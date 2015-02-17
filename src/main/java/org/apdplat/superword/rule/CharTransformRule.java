@@ -26,11 +26,20 @@ import java.util.stream.Collectors;
 import org.apdplat.superword.tools.WordSources;
 
 /**
- *
+ * 单词的发展是一个历史的递进的过程，从无到有，从有到多
+ * 字母之间的转化是有一定规律的，如元音字母（a e i o u)之间相互转化
+ * 发音相近的辅音(如双唇音唇齿音的清辅音和浊辅音等等)之间的转化
+ * 发音相同的字母和字母组合之间的转化(如ph和f)
+ * 长相相近的字母之间的转化（因为字母看上去长得像，古时候手写容易错，
+ * 如V和U，M和N，等等，在长期的发展过程中，不小心写错的词
+ * 由于作者的影响力大或者其他因素也会演化出新的单词，并具有相关的含义）。
  * @author 杨尚川
  */
 public class CharTransformRule {
-
+    /**
+     * 内置规则
+     * @param wordSet
+     */
     public void transforms(Set<String> wordSet) {
         transform(wordSet, "b", "p");
         transform(wordSet, "b", "m");
@@ -107,7 +116,13 @@ public class CharTransformRule {
         transform(wordSet, "f", "t");
     }
 
-    private void transform(Set<String> wordSet, String from, String to) {
+    /**
+     * 将单词中的一部分字母转变为另一部分字母
+     * @param wordSet 英文单词的集合
+     * @param from 待转化的字母或字母组合
+     * @param to 转换目标字母或字母组合
+     */
+    public void transform(Set<String> wordSet, String from, String to) {
         List<String> words = wordSet.parallelStream()
                 .filter(word -> word.contains(from) && wordSet.contains(word.replaceAll(from, to)))
                 .sorted()

@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 import org.apdplat.superword.tools.WordSources;
 
 /**
- *
+ * 从指定的英文单词的集合中找出符合后缀规则的单词
  * @author 杨尚川
  */
 public class SuffixRule {

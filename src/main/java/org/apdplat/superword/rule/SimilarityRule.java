@@ -28,7 +28,16 @@ import org.apdplat.superword.rule.WordVector.Score;
 import org.apdplat.superword.tools.WordSources;
 
 /**
- *
+ * 如何判断两个英文单词是否相似？
+ * 1、含义
+ * 2、读音
+ * 3、拼写
+ * 利用词向量技术，可以从拼写方面找出相似的词
+ * 我们一般都很难分辨双胞胎，因为他们长得太像了
+ * 不过呢，双胞胎的父母却能一眼识别，为什么？
+ * 因为有长期的对比识别啊
+ * 记忆英语单词也一样，把相似的词找出来对比记忆
+ * 往往事半功倍
  * @author 杨尚川
  */
 public class SimilarityRule {

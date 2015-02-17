@@ -31,7 +31,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- *
+ * 从多个文本文件中读取单词
+ * 一行一个单词，单词和其他信息之间用空白字符隔开
  * @author 杨尚川
  */
 public class WordSources {

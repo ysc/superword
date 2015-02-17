@@ -27,7 +27,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 /**
- *
+ * 从 http://www.palosverdes.com/jesse/pvphs/www-freecollege-com-vocab.htm 文章中
+ * 提取前缀
  * @author 杨尚川
  */
 public class PrefixExtractor {

@@ -27,7 +27,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- *
+ * 单词的词向量表示、向量夹角的计算等
+ * 词向量的问题在于没有考虑以下两点：
+ * 1、没有考虑词中字母的出现顺序
+ * 2、没有考虑词中字母的出现次数
  * @author 杨尚川
  */
 public class WordVector {
