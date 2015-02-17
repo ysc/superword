@@ -31,7 +31,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 /**
- *
+ * 将 http://www.palosverdes.com/jesse/pvphs/www-freecollege-com-vocab.htm 文章中的
+ * 词根词缀及其例词加上超链接，点击链接之后跳到爱词霸页面查看单词的详细信息
  * @author 杨尚川
  */
 public class PrefixSuffixOptimizer {
