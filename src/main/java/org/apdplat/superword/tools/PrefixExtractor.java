@@ -22,6 +22,8 @@ package org.apdplat.superword.tools;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -33,24 +35,87 @@ import org.jsoup.nodes.Element;
  */
 public class PrefixExtractor {
     private static final String SRC_HTML = "/tools/prefix_suffix.txt";
-    
-    public static void main(String[] args) throws Exception {
-        InputStream in = PrefixExtractor.class.getResourceAsStream(SRC_HTML);
-        Document document = Jsoup.parse(in, "utf-8", "");
-        document.select("table tbody tr")
-                .stream()
-                .forEach(PrefixExtractor::extractPrefix);
+
+    public static List<PrefixInfo> extract() {
+        try(InputStream in = PrefixExtractor.class.getResourceAsStream(SRC_HTML)) {
+            Document document = Jsoup.parse(in, "utf-8", "");
+            return document.select("table tbody tr")
+                            .stream()
+                            .map(PrefixExtractor::extractPrefix)
+                            .filter(item -> item.getPrefix() != null)
+                            .sorted()
+                            .distinct()
+                            .collect(Collectors.toList());
+        }catch (Exception e){
+            throw new RuntimeException(e);
+        }
     }
-    
-    public static void extractPrefix(Element element){
+    public static PrefixInfo extractPrefix(Element element){
+        PrefixInfo prefixInfo = new PrefixInfo();
         List<Element> tds = element.children();
         if(tds==null || tds.size()!=3){
-            return ;
+            return prefixInfo;
         }
         String prefix = tds.get(0).text().trim();
         if(!prefix.endsWith("-")){
-            return;
+            return prefixInfo;
         }
-        System.out.println("prefix(wordSet, \""+prefix+"\", \""+tds.get(1).text()+"\");");
+        String des = tds.get(1).text();
+        return new PrefixInfo(prefix, des);
+    }
+    public static class PrefixInfo implements Comparable{
+        private String prefix;
+        private String des;
+
+        public PrefixInfo(){}
+        public PrefixInfo(String prefix, String des) {
+            this.prefix = prefix;
+            this.des = des;
+        }
+
+        public String getDes() {
+            return des;
+        }
+
+        public void setDes(String des) {
+            this.des = des;
+        }
+
+        public String getPrefix() {
+            return prefix;
+        }
+
+        public void setPrefix(String prefix) {
+            this.prefix = prefix;
+        }
+
+        @Override
+        public int compareTo(Object o) {
+            if(o == null){
+                return 1;
+            }
+            return this.prefix.compareTo(((PrefixInfo)o).getPrefix());
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            PrefixInfo that = (PrefixInfo) o;
+
+            if (!prefix.equals(that.prefix)) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            return prefix.hashCode();
+        }
+    }
+    public static void main(String[] args){
+        extract().forEach(prefix ->
+                System.out.println("prefix(wordSet, \"" + prefix.getPrefix() + "\", \"" + prefix.getDes()+"\");"));
     }
 }
