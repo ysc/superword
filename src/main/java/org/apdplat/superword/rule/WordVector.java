@@ -1,30 +1,27 @@
 /**
- * 
+ *
  * APDPlat - Application Product Development Platform
  * Copyright (c) 2013, 杨尚川, yang-shangchuan@qq.com
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * 
+ *
  */
 
 package org.apdplat.superword.rule;
 
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+
+import java.util.*;
 
 /**
  * 单词的词向量表示、向量夹角的计算等
@@ -55,23 +52,13 @@ public class WordVector {
             }
             result.wordVector.set(index, true);
             //统计字母的出现次数
-            Integer v = result.times.get(c);
-            if(v == null){
-                v = 1;
-            }else{
-                v++;
-            }
-            result.times.put(c, v);
+            result.times.merge(c, 1, Integer::sum);
             //记住词序
-            List<Integer> s = result.loc.get(c);
-            if(s == null){
-                s = new ArrayList<>(5);
-                result.loc.put(c, s);
-            }
-            s.add(i++);
+            result.loc.putIfAbsent(c, new ArrayList<>(5));
+            result.loc.get(c).add(i++);
         }
         result.word = word;
-        
+
         return result;
     }
     public Score score(WordVector wordVector){
@@ -94,12 +81,11 @@ public class WordVector {
                 if(t > 1){
                     sum += t-1;
                 }
-                //如果有相同的位置，则加分
-                long locc = 0;
                 List<Integer> wordVectorLoc = wordVector.loc.get(c);
-                locc = this.loc.get(c).stream().filter(item -> wordVectorLoc.contains(item)).count();
+                //如果有相同的位置，则加分
+                long locc = this.loc.get(c).stream().filter(item -> wordVectorLoc.contains(item)).count();
                 sum += locc;
-                
+
                 if(explain){
                     tip.append(c).append("(").append(t).append("-").append(locc).append(")").append(" ");
                 }
