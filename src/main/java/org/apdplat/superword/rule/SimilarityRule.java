@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import org.apdplat.superword.model.Word;
 import org.apdplat.superword.rule.WordVector.Score;
 import org.apdplat.superword.tools.WordSources;
 
@@ -42,22 +44,22 @@ import org.apdplat.superword.tools.WordSources;
  */
 public class SimilarityRule {
 
-    public void similarity(Set<String> wordSet, String target) {
+    public void similarity(Set<Word> words, String target) {
         WordVector targetWordVecotr = WordVector.of(target);
-        List<Score> result = wordSet.parallelStream()
-                                    .map(item -> targetWordVecotr.score(WordVector.of(item), true))
+        List<Score> scores = words.parallelStream()
+                                    .map(word -> targetWordVecotr.score(WordVector.of(word.getWord()), true))
                                     .filter(item -> item.getScore() > 5)
                                     .sorted()
                                     .collect(Collectors.toList());
-        Collections.reverse(result);
+        Collections.reverse(scores);
         System.out.println("word "+target+" similarity rank: ");
         AtomicInteger i = new AtomicInteger();
-        result.forEach(item -> System.out.println("\t"+i.incrementAndGet() + "、" + item.getWord() + " " + item.getScore() + " " + item.getExplain()));
+        scores.forEach(score -> System.out.println("\t"+i.incrementAndGet() + "、" + score.getWord() + " " + score.getScore() + " " + score.getExplain()));
     }
     public static void main(String[] args) throws Exception {
-        Set<String> wordSet = WordSources.get("/words.txt", "/words_extra.txt");
+        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
 
         SimilarityRule similarityRule = new SimilarityRule();
-        similarityRule.similarity(wordSet, "book");
+        similarityRule.similarity(words, "book");
     }
 }
