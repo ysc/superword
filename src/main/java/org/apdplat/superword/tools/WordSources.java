@@ -20,6 +20,9 @@
 
 package org.apdplat.superword.tools;
 
+import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.Word;
+
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -36,7 +39,7 @@ import java.util.stream.Collectors;
  * @author 杨尚川
  */
 public class WordSources {
-    public WordSources(){}
+    private WordSources(){}
     /**
      * 
      * 一行一个单词，单词和其他信息之间用空白字符隔开
@@ -44,7 +47,7 @@ public class WordSources {
      * @param files 单词文件类路径，以/开头
      * @return 不重复的单词集合
      */
-    public static Set<String> get(String... files){
+    public static Set<Word> get(String... files){
         return get(1, files);
     }
     /**
@@ -53,22 +56,29 @@ public class WordSources {
      * @param files 单词文件类路径，以/开头
      * @return 不重复的单词集合
      */
-    public static Set<String> get(int index, String... files){
-        Set<String> set = new HashSet<>();
+    public static Set<Word> get(int index, String... files){
+        Set<Word> set = new HashSet<>();
         for(String file : files){
             URL url = WordSources.class.getResource(file);
-            System.out.println("words file: "+url);
+            System.out.println("parse word file: "+url);
             try {
                 List<String> words = Files.readAllLines(Paths.get(url.toURI()));
-                Set<String> wordSet = words.parallelStream()
-                                            .map(word -> word.split("\\s+")[index])
-                                            .collect(Collectors.toSet());
+                Set<Word> wordSet = words.parallelStream()
+                                         .map(word -> new Word(word.split("\\s+")[index], null))
+                                         .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
+                                         .collect(Collectors.toSet());
                 set.addAll(wordSet);
             } catch (URISyntaxException | IOException ex) {
                 throw new RuntimeException(ex);
             }
         }
-        System.out.println("words unique size: "+set.size());
+        System.out.println("unique words count: "+set.size());
         return set;
+    }
+    public static void main(String[] args) {
+        get("/words.txt", "/words_extra.txt")
+                .stream()
+                .sorted()
+                .forEach(word -> System.out.println(word.getWord()));
     }
 }
