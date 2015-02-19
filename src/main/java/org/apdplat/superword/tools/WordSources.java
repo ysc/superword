@@ -64,7 +64,7 @@ public class WordSources {
             try {
                 List<String> words = Files.readAllLines(Paths.get(url.toURI()));
                 Set<Word> wordSet = words.parallelStream()
-                                         .map(word -> new Word(word.split("\\s+")[index], null))
+                                         .map(word -> new Word(word.split("\\s+")[index].replaceAll("\\s+", ""), null))
                                          .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
                                          .collect(Collectors.toSet());
                 set.addAll(wordSet);
