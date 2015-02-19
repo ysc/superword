@@ -19,11 +19,14 @@
  */
 package org.apdplat.superword.rule;
 
-import java.util.List;
-import java.util.Set;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.apdplat.superword.model.Prefix;
+import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.PrefixExtractor;
 import org.apdplat.superword.tools.WordSources;
 
@@ -32,30 +35,27 @@ import org.apdplat.superword.tools.WordSources;
  * @author 杨尚川
  */
 public class PrefixRule {
-    
-    private final AtomicInteger PREFIX_COUNTER = new AtomicInteger();
+    private PrefixRule(){}
 
-    /**
-     * 前缀规则利用工具PrefixExtractor生成
-     * @param wordSet 
-     */
-    public void prefixs(Set<String> wordSet) {
-        PrefixExtractor.extract().forEach(prefix -> prefix(wordSet, prefix.getPrefix(), prefix.getDes()));
+    public static TreeMap<Prefix, List<Word>> findByPrefix(Collection<Word> words, Collection<Prefix> prefixes) {
+        TreeMap<Prefix, List<Word>> map = new TreeMap<>();
+        for(Prefix prefix : prefixes){
+            map.put(prefix, findByPrefix(words, prefix));
+        }
+        return map;
     }
 
-    public void prefix(Set<String> wordSet, String prefix) {
-        prefix(wordSet, prefix, "");
-    }
-
-    public void prefix(Set<String> wordSet, String prefix, String des) {
-        List<String> words = wordSet.parallelStream()
+    public static List<Word> findByPrefix(Collection<Word> words, Prefix prefix) {
+        return words
+                .parallelStream()
                 .filter(word -> {
-                    word = word.toLowerCase();
+                    String w = word.getWord();
                     boolean hit = false;
-                    String[] ps = prefix.toLowerCase().split(",");
+                    String[] ps = prefix.getPrefix().toLowerCase().split(",");
                     for (String p : ps) {
-                        p = p.replace("-", "").replaceAll("\\s+", "");
-                        if (word.startsWith(p) && wordSet.contains(word.substring(p.length(), word.length()))) {
+                        p = p.replaceAll("-", "").replaceAll("\\s+", "");
+                        if (w.toLowerCase().startsWith(p)
+                                && words.contains(new Word(w.substring(p.length(), w.length()),null))) {
                             hit = true;
                             break;
                         }
@@ -64,14 +64,46 @@ public class PrefixRule {
                 })
                 .sorted()
                 .collect(Collectors.toList());
-        System.out.println("</br><h2>" + PREFIX_COUNTER.incrementAndGet() + "、" + prefix + " (" + des + ") (hit " + words.size() + ")</h2></br>");
-        AtomicInteger i = new AtomicInteger();
-        words.stream().forEach(word -> System.out.println(i.incrementAndGet() + "、<a target=\"_blank\" href=\"http://www.iciba.com/" + word + "\">" + word + "</a></br>"));
     }
-    public static void main(String[] args) throws Exception {
-        Set<String> wordSet = WordSources.get("/words.txt", "/words_extra.txt");
 
-        PrefixRule prefixRule = new PrefixRule();
-        prefixRule.prefixs(wordSet);
+    public static String toHtmlFragment(Map<Prefix, List<Word>> prefixToWords) {
+        StringBuilder html = new StringBuilder();
+        AtomicInteger prefixCounter = new AtomicInteger();
+        for (Map.Entry<Prefix, List<Word>> entry : prefixToWords.entrySet()) {
+            Prefix prefix = entry.getKey();
+            List<Word> words = entry.getValue();
+            html.append("<h2>")
+                    .append(prefixCounter.incrementAndGet())
+                    .append("、")
+                    .append(prefix.getPrefix())
+                    .append(" (")
+                    .append(prefix.getDes())
+                    .append(") (hit ")
+                    .append(words.size())
+                    .append(")</h2></br>\n");
+            AtomicInteger wordCounter = new AtomicInteger();
+            words.forEach(word -> {
+                html.append("\t")
+                        .append(wordCounter.incrementAndGet())
+                        .append("、<a target=\"_blank\" href=\"http://www.iciba.com/")
+                        .append(word.getWord())
+                        .append("\">")
+                        .append(word.getWord())
+                        .append("</a></br>\n");
+            });
+        }
+        return html.toString();
+    }
+
+    public static void main(String[] args) throws Exception {
+        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+        List<Prefix> prefixes = PrefixExtractor.extract();
+
+        TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes);
+        String htmlFragment = PrefixRule.toHtmlFragment(prefixToWords);
+
+        Files.write(Paths.get("target/prefix_rule.txt"),htmlFragment.getBytes("utf-8"));
+
+        System.out.println(htmlFragment);
     }
 }
