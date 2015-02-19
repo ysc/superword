@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.apdplat.superword.model.Suffix;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -36,10 +37,11 @@ import org.jsoup.nodes.Element;
 public class SuffixExtractor {
     private static final String SRC_HTML = "/tools/prefix_suffix.txt";
 
-    public static List<SuffixInfo> extract() {
+    public static List<Suffix> extract() {
         try(InputStream in = SuffixExtractor.class.getResourceAsStream(SRC_HTML)) {
             Document document = Jsoup.parse(in, "utf-8", "");
-            return document.select("table tbody tr")
+            return document
+                    .select("table tbody tr")
                     .stream()
                     .map(SuffixExtractor::extractSuffix)
                     .filter(item -> item.getSuffix() != null)
@@ -50,72 +52,22 @@ public class SuffixExtractor {
             throw new RuntimeException(e);
         }
     }
-    public static SuffixInfo extractSuffix(Element element){
-        SuffixInfo suffixInfo = new SuffixInfo();
+    public static Suffix extractSuffix(Element element){
+        Suffix suffix = new Suffix();
         List<Element> tds = element.children();
         if(tds==null || tds.size()!=3){
-            return suffixInfo;
-        }
-        String suffix = tds.get(0).text().trim();
-        if(!suffix.startsWith("-")){
-            return suffixInfo;
-        }
-        String des = tds.get(1).text();
-        return new SuffixInfo(suffix, des);
-    }
-    public static class SuffixInfo implements Comparable{
-        private String suffix;
-        private String des;
-
-        public SuffixInfo(){}
-        public SuffixInfo(String suffix, String des) {
-            this.suffix = suffix;
-            this.des = des;
-        }
-
-        public String getDes() {
-            return des;
-        }
-
-        public void setDes(String des) {
-            this.des = des;
-        }
-
-        public String getSuffix() {
             return suffix;
         }
-
-        public void setSuffix(String suffix) {
-            this.suffix = suffix;
+        String s = tds.get(0).text().trim();
+        if(!s.startsWith("-")){
+            return suffix;
         }
-
-        @Override
-        public int compareTo(Object o) {
-            if(o == null){
-                return 1;
-            }
-            return this.suffix.compareTo(((SuffixInfo)o).getSuffix());
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            SuffixInfo that = (SuffixInfo) o;
-
-            if (!suffix.equals(that.suffix)) return false;
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            return suffix.hashCode();
-        }
+        String des = tds.get(1).text();
+        return new Suffix(s, des);
     }
     public static void main(String[] args){
-        extract().forEach(suffix ->
+        extract()
+                .forEach(suffix ->
                 System.out.println("suffix(wordSet, \"" + suffix.getSuffix() + "\", \"" + suffix.getDes() + "\");"));
     }
 }
