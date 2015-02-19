@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+
+import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.WordSources;
 
 /**
@@ -38,104 +40,108 @@ import org.apdplat.superword.tools.WordSources;
 public class CharTransformRule {
     /**
      * 内置规则
-     * @param wordSet
+     * @param words
      */
-    public void transforms(Set<String> wordSet) {
-        transform(wordSet, "b", "p");
-        transform(wordSet, "b", "m");
-        transform(wordSet, "b", "f");
-        transform(wordSet, "b", "v");
+    public void transforms(Set<Word> words) {
+        transform(words, "b", "p");
+        transform(words, "b", "m");
+        transform(words, "b", "f");
+        transform(words, "b", "v");
 
-        transform(wordSet, "p", "m");
-        transform(wordSet, "p", "f");
-        transform(wordSet, "p", "v");
+        transform(words, "p", "m");
+        transform(words, "p", "f");
+        transform(words, "p", "v");
 
-        transform(wordSet, "m", "f");
-        transform(wordSet, "m", "v");
+        transform(words, "m", "f");
+        transform(words, "m", "v");
 
-        transform(wordSet, "f", "v");
+        transform(words, "f", "v");
 
-        transform(wordSet, "d", "t");
-        transform(wordSet, "d", "s");
-        transform(wordSet, "d", "c");
-        transform(wordSet, "d", "z");
-        transform(wordSet, "d", "th");
+        transform(words, "d", "t");
+        transform(words, "d", "s");
+        transform(words, "d", "c");
+        transform(words, "d", "z");
+        transform(words, "d", "th");
 
-        transform(wordSet, "t", "s");
-        transform(wordSet, "t", "c");
-        transform(wordSet, "t", "z");
-        transform(wordSet, "t", "th");
+        transform(words, "t", "s");
+        transform(words, "t", "c");
+        transform(words, "t", "z");
+        transform(words, "t", "th");
 
-        transform(wordSet, "s", "c");
-        transform(wordSet, "s", "z");
-        transform(wordSet, "s", "th");
+        transform(words, "s", "c");
+        transform(words, "s", "z");
+        transform(words, "s", "th");
 
-        transform(wordSet, "c", "z");
-        transform(wordSet, "c", "th");
+        transform(words, "c", "z");
+        transform(words, "c", "th");
 
-        transform(wordSet, "z", "th");
+        transform(words, "z", "th");
 
-        transform(wordSet, "g", "k");
-        transform(wordSet, "g", "c");
-        transform(wordSet, "g", "h");
+        transform(words, "g", "k");
+        transform(words, "g", "c");
+        transform(words, "g", "h");
 
-        transform(wordSet, "k", "c");
-        transform(wordSet, "k", "h");
+        transform(words, "k", "c");
+        transform(words, "k", "h");
 
-        transform(wordSet, "c", "h");
+        transform(words, "c", "h");
 
-        transform(wordSet, "r", "l");
-        transform(wordSet, "r", "n");
+        transform(words, "r", "l");
+        transform(words, "r", "n");
 
-        transform(wordSet, "l", "n");
+        transform(words, "l", "n");
 
-        transform(wordSet, "m", "n");
+        transform(words, "m", "n");
 
-        transform(wordSet, "a", "e");
-        transform(wordSet, "a", "i");
-        transform(wordSet, "a", "o");
-        transform(wordSet, "a", "u");
+        transform(words, "a", "e");
+        transform(words, "a", "i");
+        transform(words, "a", "o");
+        transform(words, "a", "u");
 
-        transform(wordSet, "e", "i");
-        transform(wordSet, "e", "o");
-        transform(wordSet, "e", "u");
+        transform(words, "e", "i");
+        transform(words, "e", "o");
+        transform(words, "e", "u");
 
-        transform(wordSet, "i", "o");
-        transform(wordSet, "i", "u");
+        transform(words, "i", "o");
+        transform(words, "i", "u");
 
-        transform(wordSet, "o", "u");
+        transform(words, "o", "u");
 
         //发音相同的字母和字母组合
-        transform(wordSet, "ph", "f");
+        transform(words, "ph", "f");
         //字母长得像，容易写错
-        transform(wordSet, "v", "u");
-        transform(wordSet, "v", "w");
-        transform(wordSet, "u", "w");
-        transform(wordSet, "i", "l");
-        transform(wordSet, "i", "j");
-        transform(wordSet, "f", "t");
+        transform(words, "v", "u");
+        transform(words, "v", "w");
+        transform(words, "u", "w");
+        transform(words, "i", "l");
+        transform(words, "i", "j");
+        transform(words, "f", "t");
     }
 
     /**
      * 将单词中的一部分字母转变为另一部分字母
-     * @param wordSet 英文单词的集合
+     * @param words 英文单词的集合
      * @param from 待转化的字母或字母组合
      * @param to 转换目标字母或字母组合
      */
-    public void transform(Set<String> wordSet, String from, String to) {
-        List<String> words = wordSet.parallelStream()
-                .filter(word -> word.contains(from) && wordSet.contains(word.replaceAll(from, to)))
-                .sorted()
-                .collect(Collectors.toList());
-        System.out.println("</br><h2>" + from + " - " + to + " rule total number: " + words.size() + "</h2></br>");
+    public void transform(Set<Word> words, String from, String to) {
+        List<Word> list =
+            words.parallelStream()
+                 .filter(word ->
+                             word.getWord().contains(from)
+                             && words.contains(new Word(word.getWord().replaceAll(from, to),null)))
+                 .sorted()
+                 .collect(Collectors.toList());
+        System.out.println("</br><h2>" + from + " - " + to + " rule total number: " + list.size() + "</h2></br>");
         AtomicInteger i = new AtomicInteger();
-        words.stream().forEach(word -> System.out.println(i.incrementAndGet() + "、<a target=\"_blank\" href=\"http://www.iciba.com/" + word + "\">" + word + "</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/" + word.replaceAll(from, to) + "\">" + word.replaceAll(from, to) + "</a></br>"));
+        list.stream()
+                .forEach(word -> System.out.println(i.incrementAndGet() + "、<a target=\"_blank\" href=\"http://www.iciba.com/" + word.getWord() + "\">" + word.getWord() + "</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/" + word.getWord().replaceAll(from, to) + "\">" + word.getWord().replaceAll(from, to) + "</a></br>"));
     }
     
     public static void main(String[] args) throws Exception {
-        Set<String> wordSet = WordSources.get("/words.txt", "/words_extra.txt");
+        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
 
         CharTransformRule charTransformRule = new CharTransformRule();
-        charTransformRule.transforms(wordSet);
+        charTransformRule.transforms(words);
     }
 }
