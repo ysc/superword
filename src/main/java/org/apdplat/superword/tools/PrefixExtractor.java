@@ -40,13 +40,14 @@ public class PrefixExtractor {
     public static List<Prefix> extract() {
         try(InputStream in = PrefixExtractor.class.getResourceAsStream(SRC_HTML)) {
             Document document = Jsoup.parse(in, "utf-8", "");
-            return document.select("table tbody tr")
-                            .stream()
-                            .map(PrefixExtractor::extractPrefix)
-                            .filter(item -> item.getPrefix() != null)
-                            .sorted()
-                            .distinct()
-                            .collect(Collectors.toList());
+            return document
+                        .select("table tbody tr")
+                        .stream()
+                        .map(PrefixExtractor::extractPrefix)
+                        .filter(item -> item.getPrefix() != null)
+                        .sorted()
+                        .distinct()
+                        .collect(Collectors.toList());
         }catch (Exception e){
             throw new RuntimeException(e);
         }
@@ -66,7 +67,8 @@ public class PrefixExtractor {
     }
 
     public static void main(String[] args){
-        extract().forEach(prefix ->
+        extract()
+                .forEach(prefix ->
                 System.out.println("prefix(wordSet, \"" + prefix.getPrefix() + "\", \"" + prefix.getDes()+"\");"));
     }
 }
