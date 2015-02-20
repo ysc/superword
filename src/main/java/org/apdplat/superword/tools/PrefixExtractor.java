@@ -69,6 +69,10 @@ public class PrefixExtractor {
     public static void main(String[] args){
         extract()
                 .forEach(prefix ->
-                System.out.println("prefix(wordSet, \"" + prefix.getPrefix() + "\", \"" + prefix.getDes()+"\");"));
+                    System.out.println("prefix(wordSet, \""
+                                    + prefix.getPrefix()
+                                    + "\", \""
+                                    + prefix.getDes()
+                                    + "\");"));
     }
 }
