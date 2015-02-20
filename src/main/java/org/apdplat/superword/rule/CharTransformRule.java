@@ -129,13 +129,27 @@ public class CharTransformRule {
             words.parallelStream()
                  .filter(word ->
                              word.getWord().contains(from)
-                             && words.contains(new Word(word.getWord().replaceAll(from, to),null)))
+                             && words.contains(
+                                     new Word(
+                                             word.getWord().replaceAll(from, to), null)))
                  .sorted()
                  .collect(Collectors.toList());
-        System.out.println("</br><h2>" + from + " - " + to + " rule total number: " + list.size() + "</h2></br>");
+        System.out.println("</br><h2>"
+                            + from + " - " + to + " rule total number: "
+                            + list.size() + "</h2></br>");
         AtomicInteger i = new AtomicInteger();
         list.stream()
-                .forEach(word -> System.out.println(i.incrementAndGet() + "、<a target=\"_blank\" href=\"http://www.iciba.com/" + word.getWord() + "\">" + word.getWord() + "</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/" + word.getWord().replaceAll(from, to) + "\">" + word.getWord().replaceAll(from, to) + "</a></br>"));
+            .forEach(word -> System.out.println(
+                    i.incrementAndGet()
+                    + "、<a target=\"_blank\" href=\"http://www.iciba.com/"
+                    + word.getWord()
+                    + "\">"
+                    + word.getWord()
+                    + "</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/"
+                    + word.getWord().replaceAll(from, to)
+                    + "\">"
+                    + word.getWord().replaceAll(from, to)
+                    + "</a></br>"));
     }
     
     public static void main(String[] args) throws Exception {
