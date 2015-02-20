@@ -55,7 +55,9 @@ public class PrefixRule {
                     for (String p : ps) {
                         p = p.replaceAll("-", "").replaceAll("\\s+", "");
                         if (w.toLowerCase().startsWith(p)
-                                && words.contains(new Word(w.substring(p.length(), w.length()),null))) {
+                                && words.contains(
+                                    new Word(
+                                            w.substring(p.length(), w.length()), null))) {
                             hit = true;
                             break;
                         }
