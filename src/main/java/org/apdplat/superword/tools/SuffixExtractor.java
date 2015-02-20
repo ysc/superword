@@ -44,7 +44,7 @@ public class SuffixExtractor {
                     .select("table tbody tr")
                     .stream()
                     .map(SuffixExtractor::extractSuffix)
-                    .filter(item -> item.getSuffix() != null)
+                    .filter(suffix -> suffix.getSuffix() != null)
                     .sorted()
                     .distinct()
                     .collect(Collectors.toList());
@@ -68,10 +68,10 @@ public class SuffixExtractor {
     public static void main(String[] args){
         extract()
                 .forEach(suffix ->
-                    System.out.println("suffix(wordSet, \""
-                                    + suffix.getSuffix()
-                                    + "\", \""
-                                    + suffix.getDes()
-                                    + "\");"));
+                        System.out.println("suffix(wordSet, \""
+                                + suffix.getSuffix()
+                                + "\", \""
+                                + suffix.getDes()
+                                + "\");"));
     }
 }
