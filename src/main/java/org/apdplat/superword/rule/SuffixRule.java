@@ -55,7 +55,9 @@ public class SuffixRule{
                         for (String p : ps) {
                             p = p.replaceAll("-", "").replaceAll("\\s+", "");
                             if (w.toLowerCase().endsWith(p)
-                                    && words.contains(new Word(w.substring(0, w.length()-p.length()).toLowerCase(),null))) {
+                                    && words.contains(
+                                        new Word(
+                                                w.substring(0, w.length()-p.length()).toLowerCase(), null))) {
                                 hit = true;
                                 break;
                             }
