@@ -68,6 +68,10 @@ public class SuffixExtractor {
     public static void main(String[] args){
         extract()
                 .forEach(suffix ->
-                System.out.println("suffix(wordSet, \"" + suffix.getSuffix() + "\", \"" + suffix.getDes() + "\");"));
+                System.out.println("suffix(wordSet, \""
+                                    + suffix.getSuffix()
+                                    + "\", \""
+                                    + suffix.getDes()
+                                    + "\");"));
     }
 }
