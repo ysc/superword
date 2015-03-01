@@ -24,7 +24,7 @@ package org.apdplat.superword.model;
  * 字符映射
  * @author 杨尚川
  */
-public class CharMap{
+public class CharMap implements Comparable{
     private String from;
     private String to;
 
@@ -69,4 +69,26 @@ public class CharMap{
         result = 31 * result + to.hashCode();
         return result;
     }
+
+    @Override
+    public int compareTo(Object o) {
+        if(this == o){
+            return 0;
+        }
+        if(this.from == null){
+            return -1;
+        }
+        if(o == null){
+            return 1;
+        }
+        if(!(o instanceof CharMap)){
+            return 1;
+        }
+        String t = ((CharMap)o).getFrom();
+        if(t == null){
+            return 1;
+        }
+        return this.from.compareTo(t);
+    }
+
 }
