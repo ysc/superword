@@ -49,4 +49,24 @@ public class CharMap{
     public void setTo(String to) {
         this.to = to;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        CharMap charMap = (CharMap) o;
+
+        if (!from.equals(charMap.from)) return false;
+        if (!to.equals(charMap.to)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = from.hashCode();
+        result = 31 * result + to.hashCode();
+        return result;
+    }
 }
