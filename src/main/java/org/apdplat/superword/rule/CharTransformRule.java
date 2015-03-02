@@ -22,6 +22,7 @@ package org.apdplat.superword.rule;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -45,13 +46,13 @@ public class CharTransformRule {
     public static String toHtmlFragmentForWord(Map<Word,  Map<CharMap, List<Word>>> data){
         StringBuilder result = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
-        for(Word target : data.keySet()) {
+        data.keySet().forEach(target -> {
             result.append(i.incrementAndGet())
                     .append("、")
                     .append(target.getWord())
                     .append("</br>\n");
             AtomicInteger j = new AtomicInteger();
-            for(CharMap charMap : data.get(target).keySet()){
+            data.get(target).keySet().forEach(charMap -> {
                 result.append("\t")
                         .append(j.incrementAndGet())
                         .append("、")
@@ -62,7 +63,7 @@ public class CharTransformRule {
                 AtomicInteger z = new AtomicInteger();
                 String from = charMap.getFrom();
                 String to = charMap.getTo();
-                for(Word word : data.get(target).get(charMap)){
+                data.get(target).get(charMap).forEach(word -> {
                     result.append("\t\t")
                             .append(z.incrementAndGet())
                             .append(")、<a target=\"_blank\" href=\"http://www.iciba.com/")
@@ -74,9 +75,9 @@ public class CharTransformRule {
                             .append("\">")
                             .append(word.getWord().replaceAll(from, to))
                             .append("</a></br>\n");
-                }
-            }
-        }
+                });
+            });
+        });
         return result.toString();
     }
 
@@ -86,10 +87,10 @@ public class CharTransformRule {
 
     public static Map<Word,  Map<CharMap, List<Word>>> transforms(Set<Word> words, Set<Word> targets){
         Map<CharMap, List<Word>> data = transforms(words);
-        Map<Word,  Map<CharMap, List<Word>>> result = new HashMap<>();
-        for(Word target : targets) {
+        Map<Word,  Map<CharMap, List<Word>>> result = new ConcurrentHashMap<>();
+        targets.parallelStream().forEach(target -> {
             Map<CharMap, List<Word>> t = new HashMap<>();
-            for (Map.Entry<CharMap, List<Word>> entry : data.entrySet()) {
+            data.entrySet().parallelStream().forEach(entry -> {
                 List<Word> w = new ArrayList<>();
                 String from = entry.getKey().getFrom();
                 String to = entry.getKey().getTo();
@@ -104,11 +105,11 @@ public class CharTransformRule {
                 if (!w.isEmpty()) {
                     t.put(entry.getKey(), w);
                 }
-            }
+            });
             if(!t.isEmpty()){
                 result.put(target, t);
             }
-        }
+        });
         return result;
     }
 
@@ -193,12 +194,9 @@ public class CharTransformRule {
         charMaps.add(new CharMap("i", "j"));
         charMaps.add(new CharMap("f", "t"));
 
-        Map<CharMap, List<Word>> result = new HashMap<>();
+        Map<CharMap, List<Word>> result = new ConcurrentHashMap<>();
 
-        for(CharMap charMap : charMaps){
-            result.putAll(
-                            transform(words, charMap));
-        }
+        charMaps.parallelStream().forEach(charMap -> result.putAll(transform(words, charMap)));
 
         return result;
     }
@@ -230,35 +228,35 @@ public class CharTransformRule {
         AtomicInteger i = new AtomicInteger();
         List<CharMap> sortedList = new ArrayList<>(data.keySet());
         Collections.sort(sortedList);
-        for(CharMap charMap : sortedList) {
+        sortedList.forEach(charMap -> {
             String from = charMap.getFrom();
             String to = charMap.getTo();
             List<Word> list = data.get(charMap);
 
             html.append("<h2>")
-                .append(i.incrementAndGet())
-                .append("、")
-                .append(from)
-                .append(" - ")
-                .append(to)
-                .append(" rule total number: ")
-                .append(list.size())
-                .append("</h2></br>\n");
+                    .append(i.incrementAndGet())
+                    .append("、")
+                    .append(from)
+                    .append(" - ")
+                    .append(to)
+                    .append(" rule total number: ")
+                    .append(list.size())
+                    .append("</h2></br>\n");
 
             AtomicInteger j = new AtomicInteger();
             list.stream()
-                .forEach(word -> html.append("\t")
-                                     .append(j.incrementAndGet())
-                                     .append("、<a target=\"_blank\" href=\"http://www.iciba.com/")
-                                     .append(word.getWord())
-                                     .append("\">")
-                                     .append(word.getWord())
-                                     .append("</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/")
-                                     .append(word.getWord().replaceAll(from, to))
-                                     .append("\">")
-                                     .append(word.getWord().replaceAll(from, to))
-                                     .append("</a></br>\n"));
-        }
+                    .forEach(word -> html.append("\t")
+                            .append(j.incrementAndGet())
+                            .append("、<a target=\"_blank\" href=\"http://www.iciba.com/")
+                            .append(word.getWord())
+                            .append("\">")
+                            .append(word.getWord())
+                            .append("</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/")
+                            .append(word.getWord().replaceAll(from, to))
+                            .append("\">")
+                            .append(word.getWord().replaceAll(from, to))
+                            .append("</a></br>\n"));
+        });
         return html.toString();
     }
 
