@@ -19,6 +19,8 @@
  */
 package org.apdplat.superword.rule;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -39,6 +41,76 @@ import org.apdplat.superword.tools.WordSources;
  */
 public class CharTransformRule {
     private CharTransformRule(){}
+
+    public static String toHtmlFragmentForWord(Map<Word,  Map<CharMap, List<Word>>> data){
+        StringBuilder result = new StringBuilder();
+        AtomicInteger i = new AtomicInteger();
+        for(Word target : data.keySet()) {
+            result.append(i.incrementAndGet())
+                    .append("、")
+                    .append(target.getWord())
+                    .append("</br>\n");
+            AtomicInteger j = new AtomicInteger();
+            for(CharMap charMap : data.get(target).keySet()){
+                result.append("\t")
+                        .append(j.incrementAndGet())
+                        .append("、")
+                        .append(charMap.getFrom())
+                        .append(" - ")
+                        .append(charMap.getTo())
+                        .append("</br>\n");
+                AtomicInteger z = new AtomicInteger();
+                String from = charMap.getFrom();
+                String to = charMap.getTo();
+                for(Word word : data.get(target).get(charMap)){
+                    result.append("\t\t")
+                            .append(z.incrementAndGet())
+                            .append(")、<a target=\"_blank\" href=\"http://www.iciba.com/")
+                            .append(word.getWord())
+                            .append("\">")
+                            .append(word.getWord())
+                            .append("</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/")
+                            .append(word.getWord().replaceAll(from, to))
+                            .append("\">")
+                            .append(word.getWord().replaceAll(from, to))
+                            .append("</a></br>\n");
+                }
+            }
+        }
+        return result.toString();
+    }
+
+    public static Map<Word,  Map<CharMap, List<Word>>> transforms(Set<Word> words, Word target){
+        return transforms(words, new HashSet<Word>(Arrays.asList(target)));
+    }
+
+    public static Map<Word,  Map<CharMap, List<Word>>> transforms(Set<Word> words, Set<Word> targets){
+        Map<CharMap, List<Word>> data = transforms(words);
+        Map<Word,  Map<CharMap, List<Word>>> result = new HashMap<>();
+        for(Word target : targets) {
+            Map<CharMap, List<Word>> t = new HashMap<>();
+            for (Map.Entry<CharMap, List<Word>> entry : data.entrySet()) {
+                List<Word> w = new ArrayList<>();
+                String from = entry.getKey().getFrom();
+                String to = entry.getKey().getTo();
+                entry.getValue().parallelStream().forEach(word -> {
+                    String old = word.getWord();
+                    if (target.getWord().equals((old))) {
+                        w.add(word);
+                    } else if (target.getWord().equals(old.replaceAll(from, to))) {
+                        w.add(word);
+                    }
+                });
+                if (!w.isEmpty()) {
+                    t.put(entry.getKey(), w);
+                }
+            }
+            if(!t.isEmpty()){
+                result.put(target, t);
+            }
+        }
+        return result;
+    }
 
     /**
      * 内置规则
@@ -153,7 +225,7 @@ public class CharTransformRule {
         return result;
     }
 
-    public static String toHtmlFragment(Map<CharMap, List<Word>> data){
+    public static String toHtmlFragmentForRule(Map<CharMap, List<Word>> data){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         List<CharMap> sortedList = new ArrayList<>(data.keySet());
@@ -194,8 +266,14 @@ public class CharTransformRule {
         Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
 
         Map<CharMap, List<Word>> data = CharTransformRule.transforms(words);
-        String html = CharTransformRule.toHtmlFragment(data);
+        String html = CharTransformRule.toHtmlFragmentForRule(data);
+
+        Map<Word,  Map<CharMap, List<Word>>> data2 = CharTransformRule.transforms(words, words);
+        String html2 = CharTransformRule.toHtmlFragmentForWord(data2);
 
         System.out.println(html);
+        System.out.println(html2);
+
+        Files.write(Paths.get("target/char_transform_rule.txt"), Arrays.asList(html,html2));
     }
 }
