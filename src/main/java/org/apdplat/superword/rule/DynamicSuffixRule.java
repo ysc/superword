@@ -121,7 +121,7 @@ public class DynamicSuffixRule {
         }
 
         public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_anc.txt");
             List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ize", ""));
 
             List<Word> data = DynamicSuffixRule.findBySuffix(words, suffixes);
