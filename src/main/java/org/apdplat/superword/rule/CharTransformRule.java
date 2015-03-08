@@ -151,6 +151,7 @@ public class CharTransformRule {
 
         charMaps.add(new CharMap("c", "z"));
         charMaps.add(new CharMap("c", "th"));
+        charMaps.add(new CharMap("ch", "k"));
 
         charMaps.add(new CharMap("z", "th"));
 
@@ -193,6 +194,7 @@ public class CharTransformRule {
         charMaps.add(new CharMap("i", "l"));
         charMaps.add(new CharMap("i", "j"));
         charMaps.add(new CharMap("f", "t"));
+        charMaps.add(new CharMap("m", "w"));
 
         Map<CharMap, List<Word>> result = new ConcurrentHashMap<>();
 
