@@ -54,10 +54,10 @@ public class WordLengthStatistics {
         for (Integer length : data.keySet()){
             int size = data.get(length).size();
             html.append("长度")
-                .append(length)
-                .append(" : ")
-                .append(size)
-                .append("\n");
+                    .append(length)
+                    .append(" : ")
+                    .append(size)
+                    .append("\n");
             if(detail || lens.contains(length)){
                 AtomicInteger i = new AtomicInteger();
                 data.get(length).forEach(word -> html.append("\t")
