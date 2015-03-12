@@ -80,16 +80,6 @@ public class DynamicSuffixRule {
             AtomicInteger wordCounter = new AtomicInteger();
             words.forEach(word -> {
                 String w = word.getWord();
-                html.append("\t")
-                        .append("<tr><td>")
-                        .append(wordCounter.incrementAndGet())
-                        .append("、</td><td>")
-                        .append("<a target=\"_blank\" href=\"http://www.iciba.com/")
-                        .append(w)
-                        .append("\">")
-                        .append(w)
-                        .append("</a>")
-                        .append("</td>");
                 String common = null;
                 //这里用for比较适合，因为要break
                 for(Suffix suffix : suffixes) {
@@ -101,17 +91,19 @@ public class DynamicSuffixRule {
                     }
                 }
                 if(common != null){
+                    html.append("\t")
+                            .append("<tr><td>")
+                            .append(wordCounter.incrementAndGet())
+                            .append("、</td>");
                     final String c = common;
                     suffixes.forEach(suffix -> {
                         String s = suffix.getSuffix().toLowerCase();
                         s = s.replaceAll("-", "").replaceAll("\\s+", "");
-                        if(!w.endsWith(s)){
-                            html.append("<td><a target=\"_blank\" href=\"http://www.iciba.com/")
-                                    .append(c+s)
-                                    .append("\">")
-                                    .append(c+s)
-                                    .append("</a></td>");
-                        }
+                        html.append("<td><a target=\"_blank\" href=\"http://www.iciba.com/")
+                                .append(c+s)
+                                .append("\">")
+                                .append(c+s)
+                                .append("</a></td>");
                     });
                 }
                 html.append("</tr>\n");
