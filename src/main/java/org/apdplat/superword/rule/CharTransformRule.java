@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import org.apdplat.superword.model.CharMap;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordSources;
 
 /**
@@ -249,15 +250,11 @@ public class CharTransformRule {
             list.stream()
                     .forEach(word -> html.append("\t")
                             .append(j.incrementAndGet())
-                            .append("、<a target=\"_blank\" href=\"http://www.iciba.com/")
-                            .append(word.getWord())
-                            .append("\">")
-                            .append(word.getWord())
-                            .append("</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/")
-                            .append(word.getWord().replaceAll(from, to))
-                            .append("\">")
-                            .append(word.getWord().replaceAll(from, to))
-                            .append("</a></br>\n"));
+                            .append("、")
+                            .append(WordLinker.toLink(word.getWord()))
+                            .append(" -> ")
+                            .append(WordLinker.toLink(word.getWord().replaceAll(from, to)))
+                            .append("</br>\n"));
         });
         return html.toString();
     }
