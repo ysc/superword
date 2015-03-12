@@ -121,8 +121,16 @@ public class DynamicSuffixRule {
         }
 
         public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_anc.txt");
-            List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ize", ""));
+            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ize", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ice", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("a", ""), new Suffix("um", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ve", ""), new Suffix("ution", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ce", ""), new Suffix("se", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("e", ""), new Suffix("ation", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ter", ""), new Suffix("tre", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("d", ""), new Suffix("sion", ""));
+            List<Suffix> suffixes = Arrays.asList(new Suffix("ize", ""), new Suffix("ization", ""));
 
             List<Word> data = DynamicSuffixRule.findBySuffix(words, suffixes);
             String htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixes);
