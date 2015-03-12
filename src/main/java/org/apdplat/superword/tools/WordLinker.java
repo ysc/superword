@@ -39,4 +39,13 @@ public class WordLinker {
                 .append("</a>");
         return html.toString();
     }
+    private static String linkToYOUDAO(String word){
+        StringBuilder html = new StringBuilder();
+        html.append("<a target=\"_blank\" href=\"http://dict.youdao.com/search?q=")
+                .append(word)
+                .append("\">")
+                .append(word)
+                .append("</a>");
+        return html.toString();
+    }
 }
