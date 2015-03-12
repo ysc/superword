@@ -65,7 +65,7 @@ public class WordSources {
                 List<String> words = Files.readAllLines(Paths.get(url.toURI()));
                 Set<Word> wordSet = words.parallelStream()
                                          .filter(line -> !line.trim().startsWith("#") && !"".equals(line.trim()))
-                                         .map(line -> new Word(line.split("\\s+")[index].replaceAll("\\s+", ""), null))
+                                         .map(line -> new Word(line.trim().split("\\s+")[index].replaceAll("\\s+", ""), null))
                                          .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
                                          .collect(Collectors.toSet());
                 set.addAll(wordSet);
@@ -77,7 +77,7 @@ public class WordSources {
         return set;
     }
     public static void main(String[] args) {
-        get("/words.txt", "/words_extra.txt")
+        get("/words.txt", "/words_extra.txt", "/words_gre.txt")
                 .stream()
                 .sorted()
                 .forEach(word -> System.out.println(word.getWord()));
