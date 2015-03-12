@@ -25,9 +25,11 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.apdplat.superword.model.Prefix;
 import org.apdplat.superword.model.Suffix;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.SuffixExtractor;
+import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordSources;
 
 /**
@@ -54,10 +56,7 @@ public class SuffixRule{
                         String[] ps = suffix.getSuffix().toLowerCase().split(",");
                         for (String p : ps) {
                             p = p.replaceAll("-", "").replaceAll("\\s+", "");
-                            if (w.toLowerCase().endsWith(p)
-                                    && words.contains(
-                                        new Word(
-                                                w.substring(0, w.length()-p.length()).toLowerCase(), null))) {
+                            if (w.toLowerCase().endsWith(p)) {
                                 hit = true;
                                 break;
                             }
@@ -87,19 +86,19 @@ public class SuffixRule{
                 words.forEach(word -> {
                     html.append("\t")
                             .append(wordCounter.incrementAndGet())
-                            .append("、<a target=\"_blank\" href=\"http://www.iciba.com/")
-                            .append(word.getWord())
-                            .append("\">")
-                            .append(word.getWord())
-                            .append("</a></br>\n");
+                            .append("、")
+                            .append(WordLinker.toLink(word.getWord()))
+                            .append("</br>\n");
                 });
             }
             return html.toString();
         }
 
         public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
-            List<Suffix> suffixes = SuffixExtractor.extract();
+            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+            //List<Suffix> suffixes = SuffixExtractor.extract();
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ization", ""));
+            List<Suffix> suffixes = Arrays.asList(new Suffix("ination", ""));
 
             TreeMap<Suffix, List<Word>> suffixToWords = SuffixRule.findBySuffix(words, suffixes);
             String htmlFragment = SuffixRule.toHtmlFragment(suffixToWords);

@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.apdplat.superword.model.Prefix;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.PrefixExtractor;
+import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordSources;
 
 /**
@@ -54,10 +55,7 @@ public class PrefixRule {
                     String[] ps = prefix.getPrefix().toLowerCase().split(",");
                     for (String p : ps) {
                         p = p.replaceAll("-", "").replaceAll("\\s+", "");
-                        if (w.toLowerCase().startsWith(p)
-                                && words.contains(
-                                    new Word(
-                                            w.substring(p.length(), w.length()), null))) {
+                        if (w.toLowerCase().startsWith(p)) {
                             hit = true;
                             break;
                         }
@@ -87,19 +85,19 @@ public class PrefixRule {
             words.forEach(word -> {
                 html.append("\t")
                         .append(wordCounter.incrementAndGet())
-                        .append("、<a target=\"_blank\" href=\"http://www.iciba.com/")
-                        .append(word.getWord())
-                        .append("\">")
-                        .append(word.getWord())
-                        .append("</a></br>\n");
+                        .append("、")
+                        .append(WordLinker.toLink(word.getWord()))
+                        .append("</br>\n");
             });
         }
         return html.toString();
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
-        List<Prefix> prefixes = PrefixExtractor.extract();
+        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+        //List<Prefix> prefixes = PrefixExtractor.extract();
+        //List<Prefix> prefixes = Arrays.asList(new Prefix("mono,mon", "单个，一个"));
+        List<Prefix> prefixes = Arrays.asList(new Prefix("antiq", "=old,表示\"古老\""));
 
         TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes);
         String htmlFragment = PrefixRule.toHtmlFragment(prefixToWords);

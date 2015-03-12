@@ -21,6 +21,7 @@ package org.apdplat.superword.rule;
 
 import org.apdplat.superword.model.Suffix;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordSources;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -99,11 +100,9 @@ public class DynamicSuffixRule {
                     suffixes.forEach(suffix -> {
                         String s = suffix.getSuffix().toLowerCase();
                         s = s.replaceAll("-", "").replaceAll("\\s+", "");
-                        html.append("<td><a target=\"_blank\" href=\"http://www.iciba.com/")
-                                .append(c+s)
-                                .append("\">")
-                                .append(c+s)
-                                .append("</a></td>");
+                        html.append("<td>")
+                                .append(WordLinker.toLink(c + s))
+                                .append("</td>");
                     });
                 }
                 html.append("</tr>\n");
@@ -113,7 +112,7 @@ public class DynamicSuffixRule {
         }
 
         public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
             //List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ize", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ice", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("a", ""), new Suffix("um", ""));
@@ -122,7 +121,9 @@ public class DynamicSuffixRule {
             //List<Suffix> suffixes = Arrays.asList(new Suffix("e", ""), new Suffix("ation", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("ter", ""), new Suffix("tre", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("d", ""), new Suffix("sion", ""));
-            List<Suffix> suffixes = Arrays.asList(new Suffix("ize", ""), new Suffix("ization", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ize", ""), new Suffix("ization", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("e", ""), new Suffix("ity", ""));
+            List<Suffix> suffixes = Arrays.asList(new Suffix("nate", ""), new Suffix("nation", ""));
 
             List<Word> data = DynamicSuffixRule.findBySuffix(words, suffixes);
             String htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixes);

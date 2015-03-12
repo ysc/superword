@@ -21,6 +21,7 @@ package org.apdplat.superword.rule;
 
 import org.apdplat.superword.model.Prefix;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordSources;
 
 import java.nio.file.Files;
@@ -103,11 +104,9 @@ public class DynamicPrefixRule {
                     prefixes.forEach(prefix -> {
                         String s = prefix.getPrefix().toLowerCase();
                         s = s.replaceAll("-", "").replaceAll("\\s+", "");
-                        html.append("<td><a target=\"_blank\" href=\"http://www.iciba.com/")
-                                .append(s+c)
-                                .append("\">")
-                                .append(s+c)
-                                .append("</a></td>");
+                        html.append("<td>")
+                                .append(WordLinker.toLink(s + c))
+                                .append("</td>");
                     });
                 }
                 html.append("</tr>\n");
@@ -117,7 +116,7 @@ public class DynamicPrefixRule {
         }
 
         public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
             List<Prefix> prefixes = Arrays.asList(new Prefix("m", ""), new Prefix("imm", ""));
 
             List<Word> data = DynamicPrefixRule.findByPrefix(words, prefixes);
