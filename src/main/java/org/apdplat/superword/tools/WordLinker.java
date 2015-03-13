@@ -19,6 +19,8 @@
  */
 package org.apdplat.superword.tools;
 
+import org.apache.commons.lang.StringUtils;
+
 /**
  * 单词链接工具
  * @author 杨尚川
@@ -27,25 +29,37 @@ public class WordLinker {
     private WordLinker(){}
 
     public static String toLink(String word){
-        return linkToICIBA(word);
+        return toLink(word, "");
     }
 
-    private static String linkToICIBA(String word){
+    public static String toLink(String word, String emphasize){
+        return linkToICIBA(word, emphasize);
+    }
+
+    private static String linkToICIBA(String word, String emphasize){
         StringBuilder html = new StringBuilder();
         html.append("<a target=\"_blank\" href=\"http://www.iciba.com/")
                 .append(word)
-                .append("\">")
-                .append(word)
-                .append("</a>");
+                .append("\">");
+        if(StringUtils.isNotBlank(emphasize)) {
+            html.append(word.replace(emphasize, "<font color=\"red\">" + emphasize + "</font>"));
+        }else{
+            html.append(word);
+        }
+        html.append("</a>");
         return html.toString();
     }
-    private static String linkToYOUDAO(String word){
+    private static String linkToYOUDAO(String word, String emphasize){
         StringBuilder html = new StringBuilder();
         html.append("<a target=\"_blank\" href=\"http://dict.youdao.com/search?q=")
                 .append(word)
-                .append("\">")
-                .append(word)
-                .append("</a>");
+                .append("\">");
+        if(StringUtils.isNotBlank(emphasize)) {
+            html.append(word.replace(emphasize, "<font color=\"red\">" + emphasize + "</font>"));
+        }else{
+            html.append(word);
+        }
+        html.append("</a>");
         return html.toString();
     }
 }
