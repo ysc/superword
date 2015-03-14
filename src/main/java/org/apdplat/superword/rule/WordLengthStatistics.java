@@ -21,6 +21,7 @@
 package org.apdplat.superword.rule;
 
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordSources;
 
 import java.util.*;
@@ -60,20 +61,23 @@ public class WordLengthStatistics {
                     .append("\n");
             if(detail || lens.contains(length)){
                 AtomicInteger i = new AtomicInteger();
-                data.get(length).forEach(word -> html.append("\t")
-                        .append(i.incrementAndGet())
-                        .append("、")
-                        .append(word.getWord())
-                        .append("\n"));
+                data.get(length)
+                        .stream()
+                        .sorted()
+                        .forEach(word -> html.append("\t")
+                                .append(i.incrementAndGet())
+                                .append("、")
+                                .append(WordLinker.toLink(word.getWord()))
+                                .append("</br>\n"));
             }
         }
         return html.toString();
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
         Map<Integer, List<Word>> data = WordLengthStatistics.stat(words);
-        String html = WordLengthStatistics.toHtmlFragment(data, 1, 19, 20, 22, 28);
+        String html = WordLengthStatistics.toHtmlFragment(data, 1, 18, 19, 20, 22, 28);
         System.out.println(html);
     }
 }
