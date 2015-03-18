@@ -1,0 +1,248 @@
+Abstract—MapReduce-based data warehouse systems are playing important roles of supporting big data analytics to understand quickly the dynamics of user behavior trends and their needs in typical Web service providers and social network sites (e.g., Facebook)
+In such a system, the data placement structure is a critical factor that can affect the warehouse performance in a fundamental way.
+We have examined three commonly accepted data placement structures in conventional databases, namely rowstores, column-stores, and hybrid-stores in the context of large data analysis using MapReduce.
+We show that they are not very suitable for big data processing in distributed systems.
+In this paper, we present a big data placement structure called RCFile (Record Columnar File) and its implementation in the Hadoop system.
+With intensive experiments, we show the effectiveness of RCFile in satisfying the four requirements.
+RCFile has been chosen in Facebook data warehouse system as the default option.
+It has also been adopted by Hive and Pig, the two most widely used data analysis systems developed in Facebook and Yahoo!
+Big data not only requires a huge amount of storage, but also demands new data management on large distributed systems because conventional database systems have difficulty to manage big data.
+One important and emerging application of big data happens in social networks on the Internet, where billions of people all over the world connect and the number of users along with their various activities is growing rapidly.
+One critical task in Facebook is to understand quickly the dynamics of user behavior trends and user needs based on big data sets recording busy user activities.
+Furthermore, MapReduce-based data warehouse systems have been successfully built in major Web service providers and social.
+Instead, they have to utilize the cluster-level distributed file system (e.g.
+HDFS, the Hadoop Distributed File System) to store a huge amount of table data.
+Therefore, a serious challenge in building such a system is to find an efficient data placement structure that determines how to organize table data in the underlying HDFS.
+Being a critical factor that can affect warehouse performance in a fundamental way, such a data placement structure must be well optimized to meet the big data processing requirements and to efficiently leverage merits in a MapReduce environment.
+On average, more than 20TB data are pushed into a Facebook data warehouse every day.
+Thus, it is highly desirable to reduce data loading time, since network and disk traffic during data loading will interfere with normal query executions.
+Many queries are response-time critical in order to satisfy the requirements of both realtime Website requests and heavy workloads of decision supporting queries submitted by highly-concurrent users.
+This requires that the underlying data placement structure retain the high speed for query processing as the amount of queries rapidly increases.
+Rapidly growing user activities have constantly demanded scalable storage capacity and computing power.
+Data sets are analyzed by different application users for different purposes in many different ways [7]
+Some data analytics are routine processes that are executed periodically in a static mode, while some are ad-hoc queries issued from internal platforms.
+Most workloads do not follow any regular patterns, which demand the underlying system be highly adaptive to unexpected dynamics in data processing with limited storage space, instead of being specific to certain workload patterns.
+Data Placement for MapReduce A critical challenge in designing and implementing an.
+Each of these structures has its advantages considering one of the above requirements.
+However, simply porting these database-oriented structures into a MapReduce-based data warehouse system cannot fully satisfy all four requirements.
+We here briefly summarize major limitations of these structures for big data, and will provide a detailed evaluation on the three structures in Section II.
+First, row-store cannot support fast query processing because it cannot skip unnecessary column reads when a query only requires only a few columns from a wide table with many columns [10]
+Second, columnstore can often cause high record reconstruction overhead with expensive network transfers in a cluster.
+This is because, with column-store, HDFS cannot guarantee that all fields in the same record are stored in the same cluster node.
+Although pre-grouping multiple columns together can reduce the overhead, it does not have a strong adaptivity to respond highly dynamic workload patterns.
+Third, with the goal of optimizing CPU cache performance, the hybrid PAX structure that uses column-store inside each disk page cannot help improve the I/O performance [15][12] for analytics of big data.
+In this paper, we present our data placement structure, called.
+Then, each row group is vertically partitioned so that each column is stored independently.
+RCFile utilizes a column-wise data compression within each row group, and provides a lazy decompression technique to avoid unnecessary column decompression during query execution.
+A default size is given considering both data compression performance and query execution performance.
+RCFile also allows users to select the row group size for a given table.
+As to be discussed and evaluated in this paper, RCFile can satisfy all the above four requirements, since it not only retains the merits of both the row-store and the column-store, and also has added PAX’s missing role of I/O performance improvement.
+After extensive evaluation in production systems, RCFile has been chosen in the Facebook Hive data warehouse system as the default option.
+Besides, RCFile has also been adopted in the Yahoo Pig system, and is being considered in other MapReduce-based data processing systems.
+We present the design, implementation, and several critical issues of our solution RCFile in Section III.
+We overview other related work in Section VI, and conclude the paper in Section VII.
+In this section, we will introduce three existing data placement structures, and discuss why they may not be suitable to a Hadoop-based data warehouse system.
+Horizontal Row-store The row-store structure dominates in conventional one-sizefits-all database systems [16]
+With this structure, relational records are organized in an N-ary storage model [8]
+All fields of one record are padded one by one in the order of their occurrences.
+Figure 1 gives an example to show how a table is placed by the row-store structure in an HDFS block.
+First, rowstore cannot provide fast query processing due to unnecessary column reads if only a subset of columns in a table are needed in a query.
+Second, it is not easy for row-store to achieve a high data compression ratio (and thus a high storage space utilization) due to mixed columns with different data domains.
+Although prior work [17][18] has shown that rowstore with careful entropy coding and the utilization of column correlations can have a better data compression ratio than that of column-store, it can cause a high data decompression overhead by complex data storage implementations.
+The major advantage of row-store for a Hadoop-based system is that it has fast data loading and strong adaptive ability to dynamic workloads.
+This is because row-store guarantees that all fields in the same record is located in the same cluster node since they are in the same HDFS block.
+Vertical Column-store The vertical store scheme is based on a column-oriented.
+In a vertical storage, a relation is vertically partitioned into several sub-relations.
+In this paper, we call the first scheme the column-store, and the second one the columngroup.
+Notice that, for column-group, how data is organized (row-oriented or column-oriented) in a group is dependent on system implementations.
+In C-store, a column group uses the column-store model, i.e., each column is stored individually.
+However, to accelerate a record reconstruction activity, all columns in a column group must be ordered in the same way.
+In Zebra used for the Pig System, a column group is actually row-oriented to reduce the overhead of a record reconstruction in a MapReduce environment.
+Figure 2 shows an example on how a table is stored by.
+In this example, column A and column B are stored in the same column group, while column C and columnD are stored in two independent column groups.
+Column-store can avoid reading unnecessary columns during a query execution, and can easily achieve a high compression ratio by compressing each column within the same data domain.
+However, it cannot provide fast query processing in Hadoop-based systems due to high overhead of a tuple reconstruction.
+Column-store cannot guarantee that all fields in the same record are located in the same cluster node.
+For instance, in the example in Figure 2, the four fields of a record are stored in three HDFS blocks that can be located in different nodes.
+Therefore, a record reconstruction will cause a large amount of data transfers via networks among multiple cluster nodes.
+As introduced in the original MapReduce paper [2], excessive network transfers in a MapReduce cluster can always be a bottleneck source, which should be avoided if possible.
+However, it cannot satisfy the requirement of quickly adapting dynamic workloads, unless all column groups have been created with the pre-knowledge of possible queries.
+Otherwise, for a query that needs a non-existing combination of columns, a record reconstruction is still required to use two or more existing column groups.
+Furthermore, columngroup can also create redundant column data storage due to the column overlap among multiple groups.
+For a record with multiple fields from different columns, instead of putting these fields into different disk pages, PAX puts them in a single disk page to save additional operations for record reconstructions.
+Within each disk page, PAX uses a mini-page to store all fields belonging to each column, and uses a page header to store pointers to minipages.
+Like row-store, PAX has a strong adaptive ability to various.
+However, since it was mainly proposed for performance improvement of CPU cache utilization for data sets loaded in main memory, PAX cannot directly satisfy the requirements of both high storage space utilization and fast query processing speed on large distributed systems for the following three reasons.
+It does provide an opportunity to do column-wise data compression [13]
+The four columns are stored into three column groups, since column A and B are grouped in the first column group.
+Limited by the page-level data manipulation inside a traditional DBMS engine, PAX uses a fixed page as the basic unit of data record organization.
+With such a fixed size, PAX would not efficiently store data sets with a highly-diverse range of data resource types of different sizes in large data processing systems, such as the one in Facebook.
+In this section, we present RCFile (Record Columnar File), a data placement structure designed for MapReduce-based data warehouse systems, such as Hive.
+First, as row-store, RCFile guarantees that data in the same row are located in the same node, thus it has low cost of tuple reconstruction.
+Second, as column-store, RCFile can exploit a column-wise data compression and skip unnecessary column reads.
+Data Layout and Compression RCFile is designed and implemented on top of the Hadoop.
+As demonstrated in the example shown in Figure 3, RCFile has the following data layout to store a table:
+That is to say, all the records stored in an HDFS block are partitioned into row groups.
+For a table, all row groups have the same size.
+Depending on the row group size and the HDFS block size, an HDFS block can have only one or multiple row groups.
+An example to demonstrate the data layout of RCFile in an HDFS block.
+The first section is a sync marker that is placed in the beginning of the row group.
+The sync marker is mainly used to separate two continuous row groups in an HDFS block.
+The second section is a metadata header for the row group.
+The metadata header stores the information items on how many records are in this row group, how many bytes are in each column, and how many bytes are in each field in a column.
+The third section is the table data section that is actually a column-store.
+In this section, all the fields in the same column are stored continuously together.
+For example, as shown in Figure 3, the section first stores all fields in column A, and then all fields in column B, and so on.
+In each row group, the metadata header section and the table data section are compressed independently as follows.
+First, for the whole metadata header section, RCFile uses the RLE (Run Length Encoding) algorithm to compress data.
+Since all the values of the field lengths in the same column are continuously stored in this section, the RLE algorithm can find long runs of repeated data values, especially for fixed field lengths.
+Second, the table data section is not compressed as a whole unit.
+Rather, each column is independently compressed with the Gzip compression algorithm.
+RCFile uses the heavy-weight Gzip algorithm in order to get better compression ratios than other light-weight algorithms.
+For example, the RLE algorithm is not used since the column data is not already sorted.
+In addition, due to the lazy decompression technology to be discussed next, RCFile does not need to decompress all the columns when processing a row group.
+Thus, the relatively high decompression overhead of the Gzip algorithm can be reduced.
+Though currently RCFile uses the same algorithm for all columns in the table data section, it allows us to use different algorithms to compress different columns.
+One future work related to the RCFile project is to automatically select the best compression algorithm for each column according to its data type and data distribution.
+Data Appending RCFile does not allow arbitrary data writing operations.
+Only an appending interface is provided for data writing in RCFile because the underlying HDFS currently only supports data writes to the end of a file.
+The method of data appending in RCFile is summarized as follows.
+When a record is appended, all its fields will be scattered, and each field will be appended into its corresponding column holder.
+In addition, RCFile will record corresponding metadata of each field in the metadata header.
+RCFile provides two parameters to control how many records can be buffered in memory before they are.
+One parameter is the limit of the number of records, and the other parameter is the limit of the size of the memory buffer.
+RCFile first compresses the metadata header and stores it in the disk.
+Then it compresses each column holder separately, and flushes compressed column holders into one row group in the underlying file system.
+The mapper will sequentially process each row group in the HDFS block.
+When processing a row group, RCFile does not need to.
+Rather, it only reads the metadata header and the needed columns in the row group for a given query.
+Thus, it can skip unnecessary columns and gain the I/O advantages of columnstore.
+After the metadata header and data of needed columns have.
+The metadata header is always decompressed and held in memory until RCFile processes the next row group.
+Lazy decompression is extremely useful due to the existence of various where conditions in a query.
+If a where condition cannot be satisfied by all the records in a row group, then RCFile does not decompress the columns that do not occur in the where condition.
+For example, in the above query, column c4 in any row group must be decompressed.
+RCFile needs to use a large and flexible row group size.
+There are two considerations to determine the row group size:
+However, according to our observations of daily applications in Facebook, when the row group size reaches a threshold, increasing the row group size cannot further improve compression ratio with the Gzip algorithm.
+A large row group size may have lower read performance than that of a small size because a large size can decrease the performance benefits of lazy decompression.
+Furthermore, a large row group size would have a higher memory usage than a small size, and would affect executions of other co-running MapReduce jobs.
+Compression efficiency: In order to demonstrate how different row group sizes can affect the compression ratio, we have conducted an experiment with a portion of data from a table in Facebook.
+Data storage size with different row group sizes in RCFile.
+We can see that a large row group size can certainly improve the data compression efficiency and decrease the storage size.
+Therefore, we could not use a small row group size with the requirement of reducing storage space.
+The relationship between row group size and lazy decompression: Though a large row group size helps decrease the storage size for a table, it may hurt the data read performance, since a small row group size is a better choice to gain the performance advantage of lazy decompression than a large row group size.
+Consider assume that in an HDFS block, only one record of the table can case where the row group size is as large as possible so that the HDFS block contains only one row group.
+In this case, RCFile will decompress column e first to check the where condition, and find that the condition can be satisfied in this row group.
+Therefore, RCFile will also decompress all the other four columns (a, b, c, d) since they are needed by the query.
+However, since only one record in the HDFS block is.
+If we use a small row group size, then there is only all other row groups are useless for this query.
+Therefore, only in the useful row group, all the five columns (a, b, c, d, e) need to be decompressed.
+In other useless row groups, only column e needs to be decompressed, and the other four columns will not be decompressed, since the where condition cannot be satisfied.
+Users should choose the row group size to consider both.
+Currently, RCFile adapted in Facebook uses 4MB as the default row group size.
+The RCFile library provides a parameter to allow users to select a size for their own table.
+This is the way how RCFile is used in Hive.
+Second, it can also be directly accessed through its interfaces exposed by RCFile.Reader and RCFile.Writer.
+When using RCFile in a MapReduce program via these interfaces, there are two major configurations.
+RCFileRecordReader needs to know which columns of the table are needed.
+The following code example demonstrates how to set such information.
+After the setting, the configuration of hive.io.file.readcolumn.ids will be (2,3)
+Second, when using RCFile as output, the number of columns needs to be specified in RCFileOutputFormat.
+The following code example shows the methods to set and get the number of columns.
+The call of RCFileOutputFormat.setColumnNumber will set the configuration value of hive.io.rcfile.column.number.conf.
+RCFileOutputFormat.getColumnNumber can be used to get the number of columns.
+RCFile Reader and Writer RCFile also provides Reader and Writer to allow applications to use RCFile in their own ways.
+RCFile Writer is simple since it only supports data appending.
+The following code example outlines how to use row-wise reading methods of RCFile.
+Line 10 uses method setReadColumnIDs to pass the information of needed columns to RCFile.
+Actually, according to lazy decompression, a column will not be decompressed until one of its field is being deserialized.
+The following code example shows the deserialization of a field in column i.
+The experiments were done in a Facebook cluster with 40 nodes.
+In our experiments, we have used the Hadoop 0.20.1, and the most recent version of Hive.
+In the second group, we have evaluated the performance of RCFile from the perspectives of both storage space and query execution, by using different row group sizes and different workloads.
+RCFile versus Other Structures In this group of experiments, we configured Hive to use.
+To conduct the experiments, we have integrated the Zebra library into Hive with necessary modifications.
+Our goal in this group of experiments is to demonstrate the.
+Our workload is from the the benchmark proposed by Palvo.
+This benchmark has been widely-used to evaluate different large-scale data processing platforms [23]
+The generated data is all in plain text, and we loaded it into Hive using different data placement structures.
+During loading, data is compressed by the Gzip algorithm for each structure.
+By column-group in Zebra, sourceIP and adRevenue are located in the same column group, in order to optimize the queries in the benchmark.
+Figure 5 shows the storage space sizes required by the.
+We can see that data compression can significantly reduce the storage space, and different data placement structures show different compression efficiencies as follows.
+Row-store has the worst compression efficiency compared with column-store, column-group, and RCFile.
+This is expected because that a column-wise data compression is better than a row-wise data compression with mixed data domains.
+Sizes (GB) of raw data and loaded tables with different data placement structures in Hive.
+This is because the implementation of Zebra stores column metadata and real column data together, so that it cannot compress them separately.
+Recall the RCFile data layout in Section III-A, RCFile uses two sections to store the real data of each column and the metadata about this column (mainly the length of each cell), and compress the two sections independently.
+Thus, RCFile can have better data compression efficiency than that of Zebra.
+Data Loading Time: For a data placement structure, data loading time (the time required by loading the raw data into the data warehouse) is an important factor for daily operations in Facebook.
+Reducing this time is critical since Facebook has to load about 20TB data into the production warehouse everyday.
+We have recorded the data loading times for the USERVISITS table in the above experiment.
+Among all cases, row-store always has the smallest data loading time.
+This is because it has the minimum overhead to re-organize records in the raw text file.
+Column-store and column-group have significantly long loading times than both row-store and RCFile.
+This is because each record in the raw data file will be written to multiple HDFS blocks for different columns (or column groups)
+Since these multiple blocks are not in the same cluster node, data loading will cause much more network overhead than using other structures.
+RCFile is slightly slower than row-store with a comparable performance in practice.
+This reflects the small overhead of RCFile since it only needs to re-organize records inside each row group whose size is significantly smaller than the file size.
+Query execution time: In this experiment, we executed two queries on the RANKING table from the benchmark.
+Both of column pageRank and avgDuration are of integer type, and pageURL is of string type.
+In Zebra, when using column-group, we organized pageRank and pageURL in the.
+When using column-store, each of the three columns is stored independently.
+In order to evaluate the performance of lazy decompression of RCFile, the two queries were designed to have different selectivities according to their where conditions.
+This is because the lazy decompression technique in RCFile can accelerate the query execution with a low query selectivity.
+For Q2, column-group has the fastest query execution speed since the high selectivity of this query makes lazy decompression useless in this case.
+Note that the performance advantage of column-group is not free.
+It highly relies on pre-defined column combinations before query executions.
+Summary: We have compared RCFile with other data placement structures in three aspects of storage space, data loading time and query execution time.
+We show that each structure has its own merits for only one aspect.
+In contrast, our solution RCFile, which adopts advantages of other structures, is the best choice in almost all the cases.
+RCFile with Different Row Group Sizes In this group of experiments, we have examined how the.
+The second workload is generated by daily operations for advertisement business in Facebook.
+Both the two queries execute aggregations on the largest table LINEITEM.
+The LINEITEM has 16 columns, and the two queries only use a small number of columns, and never touch the largest column l comments.
+In addition, we have also tested row-store structure for performance comparisons.
+Figure 8 (a) shows the storage space for different configurations.
+We can see that with a small 8KB row group size, RCFile needs more storage space than row-store.
+This means that increasing row group size after a threshold would not help improve data compression efficiency significantly.
+We can see that RCFile, no matter with what row group size, can significantly outperform row-store.
+This reflects the advantage of RCFile over row-store, which skips unnecessary columns as column-store structure does.
+Among the three row group sizes, the middle value (4MB)
+Thus, the large row group size cannot gain further I/O space advantage.
+Second, according to the current RCFile’s implementation, it has more overhead to manage a large row group that must be decompressed and held in memory.
+Furthermore, a large row group can also decrease the advantage of lazy.
+The table (namely adclicks) is very wide with 38 columns.
+In this experiment, we used the trace collected in one day, and its size by rowstore with compression is about 1.3TB.
+Figure 9 (b) and (c) show the average mapper time of the MapReduce job for the query execution of Query A and Query B.
+The mapper time reflects the performance of the underlying RCFile structure.
+From the viewpoints of both data compression and query execution times, these results are consistent with the previously presented TPC-H results.
+Query A and Query B in Figure 9 (b) and (c), we can have two.
+First, for row-store, the average mapper time of Query B is even longer than that of Query A.
+This is expected since Query B has a where condition that causes more computations.
+Second, however, for RCFile with the row group size, the average mapper time of Query B is significantly shorter than that of Query A.
+This reflects the performance benefit of lazy decompression of RCFile.
+Due to the existence of a where condition in Query B, a lazy decompression can avoid to decompress unnecessary data and thus improve query execution performance.
+We have introduced and evaluated the row-store, the column-store/column-group, and the hybrid PAX store implemented in conventional database systems in Section II.
+Detailed comparison, analysis, and improvement of these three structures in data compression and query performance can be found in [17][15][24][18][12][11]
+In the context of MapReduce-based data warehouse systems, Zebra [20] was the first effort to utilize the columnstore/column-group in the Yahoo Pig system on top of Hadoop.
+As we have discussed in Section II and evaluated in Section V, Zebra’s performance is highly dependent on how column groups have been pre-defined.
+The most recently related work to RCFile is a data storage component in the Cheetah system [25]
+Like RCFile, the Cheetah system also first horizontally partitions a table into small units (each unit is called a cell),
+However, Cheetah will further use Gzip to compress the whole cell.
+Thus, during query execution, Cheetah has to read from the storage and decompress the whole cell before processing any data in a cell.
+Compared to Cheetah, RCFile can skip unnecessary column reads by independent column compression, and avoid unnecessary column decompression by the lazy decompression technique.
+The major difference between RCFile and Bigtable/Hbase is that RCFile serves as a storage structure for the almost read-only data warehouse system, while Bigtable/Hbase is mainly a low-level key-value store for both read- and write-intensive applications.
+Our solution RCFile is designed to meet all the four goals, and has been implemented on top of Hadoop.
+First, RCFile has comparable data loading speed and workload adaptivity with the row-store.
+Second, RCFile is read-optimized by avoiding unnecessary column reads during table scans.
+Third, RCFile uses column-wise compression and thus provides efficient storage space utilization.
+RCFile has been integrated into Hive, and plays an important role in daily Facebook operations.
+It is now used as the default storage structure option for internal data processing systems at Facebook.
+In order to improve storage space utilization, all the recent data generated by various Facebook applications since 2010 have been stored in the RCFile structure, and the Facebook data infrastructure team is currently working to transform existing data sets stored in the row-store structure at Facebook into the RCFile format.
+RCFile has been adopted in data processing systems beyond the scope of Facebook.
+An integration of RCFile to Pig is being developed by Yahoo! RCFile is used in another Hadoop-based data management system called Howl (http://wiki.apache.org/pig/Howl)
+In addition, according to communications in the Hive development community, RCFile has been successfully integrated into other MapReduce-based data analytics platforms.
+We believe that RCFile will continue to play its important role as a data placement standard for big data analytics in the MapReduce environment.
+We thank anonymous reviewers for their feedback to improve the readability of the paper.

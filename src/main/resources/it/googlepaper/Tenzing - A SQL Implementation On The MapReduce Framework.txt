@@ -1,0 +1,252 @@
+Tenzing supports a mostly complete SQL implementation (with several extensions) combined with several key characteristics such as heterogeneity, high performance, scalability, reliability, metadata awareness, low latency, support for columnar storage and structured data, and easy extensibility.
+In this paper, we describe the architecture and implementation of Tenzing, and present benchmarks of typical analytical queries.
+Inside Google, MapReduce has quickly become the framework of choice for writing large scalable distributed data processing jobs.
+Outside Google, projects such as Apache Hadoop have been gaining popularity rapidly.
+However, the framework is inaccessible to casual business users due to the need to understand distributed data processing and C++ or Java.
+To the best of our knowledge, such implementations suffer from latency on the order of minutes, low efficiency, or poor SQL compatibility.
+At the same time, distributed DBMS vendors have integrated the MapReduce execution model in their engines [13] to provide.
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page.
+To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.
+In this paper, we describe Tenzing, a SQL query execution engine built on top of MapReduce.
+Users have access to the underlying platform through SQL extensions such as user defined table valued functions and native support for nested relational data.
+Thanks to MapReduce, Tenzing scales to thousands of cores and petabytes of data on cheap, unreliable hardware.
+We worked closely with the MapReduce team to implement and take advantage of MapReduce optimizations.
+Our enhancements to the MapReduce framework are described in more detail in section 5.1
+Tenzing has been widely adopted inside Google, especially by the non-engineering community (Sales, Finance, Marketing), with more than a thousand users and ten thousand analytic queries per day.
+The Tenzing service currently runs on two data centers with two thousand cores each and serves queries on over 1.5 petabytes of compressed data in several different data sources and formats.
+At the end of 2008, the data warehouse for Google Ads.
+While it was working reasonably well, we faced the following issues:
+Increased cost of scalability: our need was to scale to petabytes of data, but the cost of doing so on DBMS-X was deemed unacceptably high.
+Rapidly increasing loading times: importing new data took hours each day and adding new data sources took proportionally longer.
+Further, import jobs competed with user queries for resources, leading to poor query performance during the import process.
+Analyst creativity was being stifled by the limitations of SQL and lack of access to multiple sources of data.
+An increasing number of analysts were being forced to write custom code for more complex analysis, often directly against the source (such as Sawzall against logs)
+We decided to do a major re-design of the existing platform by moving all our analysis to use Google infrastructure, and specifically to the MapReduce platform.
+Scale to thousands of cores, hundreds of users and petabytes of data.
+Run on unreliable off-the-shelf hardware, while continuing to be highly reliable.
+Provide all the required SQL features to the analysts to minimize the learning curve, while also supporting more advanced functionality such as complex userdefined functions, prediction and mining.
+We have been largely successful in this effort with Tenzing.
+With about 18 months of development, we were able to successfully migrate all users off DBMS-X to the new platform and provide them with significantly more data, more powerful analysis capabilities, similar performance for most common scenarios, and far better scalability.
+The distributed worker pool is the execution system which takes a query execution plan and executes the MapReduces.
+In order to reduce query latency, we do not spawn any new processes,1 but instead keep the processes running.
+This option is available as a separate batch execution model.
+This allows us to significantly decrease the endto-end latency of queries.
+The pool consists of master and worker nodes, plus an overall gatekeeper called the master watcher.
+The workers manipulate the data for all the tables defined in the metadata layer.
+The query server serves as the gateway between the client and the pool.
+The query server parses the query, applies optimizations and sends the plan to the master for execution.
+The Tenzing optimizer applies some basic rule and cost based optimizations to create an optimal execution plan.
+Tenzing has several client interfaces, including a command line client (CLI) and a Web UI.
+The CLI provides more power such as complex scripting and is used mostly by power users.
+The Web UI, with easier-to-use features such as query & table browsers and syntax highlighting, is geared towards novice and intermediate users.
+There is also an API to directly execute queries on the pool, and a standalone binary which does not need any server side components, but rather launches its own MapReduce jobs.
+The metadata server provides an API to store and fetch metadata such as table names and schemas, and pointers to the underlying data.
+The metadata server is also responsible for storing ACLs (Access Control Lists) and other security related information about the tables.
+A user (or another process) submits the query to the query server through the Web UI, CLI or API.
+The query server parses the query into an intermediate parse tree.
+The query server fetches the required metadata from the metadata server to create a more complete intermediate format.
+The optimizer goes through the intermediate format and applies various optimizations.
+For each MapReduce, the query server finds an available master using the master watcher and submits the query to it.
+At this stage, the execution has been physically partitioned into multiple units of work(i.e.
+The query server monitors the intermediate area for results being created and gathers them as they arrive.
+Tenzing also adds a number of enhancements on core SQL.
+These enhancements are designed to be fully parallelizable to utilize the underlying MapReduce framework.
+Tenzing supports all the standard SQL operators (arithmetic operators, IN, LIKE, BETWEEN, CASE, etc.) and functions.
+In addition, the execution engine embeds the Sawzall [19] language so that any built-in Sawzall function can be used.
+Users can also write their own functions in Sawzall and call them from Tenzing.
+The Tenzing compiler does several basic optimizations related to filtering.
+If an expression evaluates to a constant, it is converted to a constant value at compile time.
+If a predicate is a constant or a constant range (e.g., BETWEEN) and the source data is an indexed source (e.g., Bigtable), the compiler will push down the condition to an index range scan on the underlying source.
+This is very useful for making date range scans on fact tables, or point queries on dimension tables, for example.
+If the predicate does not involve complex functions (e.g., Sawzall functions) and the source is a database (e.g., MySQL), the filter is pushed down to the underlying query executed on the source database.
+If the underlying store is range partitioned on a column, and the predicate is a constant range on that column, the compiler will skip the partitions that fall outside the scan range.
+This is very useful for date based fact tables, for example.
+ColumnIO files have headers which contain meta information about the data, including the low and high values for each column.
+The execution engine will ignore the file after processing the header if it can determine that the file does not contain any records of interest, based on the predicates defined for that table in the query.
+Tenzing will scan only the columns required for query execution if the underlying format supports it (e.g., ColumnIO)
+In addition, we support a significant number of statistical aggregate functions such as CORR, COVAR and STDDEV.
+The implementation of aggregate functions on the MapReduce framework have been discussed in numerous papers including the original MapReduce paper [9]; however, Tenzing employs a few additional optimizations.
+One such is pure hash table based aggregation, which is discussed below.
+However, it is impossible to implement efficiently on the basic MapReduce framework, since the reducer always unnecessarily sorts the data by key.
+MapReduce framework to relax this restriction so that all values for the same key end up in the same reducer shard, it possible to completely avoid the sorting step on the reducer and implement a pure hash table based aggregation on MapReduce.
+This can have a significant impact on the performance on certain types of queries.
+Due to optimizer limitations, the user must explicitly indicate that they want hash based aggregation.
+A query using hash-based aggregation will fail if there is not enough memory for the hash table.
+In the mapper startup, initialize a hash table with dept id // as key and count as value.
+For each row, increment the count for the corresponding // dept id.
+At the end of the mapping phase, flush the hash table to // the reducer, without sorting.
+Each Reduce call receives a dept id and a count from // the map output.
+At the end of the reduce phase, flush out the // aggregated results.
+Since joins are one of the most important aspects of our system, we have spent considerable time on implementing different types of joins and optimizing them.
+Tenzing supports efficient joins across data sources, such as ColumnIO to Bigtable; inner, left, right, cross, and full outer joins; and equi semi-equi, non-equi and function based joins.
+Cross joins are only supported for tables small enough to fit in memory, and right outer joins are supported only with sort/
+We include distributed implementations for nested loop, sort/merge and hash joins.
+For sort/merge and hash joins, the degree of parallelism must be explicitly specified due to optimizer limitations.
+Some of the join techniques implemented in Tenzing are discussed below.
+The Tenzing cost-based optimizer can detect when a secondary table is small enough to fit in memory.
+If the order of tables specified in the query is not optimal, the compiler can also use a combination of rule and cost based heuristics to switch the order of joins so that the larger table becomes the driving table.
+If small enough, the secondary table is pulled into the memory of each mapper / reducer process for inmemory lookups, which typically is the fastest method for joining.
+In some cases, we also use a sorted disk based serialized implementation for the bigger tables to conserve memory.
+Broadcast joins are supported for all join conditions (CROSS, EQUI, SEMI-EQUI, NON-EQUI), each having a specialized implementation for optimal performance.
+A few additional optimizations are applied on a case-by-case basis:
+The data structure used to store the lookup data is determined at execution time.
+For example, if the secondary table has integer keys in a limited range, we use an integer array.
+For integer keys with wider range, we use a sparse integer map.
+We apply filters on the join data while loading to reduce the size of the in-memory structure, and also only load the columns that are needed for the query.
+For multi-threaded workers, we create a single copy of the join data in memory and share it between the threads.
+Once a secondary data set is copied into the worker process, we retain the copy for the duration of the query so that we do not have to copy the data for every map shard.
+This is valuable when there are many map shards being processed by a relatively small number of workers.
+For tables which are both static and frequently used, we permanently cache the data in local disk of the worker to avoid remote reads.
+Only the first use of the table results in a read into the worker.
+Subsequent reads are from the cached copy on local disk.
+We cache the join results from the last record; since input data often is naturally ordered on the join attribute(s), it saves us one lookup access.
+Bigtable), Tenzing supports remote lookup joins on the key (or a prefix of the key)
+We employ an asynchronous batch lookup technique combined with a local LRU cache in order to improve performance.
+The optimizer can intelligently switch table order to enable this if needed.
+Tenzing has an implementation which is most effective when the two tables being joined are roughly the same size and neither has an index on the join key.
+Neither table fits completely in memory, • One table is an order of magnitude larger than the.
+Neither table has an efficient index on the join key.
+These conditions are often satisfied by OLAP queries with star joins to large dimensions, a type of query often used with Tenzing.
+The optimizer creates the MapReduce operations required // for the hash join and aggregation.
+At the start of the mapper, load the corresponding // dimension shard into memory.
+For each row, increment the count for the corresponding // dimension key.
+At the end of the mapping phase, flush the hash table // to the reducer, without sorting.
+Note that no sorting is required in any of the MapReduces, so it is disabled for all of them.
+The reducer code is identical to the hash aggregation pseudo-code in 4.2.1
+The Tenzing scheduler can intelligently parallelize operations to make hash joins run faster.
+We also added several optimizations to the MapReduce framework to improve the efficiency of distributed hash joins, such as sort avoidance, streaming, memory chaining and block shuﬄe.
+These functions have proven to be quite popular with the analyst community.
+Consider the following example with analytic functions which ranks employees in each department by their salary:
+From the mapper, we output the partitioning key of // the analytic function as the key, and the ordering // key and other information as value.
+Reducer receives all values with the same partitioning // key.
+The list is then sorted on the ordering key for // the analytic function.
+Currently, Tenzing does not support the use of multiple analytic functions with different partitioning keys in the same query.
+We plan to remove this restriction by rewriting such queries as merging result sets from multiple queries, each with analytic functions having the same partitioning key.
+Note that it is possible to combine aggregation and analytic functions in the same query - the compiler simply rewrites it into multiple queries.
+Consider the following query which outputs the salary of each employee and also department-wise and grand totals:
+For each row, emit multiple key value pairs, one // for each combination of keys being aggregated.
+The reducer will do a standard pre−sorted // aggregation on the data.
+Set operations are implemented mainly in the reduce phase, with the mapper emitting the records using the whole record as the key, in order to ensure that similar keys end up together in the same reduce call.
+This does not apply to UNION ALL, for which we use round robin partitioning and turn off reducer side sorting for greater efficiency.
+Tenzing supports SELECT queries anywhere where a table name is allowed, in accordance with the SQL standard.
+Typically, each nested SQL gets converted to a separate MapReduce and the resultant intermediate table is substituted in the outer query.
+However, the compiler can optimize away relatively simple nested queries such that extra MapReduce jobs need not be created.
+If two (or more) MapReduces are required, Tenzing will put the reducer and following mapper in the same process.
+The current implementation is somewhat native and inefficient in that the data is flattened by the reader at the lowest level and fed as multiple records to the engine.
+The engine itself can only deal with flat relational data, unlike Dremel [17]
+Selecting fields from different repetition levels in the same query is considered an error.
+Views are simply named SELECT statements which are expanded inline during compilation.
+Views in Tenzing are predominantly used for security reasons: users can be given access to views without granting them access to underlying tables, enabling row and column level security of data.
+Consider the table Employee with fields emp id, ldap user, name, dept id, and salary.
+This view allows users to see only other employees in their department, and prevents users from seeing the salary of other employees.
+Tenzing is not ACID compliant - specifically, we are atomic, consistent and durable, but do not support isolation.
+Essentially, this acts as a batch mode APPEND style INSERT.
+Tenzing allows the user to specify, but does not enforce, primary and foreign keys.
+Limited support (no joins) for UPDATE and DELETE is implemented by applying the update or delete criteria on the data to create a new dataset.
+A reference to the new dataset then replaces the old reference in the metadata repository.
+They all work as per standard SQL and act as the main means of controlling metadata and access.
+In addition, Tenzing has metadata discovery mechanisms built-in to simplify importing datasets into Tenzing.
+For example, we provide tools and commands to automatically determine the structure of a MySQL database and make its tables accessible from Tenzing.
+We can also discover the structure of protocol buffers from the protocol definition and import the metadata into Tenzing.
+This is useful for Bigtable, ColumnIO, RecordIO and SSTable files in protocol buffer format.
+The framework is designed such that other languages can also be easily integrated.
+Integration of Lua and R has been proposed, and work is in progress.
+Tenzing currently has support for creating functions in Sawzall that take tables (vector of tuples) as input and emit tables as output.
+These are useful for tasks such as normalization of data and doing complex computation involving groups of rows.
+Various options can be specified to tweak the exact form of input / output.
+For example, for delimited text format, the user can specify the delimiter, encoding, quoting, escaping, headers, etc.
+The statement below will create the Employee table from a pipe delimited text file input and validate that the loaded data matches the table definition and all constraints (e.g., primary key) are met:
+ColumnIO, a columnar storage system developed by the Dremel team [17]
+One of the key aims of Tenzing has been to have performance comparable to traditional MPP database systems such as Teradata, Netezza and Vertica.
+In order to achieve this, there are several areas that we had to work on:
+One of the key challenges we faced was reducing latency from minutes to seconds.
+It became rapidly clear that in order to do so, we had to implement a solution which did not entail spawning of new binaries for each new Tenzing query.
+The MapReduce and Tenzing teams collaboratively came up with the pool implementation.
+The watcher is responsible for receiving a work request and assigning a free master for the task.
+The watcher also monitors the overall health of the pool such as free resources, number of running queries, etc.
+There is usually one one watcher process for one instance of the pool.
+This consists of a relatively small number of processes (usually a few dozen)
+The job of the master is to coordinate the execution of one query.
+The master receives the task from the watcher and distributes the tasks to the workers, and monitors their progress.
+Note that once a master receives a task, it takes over ownership of the task, and the death of the watcher process does not impact the query in any way.
+This contains a set of workers (typically a few thousand processes) which do all the heavy lifting of processing the data.
+Each worker can work as either a mapper or a reducer or both.
+Each worker constantly monitors a common area for new tasks and picks up new tasks as they arrive on a FIFO basis.
+We intend to implement a priority queue so that queries can be tiered by priority.
+Using this approach, we were able to bring down the latency of the execution of a Tenzing query itself to around 7 seconds.
+There are other bottlenecks in the system however, such as computation of map splits, updating the metadata service, committing / rolling back results (which involves file renames), etc.
+We are working on various other enhancements and believe we can cut this time down to less than 5 seconds end-to-end, which is fairly acceptable to the analyst community.
+The original implementation of Tenzing serialized all intermediate data to GFS.
+This led to poor performance for multi-MapReduce queries, such as hash joins and nested sub-selects.
+We improved the performance of such queries significantly by implementing streaming between MapReduces, i.e.
+We subsequently improved performance further by using memory chaining, where.
+Certain operators such as hash join and hash aggregation require shuﬄing, but not sorting.
+The MapReduce API was enhanced to automatically turn off sorting for these operations.
+When sorting is turned off, the mapper feeds data to the reducer which directly passes the sorting step.
+Typically, MapReduce uses row based encoding and decoding during shuﬄe.
+This is necessary since in order to sort the data, rows must be processed individually.
+We implemented a block-based shuﬄe mechanism on top of the existing row-based shuﬄer in MapReduce that combines many small rows into compressed blocks of roughly 1MB in size.
+By treating the entire block as one row and avoiding reducer side sorting, we were able to avoid some of the overhead associated with row serialization and deserialization in the underlying MapReduce framework code.
+This lead to 3X faster shuﬄing of data compared to row based shuﬄing with sorting.
+The backend can detect the size of the underlying data to be processed.
+If the size is under a threshold (typically 128 MB), the query is not sent to the pool, but executed directly in the client process.
+Because it is built on the MapReduce framework, Tenzing has excellent scalability characteristics.
+The current production deployment runs in two data centers, using 2000 cores each.
+Throughput, measured in rows per second per worker, remains steady as the number of workers is scaled up.
+In order to evaluate Tenzing performance against commercial parallel databases, we benchmarked four commonly used analyst queries (see appendix A) against DBMS-X, a leading MPP database appliance with row-major storage.
+The poor performance on query #3 is because query execution time is dominated by startup time.
+The production version of Tenzing was used for the benchmarks; we believe Tenzing’s results would have been significantly faster if the experimental LLVM engine discussed in the next section had been ready at benchmark time.
+Our execution engine has gone through multiple iterations to achieve single-node efficiency close to commercial DBMS.
+This code was then compiled using Sawzall’s just-in-time (JIT) compiler.
+However, this proved to be inefficient because of the serialization and deserialization costs associated with translating to and from Sawzall’s native type system.
+The second and current implementation uses Dremel’s SQL expression evaluation engine, which is based on direct evaluation of parse trees of SQL expressions.
+While more efficient than the original Sawzall implementation, it was still somewhat slow because of its interpreter-like nature and row based processing.
+For the third iteration, we did extensive experiments with two major styles of execution: LLVM based native code generation with row major block based intermediate data and column major vector based processing with columnar intermediate storage.
+The results of benchmarking LLVM vs vector on some typical aggregation queries is shown in table 3
+All experiments were done on the same dual-core Intel machine with 4 GB of RAM, with input data in columnar form in-memory.
+Note that the LLVM engine is a work in progress and has not yet been integrated into Tenzing.
+Table sizes are in millions of rows and throughput is again measured in millions of rows per worker per second.
+The data suggests that the higher the selectivity of the where clause, the better the LLVM engine’s relative performance.
+We found that the LLVM approach gave better overall results for real-life queries while vector processing was somewhat better for pure select-project queries with high selectivity.
+In comparison to the production evaluation engine, the vector engine’s per-worker throughput was about three times higher; the LLVM engine’s per-worker throughput was six to twelve times higher.
+Our LLVM based query engine stores intermediate results by rows, even when both input and output are columnar.
+In comparison to columnar vector processing, we saw several advantages and disadvantages.
+For hash table based operators like aggregation and join, using rows is more natural: composite key comparison has cache locality, and conflict resolution is done using pointers.
+Our engine iterates on input rows and uses generated procedures that do both.
+However to our best knowledge, there is no straightforward and fast columnar solution for using hash table.
+Searching in hash table breaks the cache locality for columns, resulting in more random memory accesses.
+Vector processing engines always materialize intermediate results in main memory.
+In contrast our generated native code can store results on the stack (better data locality) or even registers, depending on how the JIT compiler optimizes.
+If selectivity of source data is low, vector processing engines load less data into cache and thus scan faster.
+Because our engine stores data in rows, scans end up reading more data and are slower.
+The majority of queries in our workload are analytic queries that have aggregations and/or joins.
+These operations are significant performance bottlenecks compared to other operators like selection and projection.
+We believe that native code generation engine deals better with these bottlenecks and is a promising approach for query processing.
+A significant amount of work has been done in recent years.
+Hadoop [8] is an open source implementation of the MapReduce framework.
+These powerful but complex frameworks are designed for software engineers implementing complex parallel algorithms.
+These have limited optimizations built in, and are more suited for reasonably experienced analysts, who are comfortable with a procedural programming style, but need the ability to iterate quickly over massive volumes of data.
+Language extensions, usually with special purpose optimizers, built on top of the core frameworks.
+These seem to be mostly geared towards programmers who want to quickly build large scalable pipelines with relatively simple operations (e.g.
+Declarative query languages built on top of the core frameworks with intermediate to advanced optimizations.
+These are geared towards the reporting and analysis community, which is very comfortable with SQL.
+The latter is an interesting hybrid that tries to approach the performance of parallel DBMS by using a cluster of singlenode databases and MapReduce as the glue layer.
+A number of vendors have such offerings now, including Greenplum, AsterData, Paraccel and Vertica.
+It is possible to create a fully functional SQL engine on top of the MapReduce framework, with extensions that go beyond SQL into deep analytics.
+With relatively minor enhancements to the MapReduce framework, it is possible to implement a large number of optimizations currently available in commercial database systems, and create a system which can compete with commercial MPP DBMS in terms of throughput and latency.
+The MapReduce framework provides a combination of high performance, high reliability and high scalability on cheap unreliable hardware, which makes it an excellent platform to build distributed applications that involve doing simple to medium complexity operations on large data volumes.
+By designing the engine and the optimizer to be aware of the characteristics of heterogeneous data sources, it is possible to create a smart system which can fully utilize the characteristics of the underlying data sources.
+Tenzing is built on top of a large number of existing.
+While it is not possible to list all individuals who have contributed either directly or indirectly towards the implementation, we would like to highlight the contribution of the following:
+The data warehouse management, specifically Hemant Maheshwari, for providing business context, management support and overall guidance.
+The Sawzall team, specifically Polina Sokolova and Robert Griesemer, for helping us embed the Sawzall language which we use as the primary scripting language for supporting complex user-defined functions.
+Various other infrastructure teams at Google, including but not limited to the Bigtable, GFS, Machines and SRE teams.
+Our loyal and long-suffering user base, especially the people in Sales & Finance.
+HadoopDB: an architectural hybrid of MapReduce and DBMS technologies for analytical workloads.
+Nephele/pacts: a programming model and execution framework for web-scale analytical processing.
+A comparison of join algorithms for log processing in MapReduce.
+Scope: easy and efficient parallel processing of massive data sets.
+SQL/MapReduce: A practical approach to self-describing, polymorphic, and parallelizable user-defined functions.
+DryadLINQ: a system for general-purpose distributed data-parallel computing using a high-level language.
+This section contains the queries used for benchmarking performance against DBMS-X.
+The table sizes are indicated using XM or XK suffix.

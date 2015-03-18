@@ -1,0 +1,1645 @@
+Inverted index Analysis and analyzers Built-in analyzers When analyzers are used Testing analyzers Specifying analyzers Mapping Core simple field types Viewing the mapping Customizing field mappings Updating a mapping Testing the mapping Complex core field types Multi-value fields Empty fields Multi-level objects Mapping for inner objects How inner objects are indexed Arrays of inner objects Empty search Query DSL Structure of a query clause Combining multiple clauses Queries and Filters Performance differences When to use which Most important queries and filters Combining queries with filters Filtering a query Just a filter A query as a filter Validating queries Understanding errors Understanding queries Conclusion Sorting Sorting by field values Multi-level sorting Sorting on multi-value fields String sorting and multi-fields What is relevance? Understanding the score.
+Query time search-as-you-type Index time optimizations Ngrams for partial matching Index time search-as-you-type Preparing the index Querying the field Edge n-grams and postcodes Ngrams for compound words 16
+Controlling relevance (TODO) Similarity Boosting at index time Boosting at query time Ignoring relevance Boosting with filters Boosting with scripts Boosting and performance 20
+Not just prose (TODO) Hierarchies Indexing code Binary fields 21
+Geolocation (TODO) Adding geolocation to your documents Geolocation-aware search Sorting by distance Geo-shapes Optimizing geo-queries 24
+Scripting – when you need more (TODO) Scripting in Elasticsearch default scripting language mvel other scripting languages script fields Query DSL sorting Scripting and facets IV.
+Big data - Designing for scale (TODO) The problem Overallocation: the Kagillion shards solution Time-based indices Index-per user 27
+Index per user (TODO) Faking it Migrating a big user V.
+Cluster management and monitoring (TODO) Cluster health Cluster settings Nodes stats Nodes info 30
+That’s all well and good… until you actually need to make decisions in.
+Elasticsearch is a distributed scalable real-time search and analytics engine.
+Whether you need full text search, real-time analytics of structured data, or a.
+We will also discuss how best to model your data to take advantage of the horizontal scalability of Elasticsearch, and how to configure.
+This book is for anybody who wants to put their data to work.
+This book is suitable for novices and experienced users alike.
+The reader with a search background will also benefit from this book.
+Elasticsearch is a new technology which has some familiar concepts.
+The earlier chapters may be of less interest to you but the last.
+We have taken a problem based approach: this is the problem, how do I solve.
+Elasticsearch tries very hard to make the complex simple, and to a large.
+This is a definitive guide: not only do we help you to get started with.
+The first part of the book should be read in order as each chapter builds on the.
+They explain how to get your data in and out of Elasticsearch, how Elasticsearch interprets the data in your documents, how basic search works and how to manage indices.
+By the end of this section you will already be able to integrate your application with Elasticsearch.
+You will understand how relevance works and how to control it to ensure that the best results are on the first page.
+Because this book focuses on problem solving in Elasticsearch rather than.
+Constant width Used for program listings, as well as within paragraphs to refer to program elements such as variable or function names, databases, data types, environment variables, statements, and keywords.
+This book is here to help you get your job done.
+You do not need to contact us for permission unless you’re reproducing a.
+Answering a question by citing this book and quoting example.
+If you feel your use of code examples falls outside fair use or the permission.
+Safari Books Online is an on-demand digital library that delivers expert content in both book and video form from the world’s leading authors in technology and business.
+Safari Books Online offers a range of product mixes and pricing programs.
+Please address comments and questions concerning this book to the.
+We have a web page for this book, where we list errata, examples, and any.
+To comment or ask technical questions about this book, send email.
+For more information about our books, courses, conferences, and news, see.
+It is used for full text search, structured search, analytics, and all three in.
+GitHub uses Elasticsearch to query 130 billion lines of code.
+Elasticsearch can run on your laptop, or scale out to.
+The revolution is the combination of these individually useful parts into a.
+It has a low barrier to entry for the new.
+If you are picking up this book, it is because you have data, and there is no.
+This is what sets Elasticsearch apart: Elasticsearch encourages you to explore.
+Elasticsearch is a search engine built on top of Apache Lucene™ , a full-text.
+To leverage its power you need to work in Java.
+Elasticsearch uses Lucene internally for all of its indexing and search, but it.
+However, Elasticsearch is much more than just Lucene and much more than.
+And it packages up all of this functionality into a standalone server that your.
+As your knowledge grows, you can leverage more of Elasticsearch’s advanced.
+The easiest way to understand what Elasticsearch can do for you is to play.
+The only requirement for installing Elasticsearch is a recent version of Java.
+Preferably, you should install the latest version of the official Java.
+When installing Elasticsearch in production, you can use the method described above, or the Debian or RPM packages provided on the downloads page.
+You can also use the officially supported Puppet module or Chef cookbook.
+Marvel is a management and monitoring tool for Elasticsearch which is free for develoment use.
+It comes with an interactive console called Sense which makes it very easy to talk to Elasticsearch directly from your browser.
+When clicked, it will open up a working example of the code in the Sense console.
+You do not have to install Marvel, but it will make this book much more interactive by allowing you to experiment with the code samples on your local Elasticsearch cluster.
+To download and install it, run this command in the Elasticsearch directory:
+You probably don’t want Marvel to monitor your local cluster, so you can disable data collection with this command:
+Add -d if you want to run it in the background as a daemon.
+Test it out by opening another terminal window and running:
+This means that your Elasticsearch cluster is up and running, and we can start experimenting with it.
+A cluster is a group of nodes with the same cluster.name that are working together to share data and to provide failover and scale, although a single node can form a cluster all by itself.
+How you talk to Elasticsearch depends on whether you are using Java or not.
+If you are using Java, then Elasticsearch comes with two built-in clients which you can use in your code:
+Node client The node client joins a local cluster as a non-data node.
+In other words, it doesn’t hold any data itself, but it knows what data lives on which node in the cluster, and can forward requests directly to the correct node.
+Transport client The lighter weight transport client can be used to send requests to a remote cluster.
+It doesn’t join the cluster itself, but simply forwards requests to a node in the cluster.
+Both Java clients talk to the cluster over port 9300, using the native Elasticsearch transportprotocol.
+The nodes in the cluster also communicate with each other over port 9300
+If this port is not open, then your nodes will not be able to form a cluster.
+The Java client must be from the same version of Elasticsearch as the nodes, otherwise they may not be able to understand each other.
+More information about the Java clients can be found in the Java API section of the Guide.
+All other languages can communicate with Elasticsearch over port 9200 using a RESTful API, accessible with your favorite web client.
+In fact, as you have seen above, you can even talk to Elasticsearch from the command line using the curl command.
+Elasticsearch provides official clients for several languages, and there are numerous community-provided clients and integrations, all of which can be found in the Guide.
+A request to Elasticsearch consists of the same parts as any HTTP request.
+For instance, to count the number of documents in the cluster, we could use:
+The protocol, hostname and port of any node in the cluster.
+Any optional query string parameters, eg ?pretty will pretty-print the JSON response to make it easier to read.
+A JSON encoded request body (if the request needs one)
+Elasticsearch returns an HTTP status code like 200 OK and (except for HEAD requests) a JSON encoded response body.
+The above curl request would respond with a JSON body like the following:
+We don’t see the HTTP headers in the response because we didn’t ask curl to display them.
+To see the headers, use the curl command with the -i switch:
+For the rest of the book, we will show these curl examples using a shorthand format that leaves out all of the bits that are the same in every request, like the hostname and port, and the curl command itself.
+In fact, this is the same format that is used by the Sense console that we installed withMarvel.
+Objects in an application are seldom just a simple list of keys and values.
+Sooner or later you’re going to want to store these objects in a database.
+Trying to do this with the rows and columns of a relational database is the.
+Elasticsearch is document oriented, meaning that it stores entire objects or documents.
+Not only does it store them, it also indexes the contents of each document in order to make them searchable.
+Elasticsearch uses JSON (or JavaScript Object Notation ) as the serialization format for documents.
+Although the original user object was complex, the structure and meaning of the object has been retained in the JSON version.
+Converting an object to JSON for indexing in Elasticsearch is much simpler than the equivalent process for a flat table structure.
+The official Elasticsearch clients all handle conversion to and from JSON for you automatically.
+In order to give you a feel for what is possible in Elasticsearch and how easy it.
+We’ll introduce some new terminology and basic concepts along the way, but.
+So, sit back and enjoy a whirlwind tour of what Elasticsearch is capable of.
+The directory is supposed to foster employer empathy and real-time synergistic-dynamic-collaboration, so it has a few different business requirements: o Data can contain multi-value tags, numbers and full-text.
+The act of storing data in Elasticsearch is called indexing, but before we can index a document we need to decide whereto store it.
+In Elasticsearch, a document belongs to a type, and those types live inside an index.
+You can draw some (rough) parallels to a traditional relational database:
+An Elasticsearch cluster can contain multiple indices (databases), which in turn contain multiple types (tables)
+These types hold multiple documents (rows), and each document has multiple fields (columns)
+You may already have noticed that the word “index” is overloaded with several different meanings in the context of Elasticsearch.
+Index (noun) As explained above, an index is like a database in a traditional relational database.
+It is much like the INSERT keyword in SQL except that, if the document already exists, then the new document would replace the old.
+Inverted index Relational databases add an index, such as a B-Tree index, to specific columns in order to improve the speed of data retrieval.
+Elasticsearch and Lucene use a structure called an inverted index for exactly the same purpose.
+By default, every field in a document is indexed (has an inverted index) and thus is searchable.
+We discuss inverted indexes in more detail in Inverted index.
+So for our employee directory, we are going to do the following:
+In practice, this is very easy (even though it looks like a lot of steps)
+Notice that the path /megacorp/employee/1 contains three pieces of information:
+Simple! There was no need to perform any administrative tasks first, like.
+Before moving on, let’s add a few more employees to the directory:
+Now that we have some data stored in Elasticsearch, we can get to work on the.
+And the response will be John Smith’s original JSON document:
+In the same way that we changed the HTTP verb from PUT to GET in order to retrieve the document, we could use the DELETE verb to delete the document, and the HEADverb to check whether or not the document exists.
+To replace an existing document with an updated version, we just PUT it again.
+A GET is fairly simple—you get back the document that you ask for.
+Let’s try something a little more advanced, like a simple search!
+The first search we will try is the simplest search possible.
+You can see that we’re still using index megacorp and type employee, but instead of specifying a document ID, we now use the _search endpoint.
+The response includes all three of our documents in the hits array.
+By default, a search will return the top 10 results.
+The response not only tells us which documents matched, but it also includes the whole document itself: all of the information that we need to display the search results to the user.
+Next, let’s try searching for employees who have “Smith” in their last name.
+This method is often referred to as a query string search, since we pass the search as a URL query string parameter:
+We use the same _search endpoint in the path, and we add the query itself in.
+Query-string search is handy for ad hoc searches from the command line, but it has its limitations (see Search Lite)
+Elasticsearch provides a rich, flexible, query language called theQuery DSL, which allows us to build much more complicated, robust queries.
+We can represent the previous search for all Smith’s like so:
+This will return the same results as the previous query.
+For one, we are no longer using query string parameters, but instead a request body.
+This request body is built with JSON, and uses a match query (one of several types of queries, which we will learn about later)
+Our query will change a little to accommodate a filter, which allows us to execute structured searches efficiently:
+This portion of the query is the same match query that we used before.
+Don’t worry about the syntax too much for now, we will cover it in great detail.
+Just recognize that we’ve added a filter which performs a range search, and reused the same matchquery as before.
+The searches so far have been simple: single names, filtering by age.
+By default, Elasticsearch sorts matching results by their relevance score, that.
+But why did Jane Smith, come back as a result? The reason her document was.
+This is a good example of how Elasticsearch can search within full text fields.
+Finding individual words in a field is all well and good, but sometimes you.
+For instance, we could perform a query that will only match employees that contain both.
+To do this, we use a slight variation of the match query called the match_phrase query:
+Many applications like to highlight snippets of text from each search result so that the user can see why the document matched their query.
+Let’s rerun our previous query, but add a new highlight parameter:
+When we run this query, the same hit is returned as before, but now we get a.
+This contains a snippet of text from the about field with the matching words wrapped in <em></em> HTML tags:
+Finally, we come to our last business requirement: allow managers to run.
+It is similar to GROUP BY in SQL, but much more powerful.
+For example, let’s find the most popular interests enjoyed by our employees:
+Ignore the syntax for now and just look at the results:
+We can see that two employees are interested in music, one in forestry and.
+The all_interests aggregation has change to include only documents matching our query:
+The aggregations that we get back are a bit more complicated, but still fairly.
+The output is basically an enriched version of the first aggregation we ran.
+Even if you don’t understand the syntax yet, you can easily see how very.
+The sky is the limit as to what kind of data you can extract!
+Hopefully this little tutorial was a good demonstration about what is possible.
+It’s likely the syntax left you confused in places, and you may have questions.
+At the beginning of this chapter, we said that Elasticsearch can scale out to.
+Elasticsearch is distributed by nature, and it is designed to.
+Elasticsearch tries hard to hide the complexity of distributed systems.
+Partitioning your documents into different containers or shards, which can be stored on a single node or on multiple nodes.
+Balancing these shards across the nodes in your cluster to spread the indexing and search load.
+Duplicating each shard to provide redundant copies of your data, to prevent data loss in case of hardware failure.
+Routing requests from any node in the cluster to the nodes that hold the data you’re interested in.
+Seamlessly integrating new nodes as your cluster grows or redistributing shards to recover from node loss.
+As you read through this book, you’ll encounter supplemental chapters about.
+These chapters are not required reading—you can use Elasticsearch without.
+By now you should have a taste of what you can do with Elasticsearch, and.
+Elasticsearch is by jumping in: just start indexing and searching!
+However, the more you know about Elasticsearch, the more productive you.
+The rest of this book will help you move from novice to expert.
+Although this chapter is not required reading—you can use Elasticsearch for a.
+Elasticsearch is built to be always available, and to scale with your needs.
+Scale can come from buying bigger servers (vertical scale or scaling up) or from buying more servers (horizontal scale or scaling out)
+While Elasticsearch can benefit from more powerful hardware, vertical scale.
+With most databases, scaling horizontally usually requires a major overhaul of.
+Elasticsearch is distributed by nature: it knows how to manage multiple nodes to provide scale and high availability.
+In this chapter we are going to look at how you can setup.
+If we start a single node, with no data and no indices, our cluster looks.
+A cluster with one empty node A node is a running instance of Elasticsearch, while a cluster consists of one or more nodes with the same cluster.name that are working together to share their data and workload.
+As nodes are added to or removed from the cluster,
+One node in the cluster is elected to be the master node, which is in charge of managing cluster-wide changes like creating or deleting an index, or adding or.
+Our example cluster has only one node, so it performs the.
+As users, we can talk to any node in the cluster, including the master node.
+Every node knows where each document lives and can forward our request.
+There are many statistics that can be monitored in an Elasticsearch cluster but.
+The status field is the one we’re most interested in.
+The status field provides an overall indication of how the cluster is functioning.
+The meaning of the three colors are provided here for reference:
+In the rest of this chapter we explain what primary and replica shards are and explain the practical implications of each of the above colors.
+To add data to Elasticsearch, we need an index—a place to store related data.
+Each shard is a single instance of Lucene, and is a complete search engine in its own right.
+Elasticsearch will automatically migrate shards between nodes so that the.
+A shard can be either a primary shard or a replica shard.
+Each document in your index belongs to a single primary shard, so the number of primary shards.
+While there is no theoretical limit to the amount of data that a primary shard can hold, there is a practical limit.
+What constitutes the maximum shard size depends entirely on your use case: the hardware you have, the size and complexity of your documents, how you index and query your documents, and your expected response times.
+A replica shard is just a copy of a primary shard.
+The number of primary shards in an index is fixed at the time that an index is.
+Let’s create an index called blogs in our empty one-node cluster.
+By default, indices are assigned 5 primary shards, but for the purpose of this.
+If we were to check the cluster-health now, we would see this:
+Our three replica shards have not been allocated to a node.
+It doesn’t make sense to store copies of the same data on the same node.
+Currently our cluster is fully functional but at risk of data loss in case of.
+Running a single node means that you have a single point of failure—there is.
+Fortunately all we need to do to protect ourselves from data.
+If we start a second node, our cluster would look like Figure 2-3
+Any newly indexed document will first be stored on a primary shard, then.
+Our cluster is not only fully functional but also always available.
+What about scaling as the demand for our application grows? If we start a.
+A shard is a fully fledged search engine in its own right, and is capable of using.
+The number of primary shards is fixed at the moment an index is created.
+Effectively, that number defines the maximum amount of data that can be stored in the index.
+The actual number depends on your data, your hardware and your use case)
+The number of replica shards can be changed dynamically on a live cluster, allowing us to scale up or down as demand requires.
+Of course, just having more replica shards on the same number of nodes doesn’t increase our performance at all because each shard has access to a smaller fraction of its node’s resources.
+But these extra replicas do mean that we have more redundancy.
+With the node configuration above, we can now afford to lose two nodes without losing any data.
+We’ve said that Elasticsearch can cope when nodes fail, so let’s go ahead and.
+If we kill the first node our cluster looks like Figure 2-6
+Cluster after killing one node The node we killed was the master node.
+Fortunately a complete copy of the two lost primary shards exists on other.
+This promotion process was instantaneous, like the flick of a switch.
+By now you should have a reasonable idea of how shards allow Elasticsearch.
+Whatever program we write, the intention is the same: to organize data in a.
+We build relationships between data elements in order to represent.
+In the real world, though, not all entities of the same type look the same.
+One of the reasons that object-oriented programming languages are so.
+The problem comes when we need to store these entities.
+But what if we could store our objects as objects? Instead of modeling our.
+To send it across the network, or store it, we need to be able to represent it in some standard.
+It has become the de factostandard for exchanging data in the NoSQL world.
+When an object has been serialized into JSON it is.
+In other words, as soon as a document has been stored in Elasticsearch, it can be retrieved.
+Of course, we don’t only need to store data, we must also query it, en.
+While a number of NoSQL solutions exist which allow us to store objects as documents, they still require us to think about how we want.
+In Elasticsearch, all data in every field is indexed by default.
+In this chapter we will discuss the APIs that we use to create, retrieve, update.
+For the moment, we don’t care about the data inside.
+Most entities or objects in most applications can be serialized into a JSON.
+A key is the name of a field or property, and a value can be a string, a number, a boolean, another object, an array of values, or some other specialized type such as a string representing a date or an object.
+An object is just a JSON object—similar to what is known as a.
+It refers to the top-level or root object which is serialized into JSON and stored in Elasticsearch under a unique ID.
+Actually, in Elasticsearch, our data is stored and indexed in shards, while an index is just a logical namespace which groups together one or more shards.
+However, this is an internal detail—our application shouldn’t care about shards at all.
+As far as our application is concerned, our documents live in an index.
+We will discuss how to create and manage indices ourselves in Chapter 10, but for now we will let Elasticsearch create the index for us.
+All we have to do is to choose an index name.
+This name must be lower case, cannot begin with an underscore and cannot contain commas.
+In applications, we use objects to represent “things” such as a user, a blog post, a comment, or an email.
+Each object belongs to a class which defines the properties or data associated with an object.
+Objects in the user class may have a name, a gender, an age and an email address.
+In a relational database, we usually store objects of the same class in the same table because they share the same data structure.
+For the same reason, in Elasticsearch we use the sametype for documents which represent the same class of “thing”, because they share the same data structure.
+Every type has its own mapping or schema definition, which defines the data structure for documents of that type, much like the columns in a database table.
+Documents of all types can be stored in the same index, but the mapping for the type tells Elasticsearch how the data in each document should be indexed.
+We will discuss how to specify and manage mappings in Types and Mappings, but for now we will rely on Elasticsearch to detect our document’s data structure automatically.
+A _type name can be lower or upper case, but shouldn’t begin with an underscore, or contain commas.
+The id is a string that, when combined with the _index and type, uniquely identifies a document in Elasticsearch.
+When creating a new document, you can either provide your own_id or let Elasticsearch generate one for you.
+There are several other metadata elements, which we will discuss in Types and Mappings.
+With the elements listed above, we are already able to store a document in Elasticsearch and to retrieve it by ID—in other words, to use Elasticsearch as a document store.
+But first, we need to decide where the document lives.
+We can either provide our own _id value or let theindex API generate one for us.
+For example, if our index is called "website", our type is called "blog" and we choose the ID"123", then the index request looks like this:
+In Dealing with conflicts we will discuss how to use the _version number to ensure that one part of your application doesn’t overwrite changes made by another part.
+If our data doesn’t have a natural ID, we can let Elasticsearch autogenerate one for us.
+The response is similar to what we saw before, except that the _id field has been generated for us:
+To get the document out of Elasticsearch, we use the the.
+The response includes the by now familiar metadata elements, plus.
+We can see this by passing the -i argument to curl, which causes it to display the response headers:
+By default, a get request will return the whole document, as stored in the _source field.
+But perhaps all you are interested in is the title field.
+The _source field now contains just the fields that we requested and has filtered out the datefield:
+If all you want to do is to check whether a document exists—you’re not.
+Elasticsearch will return a 200 OK status code if the document exists:
+Of course, just because a document didn’t exist when you checked it, doesn’t.
+In the response, we can see that Elasticsearch has incremented.
+The created flag is set to false because a document with the same index,
+Internally, Elasticsearch has marked the old document as deleted and added.
+Later in this chapter, we will discuss the update API, which can be used to make partial updates to a document.
+The only difference is that the update API achieves this through a single client request, instead of requiring separate get and index requests.
+How can we be sure, when we index a document, that we are creating an.
+So the easiest way to ensure that our document is new.
+However, if we already have an _id that we want to use, then we have to tell Elasticsearch that it should only accept our index request if a document with.
+There are two ways of doing this, both of which amount to the same thing.
+And the second uses the /_create endpoint in the URL:
+If the request succeeds in creating a new document, then Elasticsearch will.
+The syntax for deleting a document follows the same pattern that we have.
+If the document is found, Elasticsearch will return an HTTP response code.
+If the document isn’t found, we get a 404 Not Found response code, and a body like:
+This is part of the internal book-keeping which ensures that changes are applied in the correct order.
+As already mentioned in Updating a whole document, deleting a document doesn’t immediately remove the document from disk—it just marks it as deleted.
+Elasticsearch will clean up deleted documents in the background as you continue to index more data.
+When updating a document using the index API, we read the original document, make our changes, then reindex the whole document in one go.
+The most recent indexing request wins—whichever document was indexed last.
+Perhaps there is little chance of two people changing the same document at.
+Or perhaps it doesn’t really matter to our business if we lose.
+Elasticsearch to store the number of widgets that we have in stock in our.
+Every time that we sell a widget, we decrement the stock count in.
+The result is that we think we have more widgets than we actually do, and.
+The more frequently that changes are made, or the longer the gap between.
+There are two approaches to ensuring that changes are not lost when making.
+Pessimistic concurrency control widely used by relational databases, assumes that conflicting changes are likely to happen and so blocks access to a resource in order to prevent conflicts.
+A typical example of this is locking a row before reading its data, ensuring that only the thread which placed the lock is able to make changes to the data in that row.
+Optimistic concurrency control used by Elasticsearch, assumes that conflicts are unlikely to happen and doesn’t block operations from being attempted.
+However, if the underlying data has been modified between reading and writing, the update will fail.
+It is then up to the application to decide how it should resolve the conflict.
+For instance, it could reattempt the update, using the fresh data, or it could report the situation to the user.
+It needs a way of ensuring that an older version of.
+When we discussed index, get and delete requests above, we pointed out that every document has a _version number which is incremented whenever a document is changed.
+Elasticsearch uses this _version number to ensure that changes are applied in the correct order.
+We can take advantage of the _version number to ensure that conflicting changes made by our application do not result in data loss.
+The response body tells us that this newly created document.
+Now imagine that we want to edit the document: we load its data into a web form, make our changes, then save the new version.
+Now, when we try to save our changes by reindexing the document, we specify.
+However, if we were to rerun the same index request, still.
+Conflict HTTP response code, and a body like the following:
+Alternatively, as in the case of the widgetstock_count above, we could retrieve the latest document and try to reapply the change.
+All APIs which update or delete a document accept a version parameter, which allows you to apply optimistic concurrency control to just the parts of.
+A common setup it to use some other database as the primary datastore and Elasticsearch to make the data searchable, which means that all changes to the primary database need to be copied across to Elasticsearch as they happen.
+If multiple processes are responsible for this data synchronization, then you may run into concurrency problems similar to those described above.
+Version numbers must be integers greater than zero and less than about 9.2e+18—a positive long value in Java.
+The way external version numbers are handled is a bit different to the internal version numbers we discussed above.
+If the request succeeds, the external version number is stored as the document’s new _version.
+External version numbers can be specified not only on index and delete requests, but also when creating new documents.
+For instance, to create a new blog post with an external version number of 5, we can do the following:
+Now we update this document, specifying a new version number of 10:
+If you were to rerun this request, it would fail with the same conflict error we saw before, because the specified external version number is not higher than the current version in Elasticsearch.
+In Updating a whole document, we said that the way to update a document is.
+However, using the update API, we can make partial updates like.
+We also said that documents are immutable—they cannot be changed, only.
+Externally, it appears as though we are partially updating a document in place.
+The simplest form of the update request accepts a partial document as the "doc" parameter which just gets merged with the existing document—objects are merged together, existing scalar fields are overwritten.
+For instance, we could add a tags field and a views field to our blog post with:
+If the request succeeds, we see a response similar to that of.
+We will discuss scripting in more detail in Chapter 25, but for now it is enough to know that scripts can be used in several places in Elasticsearch to achieve custom actions that are not directly supported by the API.
+The default scripting language is called MVEL, but Elasticsearch also supports JavaScript, Groovy and Python.
+You can read more about MVEL in the Elasticsearch scripting docsand on the MVEL website.
+For instance, we could use a script to increment the number of views that our blog post has had:
+We can also use a script to add a new tag to the tags array.
+In this example we specify the new tag as a parameter rather than hard coding it in the script itself.
+This allows Elasticsearch to reuse the script in the future, without having to compile a new script every time we want to add another tag:
+Fetching the document shows the effect of the last two requests:
+The search tag has been appended to the tags array.
+We can even choose to delete a document based on it contents, by setting ctx.op to delete:
+Imagine that we need to store a pageview counter in Elasticsearch.
+Every time that a user views a page, we increment the counter for that page.
+But if it is a new page, we can’t be sure that the counter already exists.
+If we try to update a non-existent document, the update will fail.
+In cases like these, we can use the upsert parameter to specify the document that should be created if it doesn’t already exist:
+The first time we run this request, the upsert value is indexed as a new document, which initializes the views field to 1
+On subsequent runs the document already exists so the scriptupdate is applied instead, incrementing the views counter.
+In the introduction to this section, we said that the smaller window between the retrieve andreindex steps, the smaller the opportunity for conflicting changes.
+It is still possible that a request from another process could change the document before update has managed to reindex it.
+To avoid losing data, the update API retrieves the current _version of the document in theretrieve step, and passes that to the index request during.
+If another process has changed the document in between retrieve and reindex, then the _version number won’t match and the update request will fail.
+For many uses of partial update, it doesn’t matter that a document has been changed.
+For instance, if two processes are both incrementing the page view counter, it doesn’t matter in which order it happens—if a conflict occurs, the only thing we need to do is to reattempt the update.
+This works well for operations like incrementing a counter where the order of increments does not matter, but there are other situations where the order of changes is important.
+Like the index API, the update API adopts a “last-write-wins” approach by default, but it also accepts a version parameter which allows you to use optimistic concurrency control to specify which version of the document you intend to update.
+As fast as Elasticsearch is, it can be faster still.
+If you know that you need to retrieve multiple documents from Elasticsearch,
+You can also specify a _source parameter if you just want to retrieve one or.
+The response body also contains a docs array which contains a response per document, in the same order as specified in the request.
+You can still override these values in the individual requests:
+Note that the second document that we requested doesn’t exist.
+The fact that the second document wasn’t found didn’t affect the retrieval of.
+In the same way that mget allows us to retrieve multiple documents at once, the bulk API allows us to make multiple create, index, update or delete requests in a single step.
+This is particularly useful if you need to index a data stream such as log events, which.
+The bulk request body has the following, slightly unusual, format:
+This format is like a stream of valid one-line JSON documents joined together by newline"\n" characters.
+Two important points to note: o Every line must end with a newline character "\n", including the last line.
+These are used as markers to allow for efficient line separation.
+In Why the funny format? we explain why the bulk API uses this format.
+The action/metadata line specifies what action to do to which document.
+The action must be one of index, create, update or delete.
+It is also required for update operations and should consist of the same request body that you would pass to.
+If no _id is specified, then an ID will be auto-generated:
+To put it all together, a complete bulk request has this form:
+Notice how the delete action does not have a request body, it is followed immediately by another action.
+The Elasticsearch response contains the items array which lists the result of each request, in the same order as we requested them:
+Each sub-request is executed independently, so the failure of one sub-request.
+The HTTP status code for this request reports 409 CONFLICT.
+The second request succeeded with an HTTP status code of 200 OK.
+That also means that bulk requests are not atomic—they cannot be used to implement transactions.
+Perhaps you are batch indexing logging data into the same index, and with the same type.
+Having to specify the same metadata for every document is a waste.
+The entire bulk request needs to be loaded into memory by the node which receives our request, so the bigger the request, the less memory available for other requests.
+It depends entirely on your hardware, your document size and complexity, and your indexing and search load.
+When performance starts to drop off, your batch size is too big.
+It is often useful to keep an eye on the physical size of your bulk requests.
+A good bulk size to start playing with is around 5-15MB in size.
+By now you know how to treat Elasticsearch as a distributed document store.
+You can store documents, update them, retrieve them and delete them, and.
+But first let’s talk about the internal processes that Elasticsearch.
+In the last chapter, we looked at all the ways to put data into your index and.
+In this chapter, we are going to dive into those internal, technical details to.
+Read the section to gain a taste for how things work, and to know where the.
+When you index a document, it is stored on a single primary shard.
+Elasticsearch know which shard a document belongs to? When we create a.
+The process can’t be random, since we may need to retrieve the document in.
+In fact, it is determined by a very simple formula:
+The routing value is an arbitrary string, which defaults to the document’s _id but can also be set to a custom value.
+This routing string is passed through a hashing function to generate a number, which is divided by.
+This explains why the number of primary shards can only be set when an.
+All document APIs (get, index, delete, bulk, update and mget) accept a routing parameter that can be used to customize the document-to- shard mapping.
+A custom routing value could be used to ensure that all related.
+We discuss in detail why you may want to do this.
+For explanation purposes, let’s imagine that we have a cluster consisting of 3
+It contains one index called blogs which has two primary shards.
+A cluster with three nodes and one index We can send our requests to any node in the cluster.
+In the examples below, we will send all of our requests to Node 1, which we will refer to as the requesting node.
+When sending requests, it is good practice to round-robin through all the nodes in the cluster, in order to spread the load.
+Create, index and delete requests are write operations, which must be successfully completed on the primary shard before they can be copied to any.
+Creating, indexing or deleting a single document Below we list the sequence of steps necessary to successfully create, index or.
+The client sends a create, index or delete request to Node_1
+Once all of the replica shards report success, Node 3 reports success to the requesting node, which reports success to the client.
+By the time the client receives a successful response, the document change has.
+There are a number of optional request parameters which allow you to.
+These options are seldom used because Elasticsearch is already fast,
+This causes the primary shard to wait for successful responses from the replica shards before returning.
+If you set replication to async, then it will return success to the client as soon as the request has been executed on the primary shard.
+It will still forward the request to the replicas, but you will not know if the replicas succeeded or not.
+It is advisable to use the default sync replication as it is possible to overload Elasticsearch by sending too many requests without waiting for their completion.
+The allowed values for consistency one (just the primary shard), all (the primary and all replicas) or the default quorum or majority of shard copies.
+Note that the number_of_replicas is the number of replicas specified in the index settings, not the number of replicas that are currently active.
+If you have specified that an index should have 3 replicas then a quorum would be:
+But if you only start 2 nodes, then there will be insufficient shard copies active to satisfy the quorum and you will be unable to index or delete any documents.
+A document can be retrieved from a primary shard or from any of its replicas.
+Retrieving a single document Below we list the sequence of steps to retrieve a document from either a.
+On this occasion, it forwards the request toNode 2, which returns the document.
+For read requests, the requesting node will choose a different shard copy on.
+It is possible that a document has been indexed on the primary shard but has.
+The update API combines the read and write patterns explained above.
+Partial updates to a document Below we list the sequence of steps used to perform a partial update on a.
+The update API also accepts the routing, replication, consistency and timeout parameters that are explained in Creating, indexing and deleting a document.
+When a primary shard forwards changes to its replica shards, it doesn’t forward the update request.
+Instead it forwards the new version of the full document.
+Remember that these changes are forwarded to the replica shards asynchronously and there is no guarantee that they will arrive in the same order that they were sent.
+If Elasticsearch forwarded just the change, it is possible that changes would be applied in the wrong order, resulting in a corrupt document.
+The patterns for the mget and bulk APIs are similar to those for individual documents.
+The difference is that the requesting node knows in which shard.
+Once it receives answers from each node, it collates their responses into a.
+Retrieving multiple documents with mget Below we list the sequence of steps necessary to retrieve multiple documents.
+Once all replies have been received, Node 3 builds the response and returns it to the client.
+A routing parameter can be set for each document in the docs array, and the preferenceparameter can be set for the top-level mget request.
+Multiple document changes with bulk Below we list the sequence of steps necessary to execute.
+Once all replica shards report success for all actions, the node reports success to the requesting node, which collates the responses and returns them to the client.
+The bulk API also accepts the replication and consistency parameters at the top-level for the whole bulk request, and the routing parameter in the metadata for each request.
+Each document referenced in a bulk request may belong to a different primary shard, each which may be allocated to any of the nodes in the cluster.
+This means that every action inside a bulk request needs to be forwarded to the correct shard on the correct node.
+If the individual requests were wrapped up in a JSON array, that would mean that we would need to:
+It would work, but would need a lot of RAM to hold copies of essentially the same data, and would create many more data structures that the JVM would have to spend time garbage collecting.
+Instead, Elasticsearch reaches up into the networking buffer, where the raw request has been received and reads the data directly.
+It uses the newline characters to identify and parse just the small action/metadata lines in order to decide which shard should handle each request.
+These raw requests are forwarded directly to the correct shard.
+There is no redundant copying of data, no wasted data structures.
+The entire request process is handled in the smallest amount of memory possible.
+So far, we have learned how to use Elasticsearch as a simple NoSQL-style.
+This is the reason that we use structured JSON documents, rather than.
+Elasticsearch doesn’t only store the document, it also indexes the content of the document in order to make it searchable.
+Every field in a document is indexed and can be queried.
+During a single query, Elasticsearch can use all of these indices, to.
+While many searches will just work out of the box, to use Elasticsearch to its.
+Mapping how the data in each field is interpreted Analysis how full text is processed to make it searchable Query DSL.
+Each of the above is a big subject in its own right and we explain them in.
+The chapters in this section will introduce the basic concepts.
+We will start by explaining the search API in its simplest form.
+You can copy the commands and paste them into your shell in order to follow.
+The most basic form of the search API is the empty search which doesn’t specify any query, but simply returns all documents in all indices in the cluster:
+This means that the whole document is immediately available to us directly from the search results.
+This is unlike other search engines which return just the document ID, requiring you to fetch the document itself in a separate step.
+This is the relevance score, which is a measure of how well the document matches the query.
+By default, results are returned with the most relevant documents first; that is, in descending order of _score.
+We wouldn’t normally expect shards to fail, but it can happen.
+If we were to suffer a major disaster in which we lost both the primary and the replica copy of the same shard, there would be no copies of that shard available to respond to search requests.
+In this case, Elasticsearch would report the shard asfailed, but continue to return results from the remaining shards.
+Elasticsearch will return any results that it has managed to gather from shards which responded before the request timed out.
+It should be noted that this timeout does not halt the execution of the query, it merely tells the coordinating node to return the results collected so far and to close the connection.
+In the background, other shards may still be processing the query even though results have been sent.
+Use the timeout because it is important to your SLA, not because you want to abort the execution of long running queries.
+Did you notice that the results from the empty search above contained.
+Usually, however, you will want to search within one or more specific indices,
+When you search within a single index, Elasticsearch forwards the search.
+Later, you will see how this simple fact makes it easy to scale flexibly as your.
+Our empty search above told us that there 14 documents in the cluster which.
+But there were only 10 documents in the hits array.
+Beware of paging too deep or requesting too many results at once.
+Everything works in the same way except that each shard has to produce its top 10,010 results.
+You can see that, in a distributed system, the cost of sorting results grows exponentially the deeper we page.
+There is a very good reason why web search engines don’t return more than 1,000 results for any query.
+In Reindexing your data we will explain how you can retrieve large numbers of documents efficiently.
+There are two forms of the search API: a “lite” query string version that expects all its parameters to be passed in the query string, and the full request body version that expects a JSON request body and uses a rich search language called the query DSL.
+The query string search is useful for running ad hoc queries from the command line.
+For instance this query finds all documents of type tweet that contain the word "elasticsearch"in the tweet field:
+The next query looks for "john" in the name field and "mary" in the tweet field.
+The "+" prefix indicates conditions which must be satisfied for our query to match.
+Similarly a"-" prefix would indicate conditions that must not match.
+The _all field This simple search returns all documents which contain the word "mary":
+In the previous examples, we searched for words in the tweet or name fields.
+However, the results from this query mention "mary" in three different fields: o a user whose name is “Mary”
+How has Elasticsearch managed to find results in three different fields?
+When you index a document, Elasticsearch takes the string values of all of its fields and concatenates them into one big string which it indexes as the special _all field.
+The query string search uses the _all field unless another field name has been specified.
+The _all field is a useful feature while you are getting started with a new application.
+Later, you will find that you have more control over your search results if you query specific fields instead of the _all field.
+As you can see from the above examples, this lite query string search is surprisingly powerful.
+Its query syntax, which is explained in detail in the Query String Syntax reference docs, allows us to express quite complex queries succinctly.
+This makes it great for throwaway queries from the command line or during development.
+However, you can also see that its terseness can make it cryptic and difficult to debug.
+And it’s fragile—a slight syntax error in the query string, such as a misplaced -, :, / or " and it will return an error instead of results.
+Lastly, the query string search allows any user to run potentially slow heavy queries on any field in your index, possibly exposing private information or even bringing your cluster to its knees!
+For these reasons, we don’t recommend exposing query string search directly to your users, unless they are power users who can be trusted with your data and with your cluster.
+Instead, in production we usually rely on the full-featured request body search API, which does all of the above, plus a lot more.
+Before we get there though, we first need to take a look at how our data is indexed in Elasticsearch.
+While playing around with the data in our index, we notice something odd.
+Something seems to be broken: we have 12 tweets in our indices, and only one.
+So let’s take a look at how Elasticsearch has interpreted our document structure, by requesting.
+Elasticsearch has dynamically generated a mapping for us, based on what it.
+The response shows us that the date field has been recognised as a field of type date.
+So fields of type date and fields of type string are indexed differently, and can thus be searched differently.
+But by far the biggest difference is actually between fields that represent exact values (which can include string fields) and fields that represent full text.
+This distinction is really important—it’s the thing that separates a search.
+Data in Elasticsearch can be broadly divided into two types: exact values and full text.
+The exact value "Foo" is not the same as the exact value "foo"
+Full text, on the other hand, refers to textual data—usually written in some.
+The problem is that the rules of natural languages are complex which makes them difficult for computers to parse correctly.
+This kind of query is easy to express with SQL:
+In order to facilitate these types of queries on full text fields, Elasticsearch.
+We will discuss the inverted index and the analysis process in the next two sections.
+Elasticsearch uses a structure called an inverted index which is designed to allow very fast full text searches.
+An inverted index consists of a list of all the.
+For example, let’s say we have two documents, each with a content field containing:
+To create an inverted index, we first split the content field of each document into separate words (which we call terms or tokens), create a sorted list of all the unique terms, then list in which document each term appears.
+Now, if we want to search for "quick brown" we just need to find the documents in which each term appears:
+Both documents match, but the first document has more matches than the.
+If we apply a naive similarity algorithm which just counts the number of matching terms, then we can say that the first document is a better.
+Bu there are a few problems with our current inverted index:
+Remember, a preceding + means that the word must be present)
+Both the term "Quick" and the term "foxes" have to be in the same document in order to satisfy the query, but the first doc contains "Quick fox" and the second doc contains "quick foxes"
+Our user could reasonably expect both documents to match the query.
+If we normalize the terms into a standard format, then we can find documents.
+You can only find terms that actually exist in your index, so: both the indexed text and and query string must be normalized into the same form.
+This process of tokenization and normalization is called analysis, which we discuss in the next section.
+Analysis is the process of: o first, tokenizing a block of text into individual terms suitable for use in an.
+An analyzer is really just a wrapper which combines three functions into a single package:
+Character filters First, the string is passed through any character filters in turn.
+Their job is to tidy up the string before tokenization.
+A character filter could be used to strip out HTML, or to convert "&" characters to the word "and"
+Tokenizer Next, the string is tokenized into individual terms by a tokenizer.
+A simple tokenizer might split the text up into terms whenever it encounters whitespace or punctuation.
+Token filters Last, each term is passed through any token filters in turn, which can change terms (eg lowercasing "Quick"), remove terms (eg stopwords like "a", "and","the" etc) or add terms (eg synonyms like "jump" and "leap")
+Elasticsearch provides many character filters, tokenizers and token filters out.
+These can be combined to create custom analyzers suitable for.
+However, Elasticsearch also ships with a number of pre-packaged analyzers that you can use directly.
+We list the most important ones below and, to demonstrate the difference in behaviour, we show what terms each would produce from this string:
+Standard analyzer The standard analyzer is the default analyzer that Elasticsearch uses.
+It is the best general choice for analyzing text which may be in any language.
+It splits the text on word boundaries, as defined by the Unicode Consortium, and removes most punctuation.
+The simple analyzer splits the text on anything that isn’t a letter, and lowercases the terms.
+They are able to take the peculiarities of the specified language into account.
+Note how "transparent" and "calling" have been stemmed to their root form.
+When we index a document, its full text fields are analyzed into terms which are used to create the inverted index.
+However, when we search on a full text field, we need to pass the query string through the same analysis process, to ensure that we are searching for terms in the same form as those that exist in the index.
+Full text queries, which we will discuss later, understand how each field is defined, and so they can do the right thing:
+When you query a full text field, the query will apply the same analyzer to the query string to produce the correct list of terms to search for.
+When you query an exact value field, the query will not analyze the query string, but instead search for the exact value that you have specified.
+Now you can understand why the queries that we demonstrated at the start of this chapterreturn what they do: o The date field contains an exact value: the single term "2014-09-15"
+Especially when you are new to Elasticsearch, it is sometimes difficult to understand what is actually being tokenized and stored into your index.
+To better understand what is going on, you can use the analyze API to see how text is analyzed.
+Specify which analyzer to use in the query string parameters, and the text to analyze in the body:
+The token is the actual term that will be stored in the index.
+The position indicates the order in which the terms appeared in the original text.
+The analyze API is really useful tool for understanding what is happening inside Elasticsearch indices, and we will talk more about it as we progress.
+When Elasticsearch detects a new string field in your documents, it automatically configures it as a full text string field and analyzes it with the standard analyzer.
+Perhaps you want to apply a different analyzer which suits the language your data is in.
+And sometimes you want a string field to be just a string field—to index the exact value that you pass in, without any analysis, such as a string user ID or an internal status field or tag.
+In order to achieve this, we have to configure these fields manually by specifying themapping.
+As explained in Chapter 3, each document in an index has a type.
+A mapping defines the fields within a type, the datatype for each field, and how the field should be handled by.
+A mapping is also used to configure metadata associated with.
+This means that, if you index a number in quotes—"123" it will be mapped as type"string", not type "long"
+However, if the field is already mapped as type "long", then Elasticsearch will try to convert the string into a long, and throw an error if it can’t.
+We can view the mapping that Elasticsearch has for one or more types in one or more indices using the /_mapping endpoint.
+At the start of this chapter we already retrieved the mapping for type tweet in index gb:
+This shows us the mapping for the fields (called properties) that Elasticsearch generated dynamically from the documents that we indexed:
+Incorrect mappings, such as having an age field mapped as type string instead ofinteger, can produce confusing results to your queries.
+Instead of assuming that your mapping is correct, check it!
+The most important attribute of a field is the type.
+For fields other than string fields, you will seldom need to map anything other than type:
+Fields of type "string" are, by default, considered to contain full text.
+That is, their value will be passed through an analyzer before being indexed and a full text query on the field will pass the query string through an analyzer before searching.
+The two most important mapping attributes for string fields are index and analyzer.
+It can contain one of three values: analyzed First analyze the string, then index it.
+The default value of index for a string field is analyzed.
+If we want to map the field as an exact value, then we need to set it to not_analyzed:
+By default, Elasticsearch uses the standard analyzer, but you can change this by specifying one of the built-in analyzers, such as whitespace, simple, orenglish:
+In Custom analyzers we will show you how to define and use custom analyzers as well.
+You can specify the mapping for a type when you first create an index.
+Alternatively, you can add the mapping for a new type (or update the mapping for an existing type) later, using the/_mapping endpoint.
+While you can add to an existing mapping, you can’t change it.
+If a field already exists in the mapping, then it probably means that data from that field has already been indexed.
+If you were to change the field mapping, then the already indexed data would be wrong and would not be properly searchable.
+We can update a mapping to add a new field, but we can’t change an existing field fromanalyzed to not_analyzed.
+To demonstrate both ways of specifying mappings, let’s first delete the gb index:
+Then create a new index, specifying that the tweet field should use the english analyzer:
+This creates the index with the mappings specified in the body.
+Note that we didn’t need to list all of the existing fields again, as we can’t change them anyway.
+Our new field has been merged into the existing mapping.
+You can use the analyze API to test the mapping for string fields by name.
+The text we want to analyze is passed in the body.
+The tweet field produces the two terms "black" and "cat", while the tag field produces the single term "Black-cats"
+Besides the simple scalar datatypes that we mentioned above, JSON also.
+It is quite possible that we want our tag field to contain more than one tag.
+Instead of a single string, we could index an array of tags:
+Any field can contain zero, one or more values, in the same way as a full text field is analyzed to produce multiple terms.
+By implication, this means that all of the values of an array must be of the same datatype.
+If you create a new field by indexing an array, Elasticsearch will use the datatype of the first value in the array to determine.
+Rather think of an array as a bag of values.
+In fact, there is no way of storing a null value in Lucene, so a field with a null value is also considered to be an empty field.
+These four fields would all be considered to be empty, and would not be indexed:
+The last native JSON datatype that we need to discuss is the object—known in other languages as hashes, hashmaps, dictionaries or associative arrays.
+Inner objects are often used to embed one entity or object inside another.
+Elasticsearch will detect new object fields dynamically and map them as type object, with each inner field listed under properties:
+The mapping for the user and name fields have a similar structure to the mapping for thetweet type itself.
+In fact, the type mapping is just a special type of object mapping, which we refer to as the root object.
+A Lucene document consists of a flat list of key-value pairs.
+In order for Elasticsearch to index inner objects usefully, it converts our document into something like this:
+Inner fields can be referred to by name, eg "first"
+To distinguish between two fields that have the same name we can use the full path, eg "user.name.first" or even the type name plus the path: "tweet.user.name.first"
+In the simple flattened document above, there is no field called user and no field called user.name.
+Lucene only indexes scalar or simple values, not complex datastructures.
+Finally, consider how an array containing inner objects would be indexed.
+Let’s say we have afollowers array which looks like this:
+This document will be flattened as we described above, but the result will look like this:
+To harness the full power of search, however, you should use.
+Let’s start with the simplest form of the search API, the empty search, which returns all documents in all indices.
+Just as with query-string search, you can search on one, many or _all indices, and one, many or all types:
+And you can use the from and size parameters for pagination:
+Some languages, such as JavaScript, don’t allow request bodies with a GET request.
+For this reason, the search API can also be used as a POST request:
+Instead of the cryptic query-string approach, request body search allows us to.
+The Query DSL is a flexible, expressive search language that Elasticsearch.
+It is what you should be using to write your queries in production.
+To use the query DSL, pass a query in the query parameter:
+For instance, you can use a match query clause to find tweets that mention "elasticsearch"in the tweet field:
+Query clauses are simple building blocks, that can be combined with each other to create complex queries.
+For instance, a boolclause allows you to combine other clauses that either must match, must_not match, orshould match if possible:
+It is important to note that a compound clause can combine any other query clauses, including other compound clauses.
+This means that compound clauses can be nested within each other, allowing the expression of very complex logic.
+As an example, the following query looks for emails that contain "business opportunity" and must either be starred, or both be in the Inbox and not marked as spam:
+Don’t worry about the details of this example yet—we will explain in full later.
+Although we refer to the Query DSL, in reality there are two DSLs: the Query.
+A filter asks a yes|no question of every document and is used for fields that contain exact values:
+A query is similar to a filter, but also asks the question: How well does this document match?
+Typical uses for a query would be to find documents:
+A query calculates how relevant each document is to the query, and assigns it a relevance_score, which is later used to sort matching documents by relevance.
+This concept of relevance is well suited to full text search where.
+These cached filters can be reused very efficiently for subsequent requests.
+Queries not only have to find matching documents, but also to calculate how relevant each document is, which typically makes queries heavier than filters.
+Thanks to the inverted index, a simple query which matches just a few documents may perform as well or better than a cached filter which spans millions of documents.
+In general, however, a cached filter will outperform a query, and will do so consistently.
+The goal of filters is to reduce the number of documents that have to be examined by the query.
+As a general rule, use query clauses for full text search or for any condition that should affect the relevance score, and use filter clauses for everything else.
+While Elasticsearch comes with many different queries and filters, there are.
+The term filter is used to filter by exact values, be they numbers, dates booleans,
+The terms filter is the same as the term filter, but allows you to specify multiple values to match.
+If the field contains any of the specified values, then the document matches:
+The range filter allows you to find numbers or dates which fall into the specified range:
+The exists and missing filters are used to find documents where the specified field either has one or more values (exists) or doesn’t have any values (missing)
+These filters are frequently used to apply a condition only if a field is present, and to apply a different condition if it is missing.
+The bool filter is used to combine multiple filter clauses using Boolean logic.
+It accepts three parameters: must These clauses must match, like and must_not These clauses must not match, like not should At least one of these clauses must match, like or Each of these parameters can accept a single filter clause or an array of filter clauses:
+It is the default query which is used if no query has been specified.
+This query is frequently used in combination with a filter, for instance to retrieve all emails in the inbox folder.
+The match query should be the standard query that you reach for whenever you want to query for a full text or exact value in almost any field.
+If you run a match query against a full text field, it will analyze the query string using the correct analyzer for that field before executing the search:
+If you use it on a field containing an exact value, such as a date, a number, a boolean or anot_analyzed string field, then it will search for that exact value:
+For exact value searches, you probably want to use a filter instead of a query, as a filter will be cached.
+This means that it is safe to expose to your users via a search field—you control what fields they can query and it is not prone to throwing syntax errors.
+The multi_match query allows to run the same match query on multiple fields:
+The bool query, like the bool filter, is used to combine multiple query clauses.
+Remember that while filters give binary yes|no answers, queries calculate a relevance score instead.
+The bool query combines the _score from each must orshould clause which matches.
+They are simply used to refine the relevance score for each document.
+The following query finds documents whose title field matches the query string "how to make millions" and which are not marked as spam.
+If any documents are "starred" or are from 2014 onwards, then they will rank higher than they would have otherwise.
+If there are no must clauses, then at least one should clause has to match, but if there is at least one must clause, then no should clauses are required to match.
+Queries can be used in query context and filters can be used in filter context.
+These expect a single argument containing either a single query or filter clause respectively.
+Compound query clauses can wrap other query clauses and compound filter.
+To do this, there are dedicated query clauses which wrap filter clauses and vice.
+The search API only accepts a single query parameter, so we need to wrap the.
+We can now pass this query to the query parameter of the search API:
+While in query context, if you need to use a filter without a query, for instance to match all emails in the inbox, then you can just omit the query:
+If a query is not specified then it defaults to using the match_all query, so the above query is equivalent to the following:
+Occasionally, you will want to use a query while you are in filter context.
+This can be achieved with the query filter, which just wraps a query.
+The example below shows one way we could exclude emails which look like spam:
+Note the query filter, which is allowing us to use the match query inside a boolfilter.
+You seldom need to use a query as a filter, but we have included it for completeness’ sake.
+The only time you may need it is when you need to use full text matching while in filter context.
+Queries can become quite complex and, especially when combined with.
+The validate API can be used to check whether a query is valid or not.
+The response to the above validate request tells us that the query is invalid:
+To find out why it is invalid, add the explain parameter to the query string:
+The explain flag provides more information about why a query is invalid.
+Apparently, we’ve mixed up the type of query (match) with the name of the field (tweet):
+Using the explain parameter has the added advantage of returning a human-readable description of the (valid) query, which can be useful for understanding exactly how your query has been interpreted by Elasticsearch:
+An explanation is returned for each index that we query, because each index can have different mapping and analyzers:
+From the explanation you can see how the match query for the query string "really powerful" has been rewritten as two single-term queries against the tweet field, one for each term.
+Also, for the us index, the two terms are "really" and "powerful", while for the gb index, the terms are "realli" and "power"
+The reason for this is that we changed the tweet field in thegb index to use the english analyzer.
+This chapter provides you with enough information to start running simple.
+By default, results are returned sorted by relevance—with the most relevant docs first.
+Later in this chapter we will explain what we mean by relevance and how it is calculated, but let’s start by looking at the sort parameter and how to use it.
+In order to sort by relevance, we need to represent relevance as a value.
+In other words, all documents are considered to be equally relevant.
+In this case, it probably makes sense to sort tweets by recency, with the most recent tweets first.
+The _score is not calculated because it is not being used for sorting.
+The value of the date field, expressed as milliseconds since the epoch, is returned in the sort values.
+The first is that we have a new element in each result called sort, which contains the value(s) that was used for sorting.
+In this case, we sorted on date which internally is indexed asmilliseconds-since-the-epoch.
+As a shortcut, you can specify just the name of the field to sort on:
+Fields will be sorted in ascending order by default, and the _source value in descending order.
+Perhaps we want to combine the _score from a query with the date, and show all matching results sorted first by date, then by relevance:
+Only results whose first sortvalue is identical will then be sorted by the second criterion, and so on.
+Multi-level sorting doesn’t have to involve the _score—you could sort using several different fields, on geo-distance or on a custom value calculated in a script.
+When sorting on field with more than one value, remember that the values do not have any intrinsic order—a multi-value field is just a bag of values.
+For numbers and dates, you can reduce a multi-value field to a single value using the min, max,avg or sum sort modes.
+For instance, you could sort on the earliest date in each dates field using:
+Analyzed string fields are also multi-value fields, but sorting on them seldom.
+If you analyze a string like "fine old art", it results in three terms.
+You could use the min and max sort modes (it uses min by default) but that will result in sorting on either art or old, neither of which was the intent.
+In order to sort on a string field, that field should contain one term only: the.
+But of course we still need the field to be analyzed in order to be able to query it as full text.
+The naive approach to indexing the same string in two ways would be to.
+But storing the same string twice in the _source field is waste of space.
+What we really want to do is to pass in a single field but to index it in two.
+The main tweet field is just the same as before: an analyzed full text field.
+Now, or at least as soon as we have reindexed our data, we can use.
+Sorting on a full text analyzed field can use a lot of memory.
+We’ve mentioned that, by default, results are returned in descending order of.
+The relevance score of each document is represented by a positive floating.
+How that score is calculated depends on the type of query clause—different query clauses are.
+The standard similarity algorithm used in Elasticsearch is known as TF/IDF, or Term Frequency/Inverse Document Frequency, which takes the following.
+Term frequency How often does the term appear in the field? The more often, the more relevant.
+A field containing five mentions of the same term is more likely to be.
+Inverse document frequency How often does each term appear in the index? The more often, the less relevant.
+Terms that appear in many documents have a lower weight than more uncommon terms.
+Field norm How long is the field? The longer it is, the less likely it is that words in the field will be relevant.
+A term appearing in a short title field carries more weight than the same term appearing in a long content field.
+Individual queries may combine the TF/IDF score with other factors such as.
+When multiple query clauses are combined using a compound query like.
+When debugging a complex query, it can be difficult to understand exactly how a _score has been calculated.
+Elasticsearch has the option of producing an explanation with every search result, by setting the explain parameter to true.
+The explain parameter adds an explanation of how the _score was calculated to every result.
+Adding explain produces a lot of output for every hit which can look overwhelming, but it is worth taking the time to understand what it all means.
+Don’t worry if it doesn’t all make sense now—you can refer to this section when you need it.
+We’ll work through the output for one hit bit by bit.
+First, we have the metadata that is returned on normal search requests:
+It adds information about which shard on which node the document came from, which is useful to know because term and document frequencies are calculated per shard, rather than per index:
+Each entry contains a description which tells you what type of calculation is being performed, a value which gives you the result of the calculation, and the details of any sub-calculations that were required:
+This is an internal document ID and, for our purposes, can be ignored.)
+It then provides details of how the weight was calculated:
+Term frequency How many times did the term honeymoon appear in the tweet field in this document?
+Inverse document frequency How many times did the term honeymoon appear in the tweet field of all documents in the index?
+Field norm How long is the tweet field in this document—the longer the field, the smaller this number.
+Explanations for more complicated queries can appear to be very complex, but really they just contain more of the same calculations that appear in the example above.
+This information can be invaluable for debugging why search results appear in the order that they do.
+The output from explain can be difficult to read in JSON, but it is easier when it is.
+While the explain option adds an explanation for every result, you can use the explain API to understand why one particular document matched or, more The path for the request is /index/type/id/_explain, as in:
+Along with the full explanation that we saw above, we also now have a description element, which tells us:
+In other words, our user_id filter clause is preventing the document from matching.
+Our final topic in this chapter is about an internal aspect of Elasticsearch.
+While we don’t demonstrate any new techniques here, field data is an.
+When you sort on a field, Elasticsearch needs access to the value for that field.
+In other words, we need to “uninvert” the inverted index.
+In order to make sorting efficient, Elasticsearch loads all of the values for the.
+It doesn’t just load the values for the documents that matched a particular query.
+It loads the values from every document in your index, regardless of the document type.
+The reason that it loads all values into memory is that uninverting the index.
+Even though you may only need the values for a few docs for.
+Clearly, this can consume a lot of memory, especially for high cardinality.
+Fortunately, insufficient memory is a problem which can be solved by.
+For now, all you need to know is what field data is, and to be aware that it can.
+Later we will show you how to see how much memory.
+Before moving on, we are going to take a detour and talk about how search is.
+Read the section to gain a taste for how things work, and to know where the.
+A CRUD operation deals with a single document that has a unique.
+This means that we know exactly which shard in the cluster holds that document.
+Search requires a more complicated execution model because we don’t know.
+A search request has to consult a copy of every shard in the index or.
+But finding all matching documents is only half the story.
+During the initial query phase, the query is broadcast to a shard copy (a primary or replica shard) of every shard in the index.
+The size of the priority queue depends on the pagination parameters: from and size.
+For example, the following search request would require a priority queue big enough to.
+Node 1 forwards the search request to a primary or replica copy of every.
+Each shard executes the query locally and adds the results into a local sorted priority queue of size from + size.
+Each shard returns the doc IDs and sort values of all of the docs in its priority queue to the coordinating node, Node 1, which merges these values into its own priority queue to produce a globally sorted list of results.
+When a search request is sent to a node, that node becomes the coordinating.
+It is the job of this node to broadcast the search request to all involved.
+The first step is to broadcast the request to a shard copy of every node in the.
+Just likedocument GET requests, search requests can be handled by a primary shard or by any of its replicas.
+Each shard executes the query locally and builds a sorted priority queue of.
+It returns a lightweight list of results to the coordinating.
+The coordinating node merges these shard-level results into its own sorted.
+MULTI-INDEX SEARCH An index can consist of one or more primary shards, so a search request against a single index needs to be able to combine the results from multiple shards.
+A search against multiple or all indices works in exactly the same way— there are just more shards involved.
+The query phase identifies which documents satisfy the search request, but we.
+Fetch Phase of distributed search o The coordinating node identifies which documents need to be fetched and.
+The coordinating node first decides which documents actually need to be.
+The coordinating node builds a multi-get request for each shard which holds a.
+Remember that each shard must build a priority queue of length from + size, all of which need to be passed back to.
+But with big enough from values, the sorting process can become very heavy indeed, using vast amounts of CPU, memory and bandwidth.
+A human will stop paging after two or three pages and will change their search criteria.
+The culprits are usually bots or web spiders that tirelessly keep fetching page after page until your servers crumble at the knees.
+If you do need to fetch large numbers of docs from your cluster, you can do so efficiently by disabling sorting with the scan search type, which we discuss later in this chapter.
+There are a few optional query-string parameters which can influence the.
+The preference parameter allows you to control which shards or nodes are used to handle the search request.
+However, the most generally useful value is some aribtrary string, to avoid the bouncing results problem.
+Because search requests are round-robined between all available shard copies, these two documents may be returned in one order when the request is served by the primary, and in another order when served by the replica.
+This is known as the bouncing results problem: every time the user refreshes the page they see the results in a different order.
+The problem can be avoided by always using the same shards for the same user, which can be done by setting the preference parameter to an arbitrary string like the user’s session ID.
+By default, the coordinating node waits to receive a response from all shards.
+If one node is having trouble, it could slow down the response to all search requests.
+The timeout parameter tells the coordinating node how long it should wait before giving up and just returning the results that it already has.
+It can be better to return some results than none at all.
+The response to a search request will indicate whether the search timed out how many shards responded successfully:
+One shard out of 5 failed to respond in time.
+In Routing a document to a shard we explained how a custom routing parameter could be provided at index time to ensure that all related documents, such as the.
+At search time, instead of searching on all of the shards of an index, you can specify one or more routing values to limit the search to just those shards:
+This technique comes in useful when designing very large search systems and we discuss it in detail in Chapter 26
+While query_then_fetch is the default search type, other search types can be specified for particular purposes, as:
+It can be used when you don’t need search results, just a document count or aggregations on documents matching the query.
+This is an internal optimization that is used when a search request targets a single shard only, such as when a routing value has been specified.
+While you can choose to use this search type manually, it is almost never useful to do so.
+The scan search type and the scroll API are used together to retrieve large numbers of documents from Elasticsearch efficiently, without paying the.
+A scrolled search takes a snapshot in time—it doesn’t see any changes that are made to the index after the initial search request has been made.
+It does this by keeping the old datafiles around, so that it can preserve its “view” on what the index looked like at the time it started.
+Scan instructs Elasticsearch to do no sorting, but to just return the next batch of results from every shard which still has results to return.
+To use scan-and-scroll, we execute a search request setting search_type to scan, and passing a scroll paramater telling Elasticsearch how long it should keep the scroll open:
+The response to this request doesn’t include any hits, but does include.
+The response to this scroll request includes the first batch of results.
+Every time we make the next scroll request, we must pass the _scroll_id returned by the previous scroll request.
+When no more hits are returned, we have processed all matching documents.
+All of the official Elasticsearch clients provide scan-and-scroll helpers which provide an easy wrapper around this functionality.
+We have seen how Elasticsearch makes it easy to start developing a new.
+Almost all of these customizations relate to the index, and the types which it contains.
+In this chapter we will discuss the APIs for managing indices and.
+Up until now, we have created a new index by simply indexing a document.
+The index is created with the default settings, and new fields are added.
+Now we need more control over the process: we want to ensure that the index.
+To do this, we have to create the index manually, passing in any settings or.
+In fact, if you want to you can prevent the automatic creation of indices by.
+Later, we will discuss how you can use Index templates to pre-configure automatically created indices.
+This is particularly useful when indexing log data: you log into an index whose name includes the date and, as midnight rolls over, a new properly configured index automatically springs into existence.
+There are many many knobs that you can twiddle to customize index.
+Don’t twiddle these knobs until you understand what they do and why you should change them.
+This setting can be changed at any time on a live index.
+Later, we can change the number of replica shards dynamically using.
+The third important index setting is the analysis section, which is used to configure existing analyzers or to create new custom analyzers specific to your.
+In Analysis and analyzers we introduced some of the built in analyzers, which.
+The standard analyzer, which is the default analyzer used for full text fields, is a good choice for most Western languages.
+Either provide a list of stopwords or tell it to use a predefined stopwords list from a particular language.
+In the following example, we create a new analyzer called.
+To test it with the analyze API, we must specify the index name:
+The abbreviated results show that the Spanish stopword "El" has been removed correctly:
+While Elasticsearch comes with a number of analyzers available out of the box,
+In Analysis and analyzers we said that analyzer is a wrapper which combines three functions into a single package, which are executed in sequence:
+The tokenizer breaks the string up into individual terms or tokens.
+The standard tokenizer, which is used in the standardanalyzer, breaks up a string into invidual terms on word boundaries, and removes most punctuation, but other tokenizers exist which have different behaviour.
+For instance, the keyword tokenizer outputs exactly the same string as it received, without any tokenization.
+The pattern tokenizer can be used to split text on a matching regular expression.
+Token filters After tokenization, the resulting token stream is passed through any specified token filters, in the order in which they are specified.
+We have already mentioned thelowercase and stop token filters, but there are many more available in Elasticsearch.
+Theascii_folding filter removes diacritcs, converting a term like "très" into "tres"
+The ngram and edge_ngram token filters can produce tokens suitable for partial matching or autocomplete.
+In Part II, we will discuss examples of where and how to use these tokenizers.
+But first, we need to explain how to create a custom analyzer.
+In the same way as we configured the es_std analyzer above, we can configure character filters, tokenizers and token filters in their respective sections under analysis:
+As an example, let’s set up a custom analyzer which will:
+Our analyzer definition combines the predefined tokenizer and filters with the custom filters that we have configured above:
+To put it all together, the whole create-index request looks like this:
+After creating the index, use the analyze API to test the new analyzer:
+The abbreviated results below show that our analyzer is working correctly:
+The analyzer is not much use unless we tell Elasticsearch where to use it.
+We can apply it to astring field with a mapping such as:
+A type in Elasticsearch represents a class of similar documents.
+In What is a document?, we said that a type is like a table in a relational.
+While this is a useful way to think about types initially, it is worth.
+A document in Lucene consists of a simple list of field-value pairs.
+A field must have at least one value, but any field can contain multiple values.
+Similarly, a single string value may be converted into multiple values by the analysis process.
+When we index a document in Lucene, the values for each field are added to the inverted index for the associated field.
+Optionally, the original values may also be stored unchanged so that they can be retrieved later.
+Elasticsearch types are implemented on top of this simple foundation.
+An index may have several types, each with their own mapping, and documents of any of these types may be stored in the same index.
+Because Lucene has no concept of document types, the type name of each document is stored with the document in a metadata field called _type.
+When we search for documents of a particular type, Elasticsearch simply uses a filter on the _type field to restrict results to documents of that type.
+Mappings are the layer that Elasticsearch uses tomap complex JSON documents into the simple flat documents that Lucene expects to receive.
+For instance the mapping for the name field in the user type may declare that the field is astring field, and that its value should be analyzed by.
+The fact that documents of different types can be added to the same index introduces some unexpected complications.
+Both types have a title field, but one type uses the englishanalyzer and the other type uses the spanish analyzer.
+We are searching in the title field in both types.
+The query string needs to be analyzed, but which analyzer does it use: spanish or english? It will just use the analyzer for the first titlefield that it finds, which will be correct for some docs and incorrect for the others.
+The multi_match query runs a match query on multiple fields and combines the results.
+This solution can help when both fields have the same datatype, but consider what would happen if you indexed these two documents into the same index:
+Lucene doesn’t care that one field contains a string and the other field contains a date—it will happily index the byte values from both fields.
+However, if we now try to sort on the event.login field then Elasticsearch needs to load the values in the login field into memory.
+As we said in Field data, it loads the values for all documents in the index regardless of their type.
+It will either try to load these values as a string or as a date, depending on which login field it sees first.
+To ensure that you don’t run into these conflicts, it is advisable to ensure that fields with the same name are mapped in the same way in every type in an index.
+The uppermost level of a mapping is known as the root object.
+It may contain: o a properties section which lists the mapping for each field that a document.
+We have already discussed the three most important settings for document fields or properties in Core simple field types and Complex core field types: type The datatype that the field contains, such.
+Like all stored fields, the _source field is compressed before being written to disk.
+This is almost always desired functionality because it means that:
+That said, storing the _source field does use disk space.
+If none of the above reasons is important to you, you can disable the _source field with the following mapping:
+In a search request, you can ask for only certain fields by specifying the _source parameter in the request body:
+Users with a Lucene background use stored fields to choose which fields they would like to be able to return in their search results.
+In Elasticsearch, setting individual document fields to be stored is usually a false optimization.
+The whole document is already stored as the _source field.
+It is almost always better to just extract the fields that you need using the _source parameter.
+The _all field is useful during the exploratory phase of a new application, while you are still unsure about the final structure that your documents will have.
+You can just throw any query string at it and you have a good chance of finding the document you’re after:
+As your application evolves and your search requirements become more exacting, you will find yourself using the _all field less and less.
+By querying individual fields, you have more flexbility, power and fine-grained control over which results are considered to be most relevant.
+One of the important factors taken into account by the relevance algorithm is the length of the field: the shorter the field, the more important.
+A term that appears in a short title field is likely to be more important than the same term which appears somewhere in a long content field.
+This distinction between field lengths disappears in the _all field.
+If you decide that you no longer need the _all field, you can disable it with this mapping:
+Setting include_in_all on an object (or on the root object) changes the default for all fields within that object.
+You may find that you want to keep the _all field around to use as a catch-all full text field just for specific fields, such as title, overview, summary, tags etc.
+Remember that the _all field is just an analyzed string field.
+It uses the default analyzer to analyze its values, regardless of which analyzer has been set on the fields where the values originate.
+And like any string field, you can configure which analyzer the _all field should use:
+By default, the _uid field is stored (can be retrieved) and indexed (searchable)
+In spite of this, you can query the _id field as though it were a real field.
+While you can change the index and store settings for these fields, you almost never need to do so.
+While this is very convenient, be aware that it has a slight performance impact onbulk requests (see Why the funny format?)
+The node handling the request can no longer make use of the optimized bulk format to parse just the metadata line in order to decide which shard should receive the request.
+Instead, it has to parse the document body as well.
+TODO: add links to the sections where they are discussed.
+When Elasticsearch encounters a previously unknown field in a document, it.
+Sometimes this is the desired behaviour and sometimes it isn’t.
+Fortunately, you can control this behaviour with the dynamic setting, which accepts the following options:
+You could set dynamic to strict by default, but enable it just for a specific inner object:
+The my_type object will throw an exception if an unknown field is encountered.
+With this mapping, you can add new searchable fields into the stash object:
+But trying to do the same at the top level will fail:
+However, any unknown fields will not be added to the mapping and will not be searchable.
+If you know that you are going to be adding new fields on the fly, then you.
+When Elasticsearch encounters a new string field, it checks to see if the string contains a recognisable date, like "2014-01-01"
+If it looks like a date, then the field is added as typedate.
+Assuming that this is the first time that the note field has been seen, it will be added as a datefield.
+This clearly isn’t a date, but it is too late.
+Date detection can be turned off by setting date_detection to false on the root object:
+With this mapping in place, a string will always be a string.
+If you need a date field, you have to add it manually.
+Elasticsearch’s idea of what strings look like dates can be altered with thedynamic_date_formats setting.
+You can even apply a different mapping depending on the field name or datatype.
+Each template has a name, which you can use to describe what the template does, a mappingto specify the mapping that should be applied, and at least one parameter (such as match) to define which fields the template should apply to.
+Templates are checked in order—the first template that matches is applied.
+For instance, we could specify two templates for string fields:
+We put the es template first, because it is more specific than the catch-all en template, which matches all string fields:
+The match_mapping_type allows you to apply the template only to fields of the specified type, as detected by the standard dynamic mapping rules, eg string, long etc.
+The unmatch and unmatch_path patterns can be used to exclude fields that would otherwise match.
+More configuration options can be found in the reference documentation for the root object.
+Often, all types in an index share similar fields and settings.
+The _default_ mapping acts as a template for new types.
+All types created after the _default_ mapping will include all of these default settings, unless explicitly overridden in the type mapping itself.
+The _default_ mapping can also be a good place to specify index-wide dynamic templates.
+While you can add new types to an index, or add new fields to a type, you can’t.
+The simplest way to apply these changes to your existing data is just to reindex:
+One of the advantages of the _source field is that you already have the whole document available to you in Elasticsearch itself.
+To reindex all of the documents from the old index efficiently, use scan & scroll to retrieve batches of documents from the old index, and the bulk API to push them into the new index.
+You can run multiple reindexing jobs at the same time, but you obviously don’t want their results to overlap.
+Instead, break a big reindex down into smaller jobs by filtering on a date or timestamp field:
+If you continue making changes to the old index, you will want to make sure that you include the newly added documents in your new index as well.
+This can be done by rerunning the reindex process, but again filtering on a date field to only match documents that have been added since the last reindex process started.
+The problem with the reindexing process described above is that you need to.
+An index alias is like a shortcut or symbolic link, which can point to one or more indices, and can be used in any API that expects an index name.
+We will talk more about the other uses for aliases later in the book.
+In this scenario, we will assume that your application is talking to an index.
+In reality, my_index will be an alias which points to the current real index.
+We will include a version number in the name of the real.
+Later, we decide that we want to change the mappings for a field in our index.
+Of course, we can’t change the existing mapping, so we have to reindex our.
+An alias can point to multiple indices, so we need to remove the alias from the.
+Your application has switched from using the old index to the new index.
+Even when you think that your current index design is perfect, it is likely that you will find that you need to make some change later on, when your index is already being used in production.
+Be prepared: use aliases instead of indices in your application, then you will be able to reindex whenever you need to.
+Now that you know how to manage indices, custom analyzers and mappings,
+In Part I we covered the basic tools in just enough detail to allow you to start.
+To move to the next level, it is not enough to just use the match query.
+You need to understand your data and how you want to be able to search it.
+Understanding how each query contributes to the relevance _score will help you to tune your queries: to ensure that the documents you consider to be the.
+Search is not just about full text search: a large portion of your data will be.
+Structured search is about interrogating data that has inherent structure.
+Dates, times and numbers are all structured—they have a precise format that.
+A blog post may be tagged with keywords distributed and search.
+Products in an e-commerce store have Universal Product Codes (UPCs) or some other identifier which requires strict.
+With structured search, the answer to your question is always a yes or no;
+Similarly, for structured text, a value is either equal or it isn’t.
+When working with exact values, you will be working with filters.
+We are going to explore the term filter first because you will use it often.
+This filter is capable of handling numbers, booleans, dates and text.
+Let’s look at an example using numbers first by indexing some products.
+Our goal is to find all products with a certain price.
+You may be familiar with SQL if you are coming from a relational database background.
+If we expressed this query as an SQL query, it would look like this:
+In the Elasticsearch query DSL, we use a term filter to accomplish the same thing.
+The termfilter will look for the exact value that we specify.
+It accepts a field name and the value that we wish to find:
+The term filter isn’t very useful on its own though.
+As discussed in Query DSL, the search API expects a query, not a filter.
+To use our term filter, we need to wrap it with a filteredquery:
+The filtered query accepts both a query and a filter.
+This is the default behavior, so in future examples we will simply omit the query section.
+As mentioned at the top of this section, the term filter can match strings just as easily as numbers.
+Instead of price, let’s try to find products that have a certain UPC identification code.
+To do this with SQL, we might use a query like this:
+Translated into the query DSL, we can try a similar query with the term filter like so:
+If we use the Analyze API (Testing analyzers), we can see that our UPC has been tokenized into smaller tokens:
+So when our term filter looks for the exact value XHDK-A-1293-#fJ3, it doesn’t find anything because that token does not exist in our inverted index.
+Obviously, this is not what we want to happen when dealing with identification codes, or any kind of precise enumeration.
+To prevent this from happening, we need to tell Elasticsearch that this field contains an exact value by setting it to be not_analyzed.
+To do this, we need to first delete our old index (because it has the incorrect mapping) and create a new one with the correct mappings:
+Deleting the index first is required, since we cannot change mappings that already exist.
+With the index deleted, we can recreate it with out custom mapping.
+Here we explicitly say that we don’t want productID to be analyzed.
+Let’s try it again on the newly indexed data (notice, the query and filter have not changed at all, just how the data is mapped):
+Since the productID field is not analyzed, and the term filter performs no analysis, the query finds the exact match and returns document 1 as a hit.
+Internally, Elasticsearch is performing several operations when executing a filter:
+In this case, only document 1 has the term we are looking for.
+In our example, the bitset would be: [1,0,0,0] o Cache the Bitset.
+Lastly, the bitset is stored in memory, since we can use this in the future and skip steps 1
+This adds a lot of performance and makes filters very fast.
+When executing a filtered query, the filter is executed before the query.
+The resulting bitset is given to the query which uses it to simply skip over any documents that have already been excluded by the filter.
+This is one of the ways that filters can improve performance.
+Fewer documents evaluated by the query means faster response times.
+The previous two examples showed a single filter in use.
+This is a compound filter that accepts other filters as arguments, combining them in various boolean.
+And that’s it! When you need multiple filters, simply place them into the different sections of the bool filter.
+To replicate the SQL example above, we will take the two term filters that we used previously and place them inside the should clause of a bool filter, and add another clause to deal with the NOT condition:
+Note that we still need to use a filtered query to wrap everything.
+These two term filters are children of the bool filter, and since they are placed inside the should clause, at least one of them needs to match.
+Our search results return two hits, each document satisfying a different clause in the boolfilter:
+Even though bool is a compound filter and accepts “children” filters, it is important to understand that bool is just a filter itself.
+This means you can nest bool filters inside of otherbool filters, giving you the ability to make arbitrarily complex boolean logic.
+We can translate it into a pair of nested bool filters:
+Because the term and the bool are sibling clauses inside of the first.
+These two term clauses are siblings in a must clause, so they both have to match for a document to be returned as a hit.
+The results show us two documents, one matching each of the should clauses:
+These two fields match the term filters in the nested bool.
+This was just a simple example, but it demonstrates how boolean filters can be used as building blocks to construct complex logical conditions.
+The term filter is useful for finding a single value, but often you’ll want to search for multiple values.
+What if you want to find documents that have a.
+Rather than using multiple term filters, you can instead use a single terms filter (note the “s” at the end)
+The terms filter is simply the plural version of the singular term filter.
+It looks looks nearly identical to a vanilla term too.
+Instead of specifying a single price, we are now specifying an array of values:
+And like the term filter, we will place it inside of a filtered query to actually use it:
+The terms filter as seen above, but placed inside the filtered query The query will return the second and third documents:
+This document is returned, even though it has terms other than "search"
+Recall how the term filter works: it checks the inverted index for all documents which contain a term, then constructs a bitset.
+The nature of an inverted index also means that entire field equality is rather difficult to calculate.
+How would you determine if a particular document contains only your request term? You would have to find the term in the inverted index, extract the document IDs, then scan every row in the inverted index looking for those IDs to see if a doc has any other terms.
+As you might imagine, that would be tremendously inefficient and expensive.
+For that reason, term and terms are must contain operations, not must equal exactly.
+In this field, you index the number of values that your field contains.
+Using our two previous documents, we now include a field that maintains the number of tags:
+Once you have the count information indexed, you can construct a bool filter that enforces the appropriate number of terms:
+This query will now match only the document that has a single tag which is search, rather than any document which contains search.
+When dealing with numbers in this chapter, we have so far only searched for.
+Elasticsearch has a range filter, which, unsurprisingly, allows you to filter.
+The range filter supports both inclusive and exclusive ranges, through.
+The range filter can be used on date fields too:
+When used on date fields, the range filter supports date math operations.
+For example, if we want to find all documents that have a timestamp sometime in the last hour:
+This filter will now constantly find all documents with a timestamp greater than the current time minus 1 hour, making the filter a sliding window'' across your documents.
+Date math can also be applied to actual dates, rather than a placeholder like now.
+Just add a double pipe || after the date and follow it with a date math expression:
+More details about working with dates can be found in the date format reference documentation.
+Terms in the inverted index are sorted in lexicographical order, which is why string ranges use this order.
+If we want a range from a up to but not including b, we can use the same range filter syntax:
+Numeric and date fields are indexed in such a way that ranges are very efficient to calculate.
+To perform a range on a string field, Elasticsearch is effectively performing a term filter for every term that falls in the range.
+This is much slower than a date or numeric range.
+String ranges are fine on a field with low cardinality—a small number of unique terms.
+But the more unique terms you have, the slower the string range will be.
+Think back to our earlier example where documents have a field named tags.
+If a field has no values, how is it stored in an inverted.
+That’s a trick question, because the answer is: it isn’t stored at all.
+An inverted index is simply a list of tokens and the documents that contain.
+If a field doesn’t exist… it doesn’t hold any tokens, which means it won’t.
+The first tool in your arsenal is the exists filter.
+This filter will return documents that have any value in the specified field.
+Let’s use the tagging example and index some example documents:
+We don’t care what the tag is, so long as it exists within the document.
+Doc 5 is returned even though it contains a null value.
+The field exists because a real value tag was indexed, so the null had no impact on the filter.
+Any document that has actual terms in the tags field was returned as a hit.
+The missing filter is essentially the inverse of the exists: it returns documents where there isno value for a particular field, much like this SQL:
+Let’s swap the exists filter for a missing filter from our example above:
+With the default behavior that we saw above, this is impossible—the data is lost.
+Luckily, there is an option that we can set that replaces explicit null values with a “placeholder” value of our choosing.
+When specifying the mapping for a string, numeric, boolean or date field, you can also set a null_value which will be used whenever an explicit null value is encountered.
+A field without a value will still be excluded from the inverted index.
+When choosing a suitable null_value ensure that: o it matches the field’s type.
+You can’t use a string null_value in a field of.
+The exists and missing filters also work on inner objects, not just core types.
+However, inTypes and Mappings we said that an object like the above is flattened internally into a simple field-value structure, much like this:
+So how can we use an exists or missing filter on the name field, which doesn’t really exist in the inverted index?
+The reason that it works is that a filter like:
+That also means that if first and last were both empty, then the name namespace would not exist.
+Earlier in this chapter (Internal Filter Operation) we briefly discussed how.
+Filters are real-time like the rest of the system—you don’t need to.
+Each filter is calculated and cached independently, regardless of where it is used.
+If two different queries use the same filter, the same filter bitset will be reused.
+Likewise, if a single query uses the same filter in multiple places, only one bitset is calculated and then reused.
+Let’s look at this example query which looks for emails that are either:
+These two filters are identical and will use the same bitset.
+Even though one of the inbox clauses is a must clause and the other is a must_not clause, the two clauses themselves are identical.
+This means that the bitset is calculated once for the first clause that is executed, and then the cached bitset is used for the other clause.
+By the time this query is run a second time, the inbox filter is already cached and so both clauses will use the cached bitset.
+This ties in nicely with the composability of the query DSL.
+It is easy to move filters around, or reuse the same filter in multiple places within the same query.
+This isn’t just convenient to the developer—it has direct performance benefits.
+Leaf filters have to consult the inverted index on disk, so it makes sense to cache them.
+Compound filters on the other hand use fast bit logic to combine the bitsets resulting from their inner clauses, so it is efficient to recalculate them every time.
+Certain leaf filters, however, are not cached by default, because it doesn’t make sense to do so:
+Script filters The results from script filters cannot be cached because the meaning of the script is opaque to Elasticsearch.
+Geo filters The geolocation filters, which we will talk more about in Chapter 23, are usually used to filter results based on the geolocation of a specific user.
+Since every user has their own unique geolocation, it is unlikely that geo filters will be reused, so it makes no sense to cache them.
+Date ranges Date ranges which use the now function, eg "now-1h", result in values accurate to the millisecond.
+Every time the filter is run, now returns a new time.
+Older filters will never be reused so caching is disabled by default.
+However, when using nowwith rounding, eg now/d rounds to the nearest day, then caching is enabled by default.
+Perhaps you have a complicated boolexpression which is reused several times in the same query.
+Or you have a filter on a datefield that will never be reused.
+The default caching strategy can be overridden on almost any filter by setting the _cache flag:
+It is unlikely that we will reuse this exact timestamp.
+In later chapters we will provide examples of when it can make sense to override the default caching strategy.
+The order of filters in a bool clause is important for performance.
+More specific filters should be placed before less specific filters in order to exclude.
+If Clause A could match 10 million documents, and Clause B could only match.
+Cached filters are very fast, so they should be placed before filters which are.
+Imagine that we have an index that contains one month’s worth.
+However, we’re mostly interested only in log events from the.
+This filter is not cached because it uses the now function, the value of which changes every millisecond.
+We could make this much more efficient by combining it with a cached filter:
+This filter is cached because it uses now rounded to midnight.
+This filter is not cached because it uses now without rounding.
+The now/d clause rounds to midnight last night and so excludes all documents created before today.
+The resulting bitset is cached because now is used with rounding, which means that it is only executed once a day when the.
+The now-1h clause isn’t cached because now produces a time accurate to the nearest millisecond.
+However, thanks to the first filter, this second filter need only check documents that.
+If they were the other way around, then the last-hour clause would need to examine all documents in the index, instead of just documents created since midnight.
+Now that we have covered the simple case of searching for structured data, it.
+The two most important aspects of full text search are:
+The ability to rank results by how relevant they are to the given query,
+The process of converting a block of text into distinct, normalized.
+As soon as we talk about either relevance or analysis, we are in the territory of.
+While all queries perform some sort of relevance calculation, not all queries.
+Term-based queries Queries like the term or fuzzy queries are low-level queries which have no analysis phase.
+A term query for the term "Foo"looks for that exact term in the inverted index and calculates the TF/IDF relevance _score for each document that contains the term.
+It is important to remember that the term query looks in the inverted index for the exact term only—it won’t match any variants like "foo" or "FOO"
+It doesn’t matter how the term came to be in the index, just that it is.
+Full-text queries Queries like the match or query_string queries are high-level queries which understand the mapping of a field: o If you use them to query a date or integer field, they will treat the.
+Once the query has assembled a list of terms, it executes the appropriate low-level query for each of these terms, then combines their results to produce the final relevance score for each document.
+We will discuss this process in more detail in the following chapters.
+If you do find yourself wanting to use a query on an exact value not_analyzed field, think about whether you really want a query or a filter.
+Single-term queries usually represent binary yes|no questions and are almost always better expressed as a filter, so that they can benefit from filter caching:
+It is a high-level full-text query meaning that it knows how to deal with both full-text fields and exactvalue fields.
+That said, the main use case for the match query is for full text search.
+So let’s take a look at how full text search works with a simple example.
+First, we’ll create a new index and index some documents using the bulk API:
+Later on, in Relevance is broken!, we will explain why we created this index with only one primary shard.
+Our first example explains what happens when we use the match query to search within a full-text field for a single word:
+Elasticsearch executes the above match query as follows: The title field is a full-text (analyzed) string field, which means that the query string should be analyzed too.
+The query string "QUICK!" is passed through the standard analyzer which results in the single term "quick"
+Because we have a just a single term, the match query can be executed as a single low-level term query.
+The term query caculates the relevance _score for each matching document, by combining the term frequency (how often "quick" appears in the title field of each document), with the inverse document frequency (how often "quick" appears in thetitle field in all documents in the index), and.
+Doc 3 is most relevant because it contains the term "quick" twice.
+If we could only search for one word at a time, full text search would be pretty.
+Fortunately, the match query makes multi-word queries just as simple:
+The above query returns all four documents in the results list:
+Doc 4 is the most relevant because it contains "brown" twice and "dog" once.
+Doc 1 matches even though it only contains "brown", not "dog"
+Because the match query has to look for two terms—["brown","dog"]—internally it has to execute two term queries and combine their individual results into the overall result.
+The important thing to take away from the above is that any document.
+The more terms that match, the more relevant the document.
+Matching any document which contains any of the query terms may result in a long tail of seemingly irrelevant results.
+Perhaps we only want to show documents which contain all of the query terms.
+In other words, instead of "brown OR dog"we only want to return documents that match "brown AND dog"
+The match query accepts an operator parameter which defaults to "or"
+You can change it to"and" to require that all specified terms must match:
+The structure of the match query has to change slightly in order to accomodate theoperator parameter.
+This query would exclude document 1 which only contains one of the two terms.
+The choice between all and any is a bit too black-or-white.
+What if the user specified five query terms and a document contains only four of them? Setting "operator" to "and" would exclude this document.
+Sometimes that is exactly what you want, but for most full-text search use cases, you want to include documents which may be relevant but exclude those that are unlikely to be relevant.
+The match query supports the minimum_should_match parameter which allows you to specify how many terms must match for a document to be considered relevant.
+While you can specify an absolute number of terms, it usually makes sense to specify a percentage instead as you have no control over how many words the user may enter:
+No matter what you set it to, at least one term must match for a document to be considered a match.
+The minimum_should_match parameter is very flexible and different rules can be applied depending on the number of terms the user enters.
+To fully understand how the match query handles multi-word queries, we need to look at how to combine multiple queries with the bool query.
+In Combining filters we discussed how to use the bool filter to combine multiple filter clauses with and, or and not logic.
+In query land, the bool query does a similar job but with one important difference.
+Filters make a binary decision: should this document be included in the.
+Like the filter equivalent, the bool query accepts multiple query clauses under the must,must_not and should parameters.
+The results from the above query include any document whose title field contains the term"quick", except for those that also contain "lazy"
+So far this is pretty similar to how the boolfilter works.
+The difference comes in with the two should clauses, which say: a document is not requiredto contain either "brown" or "dog", but if it does, then it should be considered more relevant:
+Doc 3 scores higher because it contains both "brown" and "dog"
+Just as we can control the precision of the match query, we can control how many shouldclauses need to match using the minimum_should_match parameter, either as an absolute number or as a percentage:
+The results would only include documents whose title field contains "brown" AND "fox","brown" AND "dog", or "fox" AND "dog"
+If a document contains all three, then it would be considered more relevant than those which contain just two of the three.
+By now, you have probably realised that multi-word match queries simply wrap the generatedterm queries in a bool query.
+With the default "or" operator, each term query is added as ashould clause, so at least one clause must match.
+With the "and" operator, all the term queries are added as must clauses, so all clauses must match.
+And if the minimum_should_match parameter is specified, it is passed directly through to thebool query, making these two queries equivalent:
+Of course, we would normally write these types of queries using.
+We will look at an example of this in the next.
+Of course, the bool query isn’t restricted to combining simple one-word match queries—it can combine any other query, including other bool queries.
+It is commonly used to fine-tune the relevance _score for each document by combining the scores from several distinct queries.
+A simple bool query allows us to write this fairly complex query as follows:
+The content field must contain all of the words full, text and search.
+If the content field also contains Elasticsearch or Lucene then the document will receive a higher _score.
+The more should clauses that match, the more relevant the document.
+But what if we want to give more weight to the docs which contain “Lucene”
+We can control the relative weight of any query clause by specifying.
+A boost value greater than 1 increases the relative weight of that clause.
+This clause is the most important, as it has the highest boost.
+This clause is more important than the default, but not as important as the “Elasticsearch” clause.
+Instead, the new _score is normalized after the boost is applied.
+Each type of query has its own normalization algorithm and the details are beyond the scope of this book.
+Suffice to say that a higher boost value results in a higher _score.
+We will discuss other ways of combining queries in the next.
+But first, let’s take a look at the other important feature.
+Queries can only find terms that actually exist in the inverted index, so it is.
+Now we can compare how values in the english field and the title field are analyzed at index time using the analyze API to analyze the word "Foxes":
+Field title, which uses the default standard analyzer will return the term foxes.
+Field english_title, which uses the english analyzer will return the term fox.
+This means that, were we to run a low-level term query for the exact term "fox", theenglish_title field would match but the title field would not.
+High-level queries like the match query understand field mappings and can apply the correct analyzer for each field being queried.
+The match query uses the appropriate analyzer for each field to ensure that it looks for each term in the correct format for that field.
+While we can specify an analyzer at field level, how do we determine which analyzer is used for a field if none is specified at field level?
+Elasticsearch works through each level until it finds an analyzer which it can use.
+The two lines in bold above highlight differences in the index time sequence and the search time sequence.
+The _analyzer field allows you to specify a default analyzer for each document (eg english, french, spanish) while the analyzer parameter in the query specifies which analyzer to use on the query string.
+This is one way of handling multiple languages in a single index.
+We will look at this technique in more detail in Chapter 17
+Occasionally, it makese sense to use a different analyzer at index and search time.
+For instance, at index time we may want to index synonyms, eg for every occurrence of quick we also index fast, rapid and speedy.
+But at search time, we don’t need to search for all of these synonyms.
+Instead we can just lookup the single word that the user has entered, be it quick,fast, rapid or speedy.
+The sheer number of places where you can specify an analyzer is quite overwhelming.
+The first thing to remember is that, even though you may start out using Elasticsearch for a single purpose or a single application such as logging, chances are that you will find more use cases and end up running several distinct applications on the same cluster.
+You don’t want to set defaults for one use case, only to have to override them for another use case later on.
+Additionally, configuring analyzers at node level requires changing the config file on every node and restarting every node which becomes a maintenance nightmare.
+It’s a much better idea to keep Elasticsearch running and to manage settings only via the API.
+Most of the time, you will know what fields your documents will contain ahead of time.
+The simplest approach is to set the analyzer for each full-text field when you create your index or add type mappings.
+While this approach is slightly more verbose, it makes it easy to see which analyzer is being applied to each field.
+Typically, most of your string fields will be exact-value not_analyzed fields such as tags or enums, plus a handful of full-text fields which will use some default analyzer like standard orenglish or some other language.
+You can set the default analyzer in the index to the analyzer you want to use for almost all full-text fields, and just configure the specialised analyzer on the one or two fields that need it.
+If, in your model, you need a different default analyzer per type, then use the type levelanalyzer setting instead.
+A common work-flow for time based data like logging is to create a new index per day on the fly by just indexing into it.
+While this work flow prevents you from creating your index up front, you can still use index templates to specify the settings and mappings that a new index should have.
+Before we move on to discussing more complex queries in Chapter 13, let’s.
+Every now and again a new user opens an issue claiming that sorting by.
+To understand why this happens, let’s imagine that we create an index with.
+In What is relevance? we described the default similarity algorithm used in.
+Term frequency counts how many times a term appears within the field we are.
+The inverse document frequency takes into account how often a term appears as a percentage of all the documents in the.
+The more frequently the term appears, the less weight it has.
+Because our documents are well distributed, the IDF for both shards will be.
+In this scenario, the term "foo" is very common on one shard (and so of little importance), but rare on the other.
+For testing purposes, there are two ways we can work around this issue.
+If you only have one shard then the local IDF is the global IDF.
+The dfs stands for Distributed Frequency Search and it tells Elasticsearch to first retrieve the local IDF from each shard in order to calculate the global IDF.
+Just having enough data will ensure that your term frequencies are well distributed.
+There is no reason to add this extra DFS step to every query that you run.
+We frequently need to search for the same or different query strings in one or more fields, which.
+In this chapter we will discuss the available tools for constructing multiclause searches and how to figure out which solution you should apply to your.
+The simplest multi-field query to deal with is the one where we can map.
+The bool query takes a more-matches-is-better approach, so the score from each matchclause will be added together to provide the final _score for each document.
+Of course, you’re not restricted to using just match clauses: the bool query can wrap any other query type, including other bool queries.
+We could add a clause to specify that we prefer to see versions of the book that have been.
+The bool query runs each match query, adds their scores together then divides by the number of clauses.
+Each clause at the same level has the same weight.
+If we had put the translator clauses at the same level as title and author,
+It is likely that an even ⅓ split between clauses is not what we need for the above query.
+Probably we’re more interested in the title and author clauses then we are in the translator clauses.
+We need to tune the query to make the title and author clauses relatively more important.
+The simplest weapon in our tuning arsenal is the boost parameter.
+To increase the weight of the title and author fields, give them a boost value higher than 1:
+The title and author clauses have a boost value of 2
+The nested bool clauses has the default boost of 1
+The “best” value for the boost parameter is most easily determined by trial and error: set aboost value, run test queries, repeat.
+Boosts higher than that have little more impact because scores are normalized.
+It works very well for many cases, especially when you are able to map different query strings to.
+The problem is that, these days, users expect to be able to type all of their.
+There is no simple one-size-fits-all approach to multi-word multi-field queries.
+To get the best results you have to know your data and to know how to use.
+When your only user input is a single query string, there are three scenarios that you will encounter frequently:
+Fields like the title andbody, while related, can be considered to be in competition with each other.
+Documents should have as many words as possible in the same field and the score should come from the best matching field.
+A common technique for fine-tuning relevance is to index the same data into multiple fields, each with their own analysis chain.
+The main field may contain words in their stemmed form, synonyms and words stripped of their diacritics or accents.
+It is used to match as many documents as possible.
+The same text could then be indexed in other fields to provide more precise matching.
+One field may contain the unstemmed version, another the original word with accents and a third might use shingles to provide information aboutword proximity.
+These other fields act as signals to increase the relevance score of each matching document.
+For some entities, the identifying information is spread across multiple fields, each of which contains just a part of the whole:
+In this case we want to find as many words as possible in any of the listed fields—we need to search across multiple fields as if they were one big field.
+All of the above are multi-word multi-field queries, but each requires a different strategy.
+We will examine each strategy in turn in the rest of this chapter.
+Imagine that we have a website which allows users to search blog posts, such.
+To our eyes, Document 2 appears to be the better match, as it contains.
+And we find that this query actually gives Document 1 the higher score:
+To understand why, think about how the bool query calculates its score: o First, it runs both of the queries in the should clause o then it adds their scores together.
+Document 1 contains the word "brown" in both fields, so both match clauses are successful and have a score.
+The high score from the body query is added to the zero score from thetitle query, and divided by two, resulting in a lower overall score than for Document 1
+In this example, the title and body fields are competing with each other.
+What if, instead of combining the scores from each field, we used the score.
+Instead of the bool query, we can use the dis_max or Disjunction Max Query.
+A simple dis_max query like the following would choose the single best matching field, and ignore the other:
+We would probably expect documents that match on both the title field and the body field to rank higher than documents that match on just one field, but this isn’t the case.
+It changes the score calculation to the following: o take the _score of the best matching clause o multiply the score of each of the other matching clauses by.
+With the tiebreaker, all matching clauses count, but the best matching clause counts most.
+The multi_match query provides us with a convenient shorthand way of running the same query against multiple fields.
+By default it runs as type best_fields, which means that it generates.
+The best_fields type is the default and can be left out.
+Parameters like minimum_should_match or operator are passed through to the generated match queries.
+Fieldnames can be specified with wildcards—any field which matches the wildcard pattern will be included in the search.
+The goal is to present the user with the most relevant documents on the first page of results.
+In order to improve recall, we cast the net wide—not only do we include.
+A common technique for fine-tuning full text relevance is to index the same.
+The main field would contain terms in their broadest-matching form to match.
+However, if we have two documents, one of which contains “jumped” and the.
+We can achieve this by indexing the same text in other fields to provide more.
+These other fields act as signals which increase the relevance score of each matching document.
+A document is included in the results list if it matches the broad-matching.
+The first thing to do is to setup our field to be indexed twice: once in a stemmed form and once in an unstemmed form.
+To do this we will use multi- fields which we introduced in String sorting and multi-fields.
+The title.std field uses the standard analyzer and so is not stemmed.
+The title field of both documents contains both of those terms, so both documents receive the same score:
+If we were to query just the title.std field, then only document 2 would match.
+However, if we were to query both fields and to combine their scores using the bool query, then both documents would match (thanks to the title field) and document 2 would score higher (thanks to the title.std field):
+We want to combine the scores from all matching fields, so we use themost_fields type.
+The contribution of each field to the final score can be controlled by specifying custom boostvalues.
+For instance, we could boost the title field to make it the most important field, thus reducing the effect of any other signal fields:
+The boost value of 10 on the title field makes that field relatively much more important than the title.std field.
+Now we come to a common pattern: cross-fields entity search.
+This sounds a lot like the example we described in Multiple query strings,
+Each of those words appears in a different field so using.
+Really we want to query each field in turn and add up the scores of every field that matches, which sounds like it is a job for the bool query:
+Repeating the query string for every field soon becomes tedious.
+The most_fields approach to entity search has some problems which are not immediately obvious:
+All three of the above problems stem from the fact.
+The best_fields type is also field centric and suffers from similar problems.
+First we’ll look at why these problems exist, then how we can combat them.
+Think about how the most_fields query is executed: Elasticsearch generates a match query for each field and wraps them in an outer bool query.
+We can see this by passing our query through the validate-query API:
+You can see that a document which matches just the word poland in two fields could score higher than a document which matches poland and street in one field.
+In Controlling precision we talked about using the "and" operator or theminimum_should_match parameter to trim the long tail of almost irrelevant results.
+In other words, using the and operator means that all words must exist in the same field, which is clearly wrong! It is unlikely that any documents would match this query.
+In What is relevance?, we explained that the default similarity algorithm used to calculate the relevance score for each term is TF/IDF:
+Term Frequency The more often a term appears in a field in a single document, the more relevant the document.
+Inverse Document Frequency The more often a term appears in a field in all documents in the index, the less relevant is that term.
+When searching against multiple fields, TF/IDF can introduce some surprising results.
+Peter is a common first name and Smith is a common last name—both will have low IDFs.
+Smith as a first name is very uncommon and so will have a high IDF!
+The high IDF of smith in the first name field can overwhelm the two low IDFs of peter as a first name and smith as a last name.
+These problems only exist because we are dealing with multiple fields.
+If we were to combine all of these fields into a single field, the problems would vanish.
+We could achieve this by adding a full_name field to our person document:
+The inverse document frequencies for first and last names would be combined so it wouldn’t matter whether “Smith” were a first or last name anymore.
+While this would work, we don’t like having to store redundant data.
+Elasticsearch provides us with this functionality via the copy_to parameter in a field mapping:
+The custom _all approach is a very good solution, as long as you thought about setting it up before you indexed your documents.
+Elasticsearch also provides a search time solution to the problem:
+It treats all of the fields as one big field, and looks for each term in any field.
+In other words, the term peter must appear in either field, and the term smith must appear in either field.
+The cross_fields type first analyzes the query string to produce a list of terms, then it searches for each term in any field.
+Fortunately, the cross_fields type solves this too, as can be seen from this validate-queryrequest:
+It solves the term frequency problem by blending inverse document frequencies across fields.
+The fact that smith is a common last name means that it will be treated as a common first name too.
+For the cross_fields query type to work optimally, all fields should have the same analyzer.
+Fields which share an analyzer are grouped together as blended fields.
+If you include fields with a different analysis chain, they will be added to the query in the same way as for best_fields.
+For instance, if we added the title field to the above query (assuming it uses a different analyzer), the explanation would be as follows:
+This is particularly important when using the minimum_should_match and operatorparameters.
+This can be done as described before with the caret (^) syntax:
+The advantage of being able to boost individual fields should be weighed against the cost of querying multiple fields instead of querying a single custom _all field.
+Use whichever of the two solutions that delivers the most bang for your buck.
+The final topic that we should touch on before leaving multi-field queries is.
+The reason for this can be demonstrated easily by looking at a query.
+Imagine that we have set the title field to be not_analyzed:
+Because the title field is not analyzed, it searches that field for a single term consisting of the whole query string!
+That term clearly does not exist in the inverted index of the title field, and can never be found.
+Standard full text search with TF/IDF treats documents, or at least each field.
+The match query can tell us if that bag contains our search terms or not, but that is only part of the story.
+A match query for "sue alligator" would match all three documents, but it doesn’t tell us if the two words form part of the same idea, or even the same.
+Understanding how words relate to each other is a very complicated problem.
+Each document may be much longer than the examples we present.
+Perhaps we still want to return these documents where the words are widely.
+This is the province of phrase matching or proximity matching.
+In this chapter we will be using the same example documents that we used for.
+Like the match query, the match_phrase query first analyzes the query string to produce a list of terms.
+A query for the phrase"quick fox" would not match any of our documents because no document contains the word"quick" immediately followed by "fox"
+The match_phrase query can also be written as a match query with type phrase:
+When a string is analyzed, the analyzer returns not only a list of terms, but also the positionor order of each term in the original string:
+Positions can be stored in the inverted index, and position-aware queries like thematch_phrase query can use them to match only documents which contains all of the words in exactly the order specified, with no words inbetween.
+If any of these conditions is not met, the document is not considered a match.
+Internally, the match_phrase query use the low-level span query family to do position-aware matching.
+Span queries are term-level queries, so they have no analysis phase—they search for the exact term specified.
+Thankfully, most people never need to use the span queries directly as thematch_phrase query is usually good enough.
+However, certain specialized fields, like patent searches, use these low-level queries to perform very specific carefully constructed positional searches.
+Requiring exact phrase matches may be too strict a constraint.
+We can introduce a degree of flexibility into phrase matching by using.
+The slop parameter tells the match_phrase query how far apart terms are allowed to be while still considering the document a match.
+To make the query "quick fox" match a document containing "quick brown fox" we need a slop of just 1:
+While all words need to be present in phrase matching, even when using slop, the words don’t neccessarily need to be in the same sequence in order to.
+With a high enough slopvalue, words can be arranged in any order.
+To make the query "fox quick" match our document, we need a slop of 3:
+Note that fox and quick occupy the same position in this step.
+A curious thing can happen when you try to use phrase matching on.
+The reason for this comes down to the way arrays are indexed in Elasticsearch.
+In other words, it produces exactly the same list of tokens as it would have.
+Our example query looks for abraham directly followed by lincoln, and these two terms do indeed exist and they are right next to each other, so the query matches.
+Fortunately, there is a simple workaround for cases like these, called.
+First delete the group mapping and and documents of that type.
+Then create a new group mapping with the correct values.
+The position_offset_gap settings tells Elasticsearch that it should increase the current termposition by the specified value for every new array element.
+So now, when we index the array of names, the terms are emitted.
+Our phrase query would no longer match a document like this.
+You would have to add a slop value of 100 in order for this document to match.
+While a phrase query simply excludes documents which don’t contain the.
+The following proximity query for "quick dog" matches both documents which contain the words "quick" and "dog", but gives a higher score to the document where the words are nearer to each other:
+While proximity queries are useful, the fact that they require all terms to be.
+Instead of using using proximity matching as an absolute requirement, we can.
+The fact that we want to add together the scores from multiple queries implies.
+We can use a simple match query as a must clause.
+This is the query that will determine which documents are included in our resultset— we can trim the.
+Then we can add other more specific queries as shouldclauses—every one that matches will increase the relevance of the matching docs.
+The must clause includes or excludes documents from the resultset.
+The should clause increases the relevance score of those documents that match.
+We could, of course, include other queries in the should clause, where each query targets a specific aspect of relevance.
+Phrase and proximity queries are more expensive than simple match queries.
+While a matchquery just has to look up terms in the inverted index, a match_phrase query has to calculate and compare the positions of multiple possibly repeated terms.
+And of course, this cost is paid at search time instead of at index time.
+Usually the extra cost of phrase queries is not as scarey as these numbers suggest.
+Really, the difference in performance is a testimony to just how fast a simple termquery is.
+Phrase queries on typical full text data usually complete within a few milliseconds, and are perfectly usable in practice, even on a busy cluster.
+In certain pathological cases phrase queries can be very costly, but this is unusual.
+An example of a pathological case is DNA sequencing, where there are many many identical terms repeated in many positions.
+Using higher slop values in this case results in a huge growth in the number of position calculations.
+So what can we do to limit the performance cost of phrase and proximity.
+In the last section we discussed using proximity queries just for relevance purposes, not to include or exclude results from the resultset.
+A query may match millions of results, but chances are that our users are only interested in the first few pages of results.
+A simple match query will already have ranked documents which contain all search terms near the top of the list.
+Really, we just want to rerank the top results to give an extra relevance bump to those documents that also match the phrase query.
+These top results are then resorted accoring to their new scores.
+The match query decides which results will be included in the final result set and ranks results according to TF/IDF.
+The window_size is the number of top results to rescore, per shard.
+The only rescoring algorithm currently supported is another query, but there are plans to add more algorithms later.
+As useful as phrase and proximity queries can be, they still have a downside.
+They are overly strict: all terms must be present for a phrase query to match,
+The flexibility in word ordering that you gain with slop also comes at a price, because you lose the association between word pairs.
+When words are used in conjunction with each other, they express an idea.
+If, instead of indexing each word independently, we were to index pairs of.
+For the sentence "Sue ate the alligator", we would not only index each word (or unigram) as a term:
+Shingles are not restricted to being pairs of words; you could index word triplets (trigrams) as well:
+Trigrams give you a higher degree of precision, but greatly increases the number of unique terms in the index.
+Of course, shingles are only useful if the user enters their query in the same.
+Fortunately, users tend to express themselves using similar constructs to.
+Shingles need to be created at index time as part of the analysis process.
+We could index both unigrams and bigrams into a single field, but it is cleaner to keep unigrams and bigrams in separate fields which can be queried independently.
+The unigram field would form the basis of our search, with the bigram field being used to boost relevance.
+First, we need to create an analyzer which uses the shingle token filter:
+The default min/max shingle size is 2 so we don’t really need to set these.
+The shingle token filter outputs unigrams by default, but we want to keep unigrams and bigrams separate.
+First, let’s test that our analyzer is working as expected with the analyze API:
+Now we can proceed to setting up a field to use the new analyzer.
+We said that it is cleaner to index unigrams and bigrams separately, so we will create thetitle field as a multi-field (see String sorting and multi-fields):
+With this mapping, values from our JSON document in the field title will be indexed both as unigrams (title) and as bigrams (title.shingles), meaning that we can query these fields independently.
+Both documents contain the, alligator and ate and so have the same score.
+We still match all three documents, but document 2 has now been bumped into first place because it matched the shingled term "ate sue"
+Even though our query included the word "hungry", which doesn’t appear in any of our documents, we still managed to use word proximity to return the most relevant document first.
+Not only are shingles more flexible than phrase queries, they perform better as well.
+Instead of paying the price of a phrase query every time you search, queries for shingles are just as efficient as a simple match query.
+There is a small cost that is payed at index time because more terms need to be indexed, which also means that fields with shingles use more disk space.
+However, most applications write once and read many times, so it makes sense to optimize for fast queries.
+This is a theme that you will encounter frequently in Elasticsearch: it makes it possible to achieve a lot with your existing data, without requiring any setup.
+But once you understand your requirements better it is worth putting in the extra effort to model your data at index time.
+A little bit of preparation will help you to achieve better results with better performance.
+A keen observer will notice that all the queries so far in this book have.
+To match something, the smallest “unit” had to be a.
+But what happens if you want to match parts of a term but not the whole thing?
+Partial matching allows the user to specify a portion of the term they are.
+The requirement to match on part of a term is less common in the full text.
+Of course, with Elasticsearch we have the analysis process and the inverted.
+That said, there are occasions when partial matching can be very useful.
+We will use UK postcodes to illustrate how to use partial matching with.
+The prefix query is a low-level query that works at the term level.
+It doesn’t analyze the query string before searching—it assumes that you have passed it.
+It just finds matching documents and gives them all a score of 1
+Really it behaves more like a filter than a query.
+The only practical difference between the prefix query and the prefix filter is that the filter can be cached.
+Previously we said that “you can only find terms that exist in the inverted.
+For each term, it lists the IDs of the documents.
+The inverted index for our example documents would look something like this:
+In order to support prefix matching on the fly, the query:
+While this works fine for our small example, imagine that our inverted index.
+The prefix query would need to visit all one million terms in order to calculate the result!
+And the shorter the prefix, the more terms need to be visited.
+The prefix query or filter are useful for ad hoc prefix matching, but should be used with care.
+They can be used freely on fields with a small number of terms, but they scale poorly and can put your cluster under a lot of strain.
+Try to limit their impact on your cluster by using a long prefix—this reduces the number of terms that need to be visited.
+Later in this chapter we will look at an alternative index-time solution which.
+Imagine now that you wanted to match all postcodes just in the W area.
+A prefix match would also include postcodes starting with WC, and you would have a similar problem with a wildcard match.
+Theregexp query allows you to write these more complicated patterns:
+The wildcard and regexp queries work in exactly the same way as the prefix query.
+They also have to scan the list of terms in the inverted index to find all matching terms, and gather document IDs term-by-term.
+While prefix matching can be made more efficient by preparing your data at.
+These queries have their place, but should be used sparingly.
+If you use them to query an analyzed field then they will examine each term in the field, not the field as a whole.
+Leaving postcodes behind, let’s take a look at how prefix matching can help.
+Not only do users receive their search results in less time, but we can guide them towards results which actually exist in our index.
+As always, there are more ways than one to skin a cat! We will start by looking.
+In Phrase matching we introduced the match_phrase query, which matches all of the specified words in the same positions relative to each other.
+This query behaves in the same way as the match_phrase query, except that it treats the last word in the query string as a prefix.
+If you were to run this query through the validate-query API, it would produce this explanation:
+Like the match_phrase query, it accepts a slop parameter (see Mixing it up) to make the word order and relative positions somewhat less rigid:
+Even though the words are in the wrong order, the query still matches because we have set a high enough slop value to allow some flexibility in word positions.
+However, it is always only the last word in the query string that is treated as a.
+Earlier, in prefix query we warned about the perils of the prefix—how prefix queries can be very resource intensive.
+A prefix of a could match hundreds of thousands of terms.
+Not only would matching on this many terms be resource intensive, it would also.
+We can limit the impact of the prefix expansion by.
+The max_expansions parameter controls how many terms the prefix is allowed to match.
+It will find the first term starting with bl and keep collecting terms (in alphabetical order) until it either runs out of terms with.
+Don’t forget that we are run this query every time the user types another.
+If the first set of results isn’t what the user is.
+All of the solutions we’ve talked about so far are implemented at query-time.
+They don’t require any special mappings or indexing patterns—they simply.
+The flexibility of query time operations comes at a cost: search performance.
+Sometimes it may make sense to move the cost away from the query.
+In a realtime web application, an additional 100ms may be too much latency to.
+By preparing your data at index time, you can make your searches more.
+As we have said before: “you can only find terms that exist in the inverted.
+While theprefix, wildcard and regexp queries demonstrated that that is not strictly true, it is true that doing a single term lookup is much faster.
+Preparing your data for partial matching ahead of time will increase your.
+Preparing your data at index time means choosing the right analysis chain,
+If we were to n-gram the word quick, the results would depend on the length we have chosen:
+Edge n-grams are anchored to the beginning of the word.
+You may notice that this conforms exactly to the letters that a user would type.
+The first step to setting up index time search-as-you-type is to define our.
+Then we need to use this token filter in a custom analyzer, which we will call the autocompleteanalyzer:
+This analyzer will tokenize a string into individual terms using the standard tokenizer, lowercase each term, then produce edge n-grams of each term, thanks to ourautocomplete_filter.
+The full request to create the index and instantiate the token filter and analyzer looks like this:
+You can test out this new analyzer to make sure it is behaving correctly using the analyzeAPI:
+The results show us that the analyzer is working correctly.
+In order to use the analyzer, we need to apply it to a field, which we can do with the update-mapping API:
+The explanation shows us that the query is looking for edge n-grams of every word in the query string:
+The name:f condition is satisfied by the second document because “Furballs” has been indexed as f, fu, fur, etc.
+The same autocompleteanalyzer is being applied both at index time and at search time which, in most situations, is the right thing to do.
+This is one of the few occasions when it makes sense to break this rule.
+We want to ensure that our inverted index contains edge n-grams of every word but we only want to match on the full words that the user has entered, ie brown and fo.
+We can do this by using the autocomplete analyzer at index time and the standard analyzer at search time.
+One way to change the search analyzer is just to specify it in in the query:
+Because we only want to change the search_analyzer, we can update the existing mapping without having to reindex our data:
+Use the autocomplete analyzer at index time to produce edge n-grams of every term.
+Use the standard analyzer at search time to search only on the terms that the user has entered.
+If we were to repeat the validate-query request, it would now give us this explanation:
+Because most of the work has been done at index time, all this query needs to do is to look up the two terms brown and fo, which is much more efficient than the match_phrase_prefixapproach of having to find all terms beginning with fo.
+Using edge n-grams for search-as-you-type is easy to set up, flexible and fast.
+Latency matters, especially when you are trying to provide instant feedback.
+Sometimes the fastest way of searching is not to search at all.
+The completion suggester in Elasticsearch takes a completely different approach.
+You feed it with a list of all possible completions and it builds them into a Finite State Transducer, an optimized data structure which resembles a big graph.
+To search for suggestions, Elasticsearch starts at the beginning of the graph and moves character-by-character along the matching path.
+Once it has run out of user input, it looks at all possible endings of the current path to produce a list of suggestions.
+This data structure lives in memory and makes prefix lookups extremely fast, much faster than any term-based query could be.
+When word order is less predictable, edge n-grams can be a better solution than the completion suggester.
+The edge n-gram approach can also be used for structured data, such as the postcodes example from earlier in this chapter.
+The keyword tokenizer is the NOOP tokenizer, the tokenizer which does nothing.
+Whatever string it receives as input, it emits exactly the same string a single token.
+It can therefore be used for values that we would normally treat as not_analyzed but which require some other analysis transformation such as lowercasing.
+Finally, let’s take a look at how n-grams can be used to search languages with.
+Rindfleischetikettierungsüberwachungsaufgabenübertragungsgesetz The law concerning the delegation of duties for the supervision of cattle marking and the labelling of beef.
+One approach to indexing languages like this is to break compound words into.
+Another approach is just to break all words into n-grams and to search for any.
+Given that an n-gram is a moving window on a word, an n-gram of any length.
+We want to choose a length which is long enough to.
+A trigram (length 3) is probably a good starting point:
+The text field uses the trigrams analyzer to index its contents as n-grams of length 3
+We can index our example compound words to test out this approach:
+A search for “Adler” (eagle) becomes a query for the three.
+Judicious use of the minimum_should_match parameter can remove these spurious results by requiring that a minimum number of trigrams must be.
+This is a bit of a shotgun approach to full text search and can result in a large.
+This technique is used to increase recall—the number of relevant documents which a search returns.
+Unlike a relational database which has normalised data, the data stored in a.
+NoSQL database is highly denormalised, and each document is independent.
+However, Elasticsearch provides two features which enable us to run queries.
+This chapter explains the use case for each of these features and the.
+Aggregations allow us to perform real-time analytics by grouping or.
+For instance, aggregations can be used to show totals-per-category, the most.
+The web is increasingly location aware – users expect to see local results, or to.
+This chapter explains how to use geolocation in Elasticsearch, including.
+Instead of asking What documents match this query?, sometimes we want to know if a particular document matches any of a list of predefined queries.
+Sometimes, the default functionality just isn’t enough – instead, we need to.
+In this chapter we explore the scripting functionality, discuss where we can.
+Elasticsearch is designed to work well with a small dataset and to scale to big.
+However, there are a few design decisions that need to be made to take.
+This chapter discusses the issues to be aware of when it comes time to deploy.
+You may have arrived here by following a link to content which is not yet.
+Clinton Gormley was the first user of Elasticsearch and wrote the Perl API.
+When Elasticsearch formed a company in 2012, he joined as a.
+He studied medicine at UCT in Cape Town and lives in.
+Zach is now a developer at Elasticsearch and maintains the PHP.
+O’Reilly books may be purchased for educational, business, or sales promotional use.
+Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks.
+Where those designations appear in this book, and O’Reilly Media, Inc.
+While every precaution has been taken in the preparation of this book, the publisher and authors assume no responsibility for errors or omissions, or for damages resulting from the use of the information contained herein.

@@ -1,0 +1,318 @@
+Abstract We present Resilient Distributed Datasets (RDDs), a distributed memory abstraction that lets programmers perform in-memory computations on large clusters in a fault-tolerant manner.
+RDDs are motivated by two types of applications that current computing frameworks handle inefficiently: iterative algorithms and interactive data mining tools.
+In both cases, keeping data in memory can improve performance by an order of magnitude.
+To achieve fault tolerance efficiently, RDDs provide a restricted form of shared memory, based on coarsegrained transformations rather than fine-grained updates to shared state.
+However, we show that RDDs are expressive enough to capture a wide class of computations, including recent specialized programming models for iterative jobs, such as Pregel, and new applications that these models do not capture.
+We have implemented RDDs in a system called Spark, which we evaluate through a variety of user applications and benchmarks.
+These systems let users write parallel computations using a set of high-level operators, without having to worry about work distribution and fault tolerance.
+Although current frameworks provide numerous abstractions for accessing a cluster’s computational resources, they lack abstractions for leveraging distributed memory.
+This makes them inefficient for an important class of emerging applications: those that reuse intermediate results across multiple computations.
+Data reuse is common in many iterative machine learning and graph algorithms, including PageRank, K-means clustering, and logistic regression.
+Another compelling use case is interactive data mining, where a user runs multiple adhoc queries on the same subset of the data.
+Unfortunately, in most current frameworks, the only way to reuse data between computations (e.g., between two MapReduce jobs) is to write it to an external stable storage system, e.g., a distributed file system.
+This incurs substantial overheads due to data replication, disk I/O, and serialization, which can dominate application execution times.
+However, these frameworks only support specific computation patterns (e.g., looping a series of MapReduce steps), and perform data sharing implicitly for these patterns.
+They do not provide abstractions for more general reuse, e.g., to let a user load several datasets into memory and run ad-hoc queries across them.
+In this paper, we propose a new abstraction called resilient distributed datasets (RDDs) that enables efficient data reuse in a broad range of applications.
+RDDs are fault-tolerant, parallel data structures that let users explicitly persist intermediate results in memory, control their partitioning to optimize data placement, and manipulate them using a rich set of operators.
+The main challenge in designing RDDs is defining a programming interface that can provide fault tolerance efficiently.
+With this interface, the only ways to provide fault tolerance are to replicate the data across machines or to log updates across machines.
+Both approaches are expensive for data-intensive workloads, as they require copying large amounts of data over the cluster network, whose bandwidth is far lower than that of RAM, and they incur substantial storage overhead.
+In contrast to these systems, RDDs provide an interface based on coarse-grained transformations (e.g., map, filter and join) that apply the same operation to many data items.
+This allows them to efficiently provide fault tolerance by logging the transformations used to build a dataset (its lineage) rather than the actual data.1 If a partition of an RDD is lost, the RDD has enough information about how it was derived from other RDDs to recompute.
+Checkpointing the data in some RDDs may be useful when a lineage chain grows large, however, and we discuss how to do it in §5.4
+Thus, lost data can be recovered, often quite quickly, without requiring costly replication.
+Although an interface based on coarse-grained transformations may at first seem limited, RDDs are a good fit for many parallel applications, because these applications naturally apply the same operation to multiple data items.
+Indeed, we show that RDDs can efficiently express many cluster programming models that have so far been proposed as separate systems, including MapReduce, DryadLINQ, SQL, Pregel and HaLoop, as well as new applications that these systems do not capture, like interactive data mining.
+The ability of RDDs to accommodate computing needs that were previously met only by introducing new frameworks is, we believe, the most credible evidence of the power of the RDD abstraction.
+We have implemented RDDs in a system called Spark, which is being used for research and production applications at UC Berkeley and several companies.
+In addition, Spark can be used interactively to query big datasets from the Scala interpreter.
+We believe that Spark is the first system that allows a general-purpose programming language to be used at interactive speeds for in-memory data mining on clusters.
+We evaluate RDDs and Spark through both microbenchmarks and measurements of user applications.
+More fundamentally, to illustrate the generality of RDDs, we have implemented the Pregel and HaLoop programming models on top of Spark, including the placement optimizations they employ, as relatively small libraries (200 lines of code each)
+We then compare RDDs with finergrained shared memory abstractions (§2.3)
+Formally, an RDD is a read-only, partitioned collection of records.
+RDDs do not need to be materialized at all times.
+Instead, an RDD has enough information about how it was derived from other datasets (its lineage) to compute its partitions from data in stable storage.
+This is a powerful property: in essence, a program cannot reference an RDD that it cannot reconstruct after a failure.
+Finally, users can control two other aspects of RDDs: persistence and partitioning.
+Users can indicate which RDDs they will reuse and choose a storage strategy for them (e.g., in-memory storage)
+They can also ask that an RDD’s elements be partitioned across machines based on a key in each record.
+This is useful for placement optimizations, such as ensuring that two datasets that will be joined together are hash-partitioned in the same way.
+Programmers start by defining one or more RDDs through transformations on data in stable storage (e.g., map and filter)
+They can then use these RDDs in actions, which are operations that return a value to the application or export data to a storage system.
+Examples of actions include count (which returns the number of elements in the dataset), collect (which returns the elements themselves), and save (which outputs the dataset to a storage system)
+Like DryadLINQ, Spark computes RDDs lazily the first time they are used in an action, so that it can pipeline transformations.
+In addition, programmers can call a persist method to indicate which RDDs they want to reuse in future operations.
+Spark keeps persistent RDDs in memory by default, but it can spill them to disk if there is not enough RAM.
+Users can also request other persistence strategies, such as storing the RDD only on disk or replicating it across machines, through flags to persist.
+Finally, users can set a persistence priority on each RDD to specify which in-memory data should spill to disk first.
+Suppose that a web service is experiencing errors and an operator wants to search terabytes of logs in the Hadoop filesystem (HDFS) to find the cause.
+Using Spark, the operator can load just the error messages from the logs into RAM across a set of nodes and query them interactively.
+Although individual RDDs are immutable, it is possible to implement mutable state by having multiple RDDs to represent multiple versions of a dataset.
+We made RDDs immutable to make it easier to describe lineage graphs, but it would have been equivalent to have our abstraction be versioned datasets and track versions in lineage graphs.
+Figure 1: Lineage graph for the third query in our example.
+Line 3 then asks for errors to persist in memory so that it can be shared across queries.
+Note that the argument to filter is Scala syntax for a closure.
+At this point, no work has been performed on the cluster.
+However, the user can now use the RDD in actions, e.g., to count the number of messages:
+The user can also perform further transformations on the RDD and use their results, as in the following lines:
+After the first action involving errors runs, Spark will store the partitions of errors in memory, greatly speeding up subsequent computations on it.
+Note that the base RDD, lines, is not loaded into RAM.
+This is desirable because the error messages might only be a small fraction of the data (small enough to fit into memory)
+Finally, to illustrate how our model achieves fault tolerance, we show the lineage graph for the RDDs in our third query in Figure 1
+In this query, we started with errors, the result of a filter on lines, and applied a further filter and map before running a collect.
+The Spark scheduler will pipeline the latter two transformations and send a set of tasks to compute them to the nodes holding the cached partitions of errors.
+In addition, if a partition of errors is lost, Spark rebuilds it by applying a filter on only the corresponding partition of lines.
+To understand the benefits of RDDs as a distributed memory abstraction, we compare them against distributed shared memory (DSM) in Table 1
+In DSM systems, applications read and write to arbitrary locations in a global address space.
+In particular, RDDs do not need to incur the overhead of checkpointing, as they can be recovered using lineage.4 Furthermore, only the lost partitions of an RDD need to be recomputed upon failure, and they can be recomputed in parallel on different nodes, without having to roll back the whole program.
+A second benefit of RDDs is that their immutable nature lets a system mitigate slow nodes (stragglers) by running backup copies of slow tasks as in MapReduce [10]
+Backup tasks would be hard to implement with DSM, as the two copies of a task would access the same memory locations and interfere with each other’s updates.
+First, in bulk operations on RDDs, a runtime can sched3Note that reads on RDDs can still be fine-grained.
+For example, an application can treat an RDD as a large read-only lookup table.
+In some applications, it can still help to checkpoint RDDs with long lineage chains, as we discuss in Section 5.4
+However, this can be done in the background because RDDs are immutable, and there is no need to take a snapshot of the whole application as in DSM.
+The user’s driver program launches multiple workers, which read data blocks from a distributed file system and can persist computed RDD partitions in memory.
+Second, RDDs degrade gracefully when there is not enough memory to store them, as long as they are only being used in scan-based operations.
+Partitions that do not fit in RAM can be stored on disk and will provide similar performance to current data-parallel systems.
+As discussed in the Introduction, RDDs are best suited for batch applications that apply the same operation to all elements of a dataset.
+In these cases, RDDs can efficiently remember each transformation as one step in a lineage graph and can recover lost partitions without having to log large amounts of data.
+RDDs would be less suitable for applications that make asynchronous finegrained updates to shared state, such as a storage system for a web application or an incremental web crawler.
+Our goal is to provide an efficient programming model for batch analytics and leave these asynchronous applications to specialized systems.
+We chose Scala due to its combination of conciseness (which is convenient for interactive use) and efficiency (due to static typing)
+However, nothing about the RDD abstraction requires a functional language.
+To use Spark, developers write a driver program that connects to a cluster of workers, as shown in Figure 2
+The driver defines one or more RDDs and invokes actions on them.
+Spark code on the driver also tracks the RDDs’ lineage.
+The workers are long-lived processes that can store RDD partitions in RAM across operations.
+As we showed in the log mining example in Section 2.2.1, users provide arguments to RDD operations like map by passing closures (function literals)
+Scala represents each closure as a Java object, and these objects can be serialized and loaded on another node to pass the closure across the network.
+Scala also saves any variables bound in the closure as fields in the Java object.
+For example, one can write code like of an RDD.5
+RDDs themselves are statically typed objects parametrized by an element type.
+However, most of our examples omit types since Scala supports type inference.
+Although our method of exposing RDDs in Scala is conceptually simple, we had to work around issues with Scala’s closure objects using reflection [33]
+We also needed more work to make Spark usable from the Scala interpreter, as we shall discuss in Section 5.2
+Nonetheless, we did not have to modify the Scala compiler.
+Table 2 lists the main RDD transformations and actions available in Spark.
+We give the signature of each operation, showing type parameters in square brackets.
+Recall that transformations are lazy operations that define a new RDD, while actions launch a computation to return a value to the program or write data to external storage.
+Note that some operations, such as join, are only available on RDDs of key-value pairs.
+Also, our function names are chosen to match other APIs in Scala and other functional languages; for example, map is a one-to-one mapping, while flatMap maps each input value to one or more outputs (similar to the map in MapReduce)
+In addition to these operators, users can ask for an RDD to persist.
+Furthermore, users can get an RDD’s partition order, which is represented by a Partitioner class, and partition another dataset according to it.
+Operations such as groupByKey, reduceByKey and sort automatically result in a hash or range partitioned RDD.
+We complement the data mining example in Section 2.2.1 with two iterative applications: logistic regression and PageRank.
+The latter also showcases how control of RDDs’ partitioning can improve performance.
+Many machine learning algorithms are iterative in nature because they run iterative optimization procedures, such as gradient descent, to maximize a function.
+They can thus run much faster by keeping their data in memory.
+As an example, the following program implements logistic regression [14], a common classification algorithm.
+We save each closure at the time it is created, so that the map in this example will always add 5 even if x changes.
+Table 2: Transformations and actions available on RDDs in Spark.
+The algorithm uses gradient descent: it starts w at a random value, and on each iteration, it sums a function of w over the data to move w in a direction that improves it.
+We start by defining a persistent RDD called points as the result of a map transformation on a text file that parses each line of text into a Point object.
+We then repeatedly run map and reduce on points to compute the gradient at each step by summing a function of the current w.
+A more complex pattern of data sharing occurs in PageRank [6]
+The algorithm iteratively updates a rank for each document by adding up contributions from documents that link to it.
+On each iteration, each document sends a contribution of rn to its neighbors, where r is its rank and n is its number of neighbors.
+This program leads to the RDD lineage graph in Figure 3
+On each iteration, we create a new ranks dataset based on the contribs and ranks from the previous iteration and the static links dataset.6 One interesting feature of this graph is that it grows longer with the number.
+Note that although RDDs are immutable, the variables ranks and contribs in the program point to different RDDs on each iteration.
+Thus, in a job with many iterations, it may be necessary to reliably replicate some of the versions of ranks to reduce fault recovery times [20]
+The user can call persist with a RELIABLE flag to do this.
+However, note that the links dataset does not need to be replicated, because partitions of it can be rebuilt efficiently by rerunning a map on blocks of the input file.
+This dataset will typically be much larger than ranks, because each document has many links but only one number as its rank, so recovering it using lineage saves time over systems that checkpoint a program’s entire in-memory state.
+Finally, we can optimize communication in PageRank by controlling the partitioning of the RDDs.
+If we specify a partitioning for links (e.g., hash-partition the link lists by URL across nodes), we can partition ranks in the same way and ensure that the join operation between links and ranks requires no communication (as each URL’s rank will be on the same machine as its link list)
+We can also write a custom Partitioner class to group pages that link to each other together (e.g., partition the URLs by domain name)
+Both optimizations can be expressed by calling partitionBy when we define links:
+After this initial call, the join operation between links and ranks will automatically aggregate the contributions for each URL to the machine that its link lists is on, calculate its new rank there, and join it with its links.
+This type of consistent partitioning across iterations is one of the main optimizations in specialized frameworks like Pregel.
+One of the challenges in providing RDDs as an abstraction is choosing a representation for them that can track lineage across a wide range of transformations.
+Ideally, a system implementing RDDs should provide as rich a set of transformation operators as possible (e.g., the ones in Table 2), and let users compose them in arbitrary ways.
+We propose a simple graph-based representation for RDDs that facilitates these goals.
+We have used this representation in Spark to support a wide range of transformations without adding special logic to the scheduler for each one, which greatly simplified the system design.
+In a nutshell, we propose representing each RDD through a common interface that exposes five pieces of information: a set of partitions, which are atomic pieces of the dataset; a set of dependencies on parent RDDs; a function for computing the dataset based on its parents; and metadata about its partitioning scheme and data placement.
+For example, an RDD representing an HDFS file has a partition for each block of the file and knows which machines each block is on.
+The most interesting question in designing this interface is how to represent dependencies between RDDs.
+We found it both sufficient and useful to classify dependencies into two types: narrow dependencies, where each partition of the parent RDD is used by at most one partition of the child RDD, wide dependencies, where multiple child partitions may depend on it.
+For example, map leads to a narrow dependency, while join leads to to wide dependencies (unless the parents are hash-partitioned)
+First, narrow dependencies allow for pipelined execution on one cluster node, which can compute all the parent partitions.
+For example, one can apply a map followed by a filter on an element-by-element basis.
+In contrast, wide dependencies require data from all parent partitions to be available and to be shuffled across the nodes using a MapReducelike operation.
+Second, recovery after a node failure is more efficient with a narrow dependency, as only the lost parent partitions need to be recomputed, and they can be recomputed in parallel on different nodes.
+In contrast, in a lineage graph with wide dependencies, a single failed node might cause the loss of some partition from all the ancestors of an RDD, requiring a complete re-execution.
+This common interface for RDDs made it possible to implement most transformations in Spark in less than 20 lines of code.
+Indeed, even new Spark users have implemented new transformations (e.g., sampling and various types of joins) without knowing the details of the scheduler.
+For these RDDs, partitions returns one partition for each block of the file (with the block’s offset stored in each Partition object), preferredLocations gives the nodes the block is on, and iterator reads the block.
+This object has the same partitions and preferred locations as its parent, but applies the function passed to.
+Each box is an RDD, with partitions shown as shaded rectangles.
+Each child partition is computed through a narrow dependency on the corresponding parent.7
+In either case, the output RDD has a partitioner (either one inherited from the parents or a default hash partitioner)
+We have implemented Spark in about 14,000 lines of Scala.
+The system runs over the Mesos cluster manager [17], allowing it to share resources with Hadoop, MPI and other applications.
+Each Spark program runs as a separate Mesos application, with its own driver (master) and workers, and resource sharing between these applications is handled by Mesos.
+Spark can read data from any Hadoop input source (e.g., HDFS or HBase) using Hadoop’s existing input plugin APIs, and runs on an unmodified version of Scala.
+Spark’s scheduler uses our representation of RDDs, described in Section 4
+Partitions are shaded rectangles, in black if they are already in memory.
+To run an action on RDD G, we build build stages at wide dependencies and pipeline narrow transformations inside each stage.
+Whenever a user runs an action (e.g., count or save) on an RDD, the scheduler examines that RDD’s lineage graph to build a DAG of stages to execute, as illustrated in Figure 5
+Each stage contains as many pipelined transformations with narrow dependencies as possible.
+The boundaries of the stages are the shuffle operations required for wide dependencies, or any already computed partitions that can shortcircuit the computation of a parent RDD.
+The scheduler then launches tasks to compute missing partitions from each stage until it has computed the target RDD.
+Our scheduler assigns tasks to machines based on data locality using delay scheduling [32]
+If a task needs to process a partition that is available in memory on a node, we send it to that node.
+Otherwise, if a task processes a partition for which the containing RDD provides preferred locations (e.g., an HDFS file), we send it to those.
+For wide dependencies (i.e., shuffle dependencies), we currently materialize intermediate records on the nodes holding parent partitions to simplify fault recovery, much like MapReduce materializes map outputs.
+If a task fails, we re-run it on another node as long as its stage’s parents are still available.
+We do not yet tolerate scheduler failures, though replicating the RDD lineage graph would be straightforward.
+Finally, although all computations in Spark currently run in response to actions called in the driver program, we are also experimenting with letting tasks on the cluster (e.g., maps) call the lookup operation, which provides random access to elements of hash-partitioned RDDs by key.
+In this case, tasks would need to tell the scheduler to compute the required partition if it is missing.
+Figure 6: Example showing how the Spark interpreter translates two lines entered by the user into Java objects.
+Scala includes an interactive shell similar to those of Ruby and Python.
+Given the low latencies attained with in-memory data, we wanted to let users run Spark interactively from the interpreter to query big datasets.
+The Scala interpreter normally operates by compiling a class for each line typed by the user, loading it into the JVM, and invoking a function on it.
+This class includes a singleton object that contains the variables or followed by println(x), the interpreter defines a class called Line1 containing x and causes the second line to.
+Modified code generation: Normally, the singleton object created for each line of code is accessed through a static method on its corresponding class.
+We modified the code generation logic to reference the instance of each line object directly.
+Figure 6 shows how the interpreter translates a set of lines typed by the user to Java objects after our changes.
+We found the Spark interpreter to be useful in processing large traces obtained as part of our research and exploring datasets stored in HDFS.
+We also plan to use to run higher-level query languages interactively, e.g., SQL.
+Spark provides three options for storage of persistent RDDs: in-memory storage as deserialized Java objects,
+The first option provides the fastest performance, because the Java VM can access each RDD element natively.
+The second option lets users choose a more memory-efficient representation than Java object graphs when space is limited, at the cost of lower performance.8
+The third option is useful for RDDs that are too large to keep in RAM but costly to recompute on each use.
+To manage the limited memory available, we use an LRU eviction policy at the level of RDDs.
+When a new RDD partition is computed but there is not enough space to store it, we evict a partition from the least recently accessed RDD, unless this is the same RDD as the one with the new partition.
+In that case, we keep the old partition in memory to prevent cycling partitions from the same RDD in and out.
+This is important because most operations will run tasks over an entire RDD, so it is quite likely that the partition already in memory will be needed in the future.
+Finally, each instance of Spark on a cluster currently has its own separate memory space.
+In future work, we plan to investigate sharing RDDs across instances of Spark through a unified memory manager.
+Although lineage can always be used to recover RDDs after a failure, such recovery may be time-consuming for RDDs with long lineage chains.
+Thus, it can be helpful to checkpoint some RDDs to stable storage.
+In general, checkpointing is useful for RDDs with long lineage graphs containing wide dependencies, such as the rank datasets in our PageRank example (§3.2.2)
+In these cases, a node failure in the cluster may result in the loss of some slice of data from each parent RDD, requiring a full recomputation [20]
+In contrast, for RDDs with narrow dependencies on data in stable storage, such as the points in our logistic regression example (§3.2.1) and the link lists in PageRank, checkpointing may never be worthwhile.
+If a node fails, lost partitions from these RDDs can be recomputed in parallel on other nodes, at a fraction of the cost of replicating the whole RDD.
+Spark currently provides an API for checkpointing (a REPLICATE flag to persist), but leaves the decision of which data to checkpoint to the user.
+However, we are also investigating how to perform automatic checkpointing.
+Because our scheduler knows the size of each dataset as well as the time it took to first compute it, it should be able to select an optimal set of RDDs to checkpoint to minimize system recovery time [30]
+The cost depends on how much computation the application does per byte of data, but can be up to 2× for lightweight processing.
+Because consistency is not a concern, RDDs can be written out in the background without requiring program pauses or distributed snapshot schemes.
+We evaluated Spark and RDDs through a series of experiments on Amazon EC2, as well as benchmarks of user applications.
+The speedup comes from avoiding I/O and deserialization costs by storing data in memory as Java objects.
+In particular, we used Spark to speed up an analytics report that was running on Hadoop by 40×
+When nodes fail, Spark can recover quickly by rebuilding only the lost RDD partitions.
+Before each test, we cleared OS buffer caches to measure IO costs accurately.
+HadoopBinMem: A Hadoop deployment that converts the input data into a low-overhead binary format in the first iteration to eliminate text parsing in later ones, and stores it in an in-memory HDFS instance.
+The key difference between the two applications is the amount of computation they perform per byte of data.
+The iteration time of kmeans is dominated by computation, while logistic regression is less compute-intensive and thus more sensitive to time spent in deserialization and I/O.
+Since typical learning algorithms need tens of iterations to converge, we report times for the first iteration and subsequent iterations separately.
+We find that sharing data via RDDs greatly speeds up future iterations.
+Figure 8: Running times for iterations after the first in Hadoop, HadoopBinMem, and Spark.
+First Iterations All three systems read text input from HDFS in their first iterations.
+As shown in the light bars in Figure 7, Spark was moderately faster than Hadoop across experiments.
+This difference was due to signaling overheads in Hadoop’s heartbeat protocol between its master and workers.
+HadoopBinMem was the slowest because it ran an extra MapReduce job to convert the data to binary, it and had to write this data across the network to a replicated in-memory HDFS instance.
+Understanding the Speedup We were surprised to find that Spark outperformed even Hadoop with inmemory storage of binary data (HadoopBinMem) by a 20× margin.
+In HadoopBinMem, we had used Hadoop’s standard binary format (SequenceFile) and a large block size of 256 MB, and we had forced HDFS’s data directory to be on an in-memory file system.
+However, Hadoop still ran slower due to several factors: 1
+Deserialization cost to convert binary records to usable in-memory Java objects.
+Regarding (2), we found that HDFS performed multiple memory copies and a checksum to serve each block.
+In particular, we compared the time to process text and binary inputs from both HDFS (where overheads in the HDFS stack will manifest) and an in-memory local file (where the kernel can very efficiently pass data to the program)
+We show the results of these tests in Figure 9
+The differences between in-memory HDFS and local file show that reading through HDFS introduced a 2-second overhead, even when data was in memory on the local machine.
+The differences between the text and binary input indicate the parsing overhead was 7 seconds.
+Finally, even when reading from an in-memory file, converting the pre-parsed binary data into Java objects took 3 seconds, which is still almost as expensive as the logistic regression itself.
+By storing RDD elements directly as Java objects in memory, Spark avoids all these overheads.
+We compared the performance of Spark with Hadoop for PageRank using a 54 GB Wikipedia dump.
+We also evaluated a version of PageRank written using our implementation of Pregel over Spark, which we describe in Section 7.1
+Figure 11: Iteration times for k-means in presence of a failure.
+One machine was killed at the start of the 6th iteration, resulting in partial reconstruction of an RDD using lineage.
+We evaluated the cost of reconstructing RDD partitions using lineage after a node failure in the k-means application.
+In the 6th iteration, one of the machines was killed, resulting in the loss of the tasks running on that machine and the RDD partitions stored there.
+Spark re-ran these tasks in parallel on other machines, where they re-read corresponding input data and reconstructed RDDs via lineage, which increased the iteration time to 80s.
+Once the lost RDD partitions were reconstructed, the iteration time went back down to 58s.
+Note that with a checkpoint-based fault recovery mechanism, recovery would likely require rerunning at least several iterations, depending on the frequency of checkpoints.
+In contrast, the lineage graphs for the RDDs in our examples were all less than 10 KB in size.
+A natural question is how Spark runs if there is not enough memory to store a job’s data.
+In this experiment, we configured Spark not to use more than a certain percentage of memory to store RDDs on each machine.
+We present results for various amounts of storage space for logistic regression in Figure 12
+In-Memory Analytics Conviva Inc, a video distribution company, used Spark to accelerate a number of data analytics reports that previously ran over Hadoop.
+For example, one report ran as a series of Hive [1] queries that computed various statistics for a customer.
+These queries all worked on the same subset of the data (records matching a customer-provided filter), but performed aggregations (averages, percentiles, and COUNT DISTINCT) over different grouping fields, requiring separate MapReduce jobs.
+Furthermore, the Spark program only required 96 GB of RAM, because it only stored the rows and columns matching the customer’s filter in an RDD, not the whole decompressed file.
+Traffic Modeling Researchers in the Mobile Millennium project at Berkeley [18] parallelized a learning algorithm for inferring road traffic congestion from sporadic automobile GPS measurements.
+Using a traffic model, the system can estimate the time it takes to travel across individual road links.
+The researchers trained this model using an expectation maximization (EM) algorithm that repeats two map and reduceByKey steps iteratively.
+Figure 13: Per-iteration running time of two user applications implemented with Spark.
+They implemented a logistic regression classifier on top of Spark similar to the example in Section 6.1, but they used a distributed reduceByKey to sum the gradient vectors in parallel.
+The scaling is not as close to linear due to a higher fixed communication cost per iteration.
+Figure 14 shows the response times of the queries on the full dataset and half and one-tenth of the data.
+This illustrates that RDDs make Spark a powerful tool for interactive data mining.
+Although RDDs seem to offer a limited programming interface due to their immutable nature and coarse-grained transformations, we have found them suitable for a wide class of applications.
+In particular, RDDs can express a surprising number of cluster programming models that have so far been proposed as separate frameworks, allowing users to compose these models in one program (e.g., run a MapReduce operation to build a graph, then run Pregel on it) and share data between them.
+In this section, we discuss which programming models RDDs can express and why they are so widely applicable (§7.1)
+In addition, we discuss another benefit of the lineage information in RDDs that we are pursuing, which is to facilitate debugging across these models (§7.2)
+RDDs can efficiently express a number of cluster programming models that have so far been proposed independently.
+By “efficiently,” we mean that not only can RDDs be used to produce the same output as programs written in these models, but that RDDs can also capture the optimizations that these frameworks perform, such as keeping specific data in memory, partitioning it to minimize communication, and recovering from failures efficiently.
+MapReduce: This model can be expressed using the flatMap and groupByKey operations in Spark, or reduceByKey if there is a combiner.
+DryadLINQ: The DryadLINQ system provides a wider range of operators than MapReduce over the more general Dryad runtime, but these are all bulk operators that correspond directly to RDD transformations available in Spark (map, groupByKey, join, etc)
+SQL: Like DryadLINQ expressions, SQL queries perform data-parallel operations on sets of records.
+Pregel: Google’s Pregel [22] is a specialized model for iterative graph applications that at first looks quite different from the set-oriented programming models in other systems.
+In Pregel, a program runs as a series of coordinated “supersteps.” On each superstep, each vertex in the graph runs a user function that can update state associated with the vertex, change the graph topology, and send messages to other vertices for use in the next superstep.
+This model can express many graph algorithms, including shortest paths, bipartite matching, and PageRank.
+The key observation that lets us implement this model with RDDs is that Pregel applies the same user function to all the vertices on each iteration.
+Thus, we can store the vertex states for each iteration in an RDD and perform a bulk transformation (flatMap) to apply this function and generate an RDD of messages.
+Equally importantly, RDDs allow us to keep vertex states in memory like Pregel does, to minimize communication by controlling their partitioning, and to support partial recovery on failures.
+The systems keep data partitioned consistently across iterations, and Twister can also keep it in memory.
+Both optimizations are simple to express with RDDs, and we were able to implement HaLoop as a 200-line library using Spark.
+These systems perform bulk operations similar to Dryad, but store application state in distributed filesystems.
+Placing the intermediate state in RDDs would speed up their processing.
+Explaining the Expressivity of RDDs Why are RDDs able to express these diverse programming models? The reason is that the restrictions on RDDs have little impact in many parallel applications.
+In particular, although RDDs can only be created through bulk transformations, many parallel programs naturally apply the same operation to many records, making them easy to express.
+Similarly, the immutability of RDDs is not an obstacle because one can create multiple RDDs to represent versions of the same dataset.
+Indeed, many of today’s MapReduce applications run over filesystems that do not allow updates to files, such as HDFS.
+One final question is why previous frameworks have not offered the same level of generality.
+We believe that this is because these systems explored specific problems that MapReduce and Dryad do not handle well, such as iteration, without observing that the common cause of these problems was a lack of data sharing abstractions.
+While we initially designed RDDs to be deterministically recomputable for fault tolerance, this property also facilitates debugging.
+Cluster Programming Models: Related work in cluster programming models falls into several classes.
+RDDs represent a more efficient data sharing abstraction than stable storage because they avoid the cost of data replication, I/O and serialization.10
+However, in these systems, the parallel collections represent either files on disk or ephemeral datasets used to express a query plan.
+Although the systems will pipeline data across operators in the same query (e.g., a map followed by another map), they cannot share data efficiently across queries.
+We based Spark’s API on the parallel collection model due to its convenience, and do not claim novelty for the language-integrated interface, but by providing RDDs as the storage abstraction behind this interface, we allow it to support a far broader class of applications.
+A third class of systems provide high-level interfaces for specific classes of applications requiring data sharing.
+However, these frameworks perform data sharing implicitly for the pattern of computation they support, and do not provide a general abstraction that the user can employ to share data of her choice among operations of her choice.
+For example, a user cannot use Pregel or Twister to load a dataset into memory and then decide what query to run on it.
+RDDs provide a distributed storage abstraction explicitly and can thus support applications that these specialized systems do not capture, such as interactive data mining.
+Finally, some systems expose shared mutable state to allow the user to perform in-memory computation.
+For example, Piccolo [27] lets users run parallel functions that read and update cells in a distributed hash table.
+Unlike these systems, an RDD-based debugger will not replay nondeterministic behavior in the user’s functions (e.g., a nondeterministic map), but it can at least report it by checksumming data.
+First, RDDs provide a higher-level programming interface based on operators such as map, sort and join, whereas the interface in Piccolo and DSM is just reads and updates to table cells.
+Second, Piccolo and DSM systems implement recovery through checkpoints and rollback, which is more expensive than the lineage-based strategy of RDDs in many applications.
+Finally, as discussed in Section 2.3, RDDs also provide other advantages over DSM, such as straggler mitigation.
+This capability would be compelling to add to an RDD-based system.
+However, Nectar does not provide in-memory caching (it places the data in a distributed file system), nor does it let users explicitly control which datasets to persist and how to partition them.
+While this solution provides faster access to data that is already in the file system, it is not as efficient a means of sharing intermediate results within an application as RDDs, because it would still require applications to write these results to the file system between stages.
+Lineage: Capturing lineage or provenance information for data has long been a research topic in scientific computing and databases, for applications such as explaining results, allowing them to be reproduced by others, and recomputing data if a bug is found in a workflow or if a dataset is lost.
+RDDs provide a parallel programming model where fine-grained lineage is inexpensive to capture, so that it can be used for failure recovery.
+Our lineage-based recovery mechanism is also similar to the recovery mechanism used within a computation (job) in MapReduce and Dryad, which track dependencies among a DAG of tasks.
+However, in these systems, the lineage information is lost after a job ends, requiring the use of a replicated storage system to share data across computations.
+In contrast, RDDs apply lineage to persist in-memory data efficiently across computations, without the cost of replication and disk I/O.
+Relational Databases: RDDs are conceptually similar to views in a database, and persistent RDDs resemble materialized views [28]
+However, like DSM systems, databases typically allow fine-grained read-write access to all records, requiring logging of operations and data for fault tolerance and additional overhead to maintain.
+These overheads are not required with the coarse-grained transformation model of RDDs.
+We have presented resilient distributed datasets (RDDs), an efficient, general-purpose and fault-tolerant abstraction for sharing data in cluster applications.
+RDDs can express a wide range of parallel applications, including many specialized programming models that have been proposed for iterative computation, and new applications that these models do not capture.
+Unlike existing storage abstractions for clusters, which require data replication for fault tolerance, RDDs offer an API based on coarsegrained transformations that lets them recover data efficiently using lineage.
+We have implemented RDDs in a system called Spark that outperforms Hadoop by up to 20× in iterative applications and can be used interactively to query hundreds of gigabytes of data.
+We have open sourced Spark at spark-project.org as a vehicle for scalable data analysis and systems research.
+Acknowledgements We thank the first Spark users, including Tim Hunter, Lester Mackey, Dilip Joseph, and Jibin Zhan, for trying out our system in their real applications, providing many good suggestions, and identifying a few research challenges along the way.
+We also thank our shepherd, Ed Nightingale, and our reviewers for their feedback.
+Mesos: A platform for fine-grained resource sharing in the data center.
+The case for RAMClouds: scalable high-performance storage entirely in DRAM.
+Design and evaluation of a real-time URL spam filtering service.
+DryadLINQ: A system for general-purpose distributed data-parallel computing using a high-level language.
+Delay scheduling: A simple technique for achieving locality and fairness in cluster scheduling.
+Resilient distributed datasets: A fault-tolerant abstraction for in-memory cluster computing.

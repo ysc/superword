@@ -1,0 +1,19 @@
+Used to add documents / delete documents from the index.
+Changes are stored in memory (possibly flushing to maintain memory limits)
+Requires a commit to make changes “persistent”, which is expensive.
+A single IndexWriter can write to an index, expensive to create (reuse at all cost!)
+Each segment is almost a self sufficient index by itself, immutable up to deletes.
+Commits “officially” adds segments to the index, though internal flushing might create new segments as well.
+IndexWriter#getReader allows to get a refreshed reader that sees changes done to IW.
+Distributed Directory Implement a Directory that works on top of a distributed “system”
+Custom IndexReader and IndexWriter to work on top of Cassandra.
+Does not work well with other Lucene constructs, like FieldCache (by doc info)
+Slave pulls index files from the master (delta, only new segments)
+Requires a “commit”on master to make changes available for replication to slave.
+Redundant data transfer as segments are merged (especially for stored fields)
+Friction between commit (heavy) and replication, slaves can get “way” behind master (big new segments), looses HA.
+Does not work for real time search, slaves are “too” behind.
+Primary dies, slave can become primary, and still allow indexing.
+IndexWriter#commit is heavy, but required in order to make sure data is actually persisted.
+Can be solved by having a write ahead log that can be replayed on the event of a crash.
+Complete non blocking, event IO based communication (no blocking threads on sockets, no deadlocks, scalable with large number of shards/replicas)

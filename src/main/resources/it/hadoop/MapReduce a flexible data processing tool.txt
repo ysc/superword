@@ -1,0 +1,91 @@
+We built a system around this programming model in 2003 to simplify construction of the inverted index for handling searches at Google.com.
+Since then, more than 10,000 distinct programs have been implemented  using MapReduce at Google, including algorithms for large-scale graph processing, text processing, machine learning, and statistical machine translation.
+MapReduce advantages over parallel databases include storage-system independence and fine-grain fault tolerance for large jobs.
+To help illustrate the MapReduce programming model, consider the problem of counting the number of occurrences of each word in a large collection of documents.
+The map function emits each word plus an associated count of occurrences (just `1' in this simple example)
+The reduce function sums together all counts emitted for a particular word.
+MapReduce automatically parallelizes and executes the program on a large cluster of commodity machines.
+The runtime system takes care of the details of partitioning the input data, scheduling the program’s execution across a set of machines, handling machine failures, and managing required inter-machine communication.
+MapReduce allows programmers with no experience with parallel and distributed systems to easily utilize the resources of a large distributed system.
+A typical MapReduce computation processes many terabytes of data on hundreds or thousands of machines.
+Programmers find the system easy to use, and more than 100,000 MapReduce jobs are executed on Google’s clusters every day.
+Compared to Parallel Databases The query languages built into parallel database systems are also used to.
+Furthermore, like Vertica and other column-store databases, we will read data only from the columns needed for this analysis, since Bigtable can store data segregated by columns.
+Nearly every logging system we are familiar with rolls over to a new log file periodically and embeds the rollover time in the name of each log file.
+Therefore, we can easily run a MapReduce operation over just the log files that may potentially overlap the specified date range, instead of reading all log files.
+Complex Functions Map and Reduce functions are often fairly simple and have straightforward SQL equivalents.
+However, in many cases, especially for Map functions, the function is too complicated to be expressed easily in a SQL query, as in the following examples:
+Extracting the set of outgoing links  ornm58 from a collection of HTML documents and aggregating by target document;
+Stitching together overlapping sat- ornm58 ellite images to remove seams and to select high-quality imagery for Google Earth;
+Generating a collection of inverted  ornm58 index files using a compression scheme tuned for efficient support of Google search queries;
+Processing all road segments in the  ornm58 world and rendering map tile images that display these segments for Google Maps; and.
+Conceptually, such user defined functions (UDFs) can be combined with SQL queries, but the experience reported in the comparison paper indicates that UDF support is either buggy (in DBMS-X) or missing (in Vertica)
+These concerns may go away over the long term, but for now, MapReduce is a better framework for doing more comexpress the type of computations supported by MapReduce.
+It evaluated the open source Hadoop implementation10 of the MapReduce programming model, DBMS-X (an unidentified commercial database system), and Vertica (a column-store database system from a company co-founded by one of the authors of the comparison paper)
+MapReduce cannot use indices and  ornm58 implies a full scan of all input data;
+MapReduce input and outputs are  ornm58 always simple files in a file system; and.
+MapReduce requires the use of in- ornm58 efficient textual data formats.
+MapReduce is storage-system inde- ornm58 pendent and can process data without first requiring it to be loaded into a database.
+In many cases, it is possible to run 50 or more separate MapReduce analyses in complete passes over the data before it is possible to load the data into a database and complete a single analysis;
+Complicated transformations are  ornm58 often easier to express in MapReduce than in SQL; and.
+Many conclusions in the compari- ornm58 son paper were based on implementation and evaluation shortcomings not fundamental to the MapReduce model; we discuss these shortcomings later in this article.
+Heterogenous Systems Many production environments contain a mix of storage systems.
+Customer data may be stored in a relational database, and user requests may be logged to a file system.
+Furthermore, as such environments evolve, data may migrate to new storage systems.
+MapReduce provides a simple model for analyzing data in such heterogenous systems.
+A single MapReduce operation easily processes and combines data from a variety of storage systems.
+Now consider a system in which a parallel DBMS is used to perform all data analysis.
+The input to such analysis must first be copied into the parallel DBMS.
+It may also be unacceptably slow, especially if the data will be analyzed only once or twice after being loaded.
+For example, consider a batch-oriented Web-crawling-and-indexing system that fetches a set of Web pages and generates an inverted index.
+It seems awkward and inefficient to load the set of fetched pages into a database just so they can be read through once to generate an inverted index.
+Even if the cost of loading the input into a parallel DBMS is acceptable, we still need an appropriate loading tool.
+Here is another place MapReduce can be used; instead of writing a custom loader with its own ad hoc parallelization and fault-tolerance support, a simple MapReduce program can be written to load the data into the parallel DBMS.
+Indices The comparison paper incorrectly said that MapReduce cannot take advantage of pregenerated indices, leading to skewed benchmark results in the paper.
+For example, consider a large data set partitioned into a collection of nondistributed databases, perhaps using a hash function.
+An index can be added to each database, and the result of running a database query using this index can be used as an input to MapReduce.
+If the data is stored in D database partitions, we will run D database queries that will become the D inputs to the MapReduce execution.
+Another example of the use of indices is a MapReduce that reads from Bigtable.
+If the data needed maps to a sub-range of the Bigtable row space, we.
+For example, consider the following schema from the comparison paper:
+The corresponding Hadoop benchmarks in the comparison paper used an inefficient and fragile textual format with different attributes separated by vertical bar characters:
+In contrast to ad hoc, inefficient formats, virtually all MapReduce operations at Google read and write data in the Protocol Buffer format.8 A highlevel language describes the input and output types, and compiler-generated code is used to hide the details of encoding/decoding from application code.
+The corresponding protocol buffer description for the Rankings data would be:
+The protocol buffer framework allows types to be upgraded (in constrained ways) without requiring existing applications to be changed (or even recompiled or rebuilt)
+This level of schema support has proved sufficient for allowing thousands of Google engineers to share the same evolving data types.
+The Java code fragments used for the benchmark runs were:
+Given the factor of an 80-fold difference in this record-parsing benchmark, we suspect the absolute numbers for the Hadoop benchmarks in the comparison paper are inflated and cannot be used to reach conclusions about fundamental differences in the performance of MapReduce and parallel DBMS.
+Fault Tolerance The MapReduce implementation uses a pull model for moving data between mappers and reducers, as opposed to a push model where mappers write directly to reducers.
+ImpleMapReduce is a highly effective and efficient tool for large-scale fault-tolerant data analysis.
+For example, the input may be a database with an index that provides efficient filtering or an indexed file structure (such as daily log files used for efficient date-based filtering of log data)
+This mistaken assumption about MapReduce affects three of the five benchmarks in the comparison paper (the selection, aggregation, and join tasks) and invalidates the conclusions in the paper about the relative performance of MapReduce and parallel databases.
+The measurements of Hadoop in all five benchmarks in the comparison paper included the cost of a final phase to merge the results of the initial MapReduce into one file.
+In practice, this merging is unnecessary, since the next consumer of MapReduce output is usually another MapReduce that can easily operate over the set of files produced by the first MapReduce, instead of requiring a single merged input.
+Even if the consumer is not another MapReduce, the reducer processes in the initial MapReduce can write directly to a merged destination (such as a Bigtable or parallel database table)
+The DBMS measurements in the comparison paper demonstrated the high cost of loading input data into a database before it is analyzed.
+For many of the benchmarks in the comparison paper, the time needed to load the input data into a parallel database is five to 50 times the time needed to analyze the data via Hadoop.
+MapReduce implementations tend not to use a push model due to the fault-tolerance properties required by Google’s developers.
+Most MapReduce executions over large data sets encounter at least a few failures; apart from hardware and software problems, Google’s cluster scheduling system can preempt MapReduce tasks by killing them to make room for higher-priority tasks.
+In a push model, failure of a reducer would force re-execution of all Map tasks.
+We suspect that as data sets grow larger, analyses will require more computation, and fault tolerance will become more important.
+There are already more than a dozen distinct data sets at Google more than 1PB in size and dozens more hundreds of TBs in size that are processed daily using MapReduce.
+Outside of Google, many users listed on the Hadoop users list11 are handling data sets of multiple hundreds of terabytes or more.
+Clearly, as data sets continue to grow, more users will need a fault-tolerant system like MapReduce that can be used to process these large data sets efficiently and effectively.
+Startup overhead and sequential scanning speed are indicators of maturity of implementation and engineering tradeoffs, not fundamental differences in programming models.
+These differences are certainly important but can be addressed in a variety of ways.
+For example, startup overhead can be addressed by keeping worker processes live, waiting for the next MapReduce invocation, an optimization added more than a year ago to Google’s MapReduce implementation.
+Google has also addressed sequential scanning performance with a variety of performance optimizations by, for example, using efficient binary-encoding.
+Long load times may not matter if many queries will be run on the data after loading, but this is often not the case; data sets are often generated, processed once or twice, and then discarded.
+For example, the Web-search index-building system described in the MapReduce paper4 is a sequence of MapReduce phases where the output of most phases is consumed by one or two subsequent MapReduce phases.
+Conclusion The conclusions about performance in the comparison paper were based on flawed assumptions about MapReduce and overstated the benefit of parallel database systems.
+In our experience, MapReduce is a highly effective and efficient tool for large-scale faulttolerant data analysis.
+However, a few useful lessons can be drawn from this discussion:
+MapReduce implementations should strive to reduce startup latency by using techniques like worker processes that are reused across different invocations;
+Careful attention must be paid to the implementation of the data-shuffling phase to avoid generating O(M*R) seeks in a MapReduce with M map tasks and R reduce tasks;
+MapReduce users should take advantage of natural indices (such as timestamps in log file names) whenever possible; and.
+Most MapReduce output should be left unmerged, since there is no benefit to merging if the next consumer is another MapReduce program.
+First and foremost, it provides fine-grain fault tolerance for large jobs; failure in the middle of a multihour execution does not require restarting the job from scratch.
+Second, MapReduce is very useful for handling data processing and data loading in a.
+Third, MapReduce provides a good framework for the execution of more complicated functions than are supported directly in SQL.
+HadoopDB: An architectural hybrid of MapReduce and DBMS technologies for analytical workloads.
+MapReduce provides fine-grain fault tolerance for large jobs; failure in the middle of a multi-hour execution does not require restarting the job from scratch.

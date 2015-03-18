@@ -1,0 +1,380 @@
+You are free to copy, distribute, modify or display the book.
+However, I ask that you always attribute the book to me,
+Karl Seguin, and do not use it for commercial purposes.
+You can see the full text of the license at:
+Karl Seguin is a developer with experience across various fields and technologies.
+He’s an active contributor to OpenSource Software projects, a technical writer and an occasional speaker.
+Redis powers the ranking and statistics of his free service for casual game developers: mogade.com.
+His blog can be found at http://openmymind.net and he tweets via [@karlseguin](http://twitter.com/karlseguin)
+A special thanks to Perry Neal for lending me his eyes, mind and passion.
+The latest source of this book is available at: http://github.com/karlseguin/the-little-redis-book.
+Over the last couple years, the techniques and tools used for persisting and querying data have grown at an incredible.
+While it’s safe to say that relational databases aren’t going anywhere, we can also say that the ecosystem around.
+Of all the new tools and solutions, for me, Redis has been the most exciting.
+Hours is the right unit to use when talking about length of time it takes to get comfortable with Redis.
+Secondly, it solves a specific set of problems while at the same time being quite generic.
+Redis doesn’t try to be all things to all data.
+As you get to know Redis, it’ll become increasingly evident what does and.
+And when it does, as a developer, it’s a great experience.
+While you can build a complete system using Redis only, I think most people will find that it supplements their more.
+It’s the kind of solution you use to implement specific features.
+But when you need good search, it’s a much better experience for both you and your users.
+Of course, the similarities between Redis and indexing engines end there.
+The goal of this book is to build the foundation you’ll need to master Redis.
+We all learn differently: some like to get their hands dirty, some like to watch videos, and some like to read.
+Redis is easy to install and comes with a simple shell.
+Let’s take a couple minutes and get it up and running on our machine.
+Redis itself doesn’t officially support Windows, but there are options available.
+Another solution, which has been available for some time, can be found at https://github.com/dmajkic/redis/downloads.
+You can download the most up to date version (which should be at the top of the list)
+For *nix and Mac users, building it from source is your best option.
+At the time of this writing the latest version is 2.6.2; to install this.
+If you built it from source, the binary outputs have been placed in the src directory.
+If everything worked, the Redis binaries should be available at your fingertips.
+We’ll focus on the Redis server and the Redis command line interface (a DOS-like client)
+If you read the start up message you’ll see a warning that the redis.conf file couldn’t be found.
+Redis will instead use built-in defaults, which is fine for what we’ll be doing.
+Next start the Redis console by either double clicking redis-cli (Windows) or running ./redis-cli (*nix/MacOSX)
+This will connect to the locally-running server on the default port (6379)
+You can test that everything is working by entering info into the command line interface.
+You’ll hopefully see a bunch of key-value pairs which provide a great deal of insight into the server’s status.
+If you are having problems with the above setup I suggest you seek help in the official Redis support group.
+As you’ll soon learn, Redis’ API is best described as an explicit set of functions.
+This means that whether you are using the command line tool, or a driver for your favorite language, things.
+Therefore, you shouldn’t have any problems following along if you prefer to work from a programming.
+If you want, head over to the client page and download the appropriate driver.
+Redis is often described as an in-memory persistent key-value store.
+It’s important to step beyond this misconception otherwise your perspective of.
+Redis and the problems it solves will be too narrow.
+The reality is that Redis exposes five different data structures, only one of which is a typical key-value structure.
+Understanding these five data structures, how they work, what methods they expose and what you can model with.
+First though, let’s wrap our heads around what it means to expose data.
+If we were to apply this data structure concept to the relational world, we could say that databases expose a single.
+What if, rather than having a one-size-fits-all structure, we used more specialized structures? There.
+Redis has the same basic concept of a database that you are already familiar with.
+The typical use-case for a database is to group all of an application’s data together and to keep it separate from another.
+In Redis, databases are simply identified by a number with the default database being number 0
+If you want to change to a different database you can do so via the select command.
+Redis should reply with an OK message and your prompt should change to something like redis 127.0.0.1:6379[1]>
+If you want to switch back to the default database, just enter select 0 in the command line interface.
+While Redis is more than just a key-value store, at its core, every one of Redis’ five data structures has at least a.
+It’s imperative that we understand keys and values before moving on to other available pieces of.
+We’ll be dealing with keys a lot, but for now, it’s good enough to know that a.
+One could reasonably expect such a key to contain information about a user named leto.
+The colon doesn’t have any special meaning, as far as Redis is concerned, but using a separator is a common approach people use to organize their keys.
+Redis treats values as a byte array and doesn’t care what they are.
+First we have the actual command, in this case set.
+The set command takes two parameters: the key we are setting and the value we are setting it to.
+Many, but not all, commands take a key (and when they do, it’s often the first parameter)
+Keys and values are fundamental concepts, and the get and set commands are the simplest way to play with them.
+Create more users, try different types of keys, try different values.
+As far as Redis is concerned, keys are everything and values are.
+Or, put another way, Redis doesn’t allow you to query an object’s values.
+We’ve lived in a world where data querying is so flexible and powerful that.
+There’ll be things that just don’t belong in there (because of the querying limitations)
+We’ll look at more concrete examples as we move on, but it’s important that we understand this basic reality of Redis.
+It helps us understand why values can be anything - Redis never needs to read or understand them.
+We mentioned before that Redis is an in-memory persistent store.
+You configure it so that if X number of keys.
+Alternatively (or in addition to snapshotting), Redis can run in append mode.
+In some cases it’s acceptable to lose 60 seconds worth of data, in exchange for performance,
+In chapter 6 we’ll see a third option, which is offloading persistence to a slave.
+With respect to memory, Redis keeps all your data in memory.
+The obvious implication of this is the cost of running.
+Redis: RAM is still the most expensive part of server hardware.
+I do feel that some developers have lost touch with how little space data can take.
+As for scaling, other solutions tend to be IO- or CPU-bound.
+Unless you’re storing large multimedia files in Redis, the in-memory aspect is probably a.
+For apps where it is an issue you’ll likely be trading being IO-bound for being memory bound.
+However, this feature has been seen as a failure (by Redis’ own developers)
+The last thing I want to do before diving into Redis is bring some of.
+Specifically, query limitations, data structures and Redis’ way to store data in memory.
+When you add those three things together you end up with something wonderful: speed.
+Redis is fast, everything’s in memory.” But that’s only part of it.
+How fast? It depends on a lot of things - which commands you are using, the type of data, and so on.
+I once changed code which used a traditional model to using Redis.
+A load test I wrote took over 5 minutes to finish.
+It’s important to understand this aspect of Redis because it impacts how you interact with it.
+However, given that we are dealing with simpler data structures, we’ll sometimes need to hit.
+Such data access patterns can feel unnatural at first, but in reality.
+Although we barely got to play with Redis, we did cover a wide range of topics.
+In the next chapter we’ll go hands-on and any questions you have will hopefully answer themselves.
+Values are arbitrary byte arrays that Redis doesn’t care about.
+Redis exposes (and is implemented as) five specialized data structures.
+Combined, the above make Redis fast and easy to use, but not suitable for every scenario.
+We’ll explain what each data structure is, what methods are available.
+The only Redis constructs we’ve seen so far are commands, keys and values.
+When we used the set command, how did Redis know what data structure to use? It turns out that every command is specific to a data structure.
+For example when you use set you are storing the value in a string data structure.
+When you use hset you are storing it in a hash.
+Given the small size of Redis’ vocabulary, it’s quite manageable.
+We’ll only cover the most important commands needed to understand the purpose of a data structure.
+There’s nothing more important than having fun and trying things out.
+Strings are the most basic data structures available in Redis.
+When you think of a key-value pair, you are thinking of.
+Don’t get mixed up by the name, as always, your value can be anything.
+We already saw a common use-case for strings, storing instances of objects by key.
+Now, you might be thinking, that’s great, but it doesn’t make sense.
+You can’t meaningfully pull a range out of JSON or.
+You are right, the lesson here is that some of the commands, especially with the string data structure,
+Earlier we learnt that Redis doesn’t care about your values.
+As a vague example, I could see the above append and.
+As a more concrete example I give you the incr, incrby, decr and decrby commands.
+As you can imagine, Redis strings are great for analytics.
+Try incrementing users:leto (a non-integer value) and see what happens (you should get an error)
+A more advanced example is the setbit and getbit commands.
+It isn’t important that you understand how bitmaps work, or how Spool uses them, but rather to understand that Redis.
+Still, the most common cases are the ones we gave above: storing.
+Also, since getting a value by key is so fast, strings are often used to cache.
+Hashes are a good example of why calling Redis a key-value store isn’t quite accurate.
+The important difference is that they provide an extra level of indirection: a field.
+We can also set multiple fields at once, get multiple fields at once, get all fields and values, list all the fields or delete.
+As you can see, hashes give us a bit more control over plain strings.
+Looking at hashes from the perspective of a well-defined object, such as a user, is key to understanding how they work.
+And it’s true that, for performance reasons, more granular control might be useful.
+Lists let you store and manipulate an array of values for a given key.
+You can add values to the list, get the first or last.
+First we push a new user at the front of the list, then we trim it so that it only contains the last 50 users.
+In this case, where we always trim after a single insert, it’ll actually have a constant performance of O(1) (because N will always be equal.
+This is also the first time that we are seeing a value in one key referencing a value in another.
+The above is a bit of Ruby which shows the type of multiple roundtrips we talked about before.
+Of course, lists aren’t only good for storing references to other keys.
+If you were building a game, you might use one to track.
+Sets are used to store unique values and provide a number of set-based operations, like unions.
+A friend’s list is the classic example of using a set:
+Regardless of how many friends a user has, we can efficiently tell (O(1)) whether userX is a friend of userY or not:
+Furthermore we can see whether two or more people share the same friends:
+Sets are great for tagging or tracking any other properties of a value for which duplicates don’t make any sense (or.
+The last and most powerful data structure are sorted sets.
+If hashes are like strings but with fields, then sorted sets.
+We use zrevrank instead of zrank since Redis’ default sort is from low to high (but in this case we are ranking from high to low)
+The most obvious use-case for sorted sets is a leaderboard system.
+That’s a high level overview of Redis’ five data structures.
+One of the neat things about Redis is that you can often do.
+There are probably ways to use string and sorted sets that no one has thought of yet.
+Redis exposes five data structures and various methods, don’t think you need to use all of them.
+In the previous chapter we talked about the five data structures and gave some examples of what problems they might.
+Now it’s time to look at a few more advanced, yet common, topics and design patterns.
+Throughout this book we’ve made references to the Big O notation in the form of O(n) or O(1)
+In Redis, it’s used to tell us how fast a command.
+Redis documentation tells us the Big O notation for each of its commands.
+The fastest anything can be is O(1) which is a constant.
+The sismember command, which tells us if a value belongs to a set, is O(1)
+Logarithmic, or O(log(N)), is the next fastest possibility because it needs to scan through smaller and smaller partitions.
+Using this type of divide and conquer approach, a very large number of items quickly gets broken down in a few.
+Looking for a non-indexed column in a table is an O(N) operation.
+However, in the case of ltrim, N isn’t the number of elements in the list, but rather the elements being removed.
+Though they’ll probably both be so fast that you wouldn’t be able to time it.)
+By reading the documentation we see that N is the number of.
+The sort command, which we’ll discuss in greater detail in the next chapter has a complexity of O(N+M*log(M))
+From its performance characteristic, you can probably tell that this is one of Redis’ most complex commands.
+There are a number of other complexities, the two remaining common ones are O(Nˆ2) and O(CˆN)
+It’s worth pointing out that the Big O notation deals with the worst case.
+A common situation you’ll run into is wanting to query the same value by different keys.
+This is bad because it’s a nightmare to manage and it takes twice the amount of memory.
+It would be nice if Redis let you link one key to another, but it doesn’t (and it probably never will)
+Redis’ development is to keep the code and API clean and simple.
+Using a hash, we can remove the need for duplication:
+What we are doing is using the field as a pseudo secondary index and referencing the single user object.
+To get a user by email, we issue an hget followed by a get (in Ruby):
+This is something that you’ll likely end up doing often.
+To me, this is where hashes really shine, but it isn’t an obvious.
+We’ve seen a couple examples of having one value reference another.
+We saw it when we looked at our list example,
+There is no magic solution to solving this problem in Redis.
+We already saw how sets are often used to implement this type of manual index:
+Each member of this set is a reference to a Redis string value containing details on the actual user.
+What if chani changes her name, or deletes her account? Maybe it would make sense to also track the inverse relationships:
+Maintenance cost aside, if you are anything like me, you might cringe at the processing and memory cost of having.
+In the next section we’ll talk about ways to reduce the performance cost of having to do.
+If you actually think about it though, relational databases have the same overhead.
+Again, having to manually deal with references in Redis is unfortunate.
+We already mentioned that making frequent trips to the server is a common pattern in Redis.
+First, many commands either accept one or more set of parameters or have a sister-command which takes multiple.
+We saw mget earlier, which takes multiple keys and returns the values:
+Or the sadd command which adds 1 or more members to a set:
+Normally when a client sends a request to Redis it waits for the reply before sending.
+With pipelining you can send a number of requests without waiting for their responses.
+It’s worth noting that Redis will use memory to queue up the commands, so it’s a good idea to batch them.
+But, if you are issuing commands against ~50 character keys, you can probably batch them in thousands or tens of.
+Exactly how you execute commands within a pipeline will vary from driver to driver.
+As you can probably guess, pipelining can really speed up a batch import!
+Every Redis command is atomic, including the ones that do multiple things.
+Additionally, Redis has support for transactions when using multiple commands.
+You might not know it, but Redis is actually single-threaded, which is how every command is guaranteed to be atomic.
+While one command is executing, no other command will run.
+We’ll briefly talk about scaling in a later chapter.) This.
+Although these commands are useful, you’ll inevitably need to run multiple commands as an atomic group.
+The commands will be executed as a single atomic operation (without another client’s command being executed.
+That either all or none of the commands in the transaction will be executed.
+You can, and should, test this in the command line interface.
+Also note that there’s no reason why you can’t combine.
+Finally, Redis lets you specify a key (or keys) to watch and conditionally apply a transaction if the key(s) changed.
+But, if we add a watch to powerlevel, we can do:
+If another client changes the value of powerlevel after we’ve called watch on it, our transaction will fail.
+If no client changes the value, the set will work.
+We can execute this code in a loop until it works.
+In the next chapter we’ll talk about commands that aren’t specifically related to data structures.
+But there’s one I’d like to talk about in particular: the keys command.
+This command takes a pattern and finds all the matching keys.
+This command seems like it’s well suited for a number of tasks, but it.
+Why? Because it does a linear scan through all the keys looking for matches.
+How do people try and use it? Say you are building a hosted bug tracking service.
+Each account will have an id and you might decide to store each bug into a string value with a key that looks like bug:account_id:bug_id.
+If you ever need to find all of an account’s bugs (to display them, or maybe delete them if they delete their account), you might.
+Much like we can use hashes to provide a way to expose secondary indexes, so.
+To get all the bug ids for an account we simply call hkeys bugs:1233
+This chapter, combined with the previous one, has hopefully given you some insight on how to use Redis to power.
+There are a number of other patterns you can use to build all types of things, but the real key is to.
+While the five data structures form the foundation of Redis, there are other commands which aren’t data structure.
+We’ve already seen a handful of these: info, select, flushdb, multi, exec, discard, watch and keys.
+This chapter will look at some of the other important ones.
+You can give it an absolute time in the form of a Unix timestamp (seconds.
+This is a key-based command, so it doesn’t matter what type of.
+The first command will delete the key (and associated value) after 30 seconds.
+You can find out how long an item has to live until via the ttl command and you can remove the expiration on a key via the persist command:
+Finally, there’s a special string command, setex which lets you set a string and specify a time to live in a single atomic command (this is more for convenience than anything else):
+Redis lists have an blpop and brpop command which returns and removes the first (or last) element from the list or blocks until one is available.
+Beyond this, Redis has first-class support for publishing messages and subscribing to channels.
+In the first window subscribe to a channel (we’ll call it warnings):
+Now, in the other window, publish a message to the warnings channel:
+If you go back to your first window you should have received the message to the warnings channel.
+Finally, notice that the publish command returned the value 1
+This indicates the number of clients that received the message.
+The monitor command lets you see what Redis is up to.
+It’s a great debugging tool that gives you insight into how your application is interacting with Redis.
+In one of your two redis-cli windows (if one is still subscribed, you can either.
+In the other, execute any other type of command (like get or set)
+You should see those commands, along with their parameters, in the first window.
+You should be wary of running monitor in production, it really is a debugging and development tool.
+Along with monitor, Redis has a slowlog which acts as a great profiling tool.
+It logs any command which takes longer than a specified number of microseconds.
+In the next section we’ll briefly cover how to configure Redis, for now you.
+Finally you can retrieve all of the logs, or the most recent logs via:
+You can also get the number of items in the slow log by entering slowlog len.
+For each command you entered you should see four parameters:
+The time, in microseconds, it took to run the command.
+The slow log is maintained in memory, so running it in production, even with a low threshold, shouldn’t be a problem.
+It lets you sort the values within a list, set or sorted set (sorted sets are ordered by score, not the members within the set)
+Which will return the values sorted from lowest to highest.
+The above command shows us how to page the sorted records (via limit), how to return the results in descending order (via desc) and how to sort lexicographically instead of numerically (via alpha)
+The real power of sort is its ability to sort based on a referenced object.
+Earlier we showed how lists, sets and sorted sets are often used to reference other Redis objects.
+The sort command can dereference those relations and sort by the underlying value.
+For example, say we have a bug tracker which lets users watch issues.
+It might make perfect sense to sort these by id (which the default sort will do), but we’d also like to have these sorted.
+To do so, we tell Redis what pattern to sort by.
+First, let’s add some more data so we can actually see a.
+To sort the bugs by severity, from highest to lowest, you’d do:
+Redis will substitute the * in our pattern (identified via by) with the values in our list/set/sorted set.
+This will create the key name that Redis will query for the actual values to sort by.
+Although you can have millions of keys within Redis, I think the above can get a little messy.
+Thankfully sort can also work on hashes and their fields.
+Instead of having a bunch of top-level keys you can leverage hashes:
+Not only is everything better organized, and we can sort by severity or priority, but we can also tell sort what field to retrieve:
+The same value substitution occurs, but Redis also recognizes the -> sequence and uses it to look into the specified field of our hash.
+We’ve also included the get parameter, which also does the substitution and field lookup, to retrieve bug details.
+The good news is that the output of a sort can be stored:
+Combining the store capabilities of sort with the expiration commands we’ve already seen makes for a nice combo.
+In the previous chapter, we saw how the keys command, while useful, shouldn’t be used in production.
+Although scan fulfills a similar purpose to keys there are a number of important difference.
+To be honest, most of the differences will seem like idiosyncrasies, but this is the cost.
+First amongst these differences is that a single call to scan doesn’t necessarily return all matching results.
+Nothing strange about paged results; however, scan returns a variable number of results which cannot be precisely controlled.
+You can provide a count hint, which defaults to 10, but it’s entirely possible to get more or less than the specified count.
+Rather than implementing paging through a limit and offset, scan uses a cursor.
+The first time you call scan you supply 0 as the cursor.
+Below we see an initial call to scan with an pattern match (optional) and a count hint (optional):
+As part of its reply, scan returns the next cursor to use.
+Alternatively, scan returns 0 to signify the end of results.
+Note that the next cursor value doesn’t correspond to the result number or anything else which clients might consider useful.
+Our first call returned a next cursor (3) and one result.
+Our subsequent call, using the next cursor, returned the end.
+Since the count is merely a hint, it’s possible for scan to return a next cursor (not 0) with no actual results.
+In other words, an empty result set doesn’t signify that no additional results exist.
+Only a 0 cursor means that there are no additional results.
+On the positive side, scan is completely stateless from Redis’ point of view.
+So there’s no need to close a cursor and there’s no harm in not fully reading a result.
+If you want to, you can stop iterating through results, even if Redis.
+It’s up to you to deal with this (likely by keeping a set of already seen values)
+Secondly, scan only guarantees that values which were present during the entire duration of iteration will be returned.
+Again, this comes from scan’s statelessness; it doesn’t take a snapshot of the existing values (like you’d see with many databases which provide strong consistency guarantees), but rather iterates.
+In addition to scan, hscan, sscan and zscan commands were also added.
+These let you iterate through hashes, sets and sorted sets.
+Why are these needed? Well, just like keys blocks all other callers, so does the hash command hgetall and the set command smembers.
+If you want to iterate over a very large hash or set, you might consider making use of these commands.
+However, if you want to fully iterate through a large sorted set, zscan isn’t without value.
+Redis 2.6 includes a built-in Lua interpreter which developers can leverage to write more advanced queries to be.
+It wouldn’t be wrong of you to think of this capability much like you might view stored procedures.
+The most difficult aspect of mastering this feature is learning Lua.
+Before looking at how to use Lua scripting, you might be wondering why you’d want to use it.
+Properly used however, it’s a feature that can simplify code and improve performance.
+It can improve performance by removing the need to return intermediary results - the final output can be calculated within.
+The examples in the following sections will better illustrate these points.
+The eval command takes a Lua script (as a string), the keys we’ll be operating against, and an optional set of arbitrary arguments.
+Let’s look at a simple example (executed from Ruby, since running multi-line Redis commands from its.
+The above code gets the details for all of Leto’s male friends.
+Notice that to call Redis commands within our script we.
+If you are new to Lua, you should go over each line carefully.
+The second parameter should actually be the number of keys; however the Ruby driver automatically creates this for us.
+Why is this needed? Consider how the above looks like when executed from.
+In the first (incorrect) case, how does Redis know which of the parameters are keys and which are simply arbitrary.
+This brings up a second question: why must keys be explicitly listed? Every command in Redis knows, at execution.
+This will allow future tools, like Redis Cluster, to distribute requests amongst.
+You might have spotted that our above example actually reads from keys dynamically (without.
+An hget is issued on all of Leto’s male friends.
+That’s because the need to list keys ahead of time is more of a suggestion than a hard rule.
+The above code will run fine in a single-instance setup, or even.
+Even though scripts executed via eval are cached by Redis, sending the body every time you want to execute something isn’t ideal.
+Instead, you can register the script with Redis and execute it’s key.
+To do this you use the script load command, which returns the SHA1 digest of the script:
+Once we’ve loaded the script, we can use evalsha to execute it:
+They are used to kill a running script, removing all scripts from the internal cache and seeing if a script already exists.
+Redis’ Lua implementation ships with a handful of useful libraries.
+While table.lib, string.lib and math.lib are quite useful, for me, cjson.lib is worth singling out.
+First, if you find yourself having to pass multiple arguments to a.
+Which you could then deserialize within the Lua script as:
+Of course, the JSON library can also be used to parse values stored in Redis itself.
+Instead of getting the gender from specific hash field, we could get it from the stored friend data itself.
+Since Redis is single-threaded, you don’t have to worry about your Lua script being interrupted by another Redis.
+One of the most obvious benefits of this is that keys with a TTL won’t expire half-way through execution.
+The next chapter will talk about Redis administration and configuration in more detail.
+Lua scripting is like almost every other Redis feature/command: you make limited, if any,
+Our last chapter is dedicated to some of the administrative aspects of running Redis.
+At best we’ll answer some of the more basic questions new users to Redis are most.
+When you first launched the Redis server, it warned you that the redis.conf file could not be found.
+This file can be used to configure various aspects of Redis.
+A well-documented redis.conf file is available for each release of Redis.
+The sample file contains the default configuration options, so it’s useful to both understand what the settings do and.
+Since the file is well-documented, we won’t be going over the settings.
+In addition to configuring Redis via the redis.conf file, the config set command can be used to set individual values.
+In fact, we already used it when setting the slowlog-log-slower-than setting to 0
+There’s also the config get command which displays the value of a setting.
+So if we want to display everything related to logging, we can do:
+This is done via the requirepass setting (set through either the redis .conf file or the config set command)
+When requirepass is set to a value (which is the password to use), clients will need to issue an auth password command.
+Once a client is authenticated, they can issue any command against any database.
+This includes the flushall command which erases every key from every database.
+Through the configuration, you can rename commands to achieve some.
+Or you can disable a command by setting the new name to an empty string.
+Redis supports replication, which means that as you write to one Redis instance (the master), one or more other.
+To configure a slave you use either the slaveof configuration setting or the slaveof command (instances running without this configuration are or can be masters)
+Replication helps protect your data by copying to different servers.
+They might respond with slightly out of date data, but for most apps that’s a worthwhile.
+If the master dies, a slave needs to be manually.
+Traditional high-availability tools that use heartbeat monitoring and scripts to automate the switch are.
+At any point in time, you can simply scp, ftp or cp (or anything else) this file.
+It isn’t uncommon to disable both snapshotting and the append-only file (aof) on the master and let a slave take care.
+This helps reduce the load on the master and lets you set more aggressive saving parameters on the slave.
+Replication is the first tool a growing site can leverage.
+Some commands are more expensive than others (sort for example) and offloading their execution to a slave can keep the overall system responsive to incoming queries.
+Beyond this, truly scaling Redis comes down to distributing your keys across multiple Redis instances (which could be.
+For the time being, this is something you’ll need to.
+The good news is that work is under way on Redis Cluster.
+Not only will this offer horizontal scaling, including rebalancing, but it’ll also provide automated failover for high availability.
+High availability and scaling is something that can be achieved today, as long as you are willing to put the time and.
+Given the number of projects and sites using Redis already, there can be no doubt that Redis is production-ready, and.
+However, some of the tooling, especially around security and availability is still young.
+Cluster, which we’ll hopefully see soon, should help address some of the current management challenges.
+In a lot of ways, Redis represents a simplification in the way we deal with data.
+Ultimately it comes back to something I said at the very start: Redis is easy to learn.

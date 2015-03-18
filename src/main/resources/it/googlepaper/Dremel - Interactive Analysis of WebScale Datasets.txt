@@ -1,0 +1,292 @@
+By combining multi-level execution trees and columnar data layout, it is capable of running aggregation queries over trillion-row tables in seconds.
+The system scales to thousands of CPUs and petabytes of data, and has thousands of users at Google.
+In this paper, we describe the architecture and implementation of Dremel, and explain how it complements MapReduce-based computing.
+We present a novel columnar storage representation for nested records and discuss experiments on few-thousand node instances of the system.
+Large-scale analytical data processing has become widespread in web companies and across industries, not least due to low-cost storage that enabled collecting vast amounts of business-critical data.
+Putting this data at the fingertips of analysts and engineers has grown increasingly important; interactive response times often make a qualitative difference in data exploration, monitoring, online customer support, rapid prototyping, debugging of data pipelines, and other tasks.
+Performing interactive data analysis at scale demands a high degree of parallelism.
+For example, reading one terabyte of compressed data in one second using today’s commodity disks would require tens of thousands of disks.
+Similarly, CPU-intensive queries may need to run on thousands of cores to complete within seconds.
+At Google, massively parallel computing is done using shared clusters of commodity machines [5]
+A cluster typically hosts a multitude of distributed applications that share resources, have widely varying workloads, and run on machines with different hardware parameters.
+An individual worker in a distributed application may take much longer to execute a given task than others, or may never complete due to failures or preemption by the cluster management system.
+Hence, dealing with stragglers and failures is essential for achieving fast execution and fault tolerance [10]
+The data used in web and scientific computing is often nonrelational.
+Hence, a flexible data model is essential in these domains.
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page.
+To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.
+Normalizing and recombining such data at web scale is usually prohibitive.
+A nested data model underlies most of structured data processing at Google [21] and reportedly at other major web companies.
+This paper describes a system called Dremel1 that supports interactive analysis of very large datasets over shared clusters of commodity machines.
+Unlike traditional databases, it is capable of operating on in situ nested data.
+Dremel can execute many queries over such data that would ordinarily require a sequence of MapReduce (MR [12]) jobs, but at a fraction of the execution time.
+Dremel is not intended as a replacement for MR and is often used in conjunction with it to analyze outputs of MR pipelines or rapidly prototype larger computations.
+Dremel has been in production since 2006 and has thousands of users within Google.
+Multiple instances of Dremel are deployed in the company, ranging from tens to thousands of nodes.
+Dremel builds on ideas from web search and parallel DBMSs.
+First, its architecture borrows the concept of a serving tree used in distributed search engines [11]
+Just like a web search request, a query gets pushed down the tree and is rewritten at each step.
+The result of the query is assembled by aggregating the replies received from lower levels of the tree.
+Second, Dremel provides a high-level, SQL-like language to express ad hoc queries.
+Lastly, and importantly, Dremel uses a column-striped storage representation, which enables it to read less data from secondary.
+Dremel is a brand of power tools that primarily rely on their speed as opposed to torque.
+Column stores have been adopted for analyzing relational data [1] but to the best of our knowledge have not been extended to nested data models.
+We describe a novel columnar storage format for nested data.
+We present algorithms for dissecting nested records into columns and reassembling them (Section 4)
+We show how execution trees used in web search systems can.
+In Section 2, we explain how Dremel is used for data analysis in combination with other data management tools.
+The main contributions listed above are covered in Sections 4-8
+We start by walking through a scenario that illustrates how interactive query processing fits into a broader data management ecosystem.
+Suppose that Alice, an engineer at Google, comes up with a novel idea for extracting new kinds of signals from web pages.
+She runs an MR job that cranks through the input data and produces a dataset containing the new signals, stored in billions of records in the distributed file system.
+To analyze the results of her experiment, she launches Dremel and executes several interactive commands:
+She runs a few other queries to convince herself that her algorithm works.
+Once the issue is fixed, she sets up a pipeline which processes the incoming input data continuously.
+She formulates a few canned SQL queries that aggregate the results of her pipeline across various dimensions, and adds them to an interactive dashboard.
+Finally, she registers her new dataset in a catalog so other engineers can locate and query it quickly.
+The above scenario requires interoperation between the query processor and other data management tools.
+The first ingredient for that is a common storage layer.
+The Google File System (GFS [14]) is one such distributed storage layer widely used in the company.
+A highperformance storage layer is critical for in situ data management.
+It allows accessing the data without a time-consuming loading phase, which is a major impedance to database usage in analytical data processing [13], where it is often possible to run dozens of MR analyses before a DBMS is able to load the data and execute a single query.
+As an added benefit, data in a file system can be conveniently manipulated using standard tools, e.g., to transfer to another cluster, change access privileges, or identify a subset of data for analysis based on file names.
+The second ingredient for building interoperable data management components is a shared storage format.
+Columnar storage proved successful for flat relational data but making it work for Google required adapting it to a nested data model.
+Figure 1 illustrates the main idea: all values of a nested field such as A.B.C are stored contiguously.
+Hence, A.B.C can be retrieved without reading A.E, A.B.D, etc.
+The challenge that we address is how to preserve all structural information and be able to reconstruct records from an arbitrary subset of fields.
+Next we discuss our data model, and then turn to algorithms and query processing.
+In this section we present Dremel’s data model and introduce some terminology used later.
+Atomic types in dom comprise integers, floating-point numbers, strings, etc.
+Field i in a record has a name Ai and an optional multiplicity label.
+Repeated fields (∗) may occur multiple times in a record.
+They are interpreted as lists of values, i.e., the order of field occurences in a record is significant.
+Otherwise, a field is required, i.e., must appear exactly once.
+It depicts a schema that defines a record type Document, representing a web document.
+A Document has a required integer DocId and optional Links, containing a list of Forward and Backward entries holding DocIds of other web pages.
+A document can have multiple Names, which are different URLs by which the document can be referenced.
+A Name contains a sequence of Code and (optional) Country pairs.
+We will use these sample records to explain the algorithms in the next sections.
+The fields defined in the schema form a tree hierarchy.
+The full path of a nested field is denoted using the usual dotted notation, e.g., Name.Language.Code.
+The nested data model backs a platform-neutral, extensible mechanism for serializing structured data at Google.
+Code generation tools produce bindings for programming languages such as C++ or Java.
+Cross-language interoperability is achieved using a standard binary on-the-wire representation of records, in which field values are laid out sequentially as they occur in the record.
+This way, a MR program written in Java can consume records from a data source exposed via a C++ library.
+Thus, if records are stored in a columnar representation, assembling them fast is important for interoperation with MR and other data processing tools.
+As illustrated in Figure 1, our goal is to store all values of a given field consecutively to improve retrieval efficiency.
+Values alone do not convey the structure of a record.
+Given two values of a repeated field, we do not know at what ‘level’ the value repeated (e.g., whether these values are from two different records, or two repeated values in the same record)
+Likewise, given a missing optional field, we do not know which enclosing records were defined explicitly.
+We therefore introduce the concepts of repetition and definition levels, which are defined below.
+For reference, see Figure 3 which summarizes the repetition and definition levels for all atomic fields in our sample records.
+To disambiguate these occurrences, we attach a repetition level to each value.
+It tells us at what repeated field in the field’s path the value has repeated.
+The field path Name.Language.Code contains two repeated fields, Name and Language.
+Notice that the second Name in r1 does not contain any Code values.
+Code is a required field in Language, so the fact that it is missing implies that Language is not defined.
+In general though, determining the level up to which nested records exist requires extra information.
+To preserve this information, we add a NULL value with definition level 1 to the Links.Backward column.
+We use integer definition levels as opposed to is-null bits so that the data for a leaf field (e.g., Name.Language.Country) contains the information about the occurrences of its parent fields; an example of how this information is used is given in Section 4.3
+Each block contains the repetition and definition levels (henceforth, simply called levels) and compressed field values.
+NULLs are not stored explicitly as they are determined by the definition levels: any definition level smaller than the number of repeated and optional fields in a field’s path denotes a NULL.
+Definition levels are not stored for values that are always defined.
+In fact, in Figure 3, no levels are stored for DocId.
+Above we presented an encoding of the record structure in a columnar format.
+The next challenge we address is how to produce column stripes with repetition and definition levels efficiently.
+The base algorithm for computing repetition and definition levels is given in Appendix A.
+The algorithm recurses into the record structure and computes the levels for each field value.
+As illustrated earlier, repetition and definition levels may need to be computed even if field values are missing.
+Many datasets used at Google are sparse; it is not uncommon to have a schema with thousands of fields, only a hundred of which are used in a given record.
+Hence, we try to process missing fields as cheaply as possible.
+To produce column stripes, we create a tree of field writers, whose structure matches the field hierarchy in the schema.
+The basic idea is to update field writers only when they have their own data, and not try to propagate parent state down the tree unless absolutely necesName.Language.Country Name.Language.Code.
+Figure 5: Automaton for assembling records from two fields, and the records it produces.
+To do that, child writers inherit the levels from their parents.
+A child writer synchronizes to its parent’s levels whenever a new value is added.
+Assembling records from columnar data efficiently is critical for record-oriented data processing tools (e.g., MR)
+Given a subset of fields, our goal is to reconstruct the original records as if they contained just the selected fields, with all other fields stripped away.
+The key idea is this: we create a finite state machine (FSM) that reads the field values and levels for each field, and appends the values sequentially to the output records.
+An FSM state corresponds to a field reader for each selected field.
+Once a reader fetches a value, we look at the next repetition level to decide what next reader to use.
+The FSM is traversed from the start to end state once for each record.
+Figure 4 shows an FSM that reconstructs the complete records in our running example.
+Once a DocId value is read, the FSM transitions to Links.Backward.
+After all repeated Backward values have been drained, the FSM jumps to Links.Forward, etc.
+The details of the record assembly algorithm are in Appendix B.
+To sketch how FSM transitions are constructed, let l be the next repetition level returned by the current field reader for field f.
+Starting at f in the schema tree, we find its ancestor that repeats at level l and select the first leaf field n inside that ancestor.
+This gives us an The details of the FSM construction algorithm are in Appendix C.
+If only a subset of fields need to be retrieved, we construct a simpler FSM that is cheaper to execute.
+Figure 5 depicts an FSM for reading the fields DocId and Name.Language.Country.
+This is important for applications that need to access, e.g., the Country appearing in the first Language of the second Name.
+In XPath, this would correspond to the ability to evaluate expressions like /Name[2]/Language[1]/Country.
+Dremel’s query language is based on SQL and is designed to be efficiently implementable on columnar nested storage.
+Defining the language formally is out of scope of this paper; instead, we illustrate its flavor.
+Each SQL statement (and algebraic operators it translates to) takes as input one or multiple nested tables and their schemas and produces a nested table and its output schema.
+Figure 6 depicts a sample query that performs projection, selection, path expressions.
+The query produces a nested result although no record constructors are present in the query.
+To explain what the query does, consider the selection operation (the WHERE clause)
+Think of a nested record as a labeled tree, where each label corresponds to a field name.
+The selection operator prunes away the branches of the tree that do not satisfy the specified conditions.
+Thus, only those nested records are retained where Name.Url is defined and starts with http.
+Each scalar expression in the SELECT clause emits a value at the same level of nesting as the most-repeated input field used in that expression.
+So, the string concatenation expression emits Str values at the level of Name.Language.Code in the input schema.
+The language supports nested subqueries, inter and intra-record aggregation, top-k, joins, user-defined functions, etc; some of these features are exemplified in the experimental section.
+We discuss the core ideas in the context of a read-only system, for simplicity.
+Many Dremel queries are one-pass aggregations; therefore, we focus on explaining those and use them for experiments in the next section.
+Dremel uses a multi-level serving tree to execute queries (see Figure 7)
+A root server receives incoming queries, reads metadata from the tables, and routes the queries to the next level in the serving tree.
+Figure 7: System architecture and execution inside a server node.
+When the root server receives the above query, it determines all tablets, i.e., horizontal partitions of the table, that comprise T and rewrites the query as follows:
+Ultimately, the queries reach the leaves, which scan the tablets in T in parallel.
+On the way up, intermediate servers perform a parallel aggregation of partial results.
+The execution model presented above is well-suited for aggregation queries returning small and mediumsized results, which are a very common class of interactive queries.
+Large aggregations and other classes of queries may need to rely on execution mechanisms known from parallel DBMSs and MR.
+Dremel is a multi-user system, i.e., usually several queries are executed simultaneously.
+A query dispatcher schedules queries based on their priorities and balances the load.
+Its other important role is to provide fault tolerance when one server becomes much slower than others or a tablet replica becomes unreachable.
+The amount of data processed in each query is often larger than the number of processing units available for execution, which we call slots.
+A slot corresponds to an execution thread on a leaf server.
+During query execution, the query dispatcher computes a histogram of tablet processing times.
+If a tablet takes a disproportionately long time to process, it reschedules it on another server.
+The leaf servers read stripes of nested data in columnar representation.
+The blocks in each stripe are prefetched asynchronously; the read-ahead cache typically achieves hit rates of 95%
+When a leaf server cannot access one tablet replica, it falls over to another replica.
+The query dispatcher honors a parameter that specifies the minimum percentage of tablets that must be scanned before returning a result.
+Each server has an internal execution tree, as depicted on the.
+The internal tree corresponds to a physical query execution plan, including evaluation of scalar expressions.
+An execution plan for project-select-aggregate queries consists of a set of iterators that scan input columns in lockstep and emit results of aggregates and scalar functions annotated with the correct repetition and definition levels, bypassing record assembly entirely during query execution.
+Some Dremel queries, such as top-k and count-distinct, return approximate results using known one-pass algorithms (e.g., [4])
+In this section we evaluate Dremel’s performance on several datasets used at Google, and examine the effectiveness of columnar storage for nested data.
+The properties of the datasets used in our study are summarized in Figure 8
+In uncompressed, nonreplicated form the datasets occupy about a petabyte of space.
+We start by examining the basic data access characteristics on a single machine, then show how columnar storage benefits MR execution, and finally focus on Dremel’s performance.
+The experiments were conducted on system instances running in two data centers next to many other applications, during regular business operation.
+Unless specified otherwise, execution times were averaged across five runs.
+In the first experiment, we examine performance tradeoffs of columnar vs.
+The data is stored on a local disk and takes about 375MB in compressed columnar representation.
+The record-oriented format uses heavier compression yet yields about the same size on disk.
+The experiment was done on a dual-core Intel machine with a disk providing 70MB/s read bandwidth.
+All reported times are cold; OS cache was flushed prior to each scan.
+The figure shows five graphs, illustrating the time it takes to read and uncompress the data, and assemble and parse the records, for a subset of the fields.
+Each data point in these graphs was obtained by averaging the measurements over 30 runs, in each of which a set of columns of a given cardinality was chosen at random.
+Graph (b) adds the time needed to assemble nested records from columns.
+Graph (c) shows how long it takes to parse the records into strongly typed C++ data structures.
+Graphs (d)-(e) depict the time for accessing the data on recordoriented storage.
+A bulk of the time is spent in decompression; in fact, the compressed data can be read from the disk in about half the time.
+Graph (e) indicates, parsing adds another 50% on top of reading and decompression time.
+These costs are paid for all fields, including the ones that are not needed.
+The main takeaways of this experiment are the following: when few columns are read, the gains of columnar representation are of about an order of magnitude.
+Retrieval time for columnar nested data grows linearly with the number of fields.
+Record assembly and parsing are expensive, each potentially doubling the execution time.
+A natural question to ask is where the top and bottom graphs cross, i.e., record-wise storage starts outperforming columnar storage.
+In our experience, the crossover point often lies at dozens of fields but it varies across datasets and depends on whether or not record assembly is required.
+Next we illustrate a MR and Dremel execution on columnar vs.
+We consider a case where a single field is accessed, i.e., the performance gains are most pronounced.
+Execution times for multiple columns can be extrapolated using the results of Figure 9
+In this experiment, we count the average number of terms in a field txtField of table T1
+The number of records is stored in the variable numRecs.
+For each record, numWords is incremented by the number of terms in input.txtField returned by the CountWords function.
+After the program runs, the average term frequency can be computed as numWords/numRecs.
+Figure 10 shows the execution times of two MR jobs and Dremel on a logarithmic scale.
+Dremel and MR-on-columns read about 0.5TB of compressed columnar data vs.
+As the figure illustrates, MR gains an order of magnitude in efficiency by switching from record-oriented to columnar storage (from hours to minutes)
+Another order of magnitude is achieved by using Dremel (going from minutes to seconds)
+In the next experiment, we show the impact of the serving tree depth on query execution times.
+Each record has a repeated field item containing a numeric amount.
+The field item.amount repeats about 40 billion times in the dataset.
+The first query sums up the item amount by country:
+It returns a few hundred records and reads roughly 60GB of compressed data from disk.
+The second query performs a GROUP BY on a text field domain with a selection condition.
+Figure 11 shows the execution times for each query as a function of the server topology.
+In each topology, the number of leaf servers is kept constant at 2900 so that we can assume the same cumulative scan speed.
+In contrast, the execution time of Q3 is halved due to increased parallelism.
+This experiment illustrates how aggregations returning many groups benefit from multi-level serving trees.
+To drill deeper into what happens during query execution consider Figure 12
+The time is measured starting at the point when a tablet got scheduled for execution in an available slot, i.e., excludes the time spent waiting in the job queue.
+This measurement methodology factors out the effects of other queries that are executing simultaneously.
+The query illustrates within-record aggregation: it counts all records where the sum of a.b.c.d values occurring in the record are larger than the sum of a.b.p.q.r values.
+Without support for nesting, running this query on T3 would be grossly expensive.
+The following experiment illustrates the scalability of the system on a trillion-record table.
+In each run, the total expended CPU time is nearly identical, at about 300K seconds, whereas the user-perceived time decreases near-linearly with the growing size of the system.
+This result suggests that a larger system can be just as effective in terms of resource usage as a smaller one, yet allows faster execution.
+In contrast to the other datasets, T5 is two-way replicated.
+Hence, the likelihood of stragglers slowing the execution is higher since there are fewer opportunities to reschedule the work.
+Figure 15: Query response time distribution in a monthly workload.
+However, a small fraction of the tablets take a lot longer, slowing down the query response time from less than a minute to several minutes, when executed on a 2500 node system.
+The next section summarizes our experimental findings and the lessons we learned.
+Figure 15 shows the query response time distribution in a typical monthly workload of one Dremel system, on a logarithmic scale.
+As the figure indicates, most queries are processed under 10 seconds, well within the interactive range.
+Some queries achieve a scan throughput close to 100 billion records per second on a shared cluster, and even higher on dedicated machines.
+Scan-based queries can be executed at interactive speeds on disk-resident datasets of up to a trillion records.
+In a multi-user environment, a larger system can benefit from.
+If trading speed against accuracy is acceptable, a query can.
+The bulk of a web-scale dataset can be scanned fast.
+The MapReduce (MR) [12] framework was designed to address the challenges of large-scale computing in the context of long-running batch jobs.
+Like MR, Dremel provides fault tolerant execution, a flexible data model, and in situ data processing capabilities.
+The success of MR led to a wide range of third-party implementations (notably open-source Hadoop [15]), and a number of hybrid systems that combine parallel DBMSs with MR, offered by vendors like Aster, Cloudera, Greenplum, and Vertica.
+HadoopDB [3] is a research system in this hybrid category.
+Although it is conceivable that parallel DBMSs can be made to scale to thousands of nodes, we are not aware of any published work or industry reports that attempted that.
+Neither are we familiar with prior literature studying MR on columnar storage.
+Our columnar representation of nested data builds on ideas that date back several decades: separation of structure from content and transposed representation.
+Many commercial DBMSs support storage of nested data using XML (e.g., [19])
+One system that uses columnar XML representation is XMill [17]
+It stores the structure for all fields combined and is not geared for selective retrieval of columns.
+The data model used in Dremel is a variation of the complex value models and nested relational models discussed in [2]
+Dremel’s query language builds on the ideas from [9], which introduced a language that avoids restructuring when accessing nested data.
+In contrast, restructuring is usually required in XQuery and object-oriented query languages, e.g., using nested for-loops and constructors.
+A recent SQL-like language operating on nested data is Pig [18]
+We presented Dremel, a distributed system for interactive analysis of large datasets.
+Dremel is a custom, scalable data management solution built from simpler components.
+We discussed its performance on trillion-record, multi-terabyte datasets of real data.
+We outlined the key aspects of Dremel, including its storage format, query language, and execution.
+In the future, we plan to cover in more depth such areas as formal algebraic specification, joins, extensibility mechanisms, etc.
+COLUMN-STRIPING ALGORITHM The algorithm for decomposing a record into columns is shown in Figure 16
+Procedure DissectRecord is passed an instance of a RecordDecoder, which is used to traverse binary-encoded records.
+FieldWriters form a tree hierarchy isomorphic to that of the input schema.
+The root FieldWriter is passed to the algorithm for each new record, with repetitionLevel set to 0
+The primary job of the DissectRecord procedure is to maintain the current repetitionLevel.
+The current definitionLevel is uniquely determined by the tree position of the current writer, as the sum of the number of optional and repeated fields in the field’s path.
+The while-loop of the algorithm (Line 5) iterates over all atomic and record-valued fields contained in a given record.
+The set seenFields tracks whether or not a field has been seen in the record.
+It is used to determine what field has repeated most recently.
+The child repetition level chRepetitionLevel is set to that of the most recently repeated field or else defaults to its parent’s level (Lines 9-13)
+The procedure is invoked recursively on nested records (Line 18)
+In Section 4.2 we sketched how FieldWriters accumulate levels and propagate them lazily to lower-level writers.
+This is done as follows: each non-leaf writer keeps a sequence of (repetition, definition) levels.
+Each writer also has a ‘version’ number associated with it.
+Simply stated, a writer version is incremented by one whenever a level is added.
+It is sufficient for children to remember the last parent’s version they synced.
+If a child writer ever gets its own (non-null) value, it synchronizes its state with the parent by fetching new levels, and only then adds the new data.
+Because input data can have thousands of fields and millions records, it is not feasible to store all levels in memory.
+Some levels may be temporarily stored in a file on disk.
+For a lossless encoding of empty (sub)records, non-atomic fields (such as Name.Language in Figure 2) may need to have column stripes of their own, containing only levels but no non-NULL values.
+In the following, writing opening tags is referred to as ‘starting’ the record, and writing closing tags is called ’ending’ it.
+AssembleRecord procedure takes as input a set of FieldReaders and (implicitly) the FSM with state transitions between the readers.
+Variable reader holds the current FieldReader in the main routine (Line 4)
+Variable lastReader holds the last reader whose value we appended to the record and is available to all three procedures shown in Figure 17
+If the value is not NULL, which is determined by looking at its definition level, we synchronize the record being assembled to the record structure of the current reader in the method MoveToLevel, and append the field value to the record.
+Otherwise, we merely adjust the record structure without appending any value—which needs to be done if empty records are present.
+Recall that the definition level factors out required fields (only repeated and optional fields are counted)
+Procedure MoveToLevel transitions the record from the state of the lastReader to that of the nextReader (see Line 22)
+For example, suppose the lastReader corresponds to Links.Backward in Figure 2 and nextReader is Name.Language.Code.
+The method ends the nested record Links and starts new records Name and Language, in that order.
+Procedure ReturnsToLevel (Line 30) is a counterpart of MoveToLevel that only ends current records without starting any new ones.
+The algorithm takes as input the fields that should be populated in the records, in the order in which they appear in the schema.
+The algorithm uses a concept of a ‘common repetition level’ of two fields, which is the repetition level of their lowest common ancestor.
+For example, the common repetition level of Links.Backward and Links.Forward equals 1
+The second concept is that of a ‘barrier’, which is the next field in the sequence after the current one.
+The intuition is that we try to process each field one by one until the barrier is hit and requires a jump to a previously seen field.
+For each repetition level we encounter, we pick the left-most field in the sequence—that is the one we need to transition to when that repetition level is returned by a FieldReader.
+The gaps arise because not all repetition levels are present in the common repetition levels computed at Line 8
+If a FieldReader produces such a level, we need to continue constructing the nested record and do not need to bounce off the barrier.
+Figure 19 shows the algorithm used for evaluating select-projectaggregate queries in Dremel.
+The algorithm addresses a general case when a query may reference repeated fields; a simpler optimized version is used for flat-relational queries, i.e., those referencing only required and optional fields.
+The algorithm has two implicit inputs: a set of FieldReaders, one for each field appearing in the query, and a set of scalar expressions, including aggregate expressions, present in the query.
+The repetition level of a scalar expression (used in Line 8) is determined as the maximum repetition level of the fields used in that expression.
+In essence, the algorithm advances the readers in lockstep to the next set of values, and, if the selection conditions are met, emits the projected values.
+Selection and projection are controlled by two variables, fetchLevel and selectLevel.
+Figure 19: Algorithm for evaluating select-project-aggregate queries over columnar input, bypassing record assembly.
+In a similar vein, only expressions whose current repetition level is no less than selectLevel are emitted (Lines 7-10)
+The algorithm ensures that expressions at a higher-level of nesting, i.e., those having a smaller repetition level, get evaluated and emitted only once for each deeper nested expression.

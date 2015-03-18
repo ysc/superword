@@ -1,0 +1,286 @@
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and limitations under the License.
+System downtime — occurs when a user-facing service is unavailable beyond a specified maximum amount of time, and.
+Most high availability systems guarantee protection against system downtime and data loss only in the event of a single failure.
+However, they are also expected to protect against cascading failures, where a single failure deteriorates into a series of consequential failures.
+A crucial aspect of high availability is the elimination of single points of failure (SPOFs)
+A SPOF is an individual piece of equipment or software which will cause system downtime or data loss if it fails.
+In order to eliminate SPOFs, check that mechanisms exist for redundancy of:
+Facility services such as power, air conditioning, and fire protection.
+Most high availability systems will fail in the event of multiple independent (nonconsequential) failures.
+In this case, most systems will protect data over maintaining availability.
+High-availability systems typically achieve uptime of 99.99% or more, which roughly equates to less than an hour of cumulative downtime per year.
+In order to achieve this, high availability systems should keep recovery times after a failure to about one to two minutes, sometimes significantly less.
+OpenStack currently meets such availability requirements for its own infrastructure services, meaning that an uptime of 99.99% is feasible for the OpenStack infrastructure proper.
+However, OpenStack does not guarantee 99.99% availability for individual guest instances.
+Preventing single points of failure can depend on whether or not a service is stateless.
+Stateful services A stateless service is one that provides a response after your request, and then requires no further attention.
+To make a stateless service highly available, you need to provide redundant instances and load balance them.
+OpenStack services that are stateless include nova-api, nova-conductor, glance-api, keystone-api, neutron-api and nova-scheduler.
+A stateful service is one where subsequent requests to the service depend on the results of the first request.
+Stateful services are more difficult to manage because a single action typically involves more than one request, so simply providing additional instances and load balancing will not solve the problem.
+For example, if the Horizon user interface reset itself every time you went to a new page, it wouldn’t be very useful.
+OpenStack services that are stateful include the OpenStack database and message queue.
+Making stateful services highly available can depend on whether you choose an active/ passive or active/active configuration.
+Active/Passive In an active/passive configuration, systems are set up to bring additional resources online to replace those that have failed.
+For example, OpenStack would write to the main database while maintaining a disaster recovery database that can be brought online in the event that the main database fails.
+Typically, an active/passive installation for a stateless service would maintain a redundant instance that can be brought online when required.
+Requests are load balanced using a virtual IP address and a load balancer such as HAProxy.
+A typical active/passive installation for a stateful service maintains a replacement resource that can be brought online when required.
+A separate application (such as Pacemaker or Corosync) monitors these services, bringing the backup online as necessary.
+Active/Active In an active/active configuration, systems also use a backup but will manage both the main and redundant systems concurrently.
+This way, if there is a failure the user is unlikely to notice.
+The backup system is already online, and takes on increased load while the main system is fixed and brought back online.
+Typically, an active/active installation for a stateless service would maintain a redundant instance, and requests are load balanced using a virtual IP address and a load balancer such as HAProxy.
+A typical active/active installation for a stateful service would include redundant services with all instances having an identical state.
+For example, updates to one instance of a database would also update all other instances.
+This way a request to one instance is the same as a request to any other.
+A load balancer manages the traffic to these systems, ensuring that operational systems always handle the request.
+These are some of the more common ways to implement these high availability architectures, but they are by no means the only ways to do it.
+This document will cover some of the more common options for highly available systems.
+The Pacemaker Cluster Stack OpenStack infrastructure high availability relies on the Pacemaker cluster stack, the stateof-the-art high availability and load balancing stack for the Linux platform.
+Pacemaker is storage- and application-agnostic, and is in no way specific to OpenStack.
+Pacemaker relies on the Corosync messaging layer for reliable cluster communications.
+Corosync implements the Totem single-ring ordering and membership protocol and provides UDP and InfiniBand based messaging, quorum, and cluster membership to Pacemaker.
+Pacemaker interacts with applications through resource agents (RAs), of which it supports over 70 natively.
+An OpenStack highavailability configuration uses existing native Pacemaker RAs (such as those managing MySQL databases or virtual IP addresses), existing third-party RAs (such as for RabbitMQ), and native OpenStack RAs (such as those managing the OpenStack Identity and Image Services)
+Installing Packages On any host that is meant to be part of a Pacemaker cluster, you must first establish cluster communications through the Corosync messaging layer.
+This involves installing the following packages (and their dependencies, which your package manager will normally install automatically):
+Setting up Corosync Besides installing the corosync package, you will also have to create a configuration file, stored in /etc/corosync/corosync.conf.
+Most distributions ship an example configuration file (corosync.conf.example) as part of the documentation bundled with the corosync package.
+Time (in ms) to wait for a token token: 10000
+This specifies the redundant ring protocol, which may be # none, active, or passive.
+The token value specifies the time, in milliseconds, during which the Corosync token is expected to be transmitted around the ring.
+When this timeout expires, the token is declared lost, and after token_retransmits_before_loss_const lost tokens the non-responding processor (cluster node) is declared dead.
+These defaults are intended to minimize failover times, but can cause frequent "false alarms" and unintended failovers in case of short network interruptions.
+The values used here are safer, albeit with slightly extended failover times.
+With secauth enabled, Corosync nodes mutually authenticate using a 128-byte shared secret stored in /etc/corosync/authkey, which may be generated with the corosync-keygen utility.
+In Corosync configurations using redundant networking (with more than one interface), you must select a Redundant Ring Protocol (RRP) mode other than none.
+There are several things to note about the recommended interface configuration:
+The ringnumber must differ between all configured interfaces, starting with 0
+The bindnetaddr is the network address of the interfaces to bind to.
+Multicast groups (mcastaddr) must not be reused across cluster boundaries.
+In other words, no two distinct clusters should ever use the same multicast group.
+Be sure to select multicast addresses compliant with RFC 2365, "Administratively Scoped IP Multicast"
+For firewall configurations, note that Corosync communicates over UDP only, and uses mcastport (for receives) and mcastport-1 (for sends)
+The service declaration for the pacemaker service may be placed in the corosync.conf file directly, or in its own separate file, /etc/corosync/ service.d/pacemaker.
+Once created, the corosync.conf file (and the authkey file if the secauth option is enabled) must be synchronized across all cluster nodes.
+Starting Corosync Corosync is started as a regular system service.
+Depending on your distribution, it may ship with a LSB (System V style) init script, an upstart job, or a systemd unit file.
+The corosync-cfgtool utility, when invoked with the -s option, gives a summary of the health of the communication rings:
+Starting Pacemaker Once the Corosync services have been started, and you have established that the cluster is communicating properly, it is safe to start pacemakerd, the Pacemaker master control process:
+Once Pacemaker services have started, Pacemaker will create an default empty cluster configuration with no resources.
+Setting basic cluster properties Once your Pacemaker cluster is set up, it is recommended to set a few basic cluster properties.
+To do so, start the crm shell and change into the configuration menu by entering configure.
+Do not set this property in Pacemaker clusters with more than two nodes.
+Setting pe-warn-series-max, pe-input-series-max and pe-errorseries-max to 1000 instructs Pacemaker to keep a longer history of the inputs processed, and errors and warnings generated, by its Policy Engine.
+This history is typically useful in case cluster troubleshooting becomes necessary.
+However, certain Pacemaker actions occur at a configurable interval, cluster-recheckinterval, which defaults to 15 minutes.
+Once you have made these changes, you may commit the updated configuration.
+Cloud Controller Cluster Stack The Cloud Controller sits on the management network and needs to talk to all other services.
+Highly available MySQL MySQL is the default database server used by many OpenStack services.
+Note MySQL/Galera is an alternative method of configuring MySQL for high availability.
+It is likely to become the preferred method of achieving MySQL high availability once it has sufficiently matured.
+At the time of writing, however, the Pacemaker/DRBD based approach remains the recommended one for OpenStack environments.
+Configuring DRBD The Pacemaker based MySQL server requires a DRBD resource from which it mounts the / var/lib/mysql directory.
+In this example, the DRBD resource is simply named mysql:
+Normally, this would be an LVM Logical Volume specifically set aside for this purpose.
+The DRBD meta-disk is internal, meaning DRBD-specific metadata is being stored at the end of the disk device itself.
+Enabling a DRBD resource is explained in detail in the DRBD User’s Guide.
+Initializes DRBD metadata and writes the initial set of metadata to /dev/data/ mysql.
+Creates the /dev/drbd0 device node, attaches the DRBD device to its backing store, and connects the DRBD node to its peer.
+Kicks off the initial device synchronization, and puts the device into the primary (readable and writable) role.
+See Resource roles (from the DRBD User’s Guide) for a more detailed description of the primary and secondary roles in DRBD.
+Must be completed on one node only, namely the one where you are about to continue with creating your filesystem.
+Creating a file system Once the DRBD resource is running and in the primary role (and potentially still in the process of running the initial device synchronization), you may proceed with creating the filesystem for MySQL data.
+You may also use the alternate device path for the DRBD device, which may be easier to remember as it includes the self-explanatory resource name:
+Once completed, you may safely return the device to the secondary role.
+Preparing MySQL for Pacemaker high availability In order for Pacemaker monitoring to function properly, you must ensure that MySQL’s database files reside on the DRBD device.
+You must complete the next step while the MySQL database server is shut down.
+For a new MySQL installation with no existing data, you may also run the mysql_install_db command:
+Regardless of the approach, the steps outlined here must be completed on only one cluster node.
+You may now proceed with adding the Pacemaker configuration for MySQL resources.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+For example, you may enter edit p_ip_mysql from the crm configure menu and edit the resource to match your preferred virtual IP address.
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the MySQL service, and its dependent resources, on one of your nodes.
+Configuring OpenStack services for highly available MySQL Your OpenStack services must now point their MySQL configuration to the highly available, virtual cluster IP address — rather than a MySQL server’s physical IP address as you normally would.
+For OpenStack Image, for example, if your MySQL service IP address is 192.168.42.101 as in the configuration explained here, you would use the following line in your OpenStack Image registry configuration file (glance-registry.conf):
+If the node currently hosting your database experiences a problem necessitating service failover, your OpenStack services may experience a brief MySQL interruption, as they would in the event of a network hiccup, and then continue to run normally.
+Highly available RabbitMQ RabbitMQ is the default AMQP server used by many OpenStack services.
+There is an alternative method of configuring RabbitMQ for high availability.
+That approach, known as active-active mirrored queues, happens to be the one preferred by the RabbitMQ developers — however it has shown less than ideal consistency and reliability in OpenStack clusters.
+Thus, at the time of writing, the Pacemaker/DRBD based approach remains the recommended one for OpenStack environments, although this may change in the near future as RabbitMQ active-active mirrored queues mature.
+The Pacemaker based RabbitMQ server requires a DRBD resource from which it mounts the /var/lib/rabbitmq directory.
+In this example, the DRBD resource is simply named rabbitmq:
+Normally, this would be an LVM Logical Volume specifically set aside for this purpose.
+The DRBD meta-disk is internal, meaning DRBD-specific metadata is being stored at the end of the disk device itself.
+Enabling a DRBD resource is explained in detail in the DRBD User’s Guide.
+Initializes DRBD metadata and writes the initial set of metadata to /dev/data/ rabbitmq.
+Creates the /dev/drbd1 device node, attaches the DRBD device to its backing store, and connects the DRBD node to its peer.
+Kicks off the initial device synchronization, and puts the device into the primary (readable and writable) role.
+Must be completed on one node only, namely the one where you are about to continue with creating your filesystem.
+Creating a file system Once the DRBD resource is running and in the primary role (and potentially still in the process of running the initial device synchronization), you may proceed with creating the filesystem for RabbitMQ data.
+You may also use the alternate device path for the DRBD device, which may be easier to remember as it includes the self-explanatory resource name:
+Once completed, you may safely return the device to the secondary role.
+Preparing RabbitMQ for Pacemaker high availability In order for Pacemaker monitoring to function properly, you must ensure that RabbitMQ’s .erlang.cookie files are identical on all nodes, regardless of whether DRBD is mounted there or not.
+The simplest way of doing so is to take an existing .erlang.cookie from one of your nodes, copying it to the RabbitMQ data directory on the other node, and also copying it to the DRBD-backed filesystem.
+Adding RabbitMQ resources to Pacemaker You may now proceed with adding the Pacemaker configuration for RabbitMQ resources.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+For example, you may enter edit p_ip_rabbitmq from the crm configure menu and edit the resource to match your preferred virtual IP address.
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the RabbitMQ service, and its dependent resources, on one of your nodes.
+Your OpenStack services must now point their RabbitMQ configuration to the highly available, virtual cluster IP address — rather than a RabbitMQ server’s physical IP address as you normally would.
+For OpenStack Image, for example, if your RabbitMQ service IP address is 192.168.42.100 as in the configuration explained here, you would use the following line in your OpenStack Image API configuration file (glance-api.conf):
+If the node currently hosting your RabbitMQ experiences a problem necessitating service failover, your OpenStack services may experience a brief RabbitMQ interruption, as they would in the event of a network hiccup, and then continue to run normally.
+It needs to talk to the Cloud Controller on the management network.
+Configure the VIP First of all, we need to select and assign a virtual IP address (VIP) that can freely float between cluster nodes.
+Making the OpenStack Identity service highly available in active / passive mode involves.
+First of all, you need to download the resource agent to your system :
+You may now proceed with adding the Pacemaker configuration for OpenStack Identity resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+This configuration creates p_keystone, a resource for manage OpenStack Identity service.
+For example, you may enter edit p_ip_keystone from the crm configure menu and edit the resource to match your preferred virtual IP address.
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the OpenStack Identity service, and its dependent resources, on one of your nodes.
+You need to edit your OpenStack Identity configuration file (keystone.conf) and change the bind parameter :
+To be sure all data will be high available, you should be sure that you store everything in the MySQL database (which is also high available) :
+Your OpenStack services must now point their OpenStack Identity configuration to the highly available, virtual cluster IP address — rather than a OpenStack Identity server’s physical IP address as you normally would.
+For example with OpenStack Compute, if your OpenStack Identity service IP address is 192.168.42.103 as in the configuration explained here, you would use the following line in your API configuration file (api-paste.ini):
+If you are using the Horizon Dashboard, you should edit local_settings.py file :
+Highly available OpenStack Image API OpenStack Image Service offers a service for discovering, registering, and retrieving virtual machine images.
+Making the OpenStack Image API service highly available in active / passive mode involves.
+Here is the documentation for installing OpenStack Image API service.
+First of all, you need to download the resource agent to your system :
+You may now proceed with adding the Pacemaker configuration for OpenStack Image API resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+For example, you may enter edit p_ip_glance-api from the crm configure menu and edit the resource to match your preferred virtual IP address.
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the OpenStack Image API service, and its dependent resources, on one of your nodes.
+We have to use MySQL connection to store datas :
+Your OpenStack services must now point their OpenStack Image API configuration to the highly available, virtual cluster IP address — rather than a OpenStack Image API server’s physical IP address as you normally would.
+For OpenStack Compute, for example, if your OpenStack Image API service IP address is 192.168.42.104 as in the configuration explained here, you would use the following line in your nova.conf file :
+Making the Cinder API service highly available in active / passive mode involves.
+First of all, you need to download the resource agent to your system :
+You may now proceed with adding the Pacemaker configuration for Cinder API resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+For example, you may enter edit p_ip_cinder-api from the crm configure menu and edit the resource to match your preferred virtual IP address.
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the Cinder API service, and its dependent resources, on one of your nodes.
+We have to use MySQL connection to store datas :
+Your OpenStack services must now point their Cinder API configuration to the highly available, virtual cluster IP address — rather than a Cinder API server’s physical IP address as you normally would.
+Making the OpenStack Networking Server service highly available in active / passive mode involves.
+First of all, you need to download the resource agent to your system :
+You may now proceed with adding the Pacemaker configuration for OpenStack Networking Server resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+This configuration creates p_neutron-server, a resource for manage OpenStack Networking Server service.
+For example, you may enter edit p_neutron-server from the crm configure menu and edit the resource to match your preferred virtual IP address.
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the OpenStack Networking API service, and its dependent resources, on one of your nodes.
+Your OpenStack services must now point their OpenStack Networking Server configuration to the highly available, virtual cluster IP address — rather than an OpenStack Networking server’s physical IP address as you normally would.
+Central Agent polls for resource utilization statistics for resources not tied to instances or compute nodes.
+Due to limitations of a polling model, a single instance of this agent can be polling a given list of meters.
+In this setup, we install this service on the API nodes also in the active / passive mode.
+Making the Ceilometer Central Agent service highly available in active / passive mode involves managing its daemon with the Pacemaker cluster manager,
+You will find at this page the process to install Ceilometer Central Agent.
+First of all, you need to download the resource agent to your system :
+You may then proceed with adding the Pacemaker configuration for Ceilometer Central Agent resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the Ceilometer Central Agent service, and its dependent resources, on one of your nodes.
+Configure Pacemaker Group Finally, we need to create a service group to ensure that virtual IP is linked to the API services resources :
+Network Controller Cluster Stack The Network controller sits on the management and data network, and needs to be connected to the Internet if a VM needs access to it.
+Both nodes should have the same hostname since the Neutron scheduler will be aware of one node, for example a virtual router attached to a single L3 node.
+High Availability for the L3 agent is achieved by adopting Pacemaker.
+First of all, you need to download the resource agent to your system:
+You may now proceed with adding the Pacemaker configuration for Neutron L3 Agent resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the Neutron L3 Agent service, and its dependent resources, on one of your nodes.
+This method does not ensure a zero downtime since it has to recreate all the namespaces and virtual routers on the node.
+High Availability for the DHCP agent is achieved by adopting Pacemaker.
+First of all, you need to download the resource agent to your system :
+You may now proceed with adding the Pacemaker configuration for Neutron DHCP Agent resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the Neutron DHCP Agent service, and its dependent resources, on one of your nodes.
+High Availability for the Metadata agent is achieved by adopting Pacemaker.
+Adding Neutron Metadata Agent resource to Pacemaker First of all, you need to download the resource agent to your system:
+You may now proceed with adding the Pacemaker configuration for Neutron Metadata Agent resource.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+Once completed, commit your configuration changes by entering commit from the crm configure menu.
+Pacemaker will then start the Neutron Metadata Agent service, and its dependent resources, on one of your nodes.
+Manage network resources You may now proceed with adding the Pacemaker configuration for managing all network resources together with a group.
+Connect to the Pacemaker cluster with crm configure, and add the following cluster resources:
+Database The first step is installing the database that sits at the heart of the cluster.
+When we’re talking about High Availability, however, we’re talking about not just one database, but several (for redundancy) and a means to keep them synchronized.
+In this case, we’re going to choose the MySQL database, along with Galera for synchronous multi-master replication.
+The choice of database isn’t a foregone conclusion; you’re not required to use MySQL.
+It is, however, a fairly common choice in OpenStack installations, so we’ll cover it here.
+MySQL with Galera Rather than starting with a vanilla version of MySQL and then adding Galera to it, you will want to install a version of MySQL patched for wsrep (Write Set REPlication) from https://launchpad.net/codership-mysql/0.7
+Note that the installation requirements are a bit touchy; you will want to make sure to read the README file so you don’t miss any steps.
+Once you’ve completed the installation, you’ll need to make a few configuration changes:
+In the system-wide my.conf file, make sure mysqld isn’t bound to 127.0.0.1, and that / etc/mysql/conf.d/ is included.
+When adding a new node, you must configure it with a MySQL account that can access the other nodes so that it can request a state snapshot from one of those existing nodes.
+Next connect as root and grant privileges to that user:
+You’ll also need to remove user accounts with empty usernames, as they cause problems:
+You’ll also need to set certain mandatory configuration options within MySQL itself.
+Finally, make sure that the nodes can access each other through the firewall.
+It might also mean configuring any NAT firewall between nodes to allow direct connections, or disabling SELinux or configuring it to allow mysqld to listen to sockets at unprivileged ports.
+Creating the cluster In creating a cluster, you first start a single instance, which creates the cluster.
+The rest of the MySQL instances then connect to that cluster.
+For example, if you started on 10.0.0.10 by executing the command:
+You also have the option to set the wsrep_cluster_address in the /etc/mysql/ conf.d/wsrep.cnf file, or within the client itself.
+In fact, for some systems, such as MariaDB or Percona, this may be your only option.) For example, to check the status of the cluster, open the MySQL client and check the status of the various parameters:
+You should see a status that looks something like this:
+Other ways to provide a Highly Available database MySQL with Galera is by no means the only way to achieve database HA.
+MariaDB (https:// mariadb.org/) and Percona (http://www.percona.com/) also work with Galera.
+RabbitMQ RabbitMQ is the default AMQP server used by many OpenStack services.
+Install RabbitMQ This setup has been tested with RabbitMQ 2.7.1
+On Ubuntu / Debian RabbitMQ is packaged on both distros:
+On Fedora / RHEL RabbitMQ is packaged on both distros:
+Configure RabbitMQ Here we are building a cluster of RabbitMQ nodes to construct a RabbitMQ broker.
+Mirrored queues in RabbitMQ improve the availability of service since it will be resilient to failures, but we have to consider that while exchanges and bindings will survive the loss of individual nodes, queues and their messages will no because a queue and its contents is located on one node.
+So if we lose this node, we also lose the queue.
+We consider that we run (at least) two RabbitMQ servers.
+To build a broker, we need to ensure that all nodes have the same erlang cookie file.
+To do so, stop RabbitMQ everywhere and copy the cookie from rabbit1 server to other server(s):
+If RabbitMQ fails to start, you can’t continue to the next step.
+If the cluster is working, you can now proceed to creating users and password for queues.
+Queue mirroring is no longer controlled by the x-ha-policy argument when declaring a queue.
+OpenStack can continue to declare this argument, but it won’t cause queues to be mirrored.
+We need to make sure that all queues (except those with auto-generated names) are mirrored across all nodes in running:
+Configure OpenStack Services to use RabbitMQ Since Grizzly Release, most of OpenStack components using queuing has been supported the feature, we have to configure them to use at least two RabbitMQ nodes.
+How long to backoff for between retries when connecting to RabbitMQ:
+Maximum retries with trying to connect to RabbitMQ (infinite by default):
+If you change the configuration from an old setup which did not use HA queues, you should interrupt the service :
+HAproxy Nodes HAProxy is a very fast and reliable solution offering high availability, load balancing, and proxying for TCP and HTTP-based applications.
+It is particularly suited for web sites crawling under very high loads while needing persistence or Layer 7 processing.
+Supporting tens of thousands of connections is clearly realistic with today’s hardware.
+For installing HAproxy on your nodes, you should consider its official documentation.
+Also, you have to consider that this service should not be a single point of failure, so you need at least two nodes running HAproxy.
+After each change of this file, you should restart HAproxy.
+All OpenStack projects have an API service for controlling all the resources in the Cloud.
+In Active / Active mode, the most common setup is to scale-out these services on at least two nodes and use load-balancing and virtual IP (with HAproxy & Keepalived in this setup)
+To configure our Cloud using Highly available and scalable API services, we need to ensure that:
+The monitor check is quite simple since it just establishes a TCP connection to the API port.
+Comparing to the Active / Passive mode using Corosync & Resources Agents, we don’t check if the service is actually running)
+That’s why all OpenStack API should be monitored by another tool (i.e.
+Nagios) with the goal to detect failures in the Cloud Framework infrastructure.
+Schedulers OpenStack schedulers are used to determine how to dispatch compute, network and volume requests.
+The most common setup is to use RabbitMQ as messaging system already documented in this guide.
+Those services are connected to the messaging backend and can scale-out :
+Please refer to the RabbitMQ section for configure these services with multiple messaging servers.
+Memcached Most of OpenStack services use an application to offer persistence and store ephemeral datas (like tokens)
+Memcached is one of them and can scale-out easily without specific trick.
+To install and configure it, you can read the official documentation.
+Memory caching is managed by Oslo-incubator for so the way to use multiple memcached servers is the same for all projects.
+More informations about memcached installation are in the OpenStack Compute Manual.
+The Neutron L2 Agent does not need to be highly available.
+It has to be installed on each Data Forwarding Node and controls the virtual networking drivers as Open-vSwitch or Linux Bridge.
+One L2 agent runs per node and controls its virtual interfaces.
+Running Neutron DHCP Agent Since the Grizzly release, OpenStack Networking service has a scheduler that lets you run multiple agents across nodes.
+But there is no native feature to make these routers highly available.
+At this time, the Active / Passive solution exists to run the Neutron L3 agent in failover mode with Pacemaker.
+Running Neutron Metadata Agent There is no native feature to make this service highly available.
+At this time, the Active / Passive solution exists to run the Neutron Metadata agent in failover mode with Pacemaker.

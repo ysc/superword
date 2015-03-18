@@ -1,0 +1,471 @@
+O’Reilly logo is a registered trademark of O’Reilly Media, Inc.
+From startups to the Fortune 500, smart companies are betting on data-driven insight, seizing the opportunities that are emerging from the convergence of four powerful trends:
+Get control over big data and turn it into insight with O’Reilly’s Strata offerings.
+Find the inspiration and information to create new products or revive existing ones, understand customer behavior, and get the data edge.
+O’Reilly books may be purchased for educational, business, or sales promotional use.
+Scaling CouchDB, the image of a chough, and related trade dress are trademarks of O’Reilly Media, Inc.
+Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks.
+Where those designations appear in this book, and O’Reilly Media, Inc., was aware of a trademark claim, the designations have been printed in caps or initial caps.
+While every precaution has been taken in the preparation of this book, the publisher and authors assume no responsibility for errors or omissions, or for damages resulting from the use of the information contained herein.
+Conventions Used in This Book The following typographical conventions are used in this book: Italic.
+Indicates new terms, URLs, email addresses, filenames, and file extensions.
+Used for program listings, as well as within paragraphs to refer to program elements such as variable or function names, databases, data types, environment variables, statements, and keywords.
+Constant width bold Shows commands or other text that should be typed literally by the user.
+Constant width italic Shows text that should be replaced with user-supplied values or by values determined by context.
+Using Code Examples This book is here to help you get your job done.
+In general, you may use the code in this book in your programs and documentation.
+You do not need to contact us for permission unless you’re reproducing a significant portion of the code.
+For example, writing a program that uses several chunks of code from this book does not require permission.
+Selling or distributing a CD-ROM of examples from O’Reilly books does.
+Answering a question by citing this book and quoting example code does not require permission.
+Incorporating a significant amount of example code from this book into your product’s documentation does require permission.
+An attribution usually includes the title, author, publisher, and ISBN.
+With a subscription, you can read any page and watch any video from our library online.
+Access new titles before they are available for print, and get exclusive access to manuscripts in development and post feedback for the authors.
+Copy and paste code samples, organize your favorites, download chapters, bookmark key sections, create notes, print out pages, and benefit from tons of other time-saving features.
+To have full digital access to this book and others on similar topics from O’Reilly and other publishers, sign up for free at http://my.safaribooksonline.com.
+How to Contact Us Please address comments and questions concerning this book to the publisher:
+We have a web page for this book, where we list errata, examples, and any additional information.
+For more information about our books, courses, conferences, and news, see our website at http://www.oreilly.com.
+Find us on Facebook: http://facebook.com/oreilly Follow us on Twitter: http://twitter.com/oreillymedia Watch us on YouTube: http://www.youtube.com/oreillymedia.
+Acknowledgments I’d first like to thank Damien Katz, creator of CouchDB, and all of CouchDB’s contributors.
+I’d also like to thank all of the contributors to the other open source software tools referenced in this book.
+Knut Ola Hellan (creator of Pillow) and Martin Brown (from Couchbase) both provided valuable feedback which helped to make this book better.
+Mike Loukides, this book’s editor, and the rest of the team at O’Reilly Media were very responsive and helpful.
+Before you can scale CouchDB, you need to define your scaling goals.
+Once you have defined your goals then you can design your system.
+You should test the scalability of your system before it is deployed.
+See Chapter 6 for information about how to perform distributed load testing on your system using Tsung.
+When your system has been deployed to production, you should continue to monitor its performance and resource utilization using a tool such as Munin (a CouchDB plugin for Munin is available at https://github.com/strattg/munin-plugin-couchdb) or Nagios.
+You can monitor an individual node by issuing a GET HTTP request to /_stats which will return various statistics about the CouchDB node.
+What is Scalability? It’s important to note the distinctions between performance, vertical scaling, and horizontal scaling.
+Performance typically refers to properties of a system such as response time or throughput.
+Vertical scaling (or scaling up) means adding computing capacity to a single node in a system.
+This could be through added memory, a faster CPU, or larger hard drives.
+While memory gets cheaper, CPUs get faster, and hard drives get larger every year, at any given moment there’s an upward limit to vertical scaling.
+Also, the hardware for high capacity nodes is usually more expensive per unit of computing capacity (as defined by your application) than commodity hardware.
+When someone uses the word “scalability,” they are often referring to horizontal scalability.
+Horizontal scaling (or scaling out) is when a system’s computing capacity is scaled by adding new nodes.
+In theory, each new node adds the entire amount of that node’s computing capacity to the system.
+In practice, true horizontal scalability is rarely, if ever, achieved.
+The network overhead of nodes communicating with each other can detract from the overall computing capacity of the system.
+Also, few systems are configured such that there is no redundant computing work between nodes.
+Capacity Planning Capacity planning is often lumped together with scaling.
+With capacity planning, the focus is on creating a system that can meet an expected amount of demand.
+With scalability, the focus is on creating a system that is capable of accommodating growth.
+As mentioned before, both vertical and horizontal scaling each have their own limitations.
+Given these limitations, a combination of scalability and capacity planning is often warranted.
+Put another way, define a maximum capacity to which you need to scale and test so that your system can scale to meet that capacity—there is no such thing as infinite scalability, and attempting to create such a system would be prohibitively expensive.
+In Chapter 6, we will take a look at testing the capacity of your system through distributed load testing.
+By design, CouchDB focuses on availability and partition tolerance and gives up consistency in exchange.
+Consistency Consistency is a database property whereby all clients will always see a consistent view of the data in your database.
+Once you have more than one CouchDB node, you will typically give up consistency in exchange for eventual consistency.
+Through replication, all CouchDB nodes can eventually be made to have a consistent view of the data.
+Availability Through load balancing, CouchDB can achieve a high level of availability.
+This means that a large number of requests can be served concurrently while still providing all clients with access to create, read, update, and delete data.
+Partition Tolerance CouchDB takes a peer-to-peer approach to replication giving it the property of partition tolerance.
+CouchDB nodes can operate in a “split-brain” scenario where the nodes are disconnected from each other and thus cannot be replicated, but will be replicated once a connection is re-established.
+In this chapter, we will take a look at some performance tips that you can apply when tuning your database.
+While not directly related to scalability, increasing performance can increase the overall capacity of your system.
+There are many options available when tuning CouchDB to meet your needs.
+We will also discuss considerations around the design of your documents.
+CouchDB is a schema-less database, giving you much flexibility in designing the document boundaries for your data.
+However, the decisions you make around designing your documents can have an impact on the performance and scalability of your database.
+Performance Tips The best way to increase the capacity of your database is to not send requests to it in the first place.
+Sometimes you can’t forego a database request altogether, but you can limit the amount of work you ask the database to do.
+Here are a some tips to limit the amount of work you ask of CouchDB and to increase performance (the applicability of these tips to your application may vary):
+Cache documents and query results using memcached or another caching system.
+For systems under heavy load, even caches that expire after only a few seconds can save many extra requests to your database.
+This caching can be done in your application or by using a reverse proxy server that supports caching.
+The response to every GET request to a document or view includes an Etag HTTP header (for documents, the Etag’s value is the document’s revision in double quotes)
+Cache the document or view results along with its corresponding Etag.
+Send an If-None-Match HTTP header containing the Etag’s value with subsequent requests to the same URL (Etags are only valid for a given URL)
+Don’t use the include_docs parameter (or set it to false) when querying views.
+First, you can emit the entire document as the value in your Map function, for instance, emit(key, doc)
+This will increase the size of your index, but will use less I/O resources and result in faster document retrieval.
+Second, you can make a separate request for each document.
+Assuming you have cached your documents, then some percentage of these requests will result in cache hits.
+CouchDB will perform best with document IDs that are mostly monotonic (in simpler terms, mostly sequential)
+This has to do with the B-tree (technically B+tree) structure that CouchDB uses to store data.
+The simplest way to generate mostly monotonic document IDs is to use the default value of sequential for the algorithm option in the uuids configuration section and let CouchDB generate your document IDs.
+Inserting documents in bulk can be many times faster than individual inserts.
+CouchDB supports a non-atomic (the default) or an all-or-nothing model for bulk updates.
+Using the non-atomic model, some documents may be updated and some may not.
+Documents may fail to update due to a document update conflict, or because of a power failure.
+Under the all-or-nothing model, either all of the documents will be updated, or none of them will be updated.
+Instead of causing a document update conflict, an update to a document using the non-latest revision will result in the document being written, but also being marked as conflicted.
+If there is a power failure before all of the documents can be written, then on restart none of the documents will have been saved.
+In this mode, CouchDB will save documents in memory and flush them to disk in batches.
+This can be triggered by setting the batch query parameter to ok when doing a POST or PUT of a document.
+Batch mode may not be a good fit for your application.
+That is, leave the delayed_commits option set to true in the couchdb configuration section.
+For non-bulk writes, requiring an fsync will have a major performance impact.
+If you can live without the most up-to-date view results, set the stale query parameter’s value to ok when querying views.
+If documents have been updated, this saves CouchDB from recomputing views on each read.
+You will need to have a system for querying these views without the stale query parameter or else your views will never get updated.
+This can be done with a cron job or through another automated process.
+You can use the HEAD HTTP method for these requests to save bandwidth.
+Run database compaction, view compaction, and view cleanup when the database is not under heavy load.
+When skipping a large number of rows, CouchDB still needs to scan the entire B-tree index, starting from the startkey and startkey_docid (if specified)
+While it may seem obvious, it’s worth mentioning that faster disks, more CPUs, and more memory should increase the performance of CouchDB.
+Being a database, CouchDB is ultimately limited to your disk I/O throughput.
+Higher RPM drives, solid-state drives (SSD), or a RAID configuration (the appropriate RAID level depends on your needs related to data redundancy, read performance, and write performance) could help.
+CouchDB (due to its Erlang underpinnings) can take advantage of multiple CPUs.
+The performance of view queries can be improved by having more RAM available with which CouchDB can cache views’ B-tree indices.
+Systems can behave very differently under load than they do otherwise.
+What performs well with only one node may perform very differently when scaled out to multiple nodes.
+Performance tuning of large scale systems can sometimes result in counterintuitive optimizations.
+If you are experiencing performance or scaling problems, be sure that your database is, in fact, the main source of your problems.
+Likely you have an application that is the main (if not the only) client to your database.
+If that application is a web application, then it has clients connecting to it through web browsers.
+You will want to make sure that you are focusing your efforts on the right part of your system.
+Document Design The document boundaries of your data can have a significant impact on the ability of your system to scale.
+Transaction, distribution, and concurrency boundaries are also used in domain-driven design when defining Aggregates.
+In the first contrived scenario, you could put all of your data in one document (let’s ignore, for a moment, how large and awkward this document would become)
+Within a single CouchDB node, an update of a single document is transactional.
+Putting all of your data in one document would make all operations transactional.
+Following is an example of putting all data in one document:
+In the second contrived scenario, you could put each discrete piece of data in its own document, much like a normalized relational database.
+Clients would get document update conflicts less often and replication would generate fewer conflicts.
+However, related data could often be disjointed since CouchDB does not support transactions across document boundaries.
+Following is an example of breaking one document into smaller pieces of data.
+The first approach gives you a high level of consistency but reduces availability (clients will get document update conflicts more often) and reduces partition tolerance (replication will often lead to conflicts)
+The second approach may reduce consistency but can give you a higher level of availability and partition tolerance.
+Replication in CouchDB is peer-based and bi-directional, although any given replication process is one-way, from the source to the target.
+Replication can be run from Futon, CouchDB’s web administration console, or by sending a POST request to _replicate containing a JSON object with replication parameters.
+Let’s assume we have two databases, both running on the same CouchDB node, that we want to replicate: catalog-a and catalog-b (we can also replicate databases on different CouchDB nodes)
+Create a new, empty document (with only an _id field) in the catalog-a database.
+Optionally, you could have checked “Continuous” to trigger continuous replication.
+If you would prefer to use cURL, first create the catalog-a database: curl -X PUT http://localhost:5984/catalog-a.
+If you have a large number of documents, then you could potentially have a time consuming replication process.
+Another use case is to cancel a continuous replication process.
+If CouchDB is restarted, then you must start continuous replication again.
+Permanent continuous replication is planned for a future version of CouchDB.
+For this reason, you may want to consider triggering continuous replication from within a cron job.
+Attempting to start continuous replication while continuous replication is already running is harmless.
+Filters and Specifying Documents Sometimes you do not want to replicate every document in your database.
+Filter functions can be used to determine which documents should and should not be replicated.
+A filter function will simply return true if the given document should be replicated, and false if the given document should not be replicated.
+A filter function can be defined within a design document on the source database.
+When initiating replication, you can specify which filter function, from which design document, to use.
+Here is an example of a filter function that would cause only documents with a collec tion value of author to be replicated:
+The first parameter, doc in the above example, is a candidate document for replication.
+The second parameter, req in the above example, is the replication request.
+This second parameter contains the details of the replication request including the HTTP headers, HTTP method, and query parameters.
+For example, req.query is a JSON object of query parameters (query_params from the replication request)
+Here is a design document containing the above filter, given the name authors:
+To use this filter during replication (the create_target parameter tells CouchDB to create the target database before replication):
+Here’s what the updated filter function would look like in a design document: "_id":"_design/default",
+If you know the exact IDs of the documents you want to replicate, then you can specify those instead of using a filter:
+Conflict Resolution When replicating, you will inevitably run into document update conflicts.
+This can happen when a document with the same ID has been updated independently on two or more CouchDB nodes.
+To handle document update conflicts, you will need to create a view to find conflicts.
+Here is the Map function that will let us find conflicts:
+Next, create the same document within the catalog-b database, but with a slightly different title (the comma is missing after “CSS”):
+Replicate back from catalog-b to catalog-a (so that the conflict will exist in both databases):
+Querying the conflicts view from catalog-a or from catalog-b should return the same results:
+CouchDB uses a deterministic algorithm to pick the winner when there is a conflict.
+Every CouchDB node will always pick the same winner of any given conflict.
+First, CouchDB looks at the incrementing part of the revision number (the part before the "-“) and the document with the highest number wins.
+If both documents have the same number of revisions, then CouchDB simply does an ASCII comparison of the revision number and the document with the highest sort order wins.
+It is always a good idea to handle conflicts within your application by automatically merging documents in a way that makes sense to your application, or by presenting the conflict to an end user to resolve.
+If you’d like, you can verify this by querying the conflicted document on catalog-a, setting the conflicts query parameter to true:
+Based on this response, we can tell that revision 1-8e68b2b2f14a81190889dab9d04481d2 (the one with the comma) was picked by CouchDB as the winner.
+We can see here that revision 1-25042aaa901375bfd7cb63d189275197 is, in fact, the one with the missing comma.
+Since each is mutually exclusive, you will need to pick one if you are following along (or start this example again from the beginning for each)
+Picking the Same Revision as CouchDB If you pick the same revision to win as CouchDB picked, then you could just do nothing.
+However, the conflict will continue to be listed and, assuming you have an automated process to deal with conflicts, your application will continue to deal with the conflict indefinitely.
+To clear the conflict, you can simply delete the revision you don’t like:
+Whenever CouchDB deletes a document, it creates a new revision with _deleted field set to true.
+The same thing happens when you delete a conflicted revision.
+Let’s take a look at our conflicts view to make sure that the conflict has, in fact, been resolved:
+Let’s verify that the document has not been deleted: curl -X GET http://localhost:5984/catalog-a/978-0-596-80579-1
+Let’s double-check that the conflict has also been resolved in the catalog-b database: curl -X GET http://localhost:5984/catalog-b/_design/default/_view/conflicts.
+Picking a Conflicted Revision In this scenario, we don’t agree with CouchDB’s pick and want to instead pick a conflicted revision to win.
+Like in the previous scenario, we simply delete the revision we don’t like (which happens to be the revision that CouchDB had picked as the winner):
+Let’s take a look at our conflicts view to make sure that the conflict has, in fact, been resolved:
+Let’s verify that the document has not been deleted: curl -X GET http://localhost:5984/catalog-a/978-0-596-80579-1
+Let’s double-check that the conflict has also been resolved in the catalog-b database: curl -X GET http://localhost:5984/catalog-b/_design/default/_view/conflicts.
+Merging Revisions In this scenario, we will create a new revision, merging properties of both documents, and then delete the conflicting document.
+Let’s take a look at our conflicts view to make sure that the conflict has been resolved: curl -X GET http://localhost:5984/catalog-a/_design/default/_view/conflicts.
+Let’s verify that the document has not been deleted: curl -X GET http://localhost:5984/catalog-a/978-0-596-80579-1
+Let’s double-check that the conflict has also been resolved in the catalog-b database: curl -X GET http://localhost:5984/catalog-b/_design/default/_view/conflicts.
+Load balancing allows you to distribute the workload evenly across multiple CouchDB nodes.
+Since CouchDB uses an HTTP API, standard HTTP load balancing software or hardware can be used.
+With simple load balancing, each CouchDB node will maintain a full copy of your database through replication.
+Each document will eventually need to be written to every node, which is a limitation of this approach since the sustained write throughput of your entire system will be limited to that of the slowest node.
+You could replicate only certain documents using filter functions or by specifying document IDs, as discussed in Chapter 3
+See Chapter 5 for details on an alternative way to distribute your data across multiple CouchDB nodes.
+In this scenario, we will set up a write-only master node and three read-only slave nodes.
+We will set up continuous replication from the write-only master to each of the read-only slave nodes.
+See Figure 4-1 for a diagram of the configuration we will be creating in this chapter.
+The MOVE HTTP method was removed from CouchDB since it was really just a COPY followed by a DELETE, but implied that there was a transaction across these two operations (which there was not)
+Assuming you are using a newer version of CouchDB, then there’s no need to concern yourself with the MOVE HTTP method.
+There are many load balancing software and hardware options available.
+A full discussion of all the available tools and how to install and configure each on every available platform is beyond the scope of this book.
+Instead, we will focus on installing and configuring the Apache HTTP Server as a load balancer.
+We’ll be using Ubuntu, but these instructions should be easily adaptable to your operating system.
+You may want to consider having multiple load balancers so that you can remove the load balancer as a single point of failure.
+This setup typically involves having two or more load balancers sharing the same IP address, with one configured as a failover.
+The details of this configuration are beyond the scope of this book.
+Apache was chosen as the load balancer for this scenario because it is relatively easy to configure and has the basic capabilities needed.
+Your hosting provider may also offer its own, proprietary load balancing tools.
+For example, Amazon has a tool called Elastic Load Balancing and Rackspace provides a service called Rackspace Cloud Load Balancers (in beta as of this writing)
+CouchDB Nodes In the following scenario, we will send write requests to one master node with a domain name of couch-master.example.com and distribute read requests to three nodes on machines with domain names of couch-a.example.com, couch-b.example.com, and couch-c.example.com.
+Install CouchDB on the master node and on all three slave nodes:
+We need to configure CouchDB to allow connections from the outside world.
+Unless your server is behind a firewall, this configuration change will allow anyone to access your CouchDB database.
+If you can’t connect remotely to one or more of the CouchDB nodes, then double-check that the bind_address in /etc/couchdb/local.ini is set to each machine’s correct IP address, respectively, and that you have restarted CouchDB.
+At this point we have four CouchDB databases, on four different nodes, running independently.
+If we write data to the master node, it will not be replicated to any of the slave nodes yet.
+Pull replication is when replication is triggered from the same node as the target.
+Push replication is when replication is triggered from the same node as the source.
+Set up a pull replication with couch-a.example.com pulling changes from couchmaster.example.com:
+Set up a pull replication with couch-b.example.com pulling changes from couchmaster.example.com:
+Set up a pull replication with couch-c.example.com pulling changes from couchmaster.example.com:
+You may want to set up replication using a separate, private, network so that you can have dedicated bandwidth for private and public requests.
+It has many features including a proxy server and a load balancer (as of version 2.1)
+In this exercise, we will create our load balancer on a machine with a domain name of couch-proxy.example.com..
+On couch-proxy.example.com, edit /etc/apache2/httpd.conf and add the following (it is likely that the file will be empty to start with):
+To instead balance by busyness, add the order doesn’t matter.
+You will also need to configure your virtual host to enable the rewrite engine and inherit the rewrite options from the server configuration above.
+Let’s take a look at each line of the /etc/apache2/httpd.conf configuration file.
+If you have mod_deflate enabled then this module will add a Vary HTTP header with a value of Accept-Encoding.
+A Vary HTTP header informs a client as to what set of request-header fields it is permitted to base its caching on.
+Since mod_deflate may be adding this header, and CouchDB uses the Accept header to vary the media type (reflected in a ContentType header with either a value of text/plain or application/json), it’s a good idea to make sure that clients know to also vary their caching based on the Accept HTTP header, and not just the Accept-Encoding HTTP header.
+The line beginning with Header add Set-Cookie sets a cookie named NODE on the client.
+The value of this cookie will be the route name associated with the load balancer member that served the request.
+This allows for sticky sessions meaning that, once a client has been routed to a specific load balancer member, that client’s requests will continue to be routed to that same load balancer member node.
+This provides more consistency only be sent if the load balancer route has changed.
+A later configuration directive will define what requests should be sent to.
+Keep the maximum number of connections to each CouchDB node low 4 may seem like a very low number, CouchDB will respond to each request very quickly and allow for a high level of throughput.
+If the proxy server has enough memory and is configured to allow enough concurrent clients itself, then it can effectively queue requests for the backend servers.
+If we didn’t need to proxy requests based on the HTTP method, we could have used the ProxyPass directive.
+The next line sets up a rewrite condition that says to only run the subsequent rewrite rule if the request HTTP method is POST, PUT, DELETE, MOVE, or COPY:
+The subsequent rewrite rule then proxies all requests to URIs starting with /api to the equivalent URI on http://couch-master.example.com:5984 (again, only if the previous rewrite condition has been met):
+This one says to only run the subsequent rewrite rule if the request HTTP method is GET, HEAD, or OPTIONS:
+The subsequent rewrite rule then proxies all requests to URIs starting with /api to the equivalent URI on the couch-master load balancer (again, only if the previous rewrite condition has been met):
+The following ProxyPassReverse directives instructs Apache to adjust the URLs in the HTTP response headers to match that of the proxy server, instead of the reverse proxied server.
+This is mainly useful for the Location header that is sent when CouchDB creates a new document:
+Open /etc/apache2/apache2.conf and look for the ServerLimit, ThreadsPerChild, and MaxClients directives.
+These directives are intended to prevent your server from running out of memory and swapping, which would significantly decrease performance.
+Testing Test your load balancer by making an HTTP request to the proxy server:
+It should proxy the request through to one of the CouchDB nodes and respond as follows (your details will be different):
+Let’s try and POST a new document to the load balancer, treating it as if it’s a CouchDB node:
+Let’s try and GET the newly created document from the load balancer, again treating it as if it’s a CouchDB node:
+If you GET the newly created document from couch-a.example.com, then you should get the exact same response:
+If you GET the newly created document from couch-b.example.com, then you should get the exact same response:
+Finally, if you GET the newly created document from couch-c.example.com, then you should get the exact same response:
+If the document did not replicate from one CouchDB node to the other, then make sure that continuous replication is running.
+See Chapter 6 for information about how to perform distributed load testing.
+To increase, please see the ServerLimit directive.” As mentioned before, Apache limits the MaxClients to the ServerLimit multiplied by the ThreadsPerChild.
+Load balancing is very useful, but it alone may not provide you with the scale you need.
+Sometimes it is necessary to partition your data across multiple shards.
+Each shard lives on a CouchDB node and contains a subset of your data.
+You can have one or more shards on each node.
+However, there are third-party tools that allow you to create a cluster of CouchDB nodes.
+An alternative to automatic partitioning is to manually partition your documents into different databases by type of document.
+The downside to this approach is that only documents in the same database can be included in any given view.
+If you have documents that don’t need to be queried in the same view, putting them in separate databases can allow you to use CouchDB as-is without needing a third-party tool.
+BigCouch BigCouch is a fork of CouchDB that introduces additional clustering capabilities.
+It is available under an open source license and is maintained by Cloudant.
+For the most part, you can interact with a BigCouch node exactly the same way you would interact with a CouchDB node.
+BigCouch introduces some new API endpoints that are needed to manage its clustering features.
+As of this writing, the current version of BigCouch was 0.3
+Each BigCouch node keeps a list of nodes that are part of its cluster.
+Each node is equally capable of handling requests, so you will want to load balance requests to your BigCouch nodes.
+Documents and views are partitioned by BigCouch across the shards.
+View results are created on each shard and then merged by the coordinating node when queried.
+The _changes feed is merged in a similar way, but without a global sort order and uses strings instead of sequence numbers.
+There are four parameters that control the operation of a BigCouch cluster.
+Note that multiple shards may exist on a single node, allowing you to grow the number of nodes in your cluster without needing to re-shard.
+This is configured in the default.ini file, but may be specified using the q query parameter when creating a database.
+A client will not receive an indication of write success (201 Created) until this many nodes have successfully written the document.
+If W is less than N, then the remaining writes will still be attempted in the background.
+This is configured in the default.ini file, but may be specified using the w query parameter when writing to the database.
+A document will not be returned to a client until this many successful reads on different nodes have been made, all with the same revision number.
+This is configured in the default.ini file, but may be specified using the r query parameter when reading from the database.
+Each BigCouch node needs to agree on a magic cookie value.
+For security reasons, be sure to change this magic cookie value to a new value (using the same new value on each node) in each node’s vm.args file.
+Lounge Lounge is another tool that allows you to create a cluster of CouchDB nodes.
+It is available under an open source license and is maintained by Meebo.
+Lounge is itself a proxy server that manages a cluster of CouchDB nodes.
+Lounge requires a small patch to CouchDB that enables design-only replication (so that only design documents and views are replicated) but, other than that, uses CouchDB as-is.
+Lounge actually includes two proxy servers—a dumbproxy and a smartproxy.
+The dumbproxy is nginx packaged up with a custom proxying module.
+The dumbproxy handles routing requests to the correct shard, or partition, for documents and for everything else that is not a view.
+This hash determines to which node an HTTP request gets sent.
+Since the document ID is included in both reads and writes, the dumbproxy will always send both reads and writes to the correct node.
+Finally, Lounge includes a replicator which keeps design documents synchronized and can replicate documents for redundancy.
+For this reason, you may want to consider oversharding your database.
+Basically, this means having multiple shards on each CouchDB node.
+In this scenario, once you’ve reached 8 nodes you would not be able to automatically reshard your database.
+If you wanted to reshard to support 64 shards, this would be a manual process.
+Pillow Pillow is both a router and rereducer for CouchDB.
+Like Lounge, Pillow is a separate application that sits in front of a cluster of standard CouchDB nodes.
+Both Lounge and Pillow are designed to solve the same problems, but they have different approaches to solving these problems.
+Pillow uses the hash of a document ID to determine which CouchDB node should serve the request.
+For view requests, Pillow collects the view results from all CouchDB nodes and merges these results for the client.
+One nice feature of Pillow is that it supports automatic resharding.
+The shard to which to send an individual document is determined by replication filters.
+When asked to reshard, Pillow will create the necessary replication filters and initiate the replication.
+You can then monitor the replication status to see when Pillow is ready for you to switch to using the new shards.
+Pillow can automatically switch to the new shards when they are ready, but it is recommended that you make the switch manually.
+It can be very difficult to accurately predict these usage patterns.
+If you are working with an existing system, then you can take a look at log files and analytics data to get a sense of how your application is used.
+If this is a new system, then you can create scenarios based on how you expect the application to be used.
+Generic benchmarking can be of some use, but a test specifically designed for your system will be more useful.
+The example load test in this chapter is intended as an illustrative example that can be helpful when you are writing your own tests.
+However, writing a test that is customized to your application’s usage patterns can be very difficult.
+An appropriate test for your system will look very different than the example test in this chapter.
+There are many tools available that allow you to create tests customized for your application.
+However, when creating a distributed system it can be difficult to actually generate enough load to push your system to its maximum capacity.
+In order to stress test a distributed system, you will need a distributed load testing tool.
+Tsung is a distributed load and stress testing tool that we will use for the example this chapter.
+We will be using Tsung on Ubuntu, but these steps can be easily adapted to other platforms.
+Tsung can generate GET and POST HTTP requests and, as of version 1.2.1, PUT and DELETE HTTP requests.
+Depending on the number of testing servers used, Tsung can simulate hundreds of thousands of concurrent users.
+Given enough servers, you could even simulate millions of concurrent users.
+Installing Tsung In the following examples, we will have two testing clients with domain names of testa.example.com and test-b.example.com, and we will be testing our couch-proxy.exam ple.com (load balancer), couch-master.example.com (CouchDB master node), coucha.example.com (CouchDB read-only node), couch-b.example.com (CouchDB read-only node), couch-c.example.com (CouchDB read-only node) servers.
+Install gnuplot on both test-a.example.com and test-b.example.com: sudo aptitude install gnuplot.
+Install Perl’s Template Toolkit on both test-a.example.com and test-b.example.com: sudo aptitude install libtemplate-perl.
+Install Python’s Matplotlib on both test-a.example.com and test-b.example.com: sudo aptitude install python-matplotlib.
+Download the latest version of Tsung on both test-a.example.com and test-b.exam ple.com.
+Extract the downloaded file on both test-a.example.com and test-b.example.com: tar -xzf tsung-1.3.3.tar.gz.
+On both test-a.example.com and test-b.example.com, change into the tsung-1.3.3 directory:
+We will be launching our tests from test-a.example.com, so you will need to be able to login from this client to test-b.example.com without using a password.
+We will do this using public key authentication, but you could instead use ssh-agent or rsh.
+Install the OpenSSH server on test-a.example.com and test-b.example.com, if it is not already:
+Each of your testing clients should use the same username for running tests.
+Setting up multiple machines will be much easier if the same username is used on each.
+If you use Erlang-based remote monitoring, create this same username on each server to be monitored as well.
+Alternatively, you can configure default usernames in your users’ SSH configuration files.
+Generate an SSH key on test-a.example.com, if you have not already: ssh-keygen.
+Pick the default file in which to save the key, likely ~/.ssh/id_rsa.
+If this is the first time using SSH to connect from test-a.example.com to test-b.exam ple.com, you will need to accept the RSA key fingerprint.
+Enter the user’s password and you should see output indicating that the file has been copied.
+Log into test-b.example.com and add the public key copied from test-a.example.com to test-b.example.com’s list of authorized keys:
+Still on test-b.example.com, remove the public key that was copied over from testa.example.com:
+To test, try logging into test-b from test-a.example.com, accepting the RSA key fingerprint if prompted, and you should not be prompted for a password:
+We are using the local hostname, test-b, rather than the complete hostname, test-b.example.com, since Tsung will require us to use the local hostname in our test configuration.
+Tsung will also allow you to use the IP address of the machine, if you’d prefer.
+If you have additional testing clients, repeat the above steps for each, setting up testa.example.com to be able to log into each testing machine without using a password.
+The more testing servers you have, the more simulated load you can generate.
+Oddly enough, test-a.example.com will also need to be able to log into itself without using a password.
+To add its own public key to its list of authorized keys, from testa.example.com:
+To test, try logging into test-a from test-a.example.com (yes, from itself), accepting the RSA key fingerprint if prompted, and you should not be prompted for a password:
+Configuring Tsung Tsung comes with an example configuration file for doing distributed HTTP testing, which you’ll find in /usr/share/doc/tsung/examples/http_distributed.xml.
+The location of the DTD file, /usr/share/tsung/tsung-1.0.dtd, may be different on your testing client.
+If so, this value will need to be modified to match the location on your client.
+All client hosts must be able to resolve the hostname of the machine running the tests.
+In the above configuration, test-b must be able to resolve the IP address of test-a.
+This clients element contains a list of clients from which tests may be launched.
+The more clients, the greater the simulated load that can be generated.
+Each client needs to be configured using its local hostname or IP address using the host attribute.
+The weight attribute assigns a relative weight to the client since some clients may be faster and able to start more sessions than other clients.
+The maxusers attribute defines a maximum number of users to simulate on this client.
+The cpu attribute declares how many Erlang virtual machines Tsung should use and should be the same as the number of CPUs that are available to the client.
+The servers element contains a list of servers to be tested.
+Each server needs to be configured using its local hostname or IP address using the host attribute.
+The port attribute indicates the TCP/IP port number to use.
+Since HTTP uses TCP, we’re using tcp as the value here.
+The load element contains a list of arrivalphase elements, each simulating various types of load.
+The arrivalphase element’s phase attribute represents the sequential number of the arrival phase.
+The duration attribute defines how long the arrival phase should last and the unit attribute defines the unit by which to measure the duration.
+Possible values for the unit element are second, minute, or hour.
+The arrivalrate attribute of the users element defines the number of arrivals within the timeframe defined by the unit element.
+Possible values for the unit element are second, minute, or hour.
+You can define multiple sessions and each can have its own probability, but the total probability of all sessions must add up to 100
+The session element with the name attribute value of post_get:
+This session element contains a name attribute with the value of post_get.
+This name will be used in reports to identify the session.
+The session element’s probability attribute indicates the percent probability of this session being used for any given user.
+Remember, the total probability of all sessions must add up to 100
+The thinktime element defines an amount of time to wait, or “think”, before continuing.
+This is helpful when trying to more realistically simulate load.
+The thinktime element’s value attribute is the amount of time, in seconds, to wait.
+Setting the thinktime element’s random attribute to a value of true tells Tsung to randomize the wait time, using the value attribute’s value as the mean.
+The sourcetype attribute value of random_number tells Tsung to generate a random number.
+The start and end attributes indicate the starting and ending values, respectively, to use when generating the random number.
+The nested var element actually instantiates the variable, using the variable name defined in the name attribute.
+Here we are generating random year, month, and day values which we will use later in the session.
+A request element defines a request to be made as part of the session.
+Since we’ll be using the dynamic variables defined earlier, we need set the request element’s subst attribute’s value to true.
+This tells Tsung to substitute variables for their values, when encountered.
+The match element tells Tsung to “match” on a certain condition.
+The do attribute value of abort tells Tsung to abort the session if the match condition is true.
+Possible values for the do attribute are continue, log, abort, restart, or loop.
+The text of the match element is the text to match or not match on.
+In this case, if the text 201 Created is not found in the response (i.e., the document was not created) then we abort the session.
+The two dyn_variable elements define dynamic variables that will be based on the server’s response.
+The name attribute defines the name of the variable to use.
+Tsung allows matching using a limited subset of JSONPath (XPath for JSON), using the jsonpath attribute.
+These two variables will contain the ID and revision of the created document (once the response has been received)
+The method attribute specifies the HTTP method to use for the request (e.g., GET, POST, PUT, DELETE)
+The url attribute specifies the URL to which to make the request.
+This can be relative to the host set up earlier in the servers element, or a full URL.
+The content_type attribute specifies the value of the Content-Type HTTP header.
+The contents attribute specifies the contents of a POST or PUT request body.
+Here we are using a JSON object as the request body.
+The JSON object contains one field, date, with its value being an array of year, month, and day values (using the random dynamic variables created earlier)
+A for element will tell Tsung to repeat the enclosed directives a specified number of times.
+The contained thinktime, request, match, and http elements should look familiar.
+As you may have guessed, these specify the name and value of HTTP headers to send as part of the request.
+The If-None-Match HTTP header allows us to use conditional caching and the Accept header tells CouchDB that our client can handle content of type application/json.
+The remaining sessions in the configuration file should be self-explanatory.
+Running Tsung First, we need to create the view that is used in the above configuration file.
+This is simply a view of dates (as an array of year, month, and day) from our documents:
+Start Tsung, telling it to use the above configuration file: tsung -f ~/http_distributed_couch_proxy.xml start.
+Note that Tsung will wait for all sessions to complete before finishing, even if it takes longer than the duration of all phases.
+Tsung will let you know what directory it has logged to, for example:
+Change into the log directory and generate the HTML and graph reports using the tsung_stats.pl script package with Tsung:
+The location of the tsung_stats.pl script may be different on your testing client.
+If so, you will need to locate this script and run it from the appropriate location.
+If everything works correctly, a report.html file will be created in this same directory.
+Open this report and you will see several statistics and graphs.
+A transaction might be useful when testing an HTML page as you could group the requests for the HTML and all related assets (e.g., JavaScript, CSS, and images) into one transaction.
+We have not done this here, so your transactions statistics table will be empty.
+The network throughput table lets you see the size of the network traffic received and sent.
+The counter statistics reports let you see the total number of simulated users and related statistics.
+The HTTP return code table gives you a list of return codes with the highest rate and total number for each.
+See Table 6-5 for a sample HTTP return code report.
+For all graphs, the x-axis represents a progression of time throughout the test.
+The y-axis for this graph represents the mean number of milliseconds that the transaction response took during a given moment in the test.
+For the next graph, the y-axis represents the mean number of milliseconds that the request or connection establishment took during a given moment in the test.
+For the next graph, the y-axis represents the number of transactions per second during a given moment in the test.
+For the next graph, the y-axis represents the number of requests or connects during a given moment in the test.
+For the next graph, the y-axis represents the number of kilobits per second sent or received during a given moment in the test.
+For the next graph, the y-axis represents the number of users per second arriving or finishing during a given moment in the test.
+For the next graph, the y-axis represents the number of simultaneous users arriving or connected during a given moment in the test.
+For the final graph, the y-axis represents the number of responses per second of a given HTTP return code.
+Monitoring Tsung can monitor the CPU usage, memory usage, and load on your servers as they are being tested.
+This data can be used to better allocate your available network resources.
+You can use either Erlang, SNMP, or Munin to monitor your servers.
+Next, you need to configure all of your Munin nodes to allow monitoring by testa.example.com.
+Start Tsung, telling it to use the above configuration file, as before: tsung -f ~/http_distributed_couch_proxy.xml start.
+As before, Tsung will let you know what directory it has logged to: "Log directory is: /home/bradley-holt/.tsung/log/20110221-23:39"
+Just like before, change into the log directory and generate the HTML and graph reports using the tsung_stats.pl script:
+This time you will see a few new statistics and graphs.
+On the statistics report page, under server monitoring, you will see several statistics from the monitored servers.
+See Table 6-6 for an example of the server monitoring report.
+Under graphs reports, you will see a new server OS monitoring section.
+For the first graph, the y-axis represents the CPU utilization of your servers during a given moment in the test.
+For the next graph, the y-axis represents the free memory available on your servers during a given moment in the test.
+For the next graph, the y-axis represents the CPU load on your servers during a given moment in the test.
+Identifying Bottlenecks Based on the results of the above tests, we can attempt to make a few conclusions.
+The CPU utilization percentages on the read-only slave nodes, the write-only master node, and the proxy server are all quite low.
+It appears that none of these nodes are CPU bound.
+The free memory amounts on the read-only slave nodes, the write-only master node, and the proxy server never drops critically low.
+It looks like none of the nodes ever run out of memory, so excessive swapping should not be an issue.
+The server load averages on the read-only slave nodes and the write-only master node are reasonable.
+The server load average on the proxy server is quite high.
+Based on this analysis, we might conclude that the proxy server is a potential bottleneck in our system.
+If you look back at the counter statistics, you’ll see that the maximum number of connections reached was 2797
+However, the maximum number of connections allowed to each read-only node was 4
+With three read-only nodes, this gives us a total of 12 maximum connections to the backend CouchDB nodes.
+The write-only node did not have a limit, but our test scenarios were read-heavy.
+It appears that the proxy server is effectively queuing requests for the backend CouchDB nodes, which could account for the high server load.
+Based on the above hypothesis, adding more read-only CouchDB nodes might actually lessen the load on the proxy server.
+Of course, we should test this hypothesis before we assume its validity.
+We’re not going to do that here, but the point is that you should always challenge your assumptions with an actual test.
+The configuration being tested matches that described in Chapter 4

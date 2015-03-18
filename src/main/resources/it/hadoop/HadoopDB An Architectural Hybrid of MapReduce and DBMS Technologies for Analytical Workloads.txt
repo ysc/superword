@@ -1,0 +1,386 @@
+Many enterprises are shifting away from deploying their analytical databases on high-end proprietary machines, and moving towards cheaper, lower-end, commodity hardware, typically arranged in a shared-nothing MPP architecture, often in a virtualized environment inside public or private “clouds”
+At the same time, the amount of data that needs to be analyzed is exploding, requiring hundreds to thousands of machines to work in parallel to perform the analysis.
+There tend to be two schools of thought regarding what technology to use for data analysis in such an environment.
+Proponents of parallel databases argue that the strong emphasis on performance and efficiency of parallel databases makes them wellsuited to perform such analysis.
+On the other hand, others argue that MapReduce-based systems are better suited due to their superior scalability, fault tolerance, and flexibility to handle unstructured data.
+In this paper, we explore the feasibility of building a hybrid system that takes the best features from both technologies; the prototype we built approaches parallel databases in performance and efficiency, yet still yields the scalability, fault tolerance, and flexibility of MapReduce-based systems.
+As business “bestpractices” trend increasingly towards basing decisions off data and hard facts rather than instinct and theory, the corporate thirst for systems that can manage, process, and granularly analyze data is becoming insatiable.
+Venture capitalists are very much aware of this trend, and have funded no fewer than a dozen new companies in recent years that build specialized analytical data management software (e.g., Netezza, Vertica, DATAllegro, Greenplum, Aster Data, Infobright, Kickfire, Dataupia, ParAccel, and Exasol), and continue to fund them, even in pressing economic times [18]
+At the same time, the amount of data that needs to be stored and processed by analytical database systems is exploding.
+Permission to copy without fee all or part of this material is granted provided that the copies are not made or distributed for direct commercial advantage, the VLDB copyright notice and the title of the publication and its date appear, and notice is given that copying is by permission of the Very Large Data Base Endowment.
+To copy otherwise, or to republish, to post on servers or to redistribute to lists, requires a fee and/or special permission from the publisher, ACM.
+It is no longer uncommon to hear of companies claiming to load more than a terabyte of structured data per day into their analytical database system and claiming data warehouses of size more than a petabyte [19]
+Given the exploding data problem, all but three of the above mentioned analytical database start-ups deploy their DBMS on a shared-nothing architecture (a collection of independent, possibly virtual, machines, each with local disk and local main memory, connected together on a high-speed network)
+This architecture is widely believed to scale the best [17], especially if one takes hardware cost into account.
+Furthermore, data analysis workloads tend to consist of many large scan operations, multidimensional aggregations, and star schema joins, all of which are fairly easy to parallelize across nodes in a shared-nothing network.
+Oracle and Microsoft have recently announced shared-nothing analytical DBMS products in their Exadata1 and Madison projects, respectively.
+For the purposes of this paper, we will call analytical DBMS systems that deploy on a shared-nothing architecture parallel databases2
+Parallel databases have been proven to scale really well into the tens of nodes (near linear scalability is not uncommon)
+However, there are very few known parallel databases deployments consisting of more than one hundred nodes, and to the best of our knowledge, there exists no published deployment of a parallel database with nodes numbering into the thousands.
+There are a variety of reasons why parallel databases generally do not scale well into the hundreds of nodes.
+First, failures become increasingly common as one adds more nodes to a system, yet parallel databases tend to be designed with the assumption that failures are a rare event.
+Second, parallel databases generally assume a homogeneous array of machines, yet it is nearly impossible to achieve pure homogeneity at scale.
+Third, until recently, there have only been a handful of applications that required deployment on more than a few dozen nodes for reasonable performance, so parallel databases have not been tested at larger scales, and unforeseen engineering hurdles await.
+As the data that needs to be analyzed continues to grow, the number of applications that require more than one hundred nodes is beginning to multiply.
+To be precise, Exadata is only shared-nothing in the storage layer.
+This is slightly different than textbook definitions of parallel databases which sometimes include shared-memory and shareddisk architectures as well.
+Despite being originally designed for a largely different application (unstructured text data processing), MapReduce (or one of its publicly available incarnations such as open source Hadoop [1]) can nonetheless be used to process structured data, and can do so at tremendous scale.
+Unfortunately, as pointed out by DeWitt and Stonebraker [9], MapReduce lacks many of the features that have proven invaluable for structured data analysis workloads (largely due to the fact that MapReduce was not originally designed to perform structured data analysis), and its immediate gratification paradigm precludes some of the long term benefits of first modeling and loading data before processing.
+These shortcomings can cause an order of magnitude slower performance than parallel databases [23]
+Ideally, the scalability advantages of MapReduce could be combined with the performance and efficiency advantages of parallel databases to achieve a hybrid system that is well suited for the analytical DBMS market and can handle the future demands of data intensive applications.
+In this paper, we describe our implementation of and experience with HadoopDB, whose goal is to serve as exactly such a hybrid system.
+The basic idea behind HadoopDB is to use MapReduce as the communication layer above multiple nodes running single-node DBMS instances.
+Queries are expressed in SQL, translated into MapReduce by extending existing tools, and as much work as possible is pushed into the higher performing single node databases.
+One of the advantages of MapReduce relative to parallel databases not mentioned above is cost.
+There exists an open source version of MapReduce (Hadoop) that can be obtained and used without cost.
+Yet all of the parallel databases mentioned above have a nontrivial cost, often coming with seven figure price tags for large installations.
+Since it is our goal to combine all of the advantages of both data analysis approaches in our hybrid system, we decided to build our prototype completely out of open source components in order to achieve the cost advantage as well.
+Hence, we use PostgreSQL as the database layer and Hadoop as the communication layer, Hive as the translation layer, and all code we add we release as open source [2]
+One side effect of such a design is a shared-nothing version of PostgreSQL.
+We are optimistic that our approach has the potential to help transform any single-node DBMS into a shared-nothing parallel database.
+Such deployments significantly reduce up-front capital costs, in addition to lowering operational, facilities, and hardware costs (through maximizing current hardware utilization)
+All experiments we run in this paper are on Amazon’s EC2 cloud offering; however our techniques are applicable to non-virtualized cluster computing grid deployments as well.
+We extend previous work [23] that showed the superior performance of parallel databases relative to Hadoop.
+While this previous work focused only on performance in an ideal setting, we add fault tolerance and heterogeneous node experiments to demonstrate some of the issues with scaling parallel databases.
+We describe the design of a hybrid system that is designed to yield the advantages of both parallel databases and MapReduce.
+This system can also be used to allow single-node databases to run in a shared-nothing environment.
+We evaluate this hybrid system on a previously published benchmark to determine how close it comes to parallel DBMSs in performance and Hadoop in scalability.
+There has been some recent work on bringing together ideas.
+Greenplum and Aster Data have added the ability to write MapReduce functions (instead of, or in addition to, SQL) over data stored in their parallel database products [16]
+Although these five projects are without question an important step in the hybrid direction, there remains a need for a hybrid solution at the systems level in addition to at the language and interface levels.
+In this section we describe the desired properties of a system designed for performing data analysis at the (soon to be more common) petabyte scale.
+In the following section, we discuss how parallel database systems and MapReduce-based systems do not meet some subset of these desired properties.
+Performance is the primary characteristic that commercial database systems use to distinguish themselves from other solutions, with marketing literature often filled with claims that a particular solution is many times faster than the competition.
+A factor of ten can make a big difference in the amount, quality, and depth of analysis a system can do.
+High performance systems can also sometimes result in cost savings.
+Upgrading to a faster software product can allow a corporation to delay a costly hardware upgrade, or avoid buying additional compute nodes as an application continues to scale.
+On public cloud computing platforms, pricing is structured in a way such that one pays only for what one uses, so the vendor price increases linearly with the requisite storage, network bandwidth, and compute power.
+Hence, if data analysis software product A requires an order of magnitude more compute units than data analysis software product B to perform the same task, then product A will cost (approximately) an order of magnitude more than B.
+Efficient software has a direct effect on the bottom line.
+Fault tolerance in the context of analytical data workloads is measured differently than fault tolerance in the context of transactional workloads.
+For transactional workloads, a fault tolerant DBMS can recover from a failure without losing any data or updates from recently committed transactions, and in the context of distributed databases, can successfully commit transactions and make progress on a workload even in the face of worker node failures.
+For read-only queries in analytical workloads, there are neither write transactions to commit, nor updates to lose upon node failure.
+Hence, a fault tolerant analytical DBMS is simply one that.
+Given the proven operational benefits and resource consumption savings of using cheap, unreliable commodity hardware to build a shared-nothing cluster of machines, and the trend towards extremely low-end hardware in data centers [14], the probability of a node failure occurring during query processing is increasing rapidly.
+This problem only gets worse at scale: the larger the amount of data that needs to be accessed for analytical queries, the more nodes are required to participate in query processing.
+This further increases the probability of at least one node failing during query execution.
+If a query must restart each time a node fails, then long, complex queries are difficult to complete.
+As described above, there is a strong trend towards increasing the number of nodes that participate in query execution.
+It is nearly impossible to get homogeneous performance across hundreds or thousands of compute nodes, even if each node runs on identical hardware or on an identical virtual machine.
+Part failures that do not cause complete node failure, but result in degraded hardware performance become more common at scale.
+Individual node disk fragmentation and software configuration errors can also cause degraded performance on some nodes.
+Concurrent queries (or, in some cases, concurrent processes) further reduce the homogeneity of cluster performance.
+If the amount of work needed to execute a query is equally divided among the nodes in a shared-nothing cluster, then there is a danger that the time to complete the query will be approximately equal to time for the slowest compute node to complete its assigned task.
+A node with degraded performance would thus have a disproportionate effect on total query time.
+A system designed to run in a heterogeneous environment must take appropriate measures to prevent this from occurring.
+There are a variety of customer-facing business intelligence tools that work with database software and aid in the visualization, query generation, result dash-boarding, and advanced data analysis.
+These tools are an important part of the analytical data management picture since business analysts are often not technically advanced and do not feel comfortable interfacing with the database software directly.
+Business Intelligence tools typically connect to databases using ODBC or JDBC, so databases that want to work with these tools must accept SQL queries through these interfaces.
+Ideally, the data analysis system should also have a robust mechanism for allowing the user to write user defined functions (UDFs) and queries that utilize UDFs should automatically be parallelized across the processing nodes in the shared-nothing cluster.
+In this section, we give an overview of the parallel database and MapReduce approaches to performing data analysis, and list the properties described in Section 3 that each approach meets.
+These systems all support standard relational tables and SQL, and implement many of the performance enhancing techniques developed by the research community over the past few decades, including indexing, compression (and direct operation on compressed data), materialized views, result caching, and I/O sharing.
+Most (or even all) tables are partitioned over multiple nodes in a sharednothing cluster; however, the mechanism by which data is partitioned is transparent to the end-user.
+Parallel databases use an optimizer tailored for distributed workloads that turn SQL commands into a query plan whose execution is divided equally among multiple nodes.
+Parallel databases can achieve especially high performance when administered by a highly skilled DBA who can carefully design, deploy, tune, and maintain the system, but recent advances in automating these tasks and bundling the software into appliance (pre-tuned and pre-configured) offerings have given many parallel databases high performance out of the box.
+Parallel databases also score well on the flexible query interface property.
+Implementation of SQL and ODBC is generally a given, and many parallel databases allow UDFs (although the ability for the query planner and optimizer to parallelize UDFs well over a shared-nothing cluster varies across different implementations)
+However, parallel databases generally do not score well on the fault tolerance and ability to operate in a heterogeneous environment properties.
+Although particular details of parallel database implementations vary, their historical assumptions that failures are rare events and “large” clusters mean dozens of nodes (instead of hundreds or thousands) have resulted in engineering decisions that make it difficult to achieve these properties.
+Furthermore, in some cases, there is a clear tradeoff between fault tolerance and performance, and parallel databases tend to choose the performance extreme of these tradeoffs.
+For example, frequent check-pointing of completed sub-tasks increase the fault tolerance of long-running read queries, yet this check-pointing reduces performance.
+In addition, pipelining intermediate results between query operators can improve performance, but can result in a large amount of work being lost upon a failure.
+Understanding the complete details of how MapReduce works is not a necessary prerequisite for understanding this paper.
+In short, MapReduce processes data distributed (and replicated) across many nodes in a shared-nothing cluster via three basic operations.
+First, a set of Map tasks are processed in parallel by each node in the cluster without communicating with other nodes.
+Next, data is repartitioned across all nodes of the cluster.
+Finally, a set of Reduce tasks are executed in parallel by each node on the partition it receives.
+This can be followed by an arbitrary number of additional Map-repartition-Reduce cycles as necessary.
+MapReduce does not create a detailed query execution plan that specifies which nodes will run which tasks in advance; instead, this is determined at runtime.
+This allows MapReduce to adjust to node failures and slow nodes on the fly by assigning more tasks to faster nodes and reassigning tasks from failed nodes.
+MapReduce also checkpoints the output of each Map task to local disk in order to minimize the amount of work that has to be redone upon a failure.
+Of the desired properties of large scale data analysis workloads,
+MapReduce best meets the fault tolerance and ability to operate in heterogeneous environment properties.
+It achieves fault tolerance by detecting and reassigning Map tasks of failed nodes to other nodes in the cluster (preferably nodes with replicas of the input Map data)
+It achieves the ability to operate in a heterogeneous environment via redundant task execution.
+Tasks that are taking a long time to complete on slow nodes get redundantly executed on other nodes that have completed their assigned tasks.
+The time to complete the task becomes equal to the time for the fastest node to complete the redundantly executed task.
+By breaking tasks into small, granular tasks, the effect of faults and “straggler” nodes can be minimized.
+MapReduce has a flexible query interface; Map and Reduce functions are just arbitrary computations written in a general-purpose language.
+Therefore, it is possible for each task to do anything on its input, just as long as its output follows the conventions defined by the model.
+In general, most MapReduce-based systems (such as Hadoop, which directly implements the systems-level details of the MapReduce paper) do not accept declarative SQL.
+As shown in previous work, the biggest issue with MapReduce is performance [23]
+By not requiring the user to first model and load data before processing, many of the performance enhancing tools listed above that are used by database systems are not possible.
+Traditional business data analytical processing, that have standard reports and many repeated queries, is particularly, poorly suited for the one-time query processing model of MapReduce.
+Ideally, the fault tolerance and ability to operate in heterogeneous environment properties of MapReduce could be combined with the performance of parallel databases systems.
+In the following sections, we will describe our attempt to build such a hybrid system.
+The basic idea behind behind HadoopDB is to connect multiple.
+Queries are parallelized across nodes using the MapReduce framework; however, as much of the single node query work as possible is pushed inside of the corresponding node databases.
+HadoopDB achieves fault tolerance and the ability to operate in heterogeneous environments by inheriting the scheduling and job tracking implementation from Hadoop, yet it achieves the performance of parallel databases by doing much of the query processing inside of the database engine.
+Individual files are broken into blocks of a fixed size and distributed across multiple DataNodes in the cluster.
+The NameNode maintains metadata about the size and location of blocks and their replicas.
+The master is a single JobTracker and the slaves or worker nodes are TaskTrackers.
+The JobTracker handles the runtime scheduling of MapReduce jobs and maintains information on each TaskTracker’s load and available resources.
+Each job is broken down into Map tasks based on the number of data blocks that require processing, and Reduce tasks.
+The JobTracker assigns tasks to TaskTrackers based on locality and load balancing.
+It load-balances by ensuring all available TaskTrackers are assigned tasks.
+TaskTrackers regularly update the JobTracker with their status through heartbeat messages.
+The InputFormat library represents the interface between the storage and processing layers.
+InputFormat implementations parse text/binary files (or connect to arbitrary data sources) and transform the data into key-value pairs that Map tasks can process.
+Hadoop provides several InputFormat implementations including one that allows a single JDBC-compliant database to be accessed by all tasks in one job in a given cluster.
+It extends Hadoop’s InputFormat class and is part of the InputFormat Implementations library.
+Each MapReduce job supplies the Connector with an SQL query and connection parameters such as: which JDBC driver to use, query fetch size and other query tuning parameters.
+The Connector connects to the database, executes the SQL query and returns results as key-value pairs.
+The Connector could theoretically connect to any JDBC-compliant database that resides in the cluster.
+In the future we plan to integrate other databases including open-source column-store databases such as MonetDB and InfoBright.
+To the framework, the databases are data sources similar to data blocks in HDFS.
+The current implementation of the HadoopDB catalog stores its metainformation as an XML file in HDFS.
+This file is accessed by the JobTracker and TaskTrackers to retrieve information necessary.
+In the future, we plan to deploy the catalog as a separate service that would work in a way similar to Hadoop’s NameNode.
+The Data Loader is responsible for (i) globally repartitioning data.
+The Global Hasher executes a custommade MapReduce job over Hadoop that reads in raw data files stored in HDFS and repartitions them into as many parts as the number of nodes in the cluster.
+The repartitioning job does not incur the sorting overhead of typical MapReduce jobs.
+The Local Hasher then copies a partition from HDFS into the local file system of each node and secondarily partitions the file into smaller sized chunks based on the maximum chunk size setting.
+The hashing functions used by both the Global Hasher and the Local Hasher differ to ensure chunks are of a uniform size.
+They also differ from Hadoop’s default hash-partitioning function to ensure better load balancing when executing MapReduce jobs over the data.
+The MapReduce jobs consist of DAGs of relational operators (such as filter, select (project), join, aggregation) that operate as iterators: each operator forwards a data tuple to the next operator after processing it.
+Since each table is stored as a separate file in HDFS, Hive assumes no collocation of tables on nodes.
+Therefore, operations that involve multiple tables usually require most of the processing to occur in the Reduce phase of a MapReduce job.
+This assumption does not completely hold in HadoopDB as some tables are collocated and if partitioned on the same attribute, the join operation can be pushed entirely into the database layer.
+To understand how we extended Hive for SMS as well as the differences between Hive and SMS, we first describe how Hive creates an executable MapReduce job for a simple GroupBy-Aggregation query.
+Then, we describe how we modify the execution plan for HadoopDB by pushing most of the query processing logic into the database layer.
+Hive processes the above SQL query in a series of phases: (1) The parser transforms the query into an Abstract Syntax Tree.
+It also populates different data structures with meta information such as the Deserializer and InputFormat classes required to scan the table and extract the necessary fields.
+The logical plan generator then creates a DAG of relational operators, the query plan.
+The optimizer restructures the query plan to create a more optimized plan.
+For example, it pushes filter operators closer to the table scan operators.
+A key function of the optimizer is to break up the plan into Map or Reduce phases.
+In particular, it adds a Repartition operator, also known as a Reduce Sink operator, before Join or GroupBy operators.
+Figure 2: (a) MapReduce job generated by Hive (b) MapReduce job generated by SMS assuming sales is partitioned by YEAR(saleDate)
+This feature is still unsupported (c) MapReduce job generated by SMS assuming no partitioning of sales.
+This is another advantage of pushing as much as possible of the query processing logic into DBMSs that have more sophisticated, adaptive or cost-based optimizers.
+Finally, the physical plan generator converts the logical query plan into a physical plan executable by one or more MapReduce jobs.
+The first and every other Reduce Sink operator marks a transition from a Map phase to a Reduce phase of a MapReduce job and the remaining Reduce Sink operators mark the start of new MapReduce jobs.
+The above SQL query results in a single MapReduce job with the physical query plan illustrated in Fig.
+The boxes stand for the operators and the arrows represent the flow of data.
+Each DAG enclosed within a MapReduce job is serialized into an XML plan.
+The job reads the XML plan and creates all the necessary operator objects that scan data from a table in HDFS, and parse and process one tuple at a time.
+In particular we intercept the normal Hive flow in two main areas:
+The HadoopDB catalog, Section 5.2.2, provides information about the table schemas and required Deserializer and InputFormat classes to the MetaStore.
+In the first pass, we retrieve data fields that are actually processed by the plan and we determine the partitioning keys used by the Reduce Sink (Repartition) operators.
+In the second pass, we traverse the DAG bottom-up from table scan operators to the output or File Sink operator.
+All operators until the first repartition operator with a partitioning key different from the database’s key are converted into one or more SQL queries and pushed into the database layer.
+The query processing logic that could be pushed into the database layer ranges from none (each.
+Given the above GroupBy query, SMS produces one of two different plans.
+If the sales table is partitioned by YEAR(saleDate), it produces the query plan in Fig.
+Only a Map task is required to output results into an HDFS file.
+The final aggregation step in the Reduce phase of the MapReduce job, however, is still required in order to merge partial results from each node.
+For join queries, Hive assumes that tables are not collocated.
+Therefore, the Hive generated plan scans each table independently and computes the join after repartitioning data by the join key.
+In contrast, if the join key matches the database partitioning key, SMS pushes the entire join sub-tree into the database layer.
+So far, we only support filter, select (project) and aggregation operators.
+Currently, the partitioning features supported by Hive are extremely naı¨ve and do not support expression-based partitioning.
+Therefore, we cannot detect if the sales table is partitioned by YEAR(saleDate) or not, therefore we have to make the pessimistic assumption that the data is not partitioned by this attribute.
+However, we use the SMS planner to automatically push SQL queries into HadoopDB’s DBMS layer for all other benchmark queries presented in our experiments for this paper.
+Both systems coexist enabling the analyst to choose the appropriate tools for a given dataset and task.
+Through the performance benchmarks in the following sections, we show that using an efficient database storage layer cuts down on data processing time especially on tasks that require complex query processing over structured data such as joins.
+We also show that HadoopDB is able to take advantage of the fault-tolerance and the ability to run on heterogeneous environments that comes naturally with Hadoop-style systems.
+In this section we evaluate HadoopDB, comparing it with a.
+MapReduce implementation and two parallel database implementations, using a benchmark first presented in [23]4
+The first task is taken directly from the original MapReduce paper [8] whose authors claim is representative of common MR tasks.
+The next four tasks are analytical queries designed to be representative of traditional structured data analysis workloads that HadoopDB targets.
+The Hive team resolved these issues in June after we completed the experiments.
+We plan to integrate the latest Hive with the SMS Planner.
+We are aware of the writing law that references shouldn’t be used as nouns.
+Consequently, we initialized some additional space on each node so that intermediate files and output of the tasks did not suffer from this initial write slow-down.
+Once disk space is initialized, subsequent writes are much faster (86MB/s)
+We execute each task three times and report the average of the trials.
+The final results from all parallel databases queries are piped from the shell command into a file.
+Hadoop and HadoopDB store results in Hadoop’s distributed file system (HDFS)
+In this section, we only report results using trials where all nodes are available, operating correctly, and have no concurrent tasks during benchmark execution (we drop these requirements in Section 7)
+We deployed the system with several changes to the default configuration settings.
+Each MR executor ran with a maximum heap size of 1024MB.
+We allowed two Map instances and a single Reduce instance to execute concurrently on each node.
+Additionally, we modified the number of parallel transfers run by Reduce during the shuffle phase and the number of worker threads for each TaskTracker’s http server to be 50
+These adjustments follow the guidelines on high-performance Hadoop clusters [13]
+For each benchmark trial, we stored all input and output data in HDFS with no replication (we add replication in Section 7)
+After benchmarking a particular cluster size, we deleted the data directories on each node, reformatted and reloaded HDFS to ensure uniform data distribution across all nodes.
+We present results of both hand-coded Hadoop and Hive-coded Hadoop (i.e.
+These separate results for Hadoop are displayed as split bars in the graphs.
+The bottom, colored segment of the bars represent the time taken by Hadoop when hand-coded and the rest of the bar indicates the additional overhead as a result of the automatic plan-generation by Hive, and operator function-call and dynamic data type resolution through Java’s Reflection API for each tuple processed in Hive-coded jobs.
+The Hadoop part of HadoopDB was configured identically to the.
+Additionally, on each worker node, PostgreSQL version 8.2.5 was installed.
+We increased memory used by the PostgreSQL shared buffers to 512 MB and the working memory.
+However, we found that while simple table scans are up to 30% faster, more complicated SQL queries are much slower due to the lack of clustered indices and poor join algorithms.
+Analogous to what we did for Hadoop, we present results of.
+These separate results for HadoopDB are displayed as split bars in the graphs.
+The bottom, colored segment of the bars represents the time taken by HadoopDB when hand-coded and the rest of the bar indicates the additional overhead as a result of the SMS planner (e.g., SMS jobs need to serialize tuples retrieved from the underlying database and deserialize them before further processing in Hadoop)
+Vertica is a relatively new parallel database system (founded in.
+Vertica is a column-store, which means that each attribute of each table is stored (and accessed) separately, a technique that has proven to improve performance for read-mostly workloads.
+Vertica offers a “cloud” edition, which we used for the experiments in this paper.
+The Vertica configuration is therefore as follows: All data is compressed.
+Vertica implements primary indexes by sorting the table by the indexed attribute.
+Since at the time of our VLDB submission this DBMS did not offer a cloud edition, we did not run experiments for it on EC2
+To explore more complex uses of the benchmarked systems, the benchmark includes four more analytical tasks related to log-file analysis and HTML document processing.
+Three of these tasks operate on structured data; the final task operates on both structured and unstructured data.
+The datasets used by these four tasks include a UserVisits table meant to model log files of HTTP server traffic, a Documents table containing 600,000 randomly generated HTML documents, and a Rankings table that contains some metadata calculated over the data in the Documents table.
+The schema of the tables in the benchmark data set is described in detail in [23]
+Each tuple is on the order of 150 bytes wide.
+Finally, the Rankings table contains three attributes: pageURL (VARCHAR(100)), pageRank (INT), and avgDuration(INT)
+Since the data generator does not ensure that Rankings and UserVisits tuples with the same value for the URL attribute are stored on the same node, a repartitioning is done during the data load, as described later.
+Records for both the UserVisits and Rankings data sets are stored in HDFS as plain text, one record per line with fields separated by a delimiting character.
+In order to access the different attributes at run time, the Map and Reduce functions split the record by the delimiter into an array of strings.
+We report load times for two data sets, Grep and UserVisits in.
+While grep data is randomly generated and requires no preprocessing, UserVisits needs to be repartitioned by destinationURL and indexed by visitDate for all databases during the load in order to achieve better performance on analytical queries (Hadoop would not benefit from such repartitioning)
+We describe, briefly, the loading procedures for all systems: Hadoop: We loaded each node with an unaltered UserVisits data file.
+Since all nodes load their data in parallel, we report the maximum node load time from each cluster.
+Each chunk is located in a separate PostgreSQL database within a node, and processes SQL queries independently of other chunks.
+We report the maximum node load time as the entire load time for both Grep and UserVisits.
+Since the Grep dataset does not require any preprocessing and is only 535MB of data per node, the entire data was loaded using the standard SQL COPY command into a single chunk on each node.
+The Global Hasher partitions the entire UserVisits dataset across all nodes in the cluster.
+Finally, a clustered index on visitDate is created for each chunk.
+The load time for UserVisits is broken down into several phases.
+The first repartition carried out by Global Hasher is the most expensive step in the process.
+It takes nearly half the total load time, 14,000 s.
+All the steps after global repartitioning are executed in parallel on all nodes.
+Some nodes required as little as 10,000 s to completely load UserVisits after global repartitioning was completed.
+Vertica: The loading procedure for Vertica is analogous to the one described in [23]
+The loading time improved since then because a newer version of Vertica (3.0) was used for these experiments.
+The key difference is that now bulk load COPY command runs on all nodes in the cluster completely in parallel.
+DBMS-X: We report the total load time including data compression and indexing from [23]
+In contrast to DBMS-X, the parallel load features of Hadoop, HadoopDB and Vertica ensure all systems scale as the number of nodes increases.
+Since the speed of loading is limited by the slowest disk-write speed in the cluster, loading is the only process that cannot benefit from Hadoop’s and HadoopDB’s inherent tolerance of heterogeneous environments (see section 7)8
+The total number of records processed for each cluster size is 5.6 million times the number of nodes.
+None of the benchmarked systems contained an index on the field attribute.
+Hence, for all systems, this query requires a full table scan and is mostly limited by disk speed.
+No Reduce function is needed for this task, so the output of the Map function is written directly to HDFS.
+HadoopDB’s SMS planner pushes the WHERE clause into the PostgreSQL instances.
+HadoopDB slightly outperforms Hadoop as it handles I/O more efficiently than Hadoop due to the lack of runtime parsing of data.
+However, both systems are outperformed by the parallel databases systems.
+The first structured data task evaluates a simple selection predicate on the pageRank attribute from the Rankings table.
+There are approximately 36,000 tuples on each node that pass this predicate.
+Since performance benchmarks are not write-limited, they are not affected by disk-write speeds.
+HadoopDB’s SMS planner pushes the selection and projection clauses into the PostgreSQL instances.
+Hadoop (with and without Hive) performs a brute-force, complete scan of all data in a file.
+The other systems, however, benefit from using clustered indices on the pageRank column.
+Hence, in general HadoopDB and the parallel DBMSs are able to outperform Hadoop.
+Since data is partitioned by UserVisits destinationURL, the foreign key relationship between Rankings pageURL and UserVisits destinationURL causes the Global and Local Hasher to repartition Rankings by pageURL.
+The overhead of scheduling twenty Map tasks to process only 1GB of data per node significantly decreases HadoopDB’s performance.
+We, therefore, maintain an additional, non-chunked copy of the Rankings table containing the entire 1GB.
+HadoopDB on this data set outperforms Hadoop because the use of a clustered index on pageRank eliminates the need to sequentially scan the entire data set.
+HadoopDB scales better relative to DBMS-X and Vertica mainly due to increased network costs of these systems which dominate when query time is otherwise very low.
+Unlike the previous tasks, this task requires intermediate results to be exchanged between different nodes in the cluster (so that the final aggregate can be calculated)
+When grouping on the seven-character prefix, there are 2000 unique groups.
+When grouping on the entire sourceIP, there are 2,500,000 unique groups.
+Hadoop (hand-coded) was executed identically to [23]: a Map function outputs the adRevenue and the first seven characters of the sourceIP field (or the whole field in the larger query) which gets sent to a Reduce function which performs the sum aggregation for each prefix (or sourceIP)
+The SMS planner for HadoopDB pushes the entire SQL query into the PostgreSQL instances.
+The output is then sent to Reduce jobs inside of Hadoop that perform the final aggregation (after collecting all pre-aggregated sums from each PostgreSQL instance)
+The performance numbers for each benchmarked system is displayed in Fig.
+Similar to the Grep task, this query is limited by reading data off disk.
+Thus, both commercial systems benefit from compression and outperform HadoopDB and Hadoop.
+We observe a reversal of the general rule that Hive adds an overhead cost to hand-coded Hadoop in the “small” (substring) aggregation task (the time taken by Hive is represented by the lower part of the Hadoop bar in Fig.
+Hive performs much better than Hadoop because it uses a hash aggregation execution strategy (it maintains an internal hash-aggregate map in the Map phase of the job), which proves to be optimal when there is a small number of groups.
+In the large aggregation task, Hive switches to sort-based aggregation upon detecting that the number of groups is more than half the number of input rows per block.
+In contrast, in our hand-coded Hadoop plan we (and the authors of [23]) failed to take advantage of hash aggregation for the smaller query because sort-based aggregation (using Combiners) is a MapReduce standard practice.
+These results illustrate the benefit of exploiting optimizers present in database systems and relational query systems like Hive, which can use statistics from the system catalog or simple optimization rules to choose between hash aggregation and sort aggregation.
+Unlike Hadoop’s Combiner, Hive serializes partial aggregates into strings instead of maintaining them in their natural binary representation.
+Hence, Hive performs much worse than Hadoop on the larger query.
+PostgreSQL chooses to use hash aggregation for both tasks as it can easily fit the entire hash aggregate table for each 1GB chunk in memory.
+Hence, HadoopDB outperforms Hadoop on both tasks due to its efficient aggregation implementation.
+Vertica is thus able to significantly outperform the other systems due to the commensurate I/O savings.
+The join task involves finding the average pageRank of the set.
+The key difference between this task and the previous tasks is that it must read in two different data sets and join them together (pageRank information is found in the Rankings table and revenue information is found in the UserVisits table)
+There are approximately 134,000 records in the UserVisits table that have a visitDate value inside the requisite date range.
+Unlike the previous three tasks, we were unable to use the same SQL for the parallel databases and for Hadoop-based systems.
+This is because the Hive build we extended was unable to execute this.
+Although this build accepts a SQL query that joins, filters and aggregates tuples from two tables, such a query fails during execution.
+Additionally, we noticed that the query plan for joins of this type uses a highly inefficient execution strategy.
+In particular, the filtering operation is planned after joining the tables.
+Hence, we are only able to present hand-coded results for HadoopDB and Hadoop for this query.
+In HadoopDB, we push the selection, join, and partial aggregation into the PostgreSQL instances with the following SQL:
+We then use a single Reduce task in Hadoop that gathers all of the partial aggregates from each PostgreSQL instance to perform the final aggregation.
+The parallel databases execute the SQL query specified in [23]
+Although Hadoop has support for a join operator, this operator.
+Such a requirement limits the utility of the join operator since in many cases, including the query above, the data is not already sorted and performing a sort before the join adds significant overhead.
+Hence, for the numbers we report below, we use an identical MR program as was used (and described in detail) in [23]
+For Hadoop, we observed similar results as found in [23]: its performance is limited by completely scanning the UserVisits dataset on each node in order to evaluate the selection predicate.
+HadoopDB, DBMS-X, and Vertica all achieve higher performance by using an index to accelerate the selection predicate and having native support for joins.
+These systems see slight performance degradation with a larger number of nodes due to the final single node aggregation of and sorting by adRevenue.
+The final task computes, for each document, the number of inward links from other documents in the Documents table.
+HadoopDB was able to store each document separately in the Documents table using the TEXT data type.
+DBMS-X processed each HTML document file separately, as described below.
+The parallel databases should theoretically be able to use a userdefined function, F, to parse the contents of each document and.
+A temporary table would then be populated with this list of URLs and then a simple count/group-by query would be executed that finds the number of instances of each unique URL.
+Unfortunately, [23] found that in practice, it was difficult to implement such a UDF inside the parallel databases.
+Hence, the UDF was implemented inside the DBMS, but the data was stored in separate HTML documents on the raw file system and the UDF made external calls accordingly.
+Vertica does not currently support UDFs, so a simple document parser had to be written in Java externally to the DBMS.
+This parser is executed on each node in parallel, parsing the concatenated documents file and writing the found URLs into a file on the local disk.
+This file is then loaded into a temporary table using Vertica’s bulkloading tools and a second query is executed that counts, for each URL, the number of inward links.
+In Hadoop, we employed standard TextInputFormat and parsed each document inside a Map task, outputting a list of URLs found in each document.
+Both a Combine and a Reduce function sum the number of instances of each unique URL.
+In HadoopDB, since text processing is more easily expressed in MapReduce, we decided to take advantage of HadoopDB’s ability to accept queries in either SQL or MapReduce and we used the latter option in this case.
+The complete contents of the Documents table on each PostgreSQL node is passed into Hadoop with the following SQL:
+In fact, we used identical MR code for both Hadoop and HadoopDB.
+The database layer provides an efficient storage layer for HTML text documents and the MapReduce framework provides arbitrary processing expression power.
+Hadoop outperforms HadoopDB as it processes merged files of multiple HTML documents.
+HadoopDB, however, does not lose the original structure of the data by merging many small files into larger ones.
+Note that the total merge time was about 6000 seconds per node.
+DBMS-X and Vertica perform worse than Hadoop-based systems since the input files are stored outside of the database.
+Moreover, for this task both commercial databases do not scale linearly with the size of the cluster.
+We believe some of this overhead can be removed with the increase of engineering time.
+HadoopDB consistently outperforms Hadoop (except for the UDF aggregation task since we did not count the data merging time against Hadoop)
+While HadoopDB’s load time is about 10 times longer than Hadoop’s, this cost is amortized across the higher performance of all queries that process this data.
+As described in Section 3, in large deployments of sharednothing machines, individual nodes may experience high rates of failure or slowdown.
+As a result, a small number of instances are unreachable.
+For parallel databases, query processing time is usually determined by the the time it takes for the slowest node to complete its task.
+In contrast, in MapReduce, each task can be scheduled on any node as long as input data is transferred to or already exists on a free node.
+Also, Hadoop speculatively redundantly executes tasks that are being performed on a straggler node to reduce the slow node’s effect on query time.
+If a TaskTracker fails to communicate with the JobTracker for a preset period of time, TaskTracker expiry interval, the JobTracker assumes failure and schedules all map/reduce tasks of the failed node on other TaskTrackers.
+This approach is different from most parallel databases which abort unfinished queries upon a node failure and restart the entire query processing (using a replica node instead of the failed node)
+By inheriting the scheduling and job tracking features of Hadoop, HadoopDB yields similar fault-tolerance and straggler handling properties as Hadoop.
+For Hadoop and HadoopDB we set the TaskTracker expiry interval to 60 seconds.
+Each of these 20 chunks was replicated on a different node selected at random.
+Vertica: In Vertica, replication is achieved by keeping an extra copy of every table segment.
+Each table is hash partitioned across the nodes and a backup copy is assigned to another node based on a replication rule.
+On node failure, this backup copy is used until the lost segment is rebuilt.
+For fault-tolerance tests, we terminated a node at 50% query completion.
+For Hadoop and HadoopDB, this is equivalent to failing a node when 50% of the scheduled Map tasks are done.
+For Vertica, this is equivalent to failing a node after 50% of the average query completion time for the given query.
+To measure percentage increase in query time in heterogeneous environments, we slow down a node by running an I/O-intensive background job that randomly seeks values from a large file and frequently clears OS caches.
+This file is located on the same disk where data for each system is stored.
+We observed no differences in percentage slowdown between HadoopDB with or without SMS and between Hadoop with or without Hive.
+Therefore, we only report results of HadoopDB with SMS and Hadoop with Hive and refer to both systems as HadoopDB and Hadoop from now on.
+Node failure caused HadoopDB and Hadoop to have smaller slowdowns than Vertica.
+Vertica’s increase in total query execution time is due to the overhead associated with query abortion and complete restart.
+In both HadoopDB and Hadoop, the tasks of the failed node are distributed over the remaining available nodes that contain replicas of the data.
+In Hadoop TaskTrackers assigned blocks not local to them will copy the data first (from a replica) before processing.
+In HadoopDB, however, processing is pushed into the (replica) database.
+Since the number of records returned after query processing is less than the raw size of data, HadoopDB does not experience Hadoop’s network overhead on node failure.
+HadoopDB and Hadoop run speculative tasks on TaskTrackers that completed their tasks.
+Thus, the delay due to processing those blocks is distributed across the cluster.
+In our experiments, we discovered an assumption made by Hadoop’s task scheduler that contradicts the HadoopDB model.
+In Hadoop, TaskTrackers will copy data not local to them from the straggler or the replica.
+HadoopDB, however, does not move PostgreSQL chunks to new nodes.
+Instead, the TaskTracker of the redundant task connects to either the straggler’s database or the replica’s database.
+If the TaskTracker connects to the straggler’s database, the straggler needs to concurrently process an additional query leading to further slowdown.
+Therefore, the same feature that causes HadoopDB to have slightly better fault tolerance than Hadoop, causes a slightly higher percentage slow down in heterogeneous environments for HadoopDB.
+We plan to modify the current task scheduler implementation to provide hints to speculative TaskTrackers to avoid connecting to a straggler node and to connect to replicas instead.
+Furthermore, Vertica’s performance in the absence of failures is an order of magnitude faster than Hadoop and HadoopDB (mostly because its column-oriented layout of data is a big win for the small aggregation query)
+This order of magnitude of performance could be translated to the same performance as Hadoop and HadoopDB, but using an order of magnitude fewer nodes.
+Hence, failures and slow nodes become less likely for Vertica than for Hadoop and HadoopDB.
+Failures are still reasonably rare at fewer than 100 nodes.
+First, data production continues to grow faster than Moore’s law (see Section 1)
+Second, it is becoming clear that from both a price/performance and (an increasingly important) power/performance perspective, many low-cost, low-power servers are far better than fewer heavy-weight servers [14]
+Hence, awaiting us in the future are heavy-weight analytic database jobs, requiring more time and more nodes.
+The probability of failure in these next generation applications will be far larger than it is today, and restarting entire jobs upon a failure will be unacceptable (failures might be common enough that long-running jobs never finish!) Thus, although Hadoop and HadoopDB pay a performance penalty for runtime scheduling, block-level restart, and frequent checkpointing, such an overhead to achieve robust fault tolerance will become necessary in the future.
+One feature of HadoopDB is that it can elegantly transition between both ends of the spectrum.
+Since one chunk is the basic unit of work, it can play in the high-performance/low-fault-tolerance space of today’s workloads (like Vertica) by setting a chunk size to be infinite, or in high fault tolerance by using more granular chunks (like Hadoop)
+In future work, we plan to explore the fault-tolerance/performance tradeoff in more detail.
+Our experiments show that HadoopDB is able to approach the.
+Although the performance of HadoopDB does not in general match the performance of parallel database systems, much of this was due to the fact that PostgreSQL is not a column-store and we did not use data compression in PostgreSQL.
+As a result, HadoopDB will automatically benefit from these improvements.
+HadoopDB is therefore a hybrid of the parallel DBMS and Hadoop approaches to data analysis, achieving the performance and efficiency of parallel databases, yet still yielding the scalability, fault tolerance, and flexibility of MapReduce-based systems.
+The ability of HadoopDB to directly incorporate Hadoop and open source DBMS software (without code modification) makes HadoopDB particularly flexible and extensible for performing data analysis at the large scales expected of future workloads.
+We’d like to thank Sergey Melnik and the three anonymous reviewers for their extremely insightful feedback on an earlier version of this paper, which we incorporated into the final version.
+We’d also like to thank Eric McCall for helping us get Vertica running on EC2
+Disclosure: Authors Daniel Abadi and Alexander Rasin have a small financial stake in Vertica due to their involvement in the predecessor C-Store project.
+Scope: Easy and efficient parallel processing of massive data sets.

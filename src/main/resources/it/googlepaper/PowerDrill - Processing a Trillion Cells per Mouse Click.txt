@@ -1,0 +1,308 @@
+Column-oriented database systems have been a real game changer for the industry in recent years.
+Highly tuned and performant systems have evolved that provide users with the possibility of answering ad hoc queries over large datasets in an interactive manner.
+It combines the advantages of columnar data layout with other known techniques (such as using composite range partitions) and extensive algorithmic engineering on key data structures.
+The main goal of the latter being to reduce the main memory footprint and to increase the efficiency in processing typical user queries.
+These enable a highly interactive Web UI where it is common that a single mouse click leads to processing a trillion values in the underlying dataset.
+In the last decade, large companies have been placing an.
+With this and with dataset sizes growing at an enormous pace, it comes as no surprise that the interest in columnoriented databases (column-stores) has grown equally.
+This spawned several dozens of research papers and at least a dozen of new column-store start-ups, cf.
+Since 2011 all major commercial database vendors actually provide column-store technologies (cf.
+An OLAP or OLTP, i.e., SQL, interface is provided to then mine the data interactively.
+The key advantage shared by these systems is that column-oriented storage enables reading only data for.
+Internal project name only, following a Google tradition of choosing names of wood-processing tools for “logs” analysis.
+Obviously, in denormalized datasets with often several thousands of columns this can make a huge difference compared to the the row-wise storage used by most database systems.
+Moreover, columnar formats compress very well, thus leading to less I/O and main memory usage.
+Both are highly distributed systems processing requests on thousands of machines.
+The latter is a column-store providing interactive query speeds for ad hoc SQL-like queries.
+In this paper we present an alternative column-store developed at Google as part of the PowerDrill project.
+For typical user queries originating from an interactive Web UI (developed as part of the same project) it gives a performance boost of 10–100x compared to traditional columnstores which do full scans of the data.
+Background Before diving into the subject matter, we give a little background about the PowerDrill system and how it is used for data analysis at Google.
+Its most visible part is an interactive Web UI making heavy use of AJAX with the help of the Google Web Toolkit [16]
+It enables data visualization and exploration with flexible drill down capabilities.
+In the background, the “engine” provides an abstraction layer for the UI based on SQL: the user constructs charts via drag’n’drop operations, they get translated to group-by SQL queries, which the engine parses and processes.
+The third large part of the project is the column-store presented in this paper.
+The Web UI is very versatile; it allows to select arbitrary.
+The dimensions can have a large number of distinct values, such as strings representing Google searches.
+A user can quickly drill down to values of interest, e.g., all German searches from yesterday afternoon that contain the word “auto”, by restricting a set of charts to these values.
+For these reasons, pre-aggregation or indexing of data does not help and we need to query the raw data directly.
+The nature of the use cases enabled by this UI demand.
+Examples of such use cases include: Responding to customer requests, spam analysis, dealing with alerts in highly critical revenue systems, or monitoring and assessing changes to production systems.
+The system has been in production since end of 2008 and.
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page.
+To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.
+When using our column-store as a backend, this may amount to scanning as much as 525 trillion cells in (hypothetical) full scans.
+The column-store developed as part of PowerDrill is tailored to support a few selected datasets and tuned for speed on typical queries resulting from users interacting with the UI.
+Compared to Dremel which supports thousands of different datasets (streaming the data from a distributed file system such as GFS [15]), our column-store relies on having as much data in memory as possible.
+PowerDrill can run interactive single queries over more rows than Dremel, however the total amount of data it can serve is much smaller, since data is kept mostly in memory, whereas Dremel uses a distributed file system.
+This and several other important distinctions, enable handling very large amounts of data in interactive queries.
+Consider a typical use case such as triggering 20 SQL queries with a single mouse click in the UI.
+Their main goal is to support the partitioned layout of the data and to enable quick skipping of chunks of data.
+For optimal usage it is assumed they can be held in memory.
+Note that for these experiments we do not partition the data at import.
+The aim being to reduce the memory footprint for certain typical cases.
+We pin-point the effects of individual optimizations with experiments measuring memory usage.
+E.g., for the important case of a field with many distinct values, we obtain a reduction of 16x.
+In Section 4 we describe how queries may be computed in a distributed manner on a cluster of machines.
+We give measurements concerning the usage in practice which show the positive effect of the partitioning (enabling to skip or cache large parts of the data)
+Related Work For an introduction to OLAP and basic techniques applied in data-warehouse applications, see the Chaudhuri and Dayal [11]
+The excellent PhD thesis by Abadi [1] can serve as a more in-depth introduction and overview of the topic.
+Recent research in this area includes, e.g., work on how.
+As mentioned, its power lies in providing interactive responses to ad hoc SQL queries over thousands of datasets.
+It achieves this by streaming over petabytes of data (stored, e.g., on GFS [15]) in a highly distributed and efficient manner.
+This is also a key difference to the column-store presented in this paper which heavily relies on having as much data in memory as possible and therefore only is used for a few selected data sources.
+Skipping over data in the context of colum-stores has been.
+We give some details on these approaches in comparison to ours in Section 2.1
+We give some details on this at the end of Section 3
+We refer to such an instance as table or just the data which has columns (also referred to as fields) and rows (also referred to as records)
+In order to store protocol buffer records with nested and repeated records (i.e., lists of sub-records), PowerDrill supports a nested relational model, cf.
+For ease of exposition, in the following we focus on unstructured / flat records as opposed to records which may, e.g., contain lists.
+As mentioned previously, the main advantage columnstores have over traditional row-wise storage, is that only a fraction of the data needs to be accessed when processing typical queries (accessing often only ten or less out of thousands of columns)
+A common characteristic of these system is that they are.
+In data mining use cases, such as ours, the queries are too diverse for traditional indices being used effectively.
+The where clause can be free form, allowing to restrict on arbitrary dimensions or even computated values (e.g., all websearches that contain the term “cat”)
+As a rule of thumb, even in large database systems if more.
+The obvious benefits being less random access I/O, simpler, easier to optimize inner loops, and very good cache locality.
+The latter already easily accounts for a factor of 10 for data which is in memory and when comparing scanning vs.
+The logical next step is to try to combine the benefits of an.
+This can be achieved by splitting the data into chunks2 during import and providing datastructures to quickly decide which chunks can be skipped at query processing time.
+On each active, i.e., not skipped, chunk a full scan is performed.
+For our application, partitioning is much more powerfull than traditional indices, since partitions allow indexing by multiple dimensions and enable covering lookups without duplication the data (such costly duplication is, e.g., used by C-Store / Vertica as proposed in [3])
+Also, they can take advantage data correlation, e.g., partitioning by country also helps to look for web-searches that contain the term “cat”, since mostly Engish speaking countries would contain that word.
+The approach is rather limitted, since it is only based on comparing with min and max values per chunk.
+Compared to the approach described in the present paper, this only covers some very specific cases.
+They give references to other column-stores with similar approaches, which include partitioning of data.
+The latter is more expensive at import time, but may enable skipping more data.
+This is also the approach chosen for the column-store presented in this paper.
+In the next section we describe a simple partitioning scheme which we apply at import time.
+In our case we perform a composite range partitioning [28] to split the data into chunks during the import.
+Put simply, the user chooses an ordered set of fields which.
+At the start the data is seen as one large chunk.
+Successively, the largest chunk is split into two (ideally evenly balanced) chunks.
+For such a split the chosen fields are considered in the given order.
+The first field with at least two remaining distinct values is used to essentially do a range split, i.e., a set of ranges are chosen for the field which determine the first and the second chunk.
+The iteration is stopped once no chunk with more rows than a given threshold, e.g., 50’000, exists.
+In practice, a good heuristic is to let a domain expert.
+As an example, for PowerDrill’s own querylogs the date, country, user name, and SQL query may be a good choice.
+Note that after the partitioning these fields are not treated specially in any way.
+Principally, any other technique of splitting up the data would work as well.
+In Section 6 we give experimental results for how well the.
+In this section we describe the basic layout used to represent the values of an entire column of the underlying table.
+Since we are discussing a column-store system, each column is stored and can be accessed independently of the others.
+It is important to note that the order of the data for all columns is the same and corresponds to the (possibly reordered) rows of the original table.
+In other words, when “synchronoulsy” iterating over all columns, the original rows can be reconstructed.
+This property of having the same order is important to correctly compute SQL queries for the original table.
+Let us now focus on a single column, say search string,
+The values of a column are stored in a doubly indirect way using two dictionaries:
+We introduce a global-dictionary which contains all distinct values of the original column, see the leftmost box in Figure 1 for an example.
+Per chunk we store a chunk-dictionary containing n entries, one for each value / global-id occurring in that chunk.
+The chunk-dictionary can be used to map occurring global-ids to and from integer chunk-ids.
+In the production system the data is also pre-split into shards as a first step.
+Figure 1: Fictious example illustrating the layout of the data in a single data column.
+The actual values of the column are then represented by a long sequence of chunk-ids per chunk, the so-called elements.
+It makes it easy to determine which chunks are not active (can be skipped) when processing a query, see next section.
+Therefore, it is not surprising that our basic data-structures have small memory footprints.
+See Section 2.5 for experiments which show that this is achieved even for the case where the entire data is treated as one large chunk.
+These experiments also show that the encoding is particularly well suited for efficiently computing group-by computations over a single field.
+The second indirection introduced by the chunk-dictionaries has the effect that the elements are comprised of values from a small range of consecutive integers.
+This is advantageous when further optimizing the memory footprint, see Section 3
+So far we have introduced the general layout of the data.
+The actual underlying representation of the data depends on the data type and some other factors.
+It can be as different as a trie (prefix tree) or bit compressed representations tuned to storing numerical values, see Section 3 for more details on this.
+For the following two sections we consider simple, “canonical” implementations: For strings like search strings we use sorted arrays for the global-dictionaries.
+With this, a lookup by global-id is an array access.
+For determining the rank of a string, one may use binary search.
+Global-ids and chunk-ids can be stored as 32 bit int values.
+The chunkdictionaries are then sorted int arrays of global-ids and the elements are ordered (but not necessarily sorted) int arrays of chunk-ids.
+To go from a chi.elem value ei to the underlying value of.
+For the other direction, for a given search string qs do a binary search in dc.dict to determine the rank / global-id of qs, followed by a binary search in chi.dict to determine the element’s chunk-id.
+With the help of the following example query we wish to.
+First it is determined which chunks are active, i.e., contain data that matches the where condition.
+For the overall result a hash-table storing global-id to counts is updated.
+In the end, the order of all occurring global-ids is determined, the limit applied, and finally the original values looked up in the global-dictionary.
+As we will see in the next section, using a simple array for incrementing counts in the inner loop has In the discussion of the example above we introduced the.
+For these experiments (and for all others except the results presented for the production system in Section 6) we measure the performance of full scans.
+I.e., we do not measure the effect of skipping / caching data by making use of the partitioning scheme described in Section 2.2
+In effect, for this section we actually do not partition the data at all and instead treat it as one large chunk.
+We compare latency and memory usage of the basic datastructures with other data formats and backends: CSV, record-io (binary format based on protocol buffers [29]), and Dremel (as mentioned in the introduction, Dremel is a high performance column-store developed at Google)
+The formats CSV and record-io are evaluated by backends developed as part of the PowerDrill project.
+We have performed the same experiments on each of the.
+Let us start by introducing the data and SQL queries used.
+For realistic input data we decided to simply use our own logs as source.
+PowerDrill is used by many teams across Google; in the last years the system has processed more than 60 million queries.
+We log various facts and metrics for each of these queries.
+For our experiments we have extracted 5 million rows with the fields timestamp, table name, latency, and country.
+Since our system is used over a large variety of data-sets, the table name is actually a field with many distinct values (several 100K; note that these logs contain queries against all backends, including Dremel which provides access to many different tables and for which table-names usually include the date)
+Such fields deserve special attention: they are a lot more resource intensive than others.
+The experimental results will highlight some of the characteristics of these fields.
+The field country on the other hand of course has only few distinct values, 25 to be concrete.
+Note, this is the country in which the user’s office is located.
+On this data we issue three different SQL queries which.
+This simulates a realistic streaming situation for CSV, record-io, and Dremel.
+Additionally to the average latency of these 5 runs, we measured the memory usage.
+I.e., for Dremel and our own datastructures this reflects only the columns present in the individual queries.
+For CSV and record-io the entire data size is reported, since these are row-wise formats and therefore the entire data needs to be streamed over to compute results.
+Discussion of Results Table 1 shows the results for CSV, record-io, Dremel, and.
+We will start by discussing the first three systems and then give some explanations for the.
+Table 1: Comparing CSV, record-io, Dremel, and our own, basic data-structures.
+The overhead of the actual group-by computation for table name dominates everything else.
+Note that the field has many distinct values, leading to large internal hash-tables; computing the hashes themselves on possibly large strings is already computationally quite expensive.
+This stems from the somewhat expensive computation of the function date(..) and the additional sum in the group-by statement.
+It is important to point out that I/O—i.e., streaming from.
+Generally speaking, it is reasonable to assume a streaming rate of at least 100 MB/second for pure I/O during these experiments.
+Let us now have a closer look at the results for our basic.
+By choice the encoding we use is extremely beneficial for group-by statements over single fields.
+This compares favorably to more generic implementations which use hash-tables and can cope with multiple group-by fields5
+To obtain these extreme speed-ups, it is crucial to have.
+On first access, expressions such as date(timestamp) are computed and materialized in the datastore as virtual fields.
+We assume that this has happened before computing Query 2
+In PowerDrill multiple group-by fields are combined into one expression which is materialized in the datastore as an additional “virtual” column.
+Such columns can be used in the same manner as original columns.
+If the entire dictionary would need to be loaded into memory only to look up these 10 integers, we would lose a large part of the advantage.
+Interestingly, the memory usage of the uncompressed, basic data-structures is about the same as the memory usage of Dremel’s compressed format.
+In other words, in these examples the simple dictionary encoding we use is already as compact as the output of the generic compression algorithm used by Dremel.
+The self-built encoding has the important advantage of being ready to use (no need to decompress it before usage)
+As a final observation, notice that the latency of Query 2
+This would be an overhead that is basically the same across all backends.
+Here our column-store profits from an important design decision: all expressions on fields are materialized in the datastore.
+This not only ensures reuse of data for complex and costly expressions, it also enables using restrictions on such expressions to potentially skip entire chunks (by using the chunk dictionaries), see also Section 5
+Data-structures with small memory footprints are essential for the overall performance of our system: Compared to other column-stores which can focus on efficiently streaming (possibly from disk) all columns accessed by a query, we heavily rely on as much data being in memory as possible.
+In a sense, all of the data is “touched” and therefore it is usually affordable to actually stream the data from disk.
+The streaming incurs an overhead in the same order of magnitude as the actual evaluation of the query.
+In contrast, in our case we may only access a fraction.
+Loading these from disk for each query would lead to a disproportionate overhead.
+To give a concrete example, loading an entire dictionary for the table name field (from our experiments) from disk, would essentially bring down the performance to the level of streaming all data, i.e., doing full scans.
+In this section we describe a selection of step-wise improvements we made to these data-structures.
+For each of the steps we perform the same experiments as described in Section 2.5; measuring latency and memory usage.
+This enables us to nicely point out the effect of each of the optimization in the various cases covered.
+Partitioning the Data into Chunks As a first step we measure the effect of partitioning the.
+Recall that for our basic experiments we treated the entire dataset as one large chunk.
+For the partitioning we use the field order country, table name and we set the threshold for the maximum chunk size to 50’000 rows.
+The following table shows the memory usage compared to Dremel and our basic data-structures with a single chunk.
+Here and in all further experiments we do not show the corresponding latencies, since they do not change significantly (the main goal is to reduce the memory footprint)
+The slight increase in size stems mainly from the many more chunk-dictionaries which are now present.
+In contrast Query 2 accesses the latency field which has many distinct values for each of the chunks.
+An obvious optimization is to choose a better encoding which depends on the size of the chunk-dictionary.
+Similarly, in case there are two distinct values a bit-set suffices; resulting in ⌈n/8⌉ bytes.
+Table 2 shows the resulting improvement comparing the memory usage of the elements and chunk-dictionaries only (left side) and the memory usage overall (right side)
+The effect of this simple optimization is quite dramatic for Query 1
+Therefore, most of the resulting chunks contain only 1 or two distinct values giving a very compact encoding.
+I.e., for fields with few distinct values this gives big wins, which is basically obvious by construction.
+For the other two queries the savings are also significant,
+In other words, the global-dictionary dominates the size of the encoding.
+Optimize Global-Dictionaries As pointed out, the basic encoding of dictionaries may.
+We made use of two properties when choosing an improved encoding: the dictionaries are sorted (alphanumerically for strings) and in practice the stored values often have long common prefixes.
+The requirements for the desired small-footprint data-structure were to support lookups in both directions, i.e., from string value to integer global-id and vice versa.
+For the former direction, tries (prefix trees) seemed like an ideal choice.
+We have implemented a high performance trie data-structure which is built on a handcrafted encoding stored in a large byte array.
+In order to support efficient lookups from global-id to string without incurring a large memory overhead, the inner nodes are chosen to represent 4 bit parts of the represented strings (as opposed to the more standard choice of characters)
+On lookup one can afford to iterate over all children of each node along the path to decide into which child to descend.
+Generic Compression Algorithm Let us now look at the easy and obvious optimization of.
+As mentioned, the resulting excellent compression rates of columnwise storage in comparison to row-wise storage constitutes one of the key advantages of the columnar format.
+We use Google’s own high speed compression algorithm Zippy, externally available as Snappy [33]
+In order to put the (so far) successively introduced optimizations into perspective, we apply Zippy to each of the resulting encodings: Basic, Chunks, OptCols, and the optimized global-dictionaries OptDicts.
+The results are shown in Table 3 with the uncompressed memory usage on the left for comparison and the compressed memory usage on the right.
+The first point to notice is that Zippy achieves very good compression ratios out of the box and can additionally profit a lot from the partitioning.
+The reason being that the resulting chunks each contain fewer distinct values.
+Qualitatively speaking, our OptCols and OptDicts encodings exploit similar properties as a generic dictionary based compression algorithm would (which does not use any expensive, entropy based techniques like Huffman codes)
+But it is still surprising to see that in these cases the final size almost seems like an invariant.
+One relevant question to ask is why not just rely on the.
+The answer is that our encodings are ready to use without any preprocessing and are even designed to allow random access; both to the elements describing the columns and the dictionaries.
+This is a big advantage, since, as pointed out, only small portions of the data may be accessed.
+Nevertheless, the additional gains of 1.4x–2x in compression ratio are significant.
+Moving items between these layers or finally evicting them entirely can be done, e.g., with the well-known LRU cache eviction heuristic.
+Reordering Rows The next step is to “help” Zippy in compressing the elements (chunk-ids) representing the data columns.
+They have proven that the problem of finding an optimal reordering is NP-hard, present heuristics, and test them on real-world data.
+In the following we will describe how to apply this observation, give a qualitative explanation of why this can improve the compression ratio, and recapitulate a somewhat surprising connection to the well-known traveling sales person problem, stated by Johnson et al.
+Finally, we will present the simple heuristic we have chosen and give the corresponding results in our experimental setup.
+The reordered version on the right would result in better compression when, e.g., using runlength encoding.
+Figure 2 gives an example of how reordering can help compression for two columns of elements / chunk-ids.
+Consider the basic compression algorithm run-length encoding (RLE) which replaces consecutive identical values with a counter.
+For simplicity we now restrict to the case of columns with.
+For this case the RLE can be simplified to only storing the counters and not the values themselves.
+Each time a bit is flipped, a new counter is added, see Figure 3 for an example.
+Figure 3: Three columns of bits compressed with a simplified RLE.
+The distance between two points in Hamming space is the Hamming distance between the two vectors.
+Each ordering of the original rows corresponds to a path with these points.
+Figure 4 depicts three rows and the corresponding path in Hamming space.
+The weights on the edges give the Hamming distance between two points.
+Figure 4: Three rows of bits and the corresponding points in Hamming space and the path given by the ordering.
+The objective of finding the ordering with the smallest encoding can now be rephrased as finding the path of shortest length.
+This corresponds to the well-known travellingsalesperson problem (in Hamming space)
+For our purposes we chose a very easy to implement heuristic which in practice gives good results: we sort lexicographically by the field order chosen for the partitioning.
+This has been investigated in more detail, e.g., by Lemire and Kaser [21] or Abadi et al.
+The latter describes C-Store’s / Vertica’s approach of storing columns in multiple sort orders in order to improve the query performance at the cost of storing complete copies of the data.
+Summary In Table 4 we show an overview of the step-wise improvements presented in this section, including Dremel for comparison.
+Distributing Data to many Machines As described in the introduction, the column store presented in this paper is set up to run in a highly distributed manner.
+For simplisity of exposition, we have so far only considered a setup on one machine with a relatively small amount of data.
+To scale up to be able to process billions of rows, the data can be distributed to many machines and processed in parallel.
+We are mostly interested in group-by queries and for these.
+To achieve that, we organize the machines as a computation tree and do the grouping and aggregation on each level of the tree.
+Therefore, we use use an approximative technique described in Section 5
+Now the leaf level machines execute the inner select in parallel and send the result to the root of the execution tree.
+This rewrite can be applied recursively, to support deeper trees.
+One approach to distribute data may be to distribute the.
+A better and actually very common approach is to start by sharding (i.e., distributing) the data quasi randomly across the machines.
+Each shard is on one machine and is then partitioned into chunks as described in Section 2.2
+It has the additional advantage that the partitioning algorithm can be tuned to work well for a bounded amount of input data.
+In practice each PowerDrill shard has about 5–7 million rows.
+Reliable Distributed Execution of a Query In a cluster of commodity machines that may run arbitrary computations spawned by many users, the load on individual machines may vary dramatically.
+In effect, individual machines may be completely blocked or may evict processes on demand.
+One of the greatest challenges of making a distributed column-store production ready is handling these fluctuations well.
+An important ingredient to getting this right for our setup.
+A query being distributed to many machines is split up into sub-queries, each being responsible for a certain, distinct part of the data.
+Instead of sending each sub-query out to only one machine, for reliability we send it out to two machines: the primary and a replica.
+As soon as one of the two repsonses returns, the sub-query is treated as “answered”
+Since the data is loaded dynamically to a machine the.
+The overhead of not having the data fresh in memory on the replica would otherwise be too large and would make the replication scheme inefficient.
+Therefore, we chose to always compute sub-queries entirely both on the primary as well as on the replica, even if one of them returns early (but we of course do not wait for the slower machine before returning the overall result)
+In this section we briefly touch aspects and extensions of.
+Complex Expressions As previously mentioned, expressions such as in Query 2 of.
+The expression only needs to be computed once, consecutive access can reuse the materialized data.
+For example, for the expression date(timestamp) IN (’2012-02-29’, ...) the left.
+For an individual chunk one can then quickly check whether it is active, i.e., actually contains data for the given dates at all.
+User-given expressions are split apart by these special operators as far as possible, before actually materializing an expression.
+Count Distinct For many analyses it is important to be able to quickly.
+As an example, consider counting the number of distinct table names per country.
+This can be a very costly operation for fields with large numbers of distinct values, both with respect to memory and runtime.
+For an elegant description (and analysis) of the variation which we use, see the first algorithm in [6]
+The basic idea of the algorithm is to compute hash values of the field to count distinctly.
+Of these hashes, the m smallest are determined in a single pass.
+The threshold m is given by the user and is typically in the order of a couple of thousand.
+We can profit from a very useful property of both the.
+This helped in designing and implementing a highly optimized data-structure for collecting and storing the smallest m hash values.
+The data-structure enables us to support count-distinct queries with comparatively small overhead.
+Other Compression Algorithms Additionally to the algorithm used for our experiments in.
+For ZLIB we tested settings with and without additional Huffman coding.
+The latter gave a perhaps surprising gain of additional 20–30% in experiments, but came with the expected cost of being up to an order of magnitude slower.
+As result of these experiments we chose a variant of LZO for production, since it gave an about 10% better compression ratio and was up to twice as fast when decompressing compared to Zippy.
+Further Optimizing the Global-Dictionaries Even with the trie data-structure described in Section 3,
+When only few chunks are active for a query, there is actually no need to have the entire dictionary in memory.
+To this end, we split a dictionary up into sub-dictionaries.
+One of these representing the most frequent values, each of the others representing values from several chunks combined.
+When processing a query with few active chunks, only a few of.
+To further reduce the situations where a (sub-) dictionary needs to be loaded into memory, we additionally keep Bloom-filters for each dictionary.
+With these Bloom-filters one can quickly check whether certain values are present in a dictionary at all.
+Improved Cache Heuristics It is a known problem in disk-cache / paging algorithms.
+Similar effects can happen in our system when a single query which accesses a lot of data is processed.
+We wish to avoid cases where a such a query can negatively impact the caches and therefore the performance of other queries.
+To this end, we have implemented a more sophisticated cache eviction policy, replacing LRU.
+In a typical use case, a user triggers about 20 SQL queries.
+An individual server on average spends less than 70 milliseconds on a sub-query.
+These measurements and those given below are collected over all queries processed during the last three months of 2011
+The good performance is enabled by the optimized datastructures and by a partitioning of the data which works well for most restrictions used in queries.
+In practice, it actually turns out that choosing the field-orders for the partitioning scheme is quite straightforward.
+We never had to go back and finetune the selection of fields and we strongly benefit from correlations in the data.
+Note that additionally to skipping over inactive chunks, we also cache results for chunks which are fully active, i.e., for which the where clause evaluates to true for all rows of the chunk.
+Another interesting question to ask is how many queries could be answered from data-structures which were in memory.
+On average over 70% of the queries do not need to access any data from disk.
+The average latency naturally increases with the amount of data which needs to be read from disk into memory, see Figure 5
+It allows exploration of billions of rows (or, log records) within seconds and its Google-internal usage has almost exploded in the last years.
+Our deployed scheme based on composite range partitioning of three to five fields works very well in practice: Most queries have restrictions on closely correlated fields which results in skipping of 95% of the input data on average.
+Our compaction techniques utilize a dictionary-based data representation together with some more key optimizations (bit-wise element encodings, usage of tries for dictionary-storage, Zippy encoding of values, row-reorderings)
+Combined, these techniques reduce the data size by up to a factor of 50x.
+That is, the amount of data that can be examined interactively increases by a factor of 10–100 compared to traditional column-store technologies.
+Non first normal form relations to represent hierarchically organized data.
+The completesearch engine: Interactive, efficient, and towards ir& db integration.
+The researcher’s guide to the data deluge: Querying a scientific database in just a few seconds.
+Small materialized aggregates: A light weight index structure for data warehousing.
+When hamming meets euclid: The approximability of geometric tsp and mst (extended abstract)

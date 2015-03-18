@@ -1,0 +1,659 @@
+O’Reilly books may be purchased for educational, business, or sales promotional use.
+Getting Started with Storm, the cover image of a skua, and related trade dress are trademarks of O’Reilly Media, Inc.
+Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks.
+Where those designations appear in this book, and O’Reilly Media, Inc., was aware of a trademark claim, the designations have been printed in caps or initial caps.
+While every precaution has been taken in the preparation of this book, the publisher and authors assume no responsibility for errors or omissions, or for damages resulting from the use of the information contained herein.
+If you’re reading this, it’s because you heard about Storm somehow, and you’re interested in better understanding what it does, how you can use it to solve various problems, and how it works.
+This book will get you started with Storm in a very straightforward and easy way.
+The first few chapters will give you a general overview of the technologies involved, some concepts you should understand so we all speak the same language, and how to install and configure Storm.
+The second half of the book will get you deep into spouts, bolts and topologies (more about these in a moment)
+The last few chapters address some more advanced features that we consider very important and interesting, like using Storm with languages that are not JVM-based.
+Conventions Used in This Book The following typographical conventions are used in this book: Italic.
+Indicates new terms, URLs, email addresses, filenames, and file extensions.
+Used for program listings, as well as within paragraphs to refer to program elements such as variable or function names, databases, data types, environment variables, statements, and keywords.
+Constant width bold Shows commands or other text that should be typed literally by the user.
+Constant width italic Shows text that should be replaced with user-supplied values or by values determined by context.
+Using Code Examples This book is here to help you get your job done.
+In general, you may use the code in this book in your programs and documentation.
+You do not need to contact us for permission unless you’re reproducing a significant portion of the code.
+For example, writing a program that uses several chunks of code from this book does not require permission.
+Selling or distributing a CD-ROM of examples from O’Reilly books does require permission.
+Answering a question by citing this book and quoting example code does not require permission.
+Incorporating a significant amount of example code from this book into your product’s documentation does require permission.
+An attribution usually includes the title, author, publisher, and ISBN.
+Safari® Books Online Safari Books Online (www.safaribooksonline.com) is an on-demand digital library that delivers expert content in both book and video form from the world’s leading authors in technology and business.
+Technology professionals, software developers, web designers, and business and creative professionals use Safari Books Online as their primary resource for research, problem solving, learning, and certification training.
+Safari Books Online offers a range of product mixes and pricing programs for organizations, government agencies, and individuals.
+For more information about Safari Books Online, please visit us online.
+How to Contact Us Please address comments and questions concerning this book to the publisher:
+We have a web page for this book, where we list errata, examples, and any additional information.
+To comment or ask technical questions about this book, send email to bookquestions@oreilly.com.
+For more information about our books, courses, conferences, and news, see our website at http://www.oreilly.com.
+Find us on Facebook: http://facebook.com/oreilly Follow us on Twitter: http://twitter.com/oreillymedia Watch us on YouTube: http://www.youtube.com/oreillymedia.
+Acknowledgements First and foremost, we would like to thank Nathan Marz who created Storm.
+His effort working on this open source project is really admirable.
+We also would like to thank Dirk McCormick for his valuable guidance, advice, and corrections.
+Without his precious time spent on this book, we wouldn’t have been able to finish it.
+Additionally, we would like to thank Carlos Alvarez for his awesome observations and suggestions while reviewing the book.
+We would like to thank Shawn Wallace from O’Reilly for guiding us through the writing and reviewing process and for providing us with a good environment and facilities to complete the project.
+Also, we would like to take this opportunity to thank MercadoLibre for giving us the time to play with Storm in real-world applications.
+It gave us an opportunity to learn a lot about Storm.
+Finally, an honorable mention goes to our families and friends for their understanding and support for us in completing this project.
+Without the help of the people mentioned above, we would never have made it here.
+Storm is a distributed, reliable, fault-tolerant system for processing streams of data.
+The work is delegated to different types of components that are each responsible for a simple specific processing task.
+The input stream of a Storm cluster is handled by a component called a spout.
+The spout passes the data to a component called a bolt, which transforms it in some way.
+A bolt either persists the data in some sort of storage, or passes it to some other bolt.
+You can imagine a Storm cluster as a chain of bolt components that each make some kind of transformation on the data exposed by the spout.
+Last night I was watching the news when the announcers started talking about politicians and their positions on various topics.
+They kept repeating different names, and I wondered if each name was mentioned an equal number of times, or if there was a bias in the number of mentions.
+Imagine the subtitles of what the announcers were saying as your input stream of data.
+You could have a spout that reads this input from a file (or a socket, via HTTP, or some other method)
+As lines of text arrive, the spout hands them to a bolt that separates lines of text into words.
+This stream of words is passed to another bolt that compares each word to a predefined list of politician’s names.
+With each match, the second bolt increases a counter for that name in a database.
+Whenever you want to see the results, you just query that database, which is updated in real time as data arrives.
+The arrangement of all the components (spouts and bolts) and their connections is called a topology (see Figure 1-1)
+Now imagine easily defining the level of parallelism for each bolt and spout across the whole cluster so you can scale your topology indefinitely.
+Amazing, right? Although this is a simple example, you can see how powerful Storm can be.
+What are some typical use cases for Storm? Processing streams.
+As demonstrated in the preceding example, unlike other stream processing systems, with Storm there’s no need for intermediate queues.
+Continuous computation Send data to clients continuously so they can update and show results in real time, such as site metrics.
+The Components of Storm In a Storm cluster, nodes are organized into a master node that runs continuously.
+There are two kind of nodes in a Storm cluster: master node and worker nodes.
+Master node run a daemon called Nimbus, which is responsible for distributing code around the cluster, assigning tasks to each worker node, and monitoring for failures.
+A topology in Storm runs across many worker nodes on different machines.
+Since Storm keeps all cluster states either in Zookeeper or on local disk, the daemons are stateless and can fail or restart without affecting the health of the system (see Figure 1-2)
+Underneath, Storm makes use of zeromq (0mq, zeromq), an advanced, embeddable networking library that provides wonderful features that make Storm possible.
+The Properties of Storm Within all these design concepts and decisions, there are some really nice properties that make Storm unique.
+If you’ve ever tried doing real-time processing from scratch, you’ll understand how painful it can become.
+Support for multiple programming languages It’s easier to develop in a JVM-based language, but Storm supports any language as long as you use or implement a small intermediary library.
+Fault-tolerant The Storm cluster takes care of workers going down, reassigning tasks when necessary.
+Scalable All you need to do in order to scale is add more machines to the cluster.
+Storm will reassign tasks to new machines as they become available.
+Reliable All messages are guaranteed to be processed at least once.
+If there are errors, messages might be processed more than once, but you’ll never lose any message.
+Fast Speed was one of the key factors driving Storm’s design.
+Transactional You can get exactly once messaging semantics for pretty much any computation.
+In this chapter, we’ll create a Storm project and our first Storm topology.
+The following assumes that you have at least version 1.6 of the Java Runtime Environment (JRE) installed.
+Our recommendation is to use the JRE provided by Oracle, which can be found at http://www.java .com/downloads/
+Operation Modes Before we start, it’s important to understand Storm operation modes.
+This mode is used for development, testing, and debugging because it’s the easiest way to see all topology components working together.
+In this mode, we can adjust parameters that enable us to see how our topology runs in different Storm configuration environments.
+To run topologies in Local Mode, we’ll need to download the Storm development dependencies, which are all the things that we need to develop and test our topologies.
+We’ll see how soon, when we create our first Storm project.
+Running a topology in Local Mode is similar to running it in a Storm cluster.
+However it’s important to make sure that all components are thread safe, because when they are deployed in Remote Mode they may run in different JVMs or on different physical machines without direct communication or shared memory.
+In all of the examples in this chapter, we’ll work in Local Mode.
+Remote Mode In Remote Mode, we submit our topology to the Storm cluster, which is composed of many processes, usually running on different machines.
+Remote Mode doesn’t show debugging information, which is why it’s considered Production Mode.
+However, it is possible to create a Storm cluster on a single development machine, and it’s a good idea to do so before deploying to production, to make sure there won’t be any problems running the topology in a production environment.
+You’ll learn more about Remote Mode in Chapter 6, and I’ll show how to install a cluster in Appendix B.
+Hello World Storm For this project, we’ll create a simple topology to count words.
+However, it’s a very powerful topology because it can scale to virtually infinite size, and with some small modifications we could even use it to create a statistical system.
+For example, we could modify the project to find trending topics on Twitter.
+To create the topology, we’ll use a spout that will be responsible for reading words, a first bolt to normalize words, and a second bolt to count words, as we can see in Figure 2-1
+You can download the source code of the example as a ZIP file at https://github.com/ storm-book/examples-ch02-getting_started/zipball/master.
+If you use git (a distributed revision control and source code management), you can run git clone git@github.com:storm-book/examplesch02-getting_started.git into the directory where you want to download the source code.
+Checking Java Installation The first step to set up the environment is to check which version of Java you are running.
+Open a terminal window and run the command java -version.
+Creating the Project To start the project, create a folder in which to place the application (as you would for any Java application)
+Next we need to download the Storm dependencies: a set of jars that we’ll add to the application classpath.
+Download the dependencies, unpack them, and add them to the classpath • Use Apache Maven.
+It can be used to manage several aspects of a project development cycle, from dependencies to the release build process.
+To check if maven is installed, run the command mvn.
+Although is not necessary to be a Maven expert to use Storm, it’s helpful to know the basics of how Maven works.
+You can find more information on the Apache Maven website (http://maven.apache.org/)
+To define the project structure, we need to create a pom.xml (project object model) file, which describes dependencies, packaging, source code, and so on.
+We’ll use the dependencies and Maven repository set up by nathanmarz (https://github.com/nathan marz/)
+The Storm Maven dependencies reference all the libraries required to run Storm in Local Mode.
+Using these dependencies, we can write a pom.xml file with the basic components necessary to run our topology:
+The first few lines specify the project name and version.
+Then we add a compiler plugin, which tells Maven that our code should be compiled with Java 1.6
+Next we define the repositories (Maven supports multiple repositories for the same project)
+Maven will automatically download all subdependencies required by Storm to run in Local Mode.
+The application will have the following structure, typical of a Maven Java project:
+The folders under Java will contain our source code and we’ll put our Word files into the resource folder to process.
+Creating Our First Topology To build our first topology, we’ll create all classes required to run the word count.
+It’s possible that some parts of the example may not be clear at this stage, but we’ll explain them further in subsequent chapters.
+Spout The WordReader spout is a class that implements IRichSpout.
+WordReader will be responsible for reading the file and providing each line to a bolt.
+This architecture allows you to have different kinds of bolts reading the same spout stream, which can then define fields for other bolts to consume and so on.
+Example 2-1 contains the complete code for the class (we’ll analyze each part of the code following the example)
+We will create the file and get the collector object */ throw new RuntimeException("Error reading file.
+The first method called in any spout is public void open(Map conf, TopologyContext context, SpoutOutputCollector collector)
+The parameters it receives are the TopologyContext, which contains all our topology data; the conf object, which is created in the topology definition; and the SpoutOutputCollector, which enables us to emit the data that will be processed by the bolts.
+In this method we also create the reader, which is responsible for reading the files.
+In our example, the method will read the file and emit a value per line.
+Values is an implementation of ArrayList, where the elements of the list are passed to the constructor.
+It must release control of the thread when there is no work to do so that the other methods have a chance to be called.
+So the first line of nextTuple checks to see if processing has finished.
+If so, it should sleep for at least one millisecond to reduce load on the processor before returning.
+If there is work to be done, each line in the file is read into a value and emitted.
+A tuple is a named list of values, which can be of any type of Java object (as long as the object is serializable)
+By default, Storm can serialize common types like strings, byte arrays, ArrayList, HashMap, and HashSet.
+Bolts We now have a spout that reads from a file and emits one tuple per line.
+We need to create two bolts to process these tuples (see Figure 2-1)
+The most important method in the bolt is void execute(Tuple input), which is called once per tuple received.
+The bolt will emit several tuples for each tuple received.
+A bolt or spout can emit as many tuples as needed.
+The first bolt, WordNormalizer, will be responsible for taking each line and normalizing it.
+It will split the line into words, convert all words to lowercase, and trim them.
+Here we declare that the bolt will emit one Field named word.
+Next we implement the public void execute(Tuple input) method, where the input tuples are processed:
+The value can be read by position or by name.
+The value is processed and then emitted using the collector object.
+In this class, we see an example of emitting multiple tuples in a single execute call.
+If the method receives the sentence This is the Storm book, in a single execute call, it will emit five new tuples.
+The next bolt, WordCounter, will be responsible for counting words.
+This is an example of a bolt that emits nothing.
+In this case, the data is added to a map, but in real life the bolt could store data to a database.
+The execute method uses a map to collect and count the words.
+The Main Class In the main class, you’ll create the topology and a LocalCluster object, which enables you to test and debug the topology locally.
+In conjunction with the Config object, LocalCluster allows you to try out different cluster configurations.
+For example, if a global or class variable was accidentally used, you would find the error when testing your topology in configurations with a different number of workers.
+All topology nodes should be able to run independently with no shared data between processes (i.e., no global or class variables) because when the topology runs in a real cluster, these processes may run on different machines.
+You’ll create the topology using a TopologyBuilder, which tells Storm how the nodes are arranged and how they exchange data.
+This type of grouping tells Storm to send messages from the source node to target nodes in randomly distributed fashion.
+Next, create a Config object containing the topology configuration, which is merged with the cluster configuration at run time and sent to all nodes with the prepare method.
+Set the property wordsFile to the name of the file to be read by the spout, and the property debug to true because you’re in development.
+When debug is true, Storm prints all messages exchanged between nodes, and other debug data useful for understanding how the topology is running.
+As explained earlier, you’ll use a LocalCluster to run the topology.
+In a production environment, the topology runs continuously, but for this example you’ll just run the topology for a few seconds so you can see the results.
+Create and run the topology using createTopology and submitTopology, sleep for two seconds (the topology runs in a different thread), and then stop the topology by shutting down the cluster.
+See It In Action You’re ready to run your first topology! If you create a file at src/main/resources/ words.txt with one word per line, you can run the topology with this command:
+For example, if you use the following words.txt file: Storm test are great is an Storm simple application but very powerful really Storm is great.
+In this example, you’re only using a single instance of each node.
+But what if you have a very large log file? You can easily change the number of nodes in the system to parallelize the work.
+Awesome! It’s so easy to change the level of parallelism (in real life, of course, each instance would run on a separate machine)
+But there seems to be a problem: the words is and great have been counted once in each instance of WordCounter.
+Why? When you use shuffleGrouping, you are telling Storm to send each message to an instance of your bolt in randomly distributed fashion.
+In this example, it’d be ideal to always send the same word to the same WordCounter.
+To do so, you can change shuffleGrouping("wordnormalizer") to fieldsGrouping("word-normalizer",new Fields("word"))
+Try it out and rerun the program to confirm the results.
+You’ll see more about groupings and message flow in later chapters.
+Conclusion We’ve discussed the difference between Storm’s Local and Remote operation modes, and the power and ease of development with Storm.
+You also learned more about some basic Storm concepts, which we’ll explain in depth in the following chapters.
+In this chapter, you’ll see how to pass tuples between the different components of a Storm topology, and how to deploy a topology into a running Storm cluster.
+Stream Grouping One of the most important things that you need to do when designing a topology is to define how data is exchanged between components (how streams are consumed by the bolts)
+A Stream Grouping specifies which stream(s) are consumed by each bolt and how the stream will be consumed.
+A node can emit more than one stream of data.
+A stream grouping allows us to choose which stream to receive.
+The stream grouping is set when the topology is defined, as we saw in Chapter 2: ...
+In the preceding code block, a bolt is set on the topology builder, and then a source is set using the shuffle stream grouping.
+A stream grouping normally takes the source component ID as a parameter, and optionally other parameters as well, depending on the kind of stream grouping.
+There can be more than one source per InputDeclarer, and each source can be grouped with a different stream grouping.
+Shuffle Grouping Shuffle Grouping is the most commonly used grouping.
+It takes a single parameter (the source component) and sends each tuple emitted by the source to a randomly chosen bolt warranting that each consumer will receive the same number of tuples.
+The shuffle grouping is useful for doing atomic operations such as a math operation.
+However, if the operation can’t be randomically distributed, such as the example in Chapter 2 where you needed to count words, you should consider the use of other grouping.
+Fields Grouping Fields Grouping allows you to control how tuples are sent to bolts, based on one or more fields of the tuple.
+It guarantees that a given set of values for a combination of fields is always sent to the same bolt.
+Coming back to the word count example, if you group the stream by the word field, the word-normalizer bolt will always send tuples with a given word to the same instance of the word-counter bolt.
+All fields set in the fields grouping must exist in the sources’s field declaration.
+All Grouping All Grouping sends a single copy of each tuple to all instances of the receiving bolt.
+This kind of grouping is used to send signals to bolts.
+For example, if you need to refresh a cache, you can send a refresh cache signal to all bolts.
+In the word-count example, you could use an all grouping to add the ability to clear the counter cache (see Topologies Example)
+Storm gives us the possibility to declare it’s an excellent way to identify the source of the tuples, such as this case where we want to identify the signals.
+In the topology definition, you’ll add a second stream to the word-counter bolt that sends each tuple from the signals-spout stream to all instances of the bolt.
+The implementation of signals-spout can be found at the git repository.
+Custom Grouping You can create your own custom stream grouping by implementing the back type.storm.grouping.CustomStreamGrouping interface.
+This gives you the power to decide which bolt(s) will receive each tuple.
+Let’s modify the word count example, to group tuples so that all words that start with the same letter will be received by the same bolt.
+You can see a simple implementation of CustomStreamGrouping, where we use the amount of tasks to take the modulus of the integer value of the first character of the word, thus selecting which bolt will receive the tuple.
+To use this grouping in the example, change the word-normalizer grouping by the following:
+Direct Grouping This is a special grouping where the source decides which component will receive the tuple.
+Similarly to the previous example, the source will decide which bolt receives the tuple based on the first letter of the word.
+To use direct grouping, in the WordNormal izer bolt, use the emitDirect method instead of emit.
+Work out the number of target tasks in the prepare method:
+And in the topology definition, specify that the stream will be grouped directly:
+Global Grouping Global Grouping sends tuples generated by all instances of the source to a single target instance (specifically, the task with lowest ID)
+In other words, when using this grouping, it doesn’t matter how streams are grouped.
+LocalCluster versus StormSubmitter Until now, you have used a utility called LocalCluster to run the topology on your local computer.
+Running the Storm infrastructure on your computer lets you run and debug different topologies easily.
+But what about when you want to submit your topology to a running Storm cluster? One of the interesting features of Storm is that it’s easy to send your topology to run in a real cluster.
+You’ll need to change the LocalCluster to a StormSubmitter and implement the submitTopology method, which is responsible for sending the topology to the cluster.
+When you use a StormSubmitter, you can’t control the cluster from your code as you could with a LocalCluster.
+Next, package the source into a jar, which is sent when you run the Storm Client command to submit the topology.
+Because you used Maven, the only thing you need to do is go to the source folder and run the following:
+Once you have the generated jar, use the storm jar command to submit the topology (you should know how to install the Storm client into Appendix A)
+In this example, from the topologies source project folder, run:
+With these commands, you have submitted the topology to the cluster.
+Storm gives you some tools to enable the use of DRPC.
+The first is a DRPC server that runs as a connector between the client and the Storm topology, running as a source for the toplogy spouts.
+Then for each piece of data on which the function operates, the server assigns a request ID used through the topology to identify the RPC request.
+When the topology executes the last bolt, it must emit the RPC request ID and the result, allowing the DRPC server to return the result to the correct client.
+The second tool that Storm provides (used in the example) is the LinearDRPCTopology Builder, an abstraction to help build DRPC topologies.
+All bolts added to a LinearDRPCTopologyBuilder are executed in sequential order.
+As an example of this type of topology, you’ll create a process that adds numbers.
+This is a simple example, but the concept could be extended to perform complex distributed math operations.
+Because this is the only bolt in the topology, it must emit the RPC ID and the result.
+The execute method is responsible for executing the add operation:
+Include the added bolt in the topology definition as follows:
+Create a LocalDRPC object that runs the DRPC server locally.
+Next, create a topology builder and add the bolt to the topology.
+To test the topology, use the execute method on your DRPC object.
+To connect to a remote DRPC server, use the DRPCClient class.
+The DRPC server exposes a Thrift API that could be used from many languages, and it’s the same API if you run DRPC server in locally or remote.
+To submit a topology to a Storm cluster, use the method createRemote Topology of the builder object instead of createLocalTopology, which uses the DRPC configuration from Storm config.
+In this chapter, you’ll take a look at the most commonly used strategies for designing the entry point for a topology (a spout) and how to make spouts fault-tolerant.
+Reliable versus Unreliable Messages When designing a topology, one important thing to keep in mind is message reliability.
+If a message can’t be processed, you need to decide what to do with the individual message and what to do with the topology as a whole.
+For example, when processing bank deposits, it is important not to lose a single transaction message.
+But if you’re processing millions of tweets looking for some statistical metric, and one tweet gets lost, you can assume that the metric will still be fairly accurate.
+In Storm, it is the author’s responsibility to guarantee message reliability according to the needs of each topology.
+A reliable topology must manage lost messages, which requires more resources.
+A less reliable topology may lose some messages, but is less resource-intensive.
+Whatever the chosen reliability strategy, Storm provides the tools to implement it.
+To manage reliability at the spout, you can include a message ID with the tuple at emit time (collector.emit(new Values(…),tupleId))
+The methods ack and fail are called when a tuple is processed correctly or fails respectively.
+Tuple processing succeeds when the tuple is processed by all target bolts and all anchored bolts (you will learn how to anchor a bolt to a tuple in the Chapter 5)
+Imagine you are processing bank transactions, and you have the following requirements:
+If the transaction fails too many times, terminate the topology.
+You’ll implement the spout using a Map to emit transaction message tuples so that it’s easy to resend messages.
+If there are messages waiting to be sent, get each transaction message and its associated ID and emit them as a tuple, then clear the message queue.
+Note that it’s safe to call clear on the map, because nextTuple, fail, and ack are the only methods that modify the map, and they all run in the same thread.
+Maintain two maps to keep track of transaction messages waiting to be sent, and the number of times each transaction has failed.
+The ack method simply removes the transaction message from each list.
+The fail method decides whether to resend a transaction message or fail if it has failed too many times.
+If you are using an all grouping in your topology and any instance of the bolt fails, the fail method of the spout will be called as well.
+If the number of failures is too high, terminate the topology throw new RuntimeException("Error, transaction id ["+
+If the number of failures is less than the maximum, save the number and re-send the message.
+First, check the number of times the transaction has failed.
+If a transaction fails too many times, throw a RuntimeException to terminate the worker where it is running.
+Otherwise, save the failure count and put the transaction message in the toSend queue so that it will be resent when nextTuple is called.
+Storm nodes do not maintain state, so if you store information in memory (as in this example) and the node goes down, you will lose all stored information.
+If an exception is thrown, the topology will go down, but Storm will restart the process in a consistent state so that it can recover correctly.
+Getting Data Here you’ll take a look at some common techniques for designing spouts that collect data efficiently from multiple sources.
+Direct Connection In a direct connection architecture, the spout connects directly to a message emitter (see Figure 4-1)
+This architecture is simple to implement, particularly when the message emitter is a well-known device or a well-known device group.
+A well-known device is one that is known at startup and remains the same throughout the life of the topology.
+A wellknown device group is one in which all devices in the group are known at start time.
+As an example, create a spout to read the Twitter stream using the Twitter streaming API.
+The spout will connect directly to the API, which serves as the message emitter.
+Filter the stream to get all public tweets that match the track parameter (as documented on the Twitter dev page)
+The complete example can be found at Twitter Example github page.
+The spout gets the connection parameters from the configuration object (track, user, and password) and creates a connection to the API (in this case, using the DefaultHttpClient from Apache)
+It reads the connection one line at a time, parses the line from JSON format into a Java object, and emits it.
+Create the client call HttpResponse response; //Execute String in; //Read line by line //Parse and emit.
+Here you are locking the nextTuple method, so you never execute the ack and fail methods.
+This is great! You’re reading the Twitter stream with a single spout.
+If you parallelize the topology, you’ll have several spouts reading different partitions of the same stream, which doesn’t make sense.
+So how do you parallelize processing if you have several streams to read? One interesting feature of Storm is that you can access the TopologyContext from any component (spouts/bolts)
+Using this feature, you can divide the streams between your spout instances.
+Using this technique, you can distribute collectors evenly across data sources.
+The same technique can be applied in other situations—for example, for collecting log files from web servers.
+In the previous example, you connected the spout to a well-known device.
+You can use the same approach to connect to unknown devices using a coordinating system to maintain the device list.
+The coordinator detects changes to the list and creates and destroys connections.
+For example, when collecting log files from web servers, the list of web servers may change over time.
+When a web server is added, the coordinator detects the change and creates a new spout for it.
+It’s recommended to create connections from spouts to message emitters, rather than the other way around.
+If the machine on which a spout is running goes down, Storm will restart it on another machine, so it’s easier for the spout to locate the message emitter than for the message emitter to keep track of which machine the spout is on.
+Enqueued Messages The second approach is to connect your spouts to a queue system that will receive the messages from the message emitters and will leave the messages available for consumption by the spouts.
+The advantage of using a queue system is that it can serve as middleware between the spouts and data source; in many cases, you can use the queue to be reliable using the capability of replay messages of many queue systems.
+The problem with this architecture is that the queue will be your point of failure, and you’ll be adding a new layer to your processing flow.
+You can use round-robin pull or hashing queues (divide the queue messages by hash to send it to the spouts or create many queues) to parallelize the processing through queues, dividing the messages between many spouts.
+You’ll create an example using Redis as your queue system and their Java library, Jedis.
+In this example, you’ll create a log processor to collect logs from an unknown source using the command lpush to insert messages into the queue and blpop to allow you to wait for a message.
+If you have many processes, using blpop will let you receive the messages in round-robin fashion.
+To retrieve messages from Redis, you’ll use a thread created at the open spout (using a thread to avoid locking the main loop where the nextTuple method is):
+The only purpose of this thread is to create the connection and execute the blpop command.
+When a message is received, it is added to an internal queue of messages that will be consumed by the nextTuple method.
+Here you can see that the source is the Redis queue and you don’t know which are the message emitters nor their quantity.
+We recommend that you not create many threads with spout, because each spout runs in a different thread.
+Instead of creating many threads, it is better to increase the parallelism.
+This will create more threads in a distributed fashion through the Storm cluster.
+In your nextTuple method, the only thing that you’ll do is receive the messages and emit them again.
+You could transform this spout for the possibility of replaying messages from Redis to transform this topology into a reliable topology.
+Conclusion You’ve seen the common spout implementation patterns, their advantages, and how to make the messages reliable.
+It’s important to define spout communication based on the problem that you are working on.
+If you know the sources or you can control these sources, then you can use a direct connection, while if you need the capacity to add unknown sources or receive messages from variety sources, it’s better to use a queued connection.
+If you need an online process, you will need to use DRPCSpouts or implement something similar.
+Although you have learned the three main types of connections, there are infinite ways to do it depending on your needs.
+As you have seen, bolts are key components in a Storm cluster.
+In this chapter, you’ll look at a bolt’s life cycle, some strategies for bolt design, and some examples of how to implement them.
+Bolt Lifecycle A bolt is a component that takes tuples as input and produces tuples as output.
+When writing a bolt, you will usually implement the IRichBolt interface.
+Bolts are created on the client machine, serialized into the topology, and submitted to the master machine of the cluster.
+The cluster launches workers that deserialize the bolt, call prepare on it, and then start processing tuples.
+To customize a bolt, you should set parameters in its constructor and save them as instance variables so they will be serialized when submitting the bolt to the cluster.
+Declare the output schema for this bolt prepare(java.util.Map stormConf, TopologyContext context, OutputCollector col lector)
+Called just before the bolt starts processing tuples execute(Tuple input)
+Take a look at an example of a bolt that will split sentences into words:
+It’s worth mentioning that in this example there is no message guarantee.
+In many cases, you’ll want to guarantee message processing through the entire topology.
+Reliable versus Unreliable Bolts As was said before, Storm guarantees that each message sent by a spout will be fully processed by all bolts.
+This is a design consideration, meaning that you will need to decide whether your bolts guarantee messages.
+A topology is a tree of nodes in which messages (tuples) travel along one or more branches.
+Each node will ack(tuple) or fail(tuple) so that Storm knows when a message fails and notifies the spout or spouts that produced the message.
+Since a Storm topology runs in a highly parallelized environment, the best way to keep track of the original spout instance is to include a reference to the originating spout in the message tuple.
+Change the SplitSentence bolt that you just saw, so that it guarantees message processing.
+Storm considers a tuple coming of a spout fully processed when every message in the tree has been processed.
+A tuple is considered failed when its tree of messages fails to be fully processed within a configurable timeout.
+Of course, the spout needs to take care of the case when a message fails and retry or discard the message accordingly.
+Storm uses memory to track each tuple, so if you don’t ack/fail every tuple, the task will eventually run out of memory.
+Multiple Streams A bolt can emit tuples to multiple streams using emit(streamId, tuple), where streamId is a string that identifies the stream.
+Then, in the TopologyBuilder, you can decide which stream to subscribe to.
+Multiple Anchoring To use a bolt to join or aggregate streams, you’ll need to buffer tuples in memory.
+In order to message guarantee in this scenario you have to anchor the stream to more than one tuple.
+This is done by calling emit with a List of tuples.
+That way, any time a bolt acks or fails, it notifies the tree, and because the stream is anchored to more than one tuple, all spouts involved are notified.
+Using IBasicBolt to Ack Automatically As you probably noticed, there are lots of use cases in which you need message guarantees.
+To make things easier, Storm provides another interface for bolts called IBasic Bolt, which encapsulates the pattern of calling ack right after the execute method.
+An implementation of this interface, BaseBasicBolt, is used to do the acking automatically.
+Tuples emitted to BasicOutputCollector are automatically anchored to the input tuple.
+The idea of this chapter is to illustrate a typical web analytics solution, a problem that is often solved using a Hadoop batch job.
+Unlike a Hadoop implementation, a Stormbased solution will show results that are refreshed in real time.
+If you want to go through this chapter while playing with the example, you should first read Appendix C.
+The Node.js Web Application We have mocked up a simple e-commerce website with three pages: a home page, a product page, and a product statistics page.
+This application is implemented using the Express Framework and Socket.io Framework to push updates to the browser.
+The idea of the application is to let you play with the cluster and see the results, but it’s not the focus of this book, so we won’t go into any more detail than a description of the pages it has.
+This page provides links to all the products available on the platform to ease navigation between them.
+It lists all the items and reads them from the Redis Server.
+The Product Page The Product Page shows information related to a specific product, such as price, title, and category.
+The Product Stats Page This page shows the information computed by the Storm cluster, which is collected as users navigate the website.
+It can be summarized as follows: users that viewed this Product looked at Products in those Categories n times.
+Starting the Node.js Web Application After starting the Redis server, start the web application by running the following command on the project’s path:
+The web application will automatically populate Redis with some sample products for you to play with.
+The Storm Topology The goal of the Storm topology in this system is to update the product stats in real time while users navigate the website.
+The Product Stats Page is shows a list of categories.
+The topology receives a navigation log and updates the product stats as shown in the Figure 6-5
+Our Storm Topology has five components: one spout to feed it and four bolts to get the job done.
+Reads from the users navigation queue and feeds the topology GetCategoryBolt.
+Reads the product information from the Redis Server and adds its category to the stream.
+UserHistoryBolt Reads the products previously navigated by the user and emits Product:Category pairs to update the counters in the next step.
+ProductCategoriesCounterBolt Keeps track of the number of times that users viewed a product of a specific category.
+NewsNotifierBolt Tells the web application to update the user interface immediately.
+Here’s how the topology is created (see Figure 6-6): ...
+UsersNavigationSpout The UsersNavigationSpout is in charge of feeding the topology with navigation entries.
+Each navigation entry is a reference to a product page viewed by one user.
+They are stored in the Redis Server by the web application.
+We’ll go into more detail on that in a moment.
+To read entries from the Redis server, you’ll be using https://github.com/xetorthio/je dis, a blazingly small and simple Redis client for Java.
+Only the relevant part of the code is shown in the following code block.
+First the spout calls jedis.rpop("navigation") to remove and return the right-most element in the “navigation” list on the Redis server.
+If the list is already empty, sleep for 0.3 seconds so as not to block the server with a busy wait loop.
+If an entry is found, parse the content (the content is JSON) and map it to a NavigationEntry object, which is just a POJO containing the entry information:
+The spout emits a tuple containing this information by calling collector.emit(new Val ues(user, entry))
+The content of this tuple is the input to the next bolt in the topology: The GetCategoryBolt.
+Its sole responsibility is to deserialize the content of the tuple emitted by the previous spout.
+If the entry is about a product page, then it loads the product information from the Redis server by using the ProductsReader helper class.
+Then, for each tuple in the input, it emits a new tuple with further product specific information:
+Call the items API to get item information return ;
+As mentioned earlier, use the ProductsReader helper class to read the product specific information.
+It’s responsible for keeping track of the products navigated by each user and determining the result pairs that should be incremented.
+You’ll use the Redis server to store product history by user, and you’ll also keep a local copy for performance reasons.
+You hid the data access details in the methods getUser NavigationHistory(user) and addProductToHistory(user,prodKey) for read and write access, respectively.
+If the user previously navigated this item -> ignore it.
+Note that the desired output of this bolt is to emit the products whose categories relations should be incremented.
+The bolt keeps a set of the products navigated by each user.
+Note that the set contains product:category pairs rather than just products.
+That’s because you’ll need the category information in future calls and it will perform better if you don’t need to get them from the database each time.
+This is possible because the products have only one category, and it won’t change during the product’s lifetime.
+After reading the set of the user’s previously navigated products (with their categories), check if the current product has been visited previously.
+Finally, add the product and its category to the set.
+For example, assume that the user John has the following navigation history:
+The user hasn’t yet looked at product 8, so you need to process it.
+Note that the relation between the products on the left and the categories on the right should be incremented in one unit.
+The getUserNavigationHistory method returns the set of products that the user has visited.
+First, attempt to get the user’s history from local memory with usersNavigate dItems.get(user), but if it’s not there, read from the Redis server using jedis.smem bers(buildKey(user)) and add the entry to the memory structure usersNavigatedItems.
+When the user navigates to a new product, call addProductToHistory to update both the memory structure with userHistory.add(product) and the Redis server structure with jedis.sadd(buildKey(user), product)
+Note that as long as the bolt keeps information in memory by user, it’s very important that when you parallelize it you use fieldsGrouping by user in the first degree, otherwise different copies of the user history will get out of synch.
+ProductCategoriesCounterBolt The ProductCategoriesCounterBolt class is in charge of keeping track of all the productcategory relationships.
+It receives the product-category pairs emitted by the UsersHistoryBolt and updates the counters.
+The information about the number of occurrences of each pair is stored on the Redis server.
+A local cache for reads and a write buffer are used for performance reasons.
+The information is sent to Redis in a background thread.
+This bolt also emits a tuple with the updated counter for the input pair to feed the next bolt in the topology, the NewsNotifierBolt, which is in charge of broadcasting the news to the final users for real-time updates.
+Persistence in this bolt is hidden in the getProductCategoryCount and storeProductCa tegoryCount methods.
+If the information is not available there, it gets it from the Redis server.
+The storeProductCategoryCount method updates the counter cache and the pendingToSave buffer.
+The download thread locks pendingToSave, and creates a new empty buffer for the other threads to use while it sends the old one to Redis.
+This code block runs each downloadTime milliseconds and is configurable through the download-time topology configuration parameter.
+The longer the download-time is, the fewer writes to Redis are performed because consecutive adds to a pair are written just once.
+Keep in mind that again, as in the previous bolt, it is extremely important to apply the correct fields grouping when assigning sources to this bolt, in this case grouping by product.
+That’s because it stores in-memory copies of the information by product, and if several copies of the cache and the buffer exist there will be inconsistencies.
+NewsNotifierBolt The NewsNotifierBolt is in charge of notifying the web application of changes in the statistics, in order for users to be able to view changes in real time.
+The notification is made by HTTP POST using Apache HttpClient, to the URL configured in the web server parameter of the topology configuration.
+The Storm Topology Results, used to store the desired results.
+Product Information The Redis Server stores the products using the product ID for the key and a JSON object containing all the product information as the value.
+User Navigation Queue The user navigation queue is stored in a Redis list named navigation and organized as a first-in-first-out (FIFO) queue.
+The server adds an entry to the left side of the list each time a user visits a product page, indicating which user viewed which product.
+The storm cluster constantly removes elements from the right side of the list to process the information.
+Intermediate Data The cluster needs to store the history of each user separately.
+In order to do so, it saves a set in the Redis server with all the products and their categories that were navigated by each user.
+Results The cluster generates useful data about the customers viewing a specific product and stores them in a Redis Hash named “prodcnt:” followed by the product ID.
+Testing the Topology In order to test the topology, use the provided LocalCluster and a local Redis server (see Figure 6-7)
+You’ll populate the products database on init and mock the insertion of navigation logs in the Redis server.
+Our assertions will be performed by reading the topology outputs to the Redis server.
+Initialization is implemented in the AbstractAnalyticsTest, which is extended by all tests.
+A static flag called topologyStarted is used to avoid initializing more than once when multiple AbstractAnalyticsTest subclasses are instantiated.
+Note that the sleep is there to allow the LocalCluster to start correctly before attempting to retrieve results from it.
+In order for the different tests to have a way to emulate the behavior of a user navigating the website, this step inserts navigation entries in the Redis server navigation queue.
+Provide a method called getProductCategoryStats in the AbstractAnalyticsTest that reads a specific relation from the Redis server.
+Different tests will also need to assert against the statistics results in order to check if the topology is behaving as expected.
+A Test Example In the next snippet, you’ll emulate a few product navigations of user “1”, then check the results.
+Note that you wait two seconds before asserting to be sure that the results have been stored to Redis.
+Remember that the ProductCategoriesCounterBolt has an in-memory copy of the counters and sends them to Redis in the background.)
+Thread.sleep(2000) // Give two seconds for the system to process the data.
+Notes on Scalability and Availability The architecture of this solution has been simplified to fit into a single chapter of the book.
+For that reason, you avoided some complexity that would be necessary for this solution to scale and have high availability.
+There are a couple of major issues with this approach.
+The Redis server in this architecture is not only a single point of failure but also a bottleneck.
+You’ll be able to receive only as much traffic as the Redis server can handle.
+The Redis layer can be scaled by using sharding, and its availability can be improved by using a Master/Slave configuration, which would require changes to the sources of both the topology and the web application.
+Another weakness is that the web application does not scale proportionately by adding servers in a round robin fashion.
+This is because it needs to be notified when some product statistic changes and to notify all interested browsers.
+This is achievable only if you shard the GET /product/:id/stats traffic and the POST /news traffic, both with same criteria, ensuring that requests referencing the same product will end up on the same server.
+Sometimes you want to use languages that aren’t based on the JVM to implement a Storm project, either because you feel more comfortable with another language or you want to use a library written in that language.
+Storm is implemented in Java, and all the spouts and bolts that you’ve seen in this book were written in Java as well.
+The multilang protocol is a special protocol implemented in Storm that uses standard input and standard output as a channel of communication with a process that does the job of a spout or a bolt.
+Messages are passed through this channel encoded as JSON or as lines of plain text.
+Let’s take a look at a simple example of a spout and a bolt in a non-JVM language.
+In this example, we check for prime numbers in a naive way.
+There are much better implementations, but they are also more complex and out of the scope of this example.
+There is an official implementation of a PHP DSL for Storm.
+In this chapter, we’ll show our implementation as an example.
+There is a way to specify topologies in a non-JVM language.
+Since Storm topologies are just Thrift structures, and Nimbus is a Thrift daemon, you can create and submit topologies in any language you want.
+But this it out of the scope of this book.
+This is a special class that comes with Storm and helps you run and control spouts written in other languages.
+In this case, it tells Storm how to execute your PHP script.
+The NumberGeneratorSpout PHP script emits tuples to the standard output, and reads standard input to process acks or fails.
+Before going over the implementation of the NumberGeneratorSpout.php script, look in more detail at how the multilang protocol works.
+The spout generates sequential numbers counting from the from parameter up to the to parameter, passed to the constructor.
+Storm provides a special class for this purpose called ShellBolt, where the only thing you have to do is to indicate how to run the script and declare the fields that it emits.
+In the constructor, just tell Storm how to run the PHP script.
+The PrimeNumbersFilterBolt PHP script reads tuples from standard input, processes them, and emits, acks, or fails to standard output.
+Before going over the implementation of the PrimeNumbersFilterBolt.php script, let’s look in more detail at how the multilang protocol works.
+The Multilang Protocol Specification The protocol relies on standard input and standard output as a channel of communication between processes.
+Follow the steps a script needs to take in order to work:
+There is a special way of logging from your script that uses Storm’s builtin logging mechanism, so you don’t need to implement your own logging system.
+Let’s take a look at the detail of each of these steps, and how to implement it using a PHP script.
+Initial Handshake In order to control the process (to start and stop it), Storm needs to know the process ID (PID) of the script it is executing.
+According to the multilang protocol, the first thing that will happen when your process starts is that Storm will send a JSON object with storm configuration, topology context, and a PID directory to standard input.
+The process must create an empty file at the path specified by pidDir, whose name is the process ID, and write the PID to standard out as a JSON object.
+This is how Storm keeps track of the PID and kills the process when it shuts down.
+You’ve created a function called read_msg to handle reading messages from standard input.
+The multilang protocol states that messages can be either a single line or multiple lines encoded in JSON.
+A message is complete when Storm sends a single line with the word end\n.
+This means that your script can hang forever waiting for an input from Storm, which it will never receive because Storm is in turn waiting on an output from your script.
+So it’s important to make sure that when your script outputs something it gets flushed immediately.
+Start Looping and Read or Write Tuples This is the most important step, where all the work gets done.
+The implementation of this step depends on if you are developing a spout or a bolt.
+In case of a spout, you should start emitting tuples.
+In case of a bolt, loop and read tuples, process them and emit, ack or fail.
+Let’s see the implementation of the spout that emits numbers.
+Get the from and to from the command-line arguments and start iterating.
+Everytime you get a next message from Storm, it means you are ready to emit a new tuple.
+Once you’ve sent all the numbers and you don’t have more tuples to send, just sleep for some time.
+In order to make sure the script is ready for the next tuple, Storm waits for the line sync decode it.
+In the case of bolts, this is a little different.
+As soon as you get a message, JSON decodes it.
+If it is a tuple, process it, checking if it is a prime number.
+In case it is a prime number, emit that number; otherwise just ignore it.
+Java sends some very big numbers, and they are decoded with less precision in PHP, which can cause problems.
+To work around this problem, tell PHP to decode big numbers as strings and to avoid using double quotes when printing numbers in JSON messages.
+Messages like emit, ack, fail, and log have the following structure:
+Where the array has the values you are emitting for the tuple.
+Where the id is the ID of the tuple you are processing.
+Same as emit, the id is the ID of the tuple you are processing.
+Log "command": "log", "msg": "some message to be logged by storm."
+Putting it all together gives you the following PHP scripts.
+And for your bolt: return false; return true; return false; return true; break;
+It is important to put all these scripts in a special folder called multilang/ resources in your project directory.
+This folder gets included in the jar file that is sent to the workers.
+If you don’t put the scripts in that folder, Storm won’t be able to run them and will report an error.
+With Storm, you can guarantee message processing by using an ack and fail strategy, as mentioned earlier in the book.
+Without support for transactional topologies, you wouldn’t be able to count in a fully accurate, scalable, and fault-tolerant way.
+Transactional Topologies are an abstraction built on top of standard Storm spouts and bolts.
+The Design In a transactional topology, Storm uses a mix of parallel and sequential tuple processing.
+The spout generates batches of tuples that are processed by the bolts in parallel.
+Some of those bolts are known as committers, and they commit processed batches in a strictly ordered fashion.
+This means that if you have two batches with five tuples each, both tuples will be processed in parallel by the bolts, but the committer bolts won’t commit the second tuple until the first tuple is committed successfully.
+When dealing with transactional topologies, it is important to be able to replay batch of tuples from the source, and sometimes even several times.
+This can be described as two different steps, or phases: The processing phase.
+A fully parallel phase, many batches are executed at the same time.
+A strongly ordered phase, batch two is not committed until batch one has committed successfully.
+By default the one used for the topology, will be used to store the metadata.
+You can change this by overriding the configuration key transactional.zookeeper.servers and transactional.zookeeper.port.
+Transactions in Action To see how transactions work, you’ll create a Twitter analytics tool.
+The topology you’ll build for this tool is described in Figure 8-1
+As you can see, TweetsTransactionalSpout is the spout that will be connecting to your tweets database and will be emitting batches of tuples across the topology.
+A third bolt, the UserHashtagJoinBolt, will receive both streams and count how many times a hashtag has appeared in a tweet where a user was named.
+In order to count and emit the result, this bolt will be a BaseBatchBolt (more on that later)
+Finally, a last bolt, called RedisCommitterBolt, will receive the three streams—the ones generated by UserSplitterBolt, HashtagSplitterBolt, and UserHashtagJoinBolt.
+It will count everything and once finished processing the batch of tuples, it will send everything to Redis, in one transaction.
+This bolt is a special kind of bolt known as a committer bolt, explained later in this chapter.
+In order to build this topology, use TransactionalTopologyBuilder, like the following code block:
+Let’s see how you can implement the spout in a transactional topology.
+The Spout The spout in a transactional topology is completely different from a standard spout.
+As you can see in the class definition, TweetsTransactionalSpout extends BaseTransac tionalSpout with a generic type.
+The type you set there is something known as the transaction metadata.
+It will be used later to emit batches of tuples from the source.
+Here you’ll store from and quantity, which will tell you exactly how to generate the batch of tuples.
+To finish the implementation of the spout, you need to implement the following three methods:
+In the getCoordinator method, you tell Storm which class will coordinate the generation of batches of tuples.
+With getEmitter, you tell Storm which class will be responsible for reading batches of tuples from the source and emitting them to a stream in the topology.
+And finally, as you did before, you need to declare which fields are emitted.
+To make the example easier, we’ve decided to encapsulate all operations with Redis in one single class.
+Read carefully the implementation of each method, and make sure you understand what they do.
+Let’s see the implementation of the coordinator of this example.
+It is important to mention that among the entire topology there will be only one coordinator instance.
+When the coordinator is instantiated, it retrieves from Redis a sequence that tells the coordinator which is the next tweet to read.
+The first time, this value will be 1, which means that the next tweet to read is the first one.
+It will always be called before initiali zeTransaction, to make sure the source is ready to be read from.
+In this example, retrieve the amount of tweets and compare them with how many tweets you read.
+The difference between them is the amount to available tweets to read.
+If it is greater than 0, it means you have tweets to read.
+As you can see, you get txid and pre vMetadata as parameters.
+The first one is a unique transaction ID generated by Storm, which identifies the batch of tuples to be generated.
+In this example, first make sure how many tweets are available to read.
+And once you have sorted that out, create a new TransactionMetadata, indicating which is the first tweet to read from, and which is the quantity of tweets to read.
+As soon as you return the metadata, Storm stores it with the txid in zookeeper.
+This guarantees that if something goes wrong, Storm will be able to replay this with the emitter to resend the batch.
+The final step when creating a transactional spout is implementing the emitter.
+Emitters are the one who will read the source and send tuples to a stream.
+This way, if something goes wrong during the processing of a batch, Storm will be able to repeat the same transaction id and transaction metadata with the emitter and make sure the batch of tuples are repeated.
+In this method, use the metadata, given as a parameter, to get tweets from Redis.
+Also increase the sequence in Redis that keeps track of how many tweets you’ve read so far.
+The Bolts First let’s see the standard bolts of this topology:
+Ensure this is an actual user, and that it's not repeated in the tweet.
+As mentioned earlier in this chapter, UserSplitterBolt receives tuples, parses the text of the tweet, and emits words preceded by @, or the Twitter users.
+The first important thing to notice is that it is a BaseBatchBolt.
+This means that the execute method will operate on the received tuples but won’t be emitting any new tuple.
+Eventually, when the batch is finished, Storm will call the finishBatch method.
+Since you need to associate all the hashtags of a tweet with the users mentioned in that tweet and count how many times they appeared, you need to join the two streams of the previous bolts.
+Do that for the entire batch, and once it finishes, the finishBatch method is called.
+In this method, generate and emit a tuple for each user-hashtag, and the amount of times it occurred.
+You can see the complete implementation in the downloadable code available on GitHub.
+The Committer Bolts As you’ve learned, batches of tuples are sent by the coordinator and emitters across the topology.
+Those batched of tuples are processed in parallel without any specific order.
+The coordinator bolts are special batch bolts that implement ICommitter or have been set with setCommiterBolt in the TransactionalTopologyBuilder.
+The main difference with regular batch bolts is that the finishBatch method of committer bolts executes when the batch is ready to be committed.
+This happens when all previous transactions have been committed successfully.
+This is all very straightforward, but there is a very important detail in the finishBatch method.
+Here you are storing in your database the last transaction ID committed.
+Why should you do that? Remember that if a transaction fails, Storm will be replaying it as many times as necessary.
+If you don’t make sure that you already processed the transaction, you could overcount and the whole idea of a transactional topology would be useless.
+So remember: store the last transaction ID committed and check against it before committing.
+Partitioned Transactional Spouts It is very common for a spout to read batches of tuples from a set of partitions.
+Continuing the example, you could have several Redis databases and the tweets could be split across those Redis databases.
+By implementing IPartitionedTransactionalSp out, Storm offers some facilities to manage the state for every partition and guarantee the ability to replay.
+Let’s see how to modify your previous TweetsTransactionalSpout so it can handle partitions.
+In the numPartitions method, tell Storm how many partitions you have.
+In an IPartitionedTransactionalSpout, the metadata is managed by the emitter directly.
+There are two important methods here, emitPartitionBatchNew and emitPartition Batch.
+In emitPartitionBatch, you receive from Storm the partition parameter, which tells you which partition you should retrieve the batch of tuples from.
+In this method, decide which tweets to retrieve, generate the corresponding metadata, call emitParti tionBatch, and return the metadata, which will be stored immediately in Zookeeper.
+Storm will send the same transaction ID for every partition, as the transaction exists across all the partitions.
+Read from the partition the tweets in the emitPartition Batch method, and emit the tuples of the batch to the topology.
+If the batch fails, Storm will call emitPartitionBatch with the stored metadata to replay the batch.
+You can check the code at ch08-transactional topologies on GitHub.
+Opaque Transactional Topologies So far, you might have assumed that it’s always possible to replay a batch of tuples for the same transaction ID.
+What happens then? It turns out that you can still achieve exactly once semantics, but it requires some more development effort as you will need to keep previous state in case the transaction is replayed by Storm.
+Since you can get different tuples for the same transaction ID, when emitting in different moments in time, you’ll need to reset to that previous state and go from there.
+For example, if you are counting total received tweets, you have currently counted five and in the last transaction, with ID 321, you count eight more.
+You would keep those transaction ID 321 is emitted again and since you get different tuples, you count four more instead of eight, the committer will detect that is the same transaction ID, it would reset to the previousCount of five, and will add those new four and update current Count to nine.
+Also, every transaction that is being processed in parallel will be cancelled when a previous transaction in cancelled.
+This is to ensure that you don’t miss anything in the middle.
+Your spout should implement IOpaquePartitionedTransactionalSpout and as you can see, the coordinator and emitters are very simple.
+The most interesting method is emitPartitionBatch, which receives the previous committed metadata.
+You should use that information to generate a batch of tuples.
+This batch won’t be necessarily the same, as was said earlier, you might not be able to reproduce the same batch.
+The rest of the job is handled by the committer bolts, which use the previous state.
+The Storm client will enable you to use the commands to manage topologies into a cluster.
+Download the latest stable version from the Storm site (https://github.com/nathan marz/storm/downloads) at this moment the latest version is storm-0.6.2
+Once you’ve downloaded the version, unzip it into the /usr/local/bin/storm to have storm in a shared directory.
+Next, add the storm binary PATH variable to be able to run the storm command without having to put the complete path, if we’ve used the /usr/local/bin/storm.
+After that, you need to create a Storm local configuration where you’ll say which is your nimbus host.
+To do it, create a file in ~/.storm/storm.yaml with the following content:
+Now, you have the needed to manage topologies in your Storm cluster.
+The Storm client contains all the storm commands needed to run a Storm cluster, but to run it you need to install other tools and configure some params.
+To manage the topologies into the cluster, you have a bunch of very simple and useful commands that allow you to submit, kill, disable, re-enable, and rebalance our topology.
+The jar command is responsible for executing your topology and submitting it to the cluster through the StormSubmitter object into the main class.
+The class-with-the-main will be the main place where the StormSubmitter is executed and the rest of arguments will be the params that receive our main method.
+With Storm you have the capability to suspend or disable a running topology, deactivating the topology spouts, so when we deactivate the topology, all emitted tuples will be processed, but the nextTuple method of the topology spouts will not be called.
+If you want re-activate a disabled topology, run: storm activate topology-name.
+If you want to destroy a topology, you can use the kill command.
+This will destroy the topology in a secure fashion, disabling the topology first and waiting for the duration of the topology’s message, allowing the topology to finish the process of the current streams.
+You can change the waiting time after the topology is deactivated using the -w [time-in-sec] parameter when you run the Storm kill command.
+Rebalance enables you to redistribute the tasks through all worker tasks into a cluster.
+This is a powerful command when you have not balanced your tasks.
+For example, when you add nodes to a running cluster.
+The rebalance command will deactivate the topology for the duration of message timeout and redistribute the workers so Storm will re-activate the topology.
+If you want to use another deactivation duration, you could use the -w parameter to set it:
+You can see the complete list of Storm commands by running the Storm client without parameters.
+The complete description of these commands can be found at https://github.com/nathanmarz/storm/wiki/Com mand-line-client.
+All of the following steps, the Java, Python and unzip commands will be required in Nimbus and the supervisor process.
+To install JZMQ, run: git clone https://github.com/nathanmarz/jzmq.git cd jzmq ./autogen.sh ./configure make sudo make install.
+Once you have installed the native libraries, download the latest Storm stable version (Storm 0.7.1 at the time of this writing), and unzip it.
+Modify the configuration file to add your Storm cluster configuration (you can see all default configurations on defaults.yaml in the Storm repository)
+To modify the storm cluster configuration, you’ll need to edit the conf/storm.yaml file located in the Storm folder and set (at least) the following parameters:
+A local directory where the Storm process will store internal data.
+It’s very important that the user who runs the storm process has write access over this directory.)
+When you’ve configured these parameters, you can run all the Storm processes.
+If you want to do a local test, you can configure nimbus.host to localhost.
+To start one process, run into the Storm folder: ./bin/storm process name.
+Storm comes with an excellent utility called Storm UI, which enables you to monitor your topologies.
+Download the latest stable version from the Redis website (at the time of this writing, 2.4.14)
+This will compile Redis and leave executable files in your PATH so you can start using Redis.
+You’ll find more information on the Redis website as well as documentation on commands and design considerations.
+At the time of this writing, the latest version of NodeJS is 0.6.19
+Extract the content of the file and run ./configure, make, and make install.
+You’ll find more information on the official site, as well as documentation on how to install Node.js on different platforms.
+Building and Testing In order to build the example, you should start the redis-server on your machine.
+After that, run the mvn command to effectively compile and test the application.
+Running the Topology Once the redis-server is running and the build is successful, start the topology running in a LocalCluster.
+After the topology is started, you can start the Node.js Web Application by running the following:
+About the Authors Jonathan Leibiusky, Head of Research and Development at MercadoLibre, has been working in software development for more than 10 years.
+He has developed and contributed to several new and existing open source projects, including “Jedis”, which is being used actively by VMware and SpringSource.
+Gabriel Eisbruch is a computer science student who has been working as a Software Architect in Mercadolibre (NASDAQ MELI) since 2007
+In the last year, he has specialized in big data analysis, implementing MercadoLibre’s Hadoop cluster.
+Dario Simonassi has been working in software development for more than 10 years.
+Since 2004, he has specialized in large website operations and performance.
+Today Dario is the Chief Architect of MercadoLibre (NASDAQ MELI) where he leads the architecture team.

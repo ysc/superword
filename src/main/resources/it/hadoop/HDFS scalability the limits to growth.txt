@@ -1,0 +1,135 @@
+Shvachko is a principal software engineer at Yahoo!, where he develops HDFS.
+He specializes in efficient data structures and algorithms for large-scale distributed storage systems.
+He discovered a new type of balanced trees, S-trees, for optimal indexing of unstructured data, and he was a primary developer of an S-tree-based Linux file system, treeFS, a prototype of reiserFS.
+Based on experience with the largest deployment of HDFS, I provide an analysis of how the amount of RAM of a single namespace server correlates with the storage capacity of Hadoop clusters, outline the advantages of the single-node namespace server architecture for linear performance scaling, and establish practical limits of growth for this architecture.
+This study may be applicable to issues with other distributed file systems.
+During the past several years Hadoop installations have grown from a handful of nodes to thousands.
+It is now used in many organizations around the world.
+What was clear then has now become a reality: the need for large distributed storage systems backed by distributed computational frameworks like Hadoop MapReduce is imminent.
+Today, when we are on the verge of the Zettabyte Era, it is time to take a retrospective view of the targets and analyze what has been achieved, how aggressive our views on the evolution and needs of the storage world have been, how the achievements compare to competing systems, and what our limits to growth may be.
+The main four-dimensional scale requirement targets for HDFS were formulated [7] as follows:
+Four thousand node clusters successfully ran jobs with a total of more than 14,000 tasks reading from or writing to HDFS simultaneously.
+The bottom line is that we achieved the target in petabytes and got close to the target in the number of files, but this is done with a smaller number of nodes, and the need to support a workload close to 100,000 clients has not yet materialized.
+The question is now whether the goals are feasible with the current system architecture.
+And the main concern is the single namespace server architecture.
+This article studies scalability and performance limitations imposed on HDFS by this architecture.
+The methods developed in this work could be useful or applicable to other distributed systems with similar architecture.
+The study is based on experience with today’s largest deployments of Hadoop.
+The performance benchmarks were run on real clusters, and the storage capacity estimates were verified by extrapolating measurements taken from production systems.
+Being a part of Hadoop core and serving as a storage layer for the Hadoop MapReduce framework, HDFS is also a stand-alone distributed file system like Lustre, GFS, PVFS, Panasas, GPFS, Ceph, and others.
+As with most contemporary distributed file systems, HDFS is based on an architecture with the namespace decoupled from the data.
+The namespace forms the file system metadata, which is maintained by a dedicated server called the name-node.
+The file system data is accessed via HDFS clients, which first contact the name-node for data location and then transfer data to (write) or from (read) the specified data-nodes (see Figure 1)
+The main motivation for decoupling the namespace from the data is the scalability of the system.
+Metadata operations are usually fast, whereas data transfers can last a long time.
+If a combined operation is passed through a single server (as in NFS), the data transfer component dominates the.
+In the decoupled architecture, fast metadata operations from multiple clients are addressed to the (usually single) namespace server, and the data transfers are distributed among the data servers utilizing the throughput of the whole cluster.
+The name-node’s metadata consist of the hierarchical namespace and a block to data-node mapping, which determines physical block locations.
+In order to keep the rate of metadata operations high, HDFS keeps the whole namespace in RAM.
+The name-node persistently stores the namespace image and its modification log (the journal) in external memory such as a local or a remote hard drive.
+The namespace image and the journal contain the HDFS file and directory names and their attributes (modification and access times, permissions, quotas), including block IDs for files, but not the locations of the blocks.
+The locations are reported by the data-nodes via block reports during startup and then periodically updated once an hour by default.
+If the name-node fails, its latest state can be restored by reading the namespace image and replaying the journal.
+Since the name-node is a single container of the file system metadata, it naturally becomes a limiting factor for file system growth.
+In order to make metadata operations fast, the name-node loads the whole namespace into its memory, and therefore the size of the namespace is limited by the amount of RAM available to the name-node.
+This estimate does not include transient data structures, which the name-node creates for replicating or deleting blocks, etc., removing them when finished.
+On new (recently out of the factory) nodes, the rate is three times higher.
+In order to provide data reliability HDFS uses block replication.
+Initially, each block is replicated by the client to three data-nodes.
+A replication factor of three is the default system parameter, which can either be configured or specified per file at creation time.
+Once the block is created, its replication is maintained by the system automatically.
+The name-node detects failed data-nodes, or missing or corrupted individual replicas, and restores their replication by directing the copying of the remaining replicas to other nodes.
+These approaches, although more space efficient, also involve performance tradeoffs for data recovery.
+With striping, depending on the redundancy requirements, the system may need to read two or more of the remaining data segments from the nodes it has been striped to in order to reconstruct the missing one.
+For HDFS, the most important advantage of the replication technique is that it provides high availability of data in high demand.
+This is actively exploited by the MapReduce framework, as it increases replications of configuration and job library files to avoid contention during the job startup, when multiple tasks access the same files simultaneously.
+Each block replica on a data-node is represented by a local (native file system) file.
+The size of this file equals the actual length of the block and does not require extra space to round it up to the maximum block size, as traditional file systems do.
+Thus, if a block is half full it needs only half of the space of the full block on the local drive.
+A slight overhead is added, since HDFS also stores a second, smaller metadata file for each block replica, which contains the checksums for the block data.
+Replication is important both from reliability and availability points of view, and the default replication value of 3 seem to be reasonable in most cases for large, busy clusters.
+As a rule of thumb, the correlation between the representation of the metadata in RAM and physical storage space required to store data referenced by this namespace is:
+The rule should not be treated the same as, say, the Pythagorean Theorem, because the correlation depends on cluster parameters, the block-to-file ratio, and the block size, but it can be used as a practical estimate for configuring cluster resources.
+Using Conclusion 2, we can estimate the number of data-nodes the cluster should have in order to accommodate namespace of a certain size.
+The remaining space is allocated for MapReduce transient data, system logs, and the OS.
+To be consistent with the target requirement of 10,000 nodes, each data-node should be configured with eight hard drives.
+The total storage capacity of such a cluster is 60PB.
+Note that these estimates are true under the assumption that the block-perfile ratio of 1.5 and the block size remain the same.
+If the ratio or the block size increases, a gigabyte of RAM will support more petabytes of physical storage, and vice versa.
+Sadly, based on practical observations, the block-to-file ratio tends to decrease during the lifetime of a file system, meaning that the object count (and therefore the memory footprint) of a single namespace server grows faster than the physical data storage.
+That makes the object-count problem, which becomes a file-count problem when λ → 1, the real bottleneck for cluster scalability.
+The name-node maintains a list of registered data-nodes and blocks belonging to each data-node.
+A data-node identifies block replicas in its possession to the name-node by sending a block report.
+A block report contains block ID, length, and the generation stamp for each block replica.
+The first block report is sent immediately after the data-node registration.
+It reveals block locations, which are not maintained in the namespace image or in the journal on the name-node.
+Subsequently, block reports are sent periodically every hour by default and serve as a sanity check, providing that the name-node has an up-to-date view of block replica distribution on the cluster.
+During normal operation, data-nodes periodically send heartbeats to the name-node to indicate that the data-node is alive.
+If the name-node does not receive a heartbeat from a data-node in 10 minutes, it pronounces the data-node dead and schedules its blocks for replication on other nodes.
+Heartbeats also carry information about total and used disk capacity and the number of data transfers currently performed by the node, which plays an.
+The communication on HDFS clusters is organized in such a way that the name-node does not call data-nodes directly.
+It uses heartbeats to reply to the data-nodes with important instructions.
+These commands are important for maintaining the overall system integrity; it is therefore imperative to keep heartbeats frequent even on big clusters.
+The name-node is optimized to process thousands of heartbeats per second without affecting other name-node operations.
+The block reports and heartbeats form the internal load of the cluster.
+If the internal load is too high, the cluster becomes dysfunctional, able to process only a few, if any, external client operations such as 1s, read, or write.
+This section analyzes what percentage of the total processing power of the name-node is dedicated to the internal load.
+This is what it takes, as we learned in previous sections, to conform to the targeted requirements.
+As usual, our analysis is based on the assumption that the block-to-file ratio is 1.5
+The ratio particularly means that every other block on a data-node is half full.
+This is the size of an average block report sent by a data-node to the name-node.
+The sending of block reports is randomized so that they do not come to the name-node together or in large waves.
+Thus, the average number of block reports the name-node receives is 10,000/hour, which is about three reports per second.
+The heartbeats are not explicitly randomized by the current implementation and, in theory, can hit the name-node together, although the likelihood of this is very low.
+In order to measure the name-node performance, I implemented a benchmark called NNThroughputBenchmark, which now is a standard part of the HDFS code base.
+NNThroughputBenchmark is a single-node benchmark, which starts a name-node and runs a series of client threads on the same node.
+Each client repetitively performs the same name-node operation by directly calling the name-node method implementing this operation.
+Then the benchmark measures the number of operations performed by the name-node per second.
+The reason for running clients locally rather than remotely from different nodes is to avoid any communication overhead caused by RPC connections and serialization, and thus reveal the upper bound of pure name-node performance.
+Table 2 summarizes the name-node throughput with respect to the two internal operations.
+Note that the block report throughput is measured in the number of blocks processed by the name-node per second.
+As we need to process only three reports per second, we may conclude that less than 30% of the name-node’s total processing capacity will be used for handling block reports.
+Thus, the internal cluster load directly depends on the average block report size and the number of the reports.
+Another way to say this is that the internal load is proportional to the number of nodes in the cluster and the average number of blocks on a node.
+Thus, if a node had only 30,000 blocks, half of the estimated amount, then the name-node would dedicate only 15% of its processing resources to the internal load, because the nodes would send the same number of block reports but the size of the block reports would be smaller by a half compared to the original estimate.
+Conversely, if the average number of blocks per node grows, then the internal load will grow proportionally.
+In particular, it means the decrease in block-to-file ratio (more small files with the same file system size) increases the internal load and therefore negatively affects the performance of the system.
+The good news from the previous section is that the name-node can still use 70% of its time to process external client requests.
+If all the clients started sending arbitrary requests to the name-node with very high frequency, the name-node most probably would have a hard time coping with the load and would become unresponsive, potentially sending the whole cluster into a tailspin, because internal load requests do not have priority over regular client requests.
+But this can happen even on smaller clusters with extreme load levels.
+We first assume that all our 100,000 clients running different tasks provide read-only load on the HDFS cluster.
+This is typical for the map stage of a job execution.
+Usually a map task produces map output, which is written to a local hard drive.
+Since MapReduce servers (task-trackers) share nodes with HDFS datanodes, map output inevitably competes with HDFS reads.
+This reduces the HDFS read throughput, but also decreases the load on the name-node.
+Thus, for the sake of this analysis we may assume that our tasks do not produce any output, because otherwise the load on the name-node would be lower.
+Figure 1 illustrates that client reads conceptually consist of two stages:
+The benchmark is a map-reduce job with multiple mappers and a single reducer.
+Each mapper writes (reads) bytes to (from) a distinct file.
+Mappers within the job either all write or all read, and each mapper transfers the same amount of data.
+The mappers collect the I/O stats and pass them to the reducer.
+The reducer averages them and summarizes the I/O throughput for the job.
+The key measurement here is the byte transfer rate of an average mapper.
+Table 3 summarizes the average client read and write throughput provided by DFSIO benchmark.
+According to our assumptions, it will then go to the name-node to get block locations for another chunk of data or a file.
+For writes we consider a different distcp-like job load, which produces a lot of writes.
+As above, we assume that an average write size per client is 96MB.
+Furthermore, this does not yet take into account the 125,000 confirmations (three per block-create) sent by data-nodes to the name-node for each successfully received block replica.
+Although these confirmations are not as heavy as create-blocks, this is still a substantial additional load.
+They will experience substantial idle cycles waiting for replies from the namenode.
+Distributed systems are designed with the expectation of linear performance scaling: more workers should be able to produce a proportionately larger amount of work.
+The estimates above (working the math backwards) show that 10,000 clients can saturate the name-node for write-dominated workloads.
+On a 10,000-node cluster this is only one client per node, while current Hadoop clusters are set up to run up to four clients per node.
+This makes the single name-node a bottleneck for linear performance scaling of the entire cluster.
+There is no benefit in increasing the number of writers.
+A smaller number of clients will be able to write the same amount of bytes in the same time.
+Such a large difference in performance is attributed to get block locations (read workload) being a memory-only operation, while creates (write workload) require journaling, which is bounded by the local hard drive performance.
+There are ways to improve the single name-node performance, but any solution intended for single namespace server optimization lacks scalability.
+Looking into the future, especially taking into account that the ratio of small files tends to grow, the most promising solutions seem to be based on distributing the namespace server itself both for workload balancing and for reducing the single server memory footprint.
+There are just a few distributed file systems that implement such an approach.
+Ceph [9] has a cluster of namespace servers (MDS) and uses a dynamic subtree partitioning algorithm in order to map the namespace tree to MDSes evenly.
+The new GFS can have hundreds of namespace servers (masters) with 100 million files per master.
+Each file is split into much smaller size than before (1 vs.
+The details of the design, the scalability, and performance facts are not yet known to the wider community.
+A file is assigned to a particular MDS using a hash function on the file name.
+I would like to thank Jakob Homan and Rik Farrow for their help with the article.

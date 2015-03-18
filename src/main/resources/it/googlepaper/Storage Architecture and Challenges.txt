@@ -1,0 +1,35 @@
+What keeps us programming: Enabling application developers Improving data locality and availability Improving performance of shared storage.
+A note from the trenches: "You know you have a large storage system when you get paged at 1 AM because you only have a few petabytes of storage left."
+What has changed: Cost of GB of storage is lower Impact of machine failures is higher Machine throughput is higher.
+What has not changed: Latency of an RPC Disk drive throughput and seek latency.
+Application programmers: Never ask simple questions of the data Change their data access patterns frequently Build and use APIs that hide storage requests Expect uniformity of performance Need strong availability and consistent operations Need visibility into distributed storage requests.
+Early Google: US-centric traffic Batch, latency-insensitive indexing processes Document "snippets" serving (single seek)
+Current day: World-wide traffic Continuous crawl and indexing processes (Caffeine) Seek-heavy, latency-sensitive apps (Gmail) Person-to-person, person-to-group sharing (Docs)
+Important future direction: Our workloads are increasingly seek heavy Best usages are still being explored.
+Concerns: Availability of devices Endurance not yet proven in the field.
+Scenario: Roger shares a blog with his 100,000 followers Rafa follows Roger and all other ATP players Rafa searches all the blogs he can read.
+To make search fast, do we copy data to each user? YES: Huge fan-out on update of a document NO: Huge fan-in when searching documents.
+To make things more complicated: Freshness requirements Heavily-versioned documents (e.g.
+Laws and interpretations are constantly changing Governments have data privacy requirements Companies have email and doc.
+Things to think about: Major impact on storage design and performance Are these storage- or application-level features? Versioning of collaborative documents.
+Ensures availability within a cluster File system (GFS/Colossus), structured storage (Bigtable)
+Planet Ensures availability across clusters Blob storage, structured storage (Spanner) ~1 cluster event / quarter (planned/unplanned)
+Building-block for higher-level storage Single spot for tuning disk access peformance Management of node addition, repair and removal Provides user resource accounting (e.g.
+Next-generation cluster-level file system Automatically sharded metadata layer Data typically written using Reed-Solomon (1.5x) Client-driven replication, encoding and replication Metadata space has enabled availability analyses.
+Field data and simulations show improved MTTF More flexible cost vs.
+Fault bursts are important: Most small bursts have no rack correlation Most large bursts are highly rack-correlated.
+The basics: Cluster-level structured storage (2003) Exports a distributed, sparse, sorted-map Splits and rebalances data based on size and load Asynchronous, eventually-consistent replication Uses GFS or Colossus for file storage.
+The lessons: Hard to share distributed storage resources Distributed transactions are badly needed Application programmers want sync.
+Typical scenario: Pete runs video encoding using CPU & local disk Roger runs a MapReduce that does heavy GFS reads Rafa runs seek-heavy Gmail on Bigtable w/ GFS Andre runs seek-heavy Docs on Bigtable w/ GFS.
+Things that go wrong: Distribution of disks being accessed is not uniform Non-storage system usage impacts CPU and disk MapReduce impacts disks and buffer cache GMail and Buzz both need hundreds of seeks NOW.
+The basics: Planet-scale large, immutable blob storage Examples: Photos, videos, and email attachments Built on top of Bigtable storage system Manual, access- and auction-based data placement Reduces costs by:
+De-duplicating data chunks Adjusting replication for cold data Migrating data to cheaper storage.
+The basics: Planet-scale structured storage Next generation of Bigtable stack Provides a single, location-agnostic namespace Manual and access-based data placement.
+Improved primitives: Distributed cross-group transactions Synchronous replication groups (Paxos) Automatic failover of client requests.
+End-user latency really matters Application complexity is less if close to its data Countries have legal restrictions on locating data.
+People want offline copies of their data Improves speed, availability and redundancy.
+Scenario: Roger is keeping a spreadsheet with Rafa Roger syncs copy to his laptop and edit Roger wants to see data on laptop from phone.
+Things to think about: Conflict resolution increases application complexity Offline codes is often very application specific Do users really need peer-to-peer synchronization?
+Layers: Generate API impedence mismatches Have numerous failure and queuing points Make capacity and perf.
+Moving data is: Hard: Many moving parts, and different priorities Expensive & time-consuming: Networks involved.
+Our system: Optimized for large, latency-insensitive networks Uses large windows and constant-bit rate UDP Produces smoother flow than TCP.

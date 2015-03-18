@@ -1,0 +1,259 @@
+Abstract Increasing scale and the need for rapid response to changing requirements are hard to meet with current monolithic cluster scheduler architectures.
+This restricts the rate at which new features can be deployed, decreases efficiency and utilization, and will eventually limit cluster growth.
+We present a novel approach to address these needs using parallelism, shared state, and lock-free optimistic concurrency control.
+We compare this approach to existing cluster scheduler designs, evaluate how much interference between schedulers occurs and how much it matters in practice, present some techniques to alleviate it, and finally discuss a use case highlighting the advantages of our approach – all driven by real-life Google production workloads.
+Large-scale compute clusters are expensive, so it is important to use them well.
+Utilization and efficiency can be increased by running a mix of workloads on the same machines: CPU- and memory-intensive jobs, small and large ones, and a mix of batch and low-latency jobs – ones that serve end user requests or provide infrastructure services such as storage, naming or locking.
+This consolidation reduces the amount of hardware required for a workload, but it makes the scheduling problem (assigning jobs to machines) more complicated: a wider range of requirements.
+Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page.
+To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.
+Figure 1: Schematic overview of the scheduling architectures explored in this paper.
+Meanwhile, clusters and their workloads keep growing, and since the scheduler’s workload is roughly proportional to the cluster size, the scheduler is at risk of becoming a scalability bottleneck.
+Over the years, it has evolved into a complicated, sophisticated system that is hard to change.
+As part of a rewrite of this scheduler, we searched for a better approach.
+We identified the two prevalent scheduler architectures shown in Figure 1
+Monolithic schedulers use a single, centralized scheduling algorithm for all jobs (our existing scheduler is one of these)
+Monolithic schedulers do not make it easy to add new policies and specialized implementations, and may not scale up to the cluster sizes we are planning for.
+Two-level scheduling architectures do appear to provide flexibility and parallelism, but in practice their conservative resource-visibility and locking algorithms limit both, and make it hard to place difficultto-schedule “picky” jobs or to make decisions that require access to the state of the entire cluster.
+Our solution is a new parallel scheduler architecture built around shared state, using lock-free optimistic concurrency control, to achieve both implementation extensibility and performance scalability.
+We find that the Omega shared-state architecture can deliver performance competitive with or superior to other architectures, and that interference in real-world settings is low.
+The ability to access the entire cluster state in a scheduler brings other benefits, too, and we demonstrate this by showing how MapReduce jobs can be accelerated by using spare resources.
+These requirements evolve over time, and, in our experience, it becomes increasingly difficult to add new policies to a single monolithic scheduler.
+This is not just due to accumulation of code as functionality grows over time, but also because some of our users have come to rely on a detailed understanding of the internal behavior of the system to get their work done, which makes both its functionality and structure difficult to change.
+One important driver of complexity is the hardware and workload heterogeneity that is commonplace in large compute clusters [24]
+To demonstrate this, we examine the workload mix on three Google production compute clusters that we believe to be representative.
+Figure 2: Batch and service workloads for the clusters A, B, and C: normalized numbers of jobs (J) and tasks (T), and aggregate requests for CPU-core-seconds (C) and RAM GBseconds (R)
+The striped portion is the service jobs; the rest is batch jobs.
+Figure 3: Cumulative distribution functions (CDFs) of job runtime and job inter-arrival times for clusters A, B, and C.
+In this and subsequent graphs, solid lines represent batch jobs, and dashed lines are for service jobs.
+There are many ways of partitioning a cluster’s workload between different schedulers.
+Here, we pick a simple twoway split between long-running service jobs that provide end-user operations (e.g., web services) and internal infrastructure services (e.g., BigTable [5]), and batch jobs which perform a computation and then finish.
+Although many other splits are possible, for simplicity we put all low priority jobs1
+A job is made up of one or more tasks – sometimes thousands of tasks.
+Why does this matter? Many batch jobs are short, and fast turnaround is important, so a lightweight, low-quality.
+Figure 4: CDF of the number of tasks in a job for clusters A, B, and C.
+But long-running, high-priority service jobs (20–40% of them run for over a month) must meet stringent availability and performance targets, meaning that careful placement of their tasks is needed to maximize resistance to failures and provide good performance.
+Indeed, the Omega service scheduler will try to place tasks to resist both independent and coordinated failures, which is an NP-hard chance-constrained optimization problem with tens of failure domains that nest and overlap.
+Our previous implementation could take tens of seconds to do this.
+While it is very reasonable to spend a few seconds making a decision whose effects last for several weeks, it can be problematic if an interactive batch job has to wait for such a calculation.
+In summary, what we require is a scheduler architecture that can accommodate both types of jobs, flexibly support job-specific policies, and also scale to an ever-growing amount of scheduling work.
+The next section examines some of these requirements in greater detail, as well as some approaches to meeting them.
+We begin with a short survey of the design issues cluster schedulers must address, followed by an examination of some different scheduler architectures that might meet them.
+Some systems use multiple job queues to hold the job requests (e.g., for different priorities), but that does not affect the scheduling parallelism: we are more interested in how many schedulers are assigned to process the queues.
+Schedulers can be allowed to select from all of the cluster resources, or limited to a subset to streamline decision making.
+The former increases the opportunity to make better decisions, and is important when “picky” jobs need to be placed into a nearly-full cluster, or when decisions rely on overall state, such as the total amount of unused resources.
+Schedulers can have greater flexibility in placing tasks if they can preempt existing assignments, as opposed to merely considering idle resources, but this comes at the cost of wasting some work in the preempted tasks.
+If schedulers compete for resources, multiple schedulers may attempt to claim the same resource simultaneously.
+A pessimistic approach avoids the issue by ensuring that a particular resource is only made available to one scheduler at a time; an optimistic one detects the (hopefully rare) conflicts, and undoes one or more of the conflicting claims.
+The optimistic approach increases parallelism, but potentially increases the amount of wasted scheduling work if conflicts occur too frequently.
+Since jobs typically contain many tasks, schedulers can have different policies for how to schedule them: at one extreme is atomic all-or-nothing gang scheduling of the tasks in a job, at the other is incremental placement of tasks as resources are found for them.
+An all-or-nothing policy can be approximated by incrementally acquiring resources and hoarding them until the job can be started, at the cost of wasting those resources in the meantime.
+All have downsides: gang scheduling may be needed by some jobs (e.g., MPI programs), but can unnecessarily delay the start of others that can make progress with only a fraction of their requested resources (e.g., MapReduce jobs)
+Incremental resource acquisition can lead to deadlock if no backoff mechanism is provided, while hoarding reduces cluster utilization and can also cause deadlock.
+Examples include achieving various types of fairness, and a common agreement on the relative importance of work, especially if one scheduler can preempt others’ tasks.
+Strict enforcement of these behaviors can be achieved with centralized control, but it is also possible to rely on emergent behaviors to approximate the desired behavior.
+Techniques such as limiting the range of priorities that a scheduler can wield can provide partial enforcement of desired behaviors, and compliance to cluster-wide policies can be audited post facto to eliminate the need for checks in a scheduler’s critical code path.
+This space is obviously larger than can be explored in a single paper; we focus on the combinations that are summarized in Table 1, and described in greater detail in the next few sections.
+Our baseline for comparisons is a monolithic scheduler that has but a single instance, no parallelism, and must implement all the policy choices in a single code base.
+This approach is common in the high-performance computing (HPC) world, where a monolithic scheduler usually runs a.
+Another way to support different scheduling policies is to provide multiple code paths in the scheduler, running separate scheduling logic for different job types.
+Google’s current cluster scheduler is effectively monolithic, although it has acquired manyoptimizations over the years to provide internal parallelism and multi-threading to address head-of-line blocking and scalability.
+Although it has been hugely successful, our scheduler has experienced several years of evolution and organic software growth, and we have found that it is surprisingly difficult to support a wide range of policies in a sustainable manner using a single-algorithm implementation.
+In the end, this kind of software engineering consideration, rather than performance scalability, was our primary motivation to move to an architecture that supported concurrent, independent scheduling components.
+This leads to fragmentation and suboptimal utilization, which is not viable for us, and so we did not explore this option any further.
+An obvious fix to the issues of static partitioning is to adjust the allocation of resources to each scheduler dynamically, using a central coordinator to decide how many resources each sub-cluster can have.
+The allocator avoids conflicts by only offering a given resource to one framework at a time, and attempts to achieve dominant resource fairness (DRF) [11] by choosing the order and the sizes of its offers.3 Because only one framework is examining a resource at a time, it effectively holds a lock on that resource for the duration of a scheduling decision.
+Mesos works best when tasks are short-lived and relinquish resources frequently, and when job sizes are small compared to the size of the cluster.
+As a result, it cannot support preemption or policies requiring access to the whole cluster state: a framework simply does not have any knowledge of resources that have been allocated to other schedulers.
+Mesos uses resource hoarding to achieve gang scheduling, and can potentially deadlock as a result.
+It might appear that YARN [21] is a two-level scheduler, too.
+In YARN, resource requests from per-job application masters are sent to a single global scheduler in the resource master, which allocates resources on various machines, subject to application-specified constraints.
+But the application masters provide job-management services, not scheduling, so YARN is effectively a monolithic scheduler architecture.
+At the time of writing, YARN only supports one resource type (fixed-sized memory chunks)
+Our experience suggests that it will eventually need a rich API to the resource master.
+This negatively impacts Mesos as framework decision times grow; see §4.2
+Although YARN application masters can request resources on particular machines, it is unclear how they acquire and maintain the state needed to make such placement decisions.
+The alternative used by Omega is the shared state approach: we grant each scheduler full access to the entire cluster, allow them to compete in a free-for-all manner, and use optimistic concurrency control to mediate clashes when they update the cluster state.
+Exploring this tradeoff is the primary purpose of this paper.
+There is no central resource allocator in Omega; all of the resource-allocation decisions take place in the schedulers.
+We maintain a resilient master copy of the resource allocations in the cluster, which we call cell state.4 Each scheduler is given a private, local, frequently-updated copy of cell state that it uses for making scheduling decisions.
+The scheduler can see the entire state of the cell and has complete freedom to lay claim to any available cluster resources provided it has the appropriate permissions and priority – even ones that another scheduler has already acquired.
+Once a scheduler makes a placement decision, it updates the shared copy of cell state in an atomic commit.
+At most one such commit will succeed in the case of conflict: effectively, the time from state synchronization to the commit attempt is a transaction.
+Whether or not the transaction succeeds, the scheduler resyncs its local copy of cell state afterwards and, if necessary, re-runs its scheduling algorithm and tries again.
+Omega schedulers operate completely in parallel and do not have to wait for jobs in other schedulers, and there is no inter-scheduler head of line blocking.
+To prevent conflicts from causing starvation, Omega schedulers typically choose to use incremental transactions, which accept all but the conflicting changes (i.e., the transaction provides atomicity but not independence)
+A scheduler can instead use an allor-nothing transaction to achieve gang scheduling: either all tasks of a job are scheduled together, or none are, and the scheduler must try to schedule the entire job again.
+This helps to avoid resource hoarding, since a gang-scheduled job can preempt lower-priority tasks once sufficient resources are available and its transaction commits, and allow other schedulers’ jobs to use the resources in the meantime.
+Different Omega schedulers can implement different policies, but all must agree on what resource allocations are.
+A cell is the management unit for part of a physical cluster; a cluster may support more than one cell.
+The two-level scheme’s centralized resource allocator component is thus simplified to a persistent data store with validation code that enforces these common rules.
+Since there is no central policy-enforcement engine for high-level cluster-wide goals, we rely on these showing up as emergent behaviors that result from the decisions of individual schedulers.
+In this, it helps that fairness is not a primary concern in our environment: we are driven more by the need to meet business requirements.
+In support of these, individual schedulers have configuration settings to limit the total amount of resources they may claim, and to limit the number of jobs they admit.
+Finally, we also rely on postfacto enforcement, since we are monitoring the system’s behavior anyway.
+The performance viability of the shared-state approach is ultimately determined by the frequency at which transactions fail and the costs of such failures.
+The rest of this paper explores these issues for typical cluster workloads at Google.
+To understand the tradeoffs between the different approaches described before (monolithic, two-level and shared-state schedulers), we built two simulators:
+A lightweight simulator driven by synthetic workloads using parameters drawn from empirical workload distributions.
+We use this to compare the behaviour of all three architectures under the same conditions and with identical workloads.
+By making some simplifications, this lightweight simulator allows us to sweep across a broad range of operating points within a reasonable runtime.
+The lightweight simulator also does not contain any proprietary Google code and is available as open source software.5
+A high-fidelity simulator that replays historic workload traces from Google production clusters, and reuses much of the Google production scheduler’s code.
+Figure 5: Schedulers’ job wait time, as a function of tjob in the monolithic single-path case, tjob(service) in the monolithic multi-path and shared-state cases.
+Figure 6: Schedulers’ busyness, as a function of tjob in the monolithic single-path case, tjob(service) in the monolithic multipath and shared-state cases.
+The rest of this section describes the simulators and our experimental setup.
+In the lightweight simulator, we trade speed and flexibility for accuracy by making some simplifying assumptions, summarized in Table 2
+The simulator is driven by a workload derived from from real workloads that ran on the same clusters and time periods discussed in §2.1
+While the high-fidelity simulator is driven by the actual workload traces, for the lightweight simulator we analyze the workloads to obtain distributions of parameter values such as the number of tasks per job, the task duration, the per-task resources and job inter-arrival times, and then synthesize jobs and tasks that conform to these distributions.
+At the start of a simulation, the lightweight simulator initializes cluster state using task-size data extracted from the.
+In production, Google speculatively over-commits resources, but the mechanisms and policies for this are too complicated to be replicated in the lightweight simulator.
+The simulator can support multiple scheduler types, but initially we consider just two: batch and service.
+The two types of job have different parameter distributions, summarized in §2.1
+To improve simulation runtime in pathological situations, we limit any single job to 1,000 scheduling attempts, and the simulator abandons the job at this point if some tasks are still unscheduled.
+In practice, this only matters for the two-level scheduler (see §4.2), and is rarely triggered by the others.
+We model the scheduler decision time tasks per job, where tjob is a per-job overhead and ttask represents the incremental cost to place each task.
+This turns out to be a reasonable approximation of Google’s current cluster scheduling logic because most jobs in our real-life.
+Our values for tjob and ttask are based on somewhat conservative6
+Many of our experiments explore the effects of varying tdecision(service) for the service scheduler because we are interested in exploring how Omega is affected by the longer decision times needed for sophisticated placement algorithms.
+We also vary the job arrival rate, λjobs, to model changes to the cluster workload level.
+Typically, users evaluate the perceived quality of cluster scheduling by considering the time until their jobs start running, as well as their runtime to completion.
+We refer to the former metric as job wait time, which we define as the difference between the job submission time and the beginning of the job’s first scheduling attempt.
+Our schedulers process one request at a time, so a busy scheduler will cause enqueued jobs to be delayed.
+Job wait time thus measures the depth of scheduler queues, and will increase as the scheduler is busy for longer – either because it receives more jobs, or because they take longer to schedule.
+A common production service level objective (SLO) for job wait time is 30s.
+Job wait time depends on the scheduler busyness: the fraction of time in which the scheduler is busy making scheduling decisions.
+It increases with the per-job decision time, and, in the shared-state approach, if scheduling work must be redone because of conflicts.
+To assess how much of the latter is occurring, we measure the conflict fraction, which denotes the average number of conflicts per successful transaction.
+Our values for scheduler busyness and conflict fraction are medians of the daily values, and wait time values are overall averages.
+Where present, error bars indicate how much variation exists across days in the experiment: they show the median absolute deviation (MAD) from the median value of the per-day averages.
+All experiments simulate seven days of cluster operation, except for the Mesos ones, which simulate only one day, as they take much longer to run because of the failed scheduling attempts that result from insufficient available resources (see §4.2)
+Our baseline for comparison is a serial monolithic scheduler with the same decision time for batch and service jobs, to reflect the need to run much of the same code for every job type (a single-path implementation)
+We also consider a monolithic scheduler with a fast code path for batch jobs; we refer to this as a multi-path monolithic scheduler, since it still schedules only one job at a time.
+The current monolithic Google cluster scheduler is somewhere in between these.
+In the sense that they are approximations least favorable to the Omega architecture.
+In the baseline case, we vary the scheduler decision time on the x-axis by changing tjob.
+In the multi-path case, we split the workload into batch and service workloads and use the defaults for the batch scheduler decision time while we vary tjob(service)
+The results are not surprising: in the single-path baseline case, the scheduler busyness is low as long as scheduling is quick, but scales linearly with increased tjob (Figure 6a)
+As a consequence, job wait time increases at a similar rate until the scheduler is saturated, at which point it cannot keep up with the incoming workload any more.
+The wait time curves for service jobs closely track the ones for batch jobs, since all jobs take the same time to schedule (Figure 5a)
+With a fast path for batch jobs in the multi-path case, both average job wait time and scheduler busyness decrease significantly even at long decision times for service jobs, since the majority of jobs are batch ones.
+To avoid this, we need some form of parallel processing.
+Our two-level scheduler experiments are modeled on the offer-based Mesos design.
+We simulate a single resource manager and two scheduler frameworks, one handling batch jobs and one handling service jobs.
+To keep things simple, we assume that a scheduler only looks at the set of resources available to it when it begins a scheduling attempt for a job (i.e., any offers that arrive during the attempt are ignored)
+Resources not used at the end of scheduling a job are returned to the allocator; they may be re-offered again if the framework is the one furthest below its fair share.
+The DRF algorithm used by Mesos’s centralized resource allocator is quite fast, so we assume it takes 1 ms to make a resource offer.
+Since we now have two schedulers, we keep the decision time for the batch scheduler constant, and vary the decision time for the service scheduler by adjusting tjob(service)
+However, the batch scheduler busyness (Figure 7b) turns out to be much higher than in the monolithic multi-path case.
+This is a consequence of an interaction between the Mesos offer model and the service scheduler’s long scheduling decision times.
+Mesos achieves fairness by alternately offering all available cluster resources to different schedulers, predicated on assumptions that resources become available frequently and scheduler decisions are quick.
+As a result, a long scheduler decision time means that nearly all cluster resources are locked down for a long time, inaccessible to other schedulers.
+The only resources available for other schedulers in this situation are the few becoming available while the slow scheduler is busy.
+Figure 7: Two-level scheduling (Mesos): performance as a function of tjob(service)
+This pathology occurs because of Mesos’s assumption of quick scheduling decisions, small jobs and high resource churn, which do not hold for our service jobs.
+Mesos could be extended to make only fair-share offers, although this would complicate the resource allocator logic, and the quality of the placement decisions for big or picky jobs would likely decrease, since each scheduler could only see a smaller fraction of the available resources.
+We have raised this point with the Mesos team; they agree about the limitation and are considering to address it in future work.
+Finally, we use the lightweight simulator to explore the Omega shared-state approach.
+We again simulate two schedulers: one handling the batch workload, one handling the service workload.
+Both schedulers refresh their local copy of cell state by synchronizing it with the shared one when they start looking at a job, and work on their local copy for the duration of the decision time.
+Assuming at least one task got scheduled, a transaction to update the shared cell state is issued once finished.
+If there are no conflicts, then the entire transaction is accepted; otherwise only those changes that do not result in an overcommitted machine are accepted.
+This suggests that conflicts and interference are relatively rare, and this is confirmed by the graph of scheduler busyness (Figure 6c)
+Unlike Mesos (Figure 7c), the Omega-style scheduler manages to schedule all jobs in the workload.
+Unlike the monolithic multi-path implementation, it does not suffer from head-of-line blocking: the lines for batch and service jobs are independent.
+We also investigate at how the Omega approach scales as the workload changes.
+For this purpose, we increase the job arrival rate of the batch scheduler, λjobs(batch)
+Figure 8 shows that both job wait time and scheduler busyness increase.
+In the batch case, this is due to the higher job arrival rate, while in the service case, it is due to additional conflicts.
+Since the batch scheduler is the main scalability bottleneck, we repeat the same scaling experiment with multiple batch schedulers in order to test the ability of the Omega model to scale to larger loads.
+The batch scheduling work is load-balanced across the schedulers using a simple hashing function.
+Similar results are seen with the job wait times (not shown here)
+This is an encouraging result: the Omega model can scale to a high batch workload while still providing good behavior for service jobs.
+The lightweight simulator is a useful tool for comparing the different scheduler architectures.
+Figure 10 summarizes the results graphically, considering the impact of scaling ttask as an additional dimension.
+Although adding the multi-path feature reduces the average scheduling decision time, head-of-line blocking is still a problem for batch jobs, and means that this model may not be able to scale to the workloads we project for large clusters.
+The two-level model of Mesos can support independent scheduler implementations, but it is hampered by pessimistic locking, does not handle long decision times well, and could not schedule much of the heterogeneous load we offered it.
+The shared-state Omega approach seems to offer competitive, scalable performance with little interference at realistic.
+Figure 8: Shared-state scheduling (Omega): varying the arrival rate for the batch workload, λjobs(batch), for cluster B.
+Dashed vertical lines indicate points of scheduler saturation; i.e., only partial scheduling of the workload to their right.
+Our results indicate that Omega can scale to many schedulers, as well as to challenging workloads.
+Having compared the different scheduler architectures using the lightweight simulator, we use the high-fidelity simulator to explore some of the properties of the Omega shared-state approach in greater detail and without the simplifying assumptions made by the lightweight simulator.
+The core of the high-fidelity simulator is the code used in Google’s production scheduling system.
+It respects task placement constraints, uses the same algorithms as the production version, and can be given initial cell descriptions and detailed workload traces obtained from live production cells.
+It lets us evaluate the shared-state design with high confidence on.
+How much scheduling interference is present in realworld workloads and what scheduler decision times can we afford in production (§5.1)?
+What are the effects of different conflict detection and resolution techniques on real workloads (§5.2)?
+It does not model machine failures (as model the disparity between resource requests and the actual.
+Figure 10: Lightweight simulator: impact of varying tjob(service) (right axis) and ttask(service) (left axis) on scheduler busyness (z-axis) in different scheduling schemes, on cluster B.
+Red shading of a 3D graph means that part of the workload remained unscheduled.
+As expected, the outputs of the two simulators generally agree.
+The main difference is that the lightweight simulator runs experience less interference, which is likely a result of the lightweight simulator’s lack of support for placement constraints (which makes “picky” jobs seem easier to schedule than they are), and its simpler notion of when a machine is considered full (which means it sees fewer conflicts with fine-grained conflict detection, cf.
+We can nonetheless confirm all the trends the lightweight simulator demonstrates for the Omega shared-state model using the high-fidelity simulator.
+We believe this confirms that the lightweight simulator experiments provide plausible comparisons between different scheduling architectures under a common set of assumptions.
+Figure 11 shows how service scheduler busyness varies as a function of both tjob(service) and ttask(service) for a monthlong trace of cluster C (covering the same workload as the.
+We also investigate the performance of the shared-state architecture using a 7-day trace from cluster B, which is one of the largest and busiest Google clusters.
+This is a higher level of interference compared to cluster C, most likely because of a much higher batch load in cluster B.
+Despite these relatively high conflict rates, our experiments show that the shared-state Omega architecture can support service schedulers that take several seconds to make a decision.
+This means that we can support schedulers with a high one-off per-job decision time, and ones with a large per-task decision time.
+With the monolithic single-path scheduler (§4.1), the high batch job arrival rate requires the use of basic, simple scheduling algorithms: it simply is not possible to use smarter, more timeconsuming scheduling algorithms for these jobs as we already miss the SLO on cluster B due to the high load.
+Batch jobs want to survive failures, too, and the placement quality would doubtless improve if a scheduler could be given a little more time to make a decision.
+To test this, we run an experiment with three parallel batch schedulers, partitioning the workload across them by hashing the job identifiers, akin to the earlier experiment with the simple simulator.
+In short, load-balancing across multiple schedulers can increase scalability to increasing job arrival rates.
+Of course, the scale-up must be sub-linear due to of the overhead of.
+Our comparison point, however, is a single monolithic scheduler, so even a single-digit speedup is helpful.
+In summary, the Omega architecture scales well, and tolerates large decision times on real cluster workloads.
+We also use the high-fidelity simulator to explore two implementation choices we were considering for Omega.
+In the first, coarse-grained conflict detection, a scheduler’s placement choice would be rejected if any changes had been made to the target machine since the local copy of cell state was synchronized at the beginning of the transaction.
+This can be implemented with a simple sequence number in the machine’s state object.
+In the second, all-or-nothing scheduling, an entire cell state transaction would be rejected if it would cause any machine to be over-committed.
+The goal here was to support jobs that require gang scheduling, or that cannot perform any useful work until all their tasks are running.7
+Not surprisingly, both alternatives lead to additional conflicts and higher scheduler busyness (Figure 14)
+Thus, this option should only be used on a job-level granularity.
+Relying on coarse-grained conflict detection makes things even worse: spurious conflicts lead to increases in conflict rate, and consequently scheduler busyness, by 2–3×
+Finally, we explore how well we can meet two additional design goals of the Omega shared-state model: supporting spe7 This is supported by Google’s current scheduler, but it is only rarely used due to the expectation of machine failures, which disrupt jobs anyway.
+This is somewhat challenging to evaluate quantitatively, so we proceed by way of a case study that adds a specialized scheduler for MapReduce jobs.
+Cluster users at Google currently specify the number of workers for a MapReduce job and their resource requirements at job submission time, and the MapReduce framework schedules map and reduce activities8 onto these workers.
+What if the number of workers could be chosen automatically if additional resources were available, so that jobs could complete sooner? Our specialized MapReduce scheduler does just this by opportunistically using idle cluster resources to speed up MapReduce jobs.
+It observes the overall resource utilization in the cluster, predicts the benefits of scaling up current and pending MapReduce jobs, and apportions some fraction of the unused resources across those jobs according to some policy.
+About 20% of jobs in Google are MapReduce ones, and many of them are run repeatedly, so historical data is available to build models.
+Since our goal is to investigate scheduler flexibility rather than demonstrate accurate MapReduce modelling, we deliberately use a simple performance model that only relies on historical data about the job’s average map and reduce activity duration.
+It assumes that adding more workers results in an idealized linear speedup (modulo dependencies between mappers and reducers), up to the point where map activities and all reduce activities respectively run in parallel.
+Since large MapReduce jobs typically have many more of these activities than configured workers, we usually run out of available resources before this point.
+We consider three different policies for adding resources: max-parallelism, which keeps on adding workers as long as benefit is obtained, global cap, which stops the MapReduce scheduler using idle resources if the total cluster utilization is above a target value, and relative job size, which limits the maximum number of workers to four times as many as it initially requested.
+In each case, a set of resource allocations to be investigated is run through the predictive model, and the allocation leading to the earliest possible finish time is used.
+More elaborate approaches and objective functions, such as used in deadline-based schedulering [10], are certainly possible, but not the focus of this case study.
+We evaluate the three different resource-allocation policies using traces from clusters A and C, plus cluster D, which is a small, lightly-loaded cluster that is about a quarter of the size of cluster C.
+Although the max-parallelism policy produces the largest improvements, the relative job size policy also does quite well, and its speedups probably have a higher likelihood of being achieved because it requires fewer new MapReduce workers to be constructed: the time to set up a worker on a new machine is not fully accounted for in the simple model.
+The global cap policy performs almost as well as max-parallelism in the small, under-utilized cluster D, but achieves little or no benefit elsewhere, since the cluster utilization is usually above the threshold, which was set at 60%
+Adding resources to a MapReduce job will cause the cluster’s resource utilization to increase, and should result in the job completing sooner, at which point all of the job’s resources will free up.
+An effect of this is an increase in the variability of the cluster’s resource utilization (Figure 16)
+To do its work, the MapReduce scheduler relies on being able to see the entire cluster’s state, which is straightforward in the Omega architecture.
+Figure 15: CDF of potential per-job speedups using different policies on clusters A, C and D (a small, lightly-utilized cluster)
+Figure 16: Time series of normalized cluster utilization on cluster C without the specialized Omega MapReduce scheduler (top), and in max-parallelism mode (bottom)
+Scheduling them requires determining which machines are applicable, and deciding how best to place the new job while minimizing the number of preemptions caused to lower-priority jobs.
+Our prototype MapReduce scheduler demonstrates that adding a specialized functionality to the Omega system is straightforward (unlike with our current production scheduler)
+Many researchers have considered this problem before, and different solutions have been proposed in the HPC, middleware and “cloud” communities.
+Exposing the entire cluster state to each scheduler is not unlike the Exokernel approach of removing abstractions.
+The programming language and OS communities have recently revisited application level scheduling as an alternative to general-purpose thread and process schedulers, arguing that a single, global OS scheduler is neither scalable, nor flexible enough for modern multi-core applications’ demands [22]
+Amoeba [3] implements opportunistic allocation of spare resources to jobs, with motivation similar to our MapReduce scheduler use-case.
+However, it achieves this by complex communication between resource and application managers, whereas Omega naturally lends itself to such designs as it exposes the entire cluster state to all schedulers.
+This investigation is part of a wider effort to build Omega, Google’s next-generation cluster management platform.
+Here, we specifically focused on a cluster scheduling architecture that uses parallelism, shared state, and optimistic concurrency control.
+Our performance evaluation of the Omega model using both lightweight simulations with synthetic workloads, and high-fidelity, trace-based simulations of production workloads at Google, shows that optimistic concurrency over shared state is a viable, attractive approach to cluster scheduling.
+Although this approach will do strictly more work than a pessimistic locking scheme as work may need to be re-done, we found the overhead to be acceptable at reasonable operating points, and the resulting benefits in eliminating head-ofline blocking and better scalability to often outweigh it.
+We also found that Omega’s approach offers an attractive platform for development of specialized schedulers, and illustrated its flexibility by adding a MapReduce scheduler with opportunistic resource adjustment.
+Future work could usefully focus on ways to provide global guarantees (fairness, starvation avoidance, etc.) in the Omega model: this is an area where centralized control makes life easier.
+Furthermore, we believe there are some techniques from the database community that could be applied to reduce the likelihood and effects of interference for schedulers with long decision times.
+We hope to explore some of these in the future.
+Acknowledgements Many people contributed to the work described in this paper.
+We would like to thank the Mesos team at UC Berkeley for many fruitful and interesting discussions about Mesos, and Joseph Hellerstein for his early work on modeling scheduler interference in Omega.
+Derek Murray, Steven Hand and Alexey Tumanov provided valuable feedback on draft versions of this paper.
+The final version was much improved by comments from the anonymous reviewers.
+Energy efficiency for large-scale MapReduce workloads with significant interactive analysis.
+No one (cluster) size fits all: automatic cluster sizing for data-intensive analytics.
+Mesos: a platform for fine-grained resource sharing in the data center.
+Towards characterizing cloud backend workloads: insights from Google compute clusters.
+Heterogeneity and dynamicity of clouds at scale: Google trace analysis.
+Modeling and synthesizing task placement constraints in Google compute clusters.
+Delay scheduling: A simple technique for achieving locality and fairness in cluster scheduling.
