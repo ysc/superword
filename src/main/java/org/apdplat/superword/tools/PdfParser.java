@@ -86,7 +86,7 @@ public class PdfParser {
     }
     public static void parseDirectory(Path dir){
         try {
-            LOGGER.debug("处理目录：" + dir);
+            LOGGER.info("处理目录：" + dir);
             List<String> fileNames = new ArrayList<>();
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
@@ -101,7 +101,7 @@ public class PdfParser {
 
             });
             Files.write(Paths.get("src/main/resources/it/manifest"), fileNames);
-            LOGGER.debug("处理完毕");
+            LOGGER.info("处理完毕");
         }catch (IOException e){
             e.printStackTrace();
         }
@@ -116,8 +116,8 @@ public class PdfParser {
             }
             String sourceName = file.toFile().getAbsolutePath();
             String targetName = prepareTarget(file);
-            LOGGER.debug("处理文件：" + sourceName);
-            LOGGER.debug("生成文件：" + targetName);
+            LOGGER.info("处理文件：" + sourceName);
+            LOGGER.info("生成文件：" + targetName);
             //解析文本
             String text = parsePdfFileToPlainText(sourceName);
             //处理文本
@@ -408,7 +408,7 @@ public class PdfParser {
         }
         String fileName = file.toFile().getAbsolutePath();
         if (!fileName.endsWith(".pdf")) {
-            LOGGER.debug("放弃处理非PDF文件：" + fileName);
+            LOGGER.info("放弃处理非PDF文件：" + fileName);
             return true;
         }
         return false;
