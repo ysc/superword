@@ -20,7 +20,9 @@
 package org.apdplat.superword.rule;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.WordLinker;
+import org.apdplat.superword.tools.WordSources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +32,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 文本词频统计
@@ -40,6 +44,8 @@ public class TextAnalysis {
     private TextAnalysis() {
     }
 
+    private static final List<String> UN = Arrays.asList("tion co ed ng ca alice jp gc ".split("\\s+"));
+    private static final Pattern PATTERN = Pattern.compile("\\d+");
     private static final Logger LOGGER = LoggerFactory.getLogger(TextAnalysis.class);
 
     /**
@@ -98,31 +104,33 @@ public class TextAnalysis {
         return map;
     }
 
-    public static List<String> seg(String sentence) {
-        return seg(sentence, false);
-    }
-
     /**
      * 分词
      * @param sentence
      * @param debug 打开开关可在开发时跟踪分词细节
      * @return
      */
-    public static List<String> seg(String sentence, boolean debug) {
+    public static List<String> seg(String sentence) {
         List<String> data = new ArrayList<>();
         //以非字母字符切分行
-        String[] words = sentence.trim().split("[^a-zA-Z]");
+        String[] words = sentence.trim().split("[^a-zA-Z0-9]");
         StringBuilder log = new StringBuilder();
         if (LOGGER.isDebugEnabled()) {
             LOGGER.debug("句子:" + sentence);
         }
         for (String word : words) {
-            if (StringUtils.isBlank(word)) {
+            if (StringUtils.isBlank(word) || word.length()<2) {
                 continue;
             }
             List<String> list = new ArrayList<String>();
-            //将长度小于6的以及全部大写的先转换为全部小写
-            if (word.length() < 6 || StringUtils.isAllUpperCase(word)) {
+            //转换为全部小写
+            if (word.length() < 6
+                    //PostgreSQL等
+                    || (Character.isUpperCase(word.charAt(word.length()-1))
+                          && Character.isUpperCase(word.charAt(0)))
+                    //P2P,Neo4j等
+                    || PATTERN.matcher(word).find()
+                    || StringUtils.isAllUpperCase(word)) {
                 word = word.toLowerCase();
             }
             //按照大写字母进行单词拆分
@@ -144,7 +152,7 @@ public class TextAnalysis {
                             return;
                         }
                         w = irregularity(w);
-                        if(StringUtils.isNotBlank(w)) {
+                        if(StringUtils.isNotBlank(w) && !StringUtils.isNumeric(w)) {
                             data.add(w);
                             if (LOGGER.isDebugEnabled()) {
                                 log.append(w).append(" ");
@@ -357,9 +365,10 @@ public class TextAnalysis {
         return fileNames;
     }
 
-    public static Map<String, List<String>> findEvidence(Path dir, List<String> words) {
+    public static Map<String, List<String>> findEvidence(Path dir, List<String> words, int limit) {
         LOGGER.info("处理目录：" + dir);
         Map<String, List<String>> data = new HashMap<>();
+        Set<String> set = new HashSet<>();
         try {
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
@@ -376,19 +385,25 @@ public class TextAnalysis {
 
                     LOGGER.info("处理文件：" + fileName);
                     List<String> lines = Files.readAllLines(file);
+                    final String book = file.toFile().getName().replace(".txt", "");
                     for (int i = 0; i < lines.size(); i++) {
                         final String line = lines.get(i);
-                        final int index = i;
+                        final List<String> wordSet = seg(line);
                         words
-                                .forEach(word -> {
-                                    if (line.toLowerCase().contains(word)) {
-                                        data.putIfAbsent(word, new ArrayList<>());
-                                        data.get(word).add(line
-                                                + " <u><i>"
-                                                + file.toFile().getName().replace(".txt", "")
-                                                + "</i></u>");
-                                    }
-                                });
+                            .forEach(word -> {
+                                String id = word+"_"+book;
+                                data.putIfAbsent(word, new ArrayList<>());
+                                //一个词在一本书中只取一个句子
+                                if (data.get(word).size() < limit
+                                        && !set.contains(id)
+                                        && wordSet.contains(word)) {
+                                    set.add(id);
+                                    data.get(word).add(line
+                                            + " <u><i>"
+                                            + book
+                                            + "</i></u>");
+                                }
+                            });
                     }
 
                     return FileVisitResult.CONTINUE;
@@ -407,6 +422,10 @@ public class TextAnalysis {
         data.keySet()
                 .stream()
                 .forEach(word -> {
+                    if(data.get(word).isEmpty()){
+                        System.err.println("词："+word+"没有找到匹配文本");
+                        return ;
+                    }
                     StringBuilder p = new StringBuilder();
                     for (char c : word.toCharArray()) {
                         p.append("[")
@@ -414,10 +433,11 @@ public class TextAnalysis {
                                 .append(Character.toLowerCase(c))
                                 .append("]{1}");
                     }
-                    html.append(i.incrementAndGet())
+                    html.append("<h1>")
+                            .append(i.incrementAndGet())
                             .append("、单词 ")
                             .append(WordLinker.toLink(word))
-                            .append(" 的匹配文本：<br/>\n");
+                            .append(" 的匹配文本：</h1><br/>\n");
                     html.append("<ol>\n");
                     data.get(word)
                             .forEach(t -> html.append("\t<li>")
@@ -428,6 +448,564 @@ public class TextAnalysis {
         return html.toString();
     }
 
+    /**
+     * 这些词由wordDetect方法生成
+     */
+    public static void summary2(){
+        List<String> words = Arrays.asList("hadoop",
+                "http",
+                "api",
+                "xml",
+                "solr",
+                "hbase",
+                "hdfs",
+                "mysql",
+                "apache",
+                "gradle",
+                "url",
+                "schema",
+                "metadata",
+                "mongodb",
+                "jvm",
+                "plugin",
+                "sql",
+                "implementations",
+                "osgi",
+                "dependencies",
+                "runtime",
+                "jenkins",
+                "couchdb",
+                "cpu",
+                "bytes",
+                "ip",
+                "lucene",
+                "redis",
+                "html",
+                "metrics",
+                "dm",
+                "cassandra",
+                "mapper",
+                "filesystem",
+                "json",
+                "annotations",
+                "servlet",
+                "jdbc",
+                "parser",
+                "activemq",
+                "jms",
+                "tika",
+                "configuring",
+                "namespace",
+                "www",
+                "jrockit",
+                "vm",
+                "linux",
+                "jpa",
+                "rabbitmq",
+                "concurrency",
+                "frameworks",
+                "subclass",
+                "boolean",
+                "permissions",
+                "roo",
+                "apis",
+                "asynchronous",
+                "mvc",
+                "google",
+                "ruby",
+                "sqoop",
+                "innodb",
+                "caching",
+                "scheduler",
+                "initialization",
+                "config",
+                "classpath",
+                "superclass",
+                "plugins",
+                "mahout",
+                "enum",
+                "proofreaders",
+                "copyeditors",
+                "iterator",
+                "username",
+                "jdk",
+                "timestamp",
+                "tcp",
+                "tuple",
+                "screenshot",
+                "scalability",
+                "constructors",
+                "dataset",
+                "daemon",
+                "topology",
+                "partitioning",
+                "urls",
+                "jmx",
+                "unix",
+                "packt",
+                "ids",
+                "aop",
+                "serialization",
+                "namenode",
+                "uri",
+                "jsp",
+                "dynamically",
+                "cached",
+                "avro",
+                "oozie",
+                "writable",
+                "nutch",
+                "subclasses",
+                "operand",
+                "php",
+                "applet",
+                "sharding",
+                "optimized",
+                "transactional",
+                "amazon",
+                "ssl",
+                "ejb",
+                "manning",
+                "querying",
+                "junit",
+                "workflow",
+                "gui",
+                "faceting",
+                "gmond",
+                "endpoint",
+                "tuples",
+                "standalone",
+                "ssh",
+                "kafka",
+                "rmi",
+                "bytecode",
+                "datagram",
+                "hostname",
+                "clojure",
+                "descriptor",
+                "lifecycle",
+                "optimizations",
+                "repositories",
+                "reducers",
+                "dao",
+                "znode",
+                "netty",
+                "localhost",
+                "iteration",
+                "pom",
+                "ldap",
+                "nosql",
+                "udp",
+                "rpc",
+                "dsl",
+                "acl",
+                "optimizer",
+                "mappings",
+                "runnable",
+                "init",
+                "multicast",
+                "singleton",
+                "optionally",
+                "failover",
+                "parameterized",
+                "serialized",
+                "combiner",
+                "generics",
+                "compaction",
+                "datasets",
+                "daemons",
+                "foo",
+                "filename",
+                "scripting",
+                "mac",
+                "gc",
+                "browsers",
+                "ec2",
+                "lambda",
+                "grained",
+                "append",
+                "jit",
+                "jndi",
+                "enumerated",
+                "benchmarks",
+                "bigtable",
+                "myisam",
+                "wiki",
+                "analytics",
+                "executable",
+                "elasticsearch",
+                "comparator",
+                "meta",
+                "cpus",
+                "dom",
+                "wildcard",
+                "kerberos",
+                "aws",
+                "backend",
+                "jmeter",
+                "predicate",
+                "erlang",
+                "parsed",
+                "nagios",
+                "src",
+                "css",
+                "endpoints",
+                "mappers",
+                "rdbms",
+                "instantiate",
+                "facebook",
+                "udf",
+                "xpath",
+                "errata",
+                "recommender",
+                "amqp",
+                "optimizing",
+                "jspa",
+                "workloads",
+                "sharded",
+                "latin",
+                "dns",
+                "parsers",
+                "ajax",
+                "emr",
+                "co",
+                "configurable",
+                "db",
+                "partitioner",
+                "ubuntu",
+                "frontend",
+                "txt",
+                "schemas",
+                "javadoc",
+                "aspectj",
+                "keystore",
+                "repl",
+                "mbean",
+                "bootstrap",
+                "declarative",
+                "nio",
+                "mongo",
+                "akka",
+                "stateful",
+                "instantiated",
+                "classifier",
+                "invocations",
+                "asynchronously",
+                "jsf",
+                "multithreaded",
+                "sh",
+                "pointcut",
+                "util",
+                "reusable",
+                "reilly",
+                "spel",
+                "predefined",
+                "serializable",
+                "unicode",
+                "sts",
+                "microsoft",
+                "codec",
+                "deprecated",
+                "foreach",
+                "csv",
+                "searcher",
+                "applets",
+                "literals",
+                "recursion",
+                "solaris",
+                "mongos",
+                "iterable",
+                "jobtracker",
+                "sbt",
+                "orm",
+                "zset",
+                "ql",
+                "js",
+                "udfs",
+                "mongod",
+                "vms",
+                "openid",
+                "datanode",
+                "adapters",
+                "javafx",
+                "firefox",
+                "mcollective",
+                "servlets",
+                "aggregates",
+                "ca",
+                "rollback",
+                "lookups",
+                "monad",
+                "hashing",
+                "tokenizer",
+                "accumulo",
+                "jvms",
+                "s3",
+                "programmatically",
+                "jp",
+                "ping",
+                "ascii",
+                "wikipedia",
+                "enumeration",
+                "percona",
+                "deletes",
+                "callable",
+                "solrconfig",
+                "resolver",
+                "perl",
+                "mb",
+                "urlconnection",
+                "validator",
+                "hypervisor",
+                "pojo",
+                "traversal",
+                "pdf",
+                "operands",
+                "gmetad",
+                "hashes",
+                "virtualization",
+                "hfile",
+                "jconsole",
+                "fs",
+                "tasktracker",
+                "subdirectory",
+                "parses",
+                "recursively",
+                "subflow",
+                "configures",
+                "lang",
+                "subquery",
+                "tasklet",
+                "aggregated",
+                "ivy",
+                "matcher",
+                "ioexception",
+                "neo4j",
+                "cron",
+                "chubby",
+                "english",
+                "formatter",
+                "keyspace",
+                "dfs",
+                "namespaces",
+                "oplog",
+                "checksum",
+                "compilers",
+                "refactoring",
+                "mbeans",
+                "datanodes",
+                "codebase",
+                "benchmarking",
+                "dhcp",
+                "metastore",
+                "debian",
+                "impl",
+                "gb",
+                "riak",
+                "whitespace",
+                "paging",
+                "iterating",
+                "granularity",
+                "jax",
+                "jsr",
+                "timestamps",
+                "timeline",
+                "nonblocking",
+                "modifiers",
+                "iterative",
+                "acls",
+                "nfs",
+                "rss",
+                "datagrams",
+                "visualvm",
+                "mesos",
+                "tweets",
+                "batis",
+                "iff",
+                "bson",
+                "compiles",
+                "cloudera",
+                "xen",
+                "initializer",
+                "ftp",
+                "statically",
+                "zookeeper",
+                "descriptors",
+                "delimited",
+                "rowkey",
+                "memcached",
+                "stm",
+                "charset",
+                "yahoo",
+                "programmatic",
+                "cms",
+                "extensible",
+                "customizing",
+                "hiveql",
+                "wildcards",
+                "sphinx",
+                "versioning",
+                "https",
+                "incremented",
+                "filesystems",
+                "awt",
+                "dev",
+                "combinators",
+                "cd",
+                "oop",
+                "filenames",
+                "jta",
+                "finalizer",
+                "sflow",
+                "subprojects",
+                "iterates",
+                "connectors",
+                "buf",
+                "subproject",
+                "schedulers",
+                "atomically",
+                "sudo",
+                "classloader",
+                "deployer",
+                "traversable",
+                "htable",
+                "bytecodes",
+                "workflows",
+                "keystone",
+                "env",
+                "tmp",
+                "leveraging",
+                "sawzall",
+                "delimiter",
+                "untrusted",
+                "polymorphism",
+                "aggregator",
+                "syslog",
+                "implicits",
+                "vlan",
+                "println",
+                "san",
+                "middleware",
+                "jruby",
+                "hashtable",
+                "nonzero",
+                "suggester",
+                "logfile",
+                "initializing",
+                "inet",
+                "bidirectional",
+                "gridfs",
+                "uris",
+                "zsets",
+                "cryptographic",
+                "natively",
+                "timeouts",
+                "subtree",
+                "alice",
+                "concatenation",
+                "py",
+                "znodes",
+                "ips",
+                "checkstyle",
+                "readability",
+                "utf",
+                "smtp",
+                "accessor",
+                "xx",
+                "logout",
+                "searchable",
+                "subdirectories",
+                "bundlor",
+                "lzo",
+                "gzip",
+                "leverages",
+                "enums",
+                "predicates",
+                "deadlocks",
+                "metamodel",
+                "jaas",
+                "wal",
+                "initializes",
+                "regex",
+                "gwt",
+                "ioc",
+                "lua",
+                "coprocessor",
+                "multicore",
+                "refactor",
+                "jre",
+                "instantiating",
+                "usr",
+                "mutability",
+                "thymeleaf",
+                "gfs",
+                "autocomplete",
+                "paxos",
+                "postgresql",
+                "mutex",
+                "jni",
+                "topologies",
+                "latencies",
+                "xxx",
+                "log4j",
+                "lzop",
+                "tf",
+                "osds",
+                "pmd",
+                "multipart",
+                "throwable",
+                "inline",
+                "dsls",
+                "ctrl",
+                "rdds",
+                "atomicity",
+                "instanceof",
+                "nodetool",
+                "covariant",
+                "ntp",
+                "installer",
+                "packtpub",
+                "facter",
+                "uuid",
+                "mapred",
+                "bnd",
+                "combinator",
+                "embeddable",
+                "async",
+                "mixin",
+                "idf",
+                "unicast",
+                "appending",
+                "args",
+                "xhtml",
+                "javac",
+                "param",
+                "superclasses",
+                "uppercase",
+                "logfiles",
+                "testable",
+                "rs",
+                "brainz",
+                "checkbox",
+                "mvn",
+                "osd",
+                "testng",
+                "pt",
+                "corba",
+                "immutability",
+                "interoperability",
+                "multithreading",
+                "opentsdb",
+                "hfiles",
+                "bz",
+                "mng",
+                "normalization",
+                "customization",
+                "rcfile");
+        Map<String, List<String>> data = findEvidence(Paths.get("src/main/resources/it"), words, 10);
+        String html = toHtmlFragment(data);
+        LOGGER.info(html);
+    }
     public static void summary() {
         List<String> words =
                 Arrays.asList("resurgent",
@@ -450,7 +1028,7 @@ public class TextAnalysis {
                         "creativity",
                         "coyote",
                         "reaction");
-        Map<String, List<String>> data = findEvidence(Paths.get("src/main/resources/it"), words);
+        Map<String, List<String>> data = findEvidence(Paths.get("src/main/resources/it"), words, 100);
         String html = toHtmlFragment(data);
         LOGGER.info(html);
     }
@@ -459,7 +1037,108 @@ public class TextAnalysis {
         //parse("src/main/resources/it/spring/Spring in Action 4th Edition.txt");
         //parse("src/main/resources/it/spring");
         parse("src/main/resources/it");
-        summary();
+        //summary();
+        //footN("src/main/resources/it", 100);
+        //topN("src/main/resources/it", 100);
+        //wordDetect("src/main/resources/it");
+        //summary2();
+    }
+
+    public static void wordDetect(String path){
+        //获取目录下的所有文件列表 或 文件本身
+        Set<String> fileNames = getFileNames(path);
+        //词频统计
+        Map<String, AtomicInteger> fres = frequency(fileNames);
+        //词典
+        Set<Word> DICTIONARY = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+        Map<String, AtomicInteger> unknown = new HashMap<>();
+        LOGGER.debug("需要检查单词个数：" + fres.keySet().size());
+        fres
+            .keySet()
+            .forEach(key -> {
+                if (!DICTIONARY.contains(new Word(key.toLowerCase(), ""))) {
+                    unknown.put(key, fres.get(key));
+                }
+            });
+        LOGGER.debug("未知的单词个数："+unknown.size());
+        AtomicInteger i = new AtomicInteger();
+        unknown.entrySet()
+                .stream()
+                .sorted((a, b) -> b.getValue().get() - a.getValue().get())
+                .forEach(entry -> {
+                    i.incrementAndGet();
+                    if(i.get()<551) {
+                        LOGGER.info("\t\"" + entry.getKey() +"\",");
+                    }
+                });
+    }
+
+    public static void footN(String path, int limit) {
+        sentence(path, limit, false);
+    }
+
+    public static void topN(String path, int limit) {
+        sentence(path, limit, true);
+    }
+    public static void sentence(String path, int limit, boolean isTopN) {
+        //获取目录下的所有文件列表 或 文件本身
+        Set<String> fileNames = getFileNames(path);
+        //词频统计
+        Map<String, AtomicInteger> fres = frequency(fileNames);
+        //有序
+        TreeMap<Float, String> sentences = new TreeMap<>();
+        //句子评分
+        int count = 0;
+        for(String fileName : fileNames) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(
+                            new BufferedInputStream(
+                                    new FileInputStream(fileName))))) {
+                String line = null;
+                while ((line = reader.readLine()) != null) {
+                    if (StringUtils.isBlank(line)) {
+                        continue;
+                    }
+                    //计算分值
+                    float score = 0;
+                    List<String> words = seg(line);
+                    for(String word : words){
+                        AtomicInteger fre = fres.get(word);
+                        if(fre == null || fre.get() == 0){
+                            LOGGER.error("评分句子没有词频信息：" + line);
+                            score = 0;
+                            break;
+                        }
+                        score += 1/(float)fre.get();
+                    }
+                    words.clear();
+                    if(score > 0) {
+                        //保存句子
+                        if(sentences.get(score) != null){
+                            continue;
+                        }
+                        sentences.put(score, line + " <u><i>" + Paths.get(fileName).toFile().getName().replace(".txt", "") + "</i></u>");
+                        count++;
+                        if(count >= limit) {
+                            if(isTopN){
+                                //删除分值最低的
+                                sentences.pollFirstEntry();
+                            }else{
+                                //删除分值最高的
+                                sentences.pollLastEntry();
+                            }
+                        }
+                    }
+                }
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+        AtomicInteger i = new AtomicInteger();
+        sentences.entrySet().forEach(entry -> {
+            //LOGGER.info(i.incrementAndGet()+"、分值："+entry.getKey()+":<br/>\n\t"+entry.getValue()+"<br/>\n");
+            LOGGER.info(i.incrementAndGet()+"、"+entry.getValue()+"<br/><br/>\n");
+        });
     }
 
     private static class Stat {
