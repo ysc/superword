@@ -39,43 +39,31 @@ A load balancer manages the traffic to these systems, ensuring that operational 
 These are some of the more common ways to implement these high availability architectures, but they are by no means the only ways to do it.
 This document will cover some of the more common options for highly available systems.
 The Pacemaker Cluster Stack OpenStack infrastructure high availability relies on the Pacemaker cluster stack, the stateof-the-art high availability and load balancing stack for the Linux platform.
-Pacemaker is storage- and application-agnostic, and is in no way specific to OpenStack.
 Pacemaker relies on the Corosync messaging layer for reliable cluster communications.
 Corosync implements the Totem single-ring ordering and membership protocol and provides UDP and InfiniBand based messaging, quorum, and cluster membership to Pacemaker.
 Pacemaker interacts with applications through resource agents (RAs), of which it supports over 70 natively.
 An OpenStack highavailability configuration uses existing native Pacemaker RAs (such as those managing MySQL databases or virtual IP addresses), existing third-party RAs (such as for RabbitMQ), and native OpenStack RAs (such as those managing the OpenStack Identity and Image Services)
 Installing Packages On any host that is meant to be part of a Pacemaker cluster, you must first establish cluster communications through the Corosync messaging layer.
 This involves installing the following packages (and their dependencies, which your package manager will normally install automatically):
-Setting up Corosync Besides installing the corosync package, you will also have to create a configuration file, stored in /etc/corosync/corosync.conf.
-Most distributions ship an example configuration file (corosync.conf.example) as part of the documentation bundled with the corosync package.
 Time (in ms) to wait for a token token: 10000
 This specifies the redundant ring protocol, which may be # none, active, or passive.
-The token value specifies the time, in milliseconds, during which the Corosync token is expected to be transmitted around the ring.
-When this timeout expires, the token is declared lost, and after token_retransmits_before_loss_const lost tokens the non-responding processor (cluster node) is declared dead.
-These defaults are intended to minimize failover times, but can cause frequent "false alarms" and unintended failovers in case of short network interruptions.
-The values used here are safer, albeit with slightly extended failover times.
-With secauth enabled, Corosync nodes mutually authenticate using a 128-byte shared secret stored in /etc/corosync/authkey, which may be generated with the corosync-keygen utility.
-In Corosync configurations using redundant networking (with more than one interface), you must select a Redundant Ring Protocol (RRP) mode other than none.
-There are several things to note about the recommended interface configuration:
 The ringnumber must differ between all configured interfaces, starting with 0
 The bindnetaddr is the network address of the interfaces to bind to.
 Multicast groups (mcastaddr) must not be reused across cluster boundaries.
 In other words, no two distinct clusters should ever use the same multicast group.
 Be sure to select multicast addresses compliant with RFC 2365, "Administratively Scoped IP Multicast"
 For firewall configurations, note that Corosync communicates over UDP only, and uses mcastport (for receives) and mcastport-1 (for sends)
-The service declaration for the pacemaker service may be placed in the corosync.conf file directly, or in its own separate file, /etc/corosync/ service.d/pacemaker.
 Once created, the corosync.conf file (and the authkey file if the secauth option is enabled) must be synchronized across all cluster nodes.
 Starting Corosync Corosync is started as a regular system service.
 Depending on your distribution, it may ship with a LSB (System V style) init script, an upstart job, or a systemd unit file.
 The corosync-cfgtool utility, when invoked with the -s option, gives a summary of the health of the communication rings:
+You should see a status=joined entry for each of your constituent cluster nodes.
 Starting Pacemaker Once the Corosync services have been started, and you have established that the cluster is communicating properly, it is safe to start pacemakerd, the Pacemaker master control process:
 Once Pacemaker services have started, Pacemaker will create an default empty cluster configuration with no resources.
 Setting basic cluster properties Once your Pacemaker cluster is set up, it is recommended to set a few basic cluster properties.
 To do so, start the crm shell and change into the configuration menu by entering configure.
 Do not set this property in Pacemaker clusters with more than two nodes.
-Setting pe-warn-series-max, pe-input-series-max and pe-errorseries-max to 1000 instructs Pacemaker to keep a longer history of the inputs processed, and errors and warnings generated, by its Policy Engine.
 This history is typically useful in case cluster troubleshooting becomes necessary.
-However, certain Pacemaker actions occur at a configurable interval, cluster-recheckinterval, which defaults to 15 minutes.
 Once you have made these changes, you may commit the updated configuration.
 Cloud Controller Cluster Stack The Cloud Controller sits on the management network and needs to talk to all other services.
 Highly available MySQL MySQL is the default database server used by many OpenStack services.
@@ -105,7 +93,6 @@ For example, you may enter edit p_ip_mysql from the crm configure menu and edit 
 Once completed, commit your configuration changes by entering commit from the crm configure menu.
 Pacemaker will then start the MySQL service, and its dependent resources, on one of your nodes.
 Configuring OpenStack services for highly available MySQL Your OpenStack services must now point their MySQL configuration to the highly available, virtual cluster IP address — rather than a MySQL server’s physical IP address as you normally would.
-For OpenStack Image, for example, if your MySQL service IP address is 192.168.42.101 as in the configuration explained here, you would use the following line in your OpenStack Image registry configuration file (glance-registry.conf):
 If the node currently hosting your database experiences a problem necessitating service failover, your OpenStack services may experience a brief MySQL interruption, as they would in the event of a network hiccup, and then continue to run normally.
 Highly available RabbitMQ RabbitMQ is the default AMQP server used by many OpenStack services.
 There is an alternative method of configuring RabbitMQ for high availability.
@@ -131,7 +118,6 @@ For example, you may enter edit p_ip_rabbitmq from the crm configure menu and ed
 Once completed, commit your configuration changes by entering commit from the crm configure menu.
 Pacemaker will then start the RabbitMQ service, and its dependent resources, on one of your nodes.
 Your OpenStack services must now point their RabbitMQ configuration to the highly available, virtual cluster IP address — rather than a RabbitMQ server’s physical IP address as you normally would.
-For OpenStack Image, for example, if your RabbitMQ service IP address is 192.168.42.100 as in the configuration explained here, you would use the following line in your OpenStack Image API configuration file (glance-api.conf):
 If the node currently hosting your RabbitMQ experiences a problem necessitating service failover, your OpenStack services may experience a brief RabbitMQ interruption, as they would in the event of a network hiccup, and then continue to run normally.
 It needs to talk to the Cloud Controller on the management network.
 Configure the VIP First of all, we need to select and assign a virtual IP address (VIP) that can freely float between cluster nodes.
@@ -146,8 +132,6 @@ Pacemaker will then start the OpenStack Identity service, and its dependent reso
 You need to edit your OpenStack Identity configuration file (keystone.conf) and change the bind parameter :
 To be sure all data will be high available, you should be sure that you store everything in the MySQL database (which is also high available) :
 Your OpenStack services must now point their OpenStack Identity configuration to the highly available, virtual cluster IP address — rather than a OpenStack Identity server’s physical IP address as you normally would.
-For example with OpenStack Compute, if your OpenStack Identity service IP address is 192.168.42.103 as in the configuration explained here, you would use the following line in your API configuration file (api-paste.ini):
-If you are using the Horizon Dashboard, you should edit local_settings.py file :
 Highly available OpenStack Image API OpenStack Image Service offers a service for discovering, registering, and retrieving virtual machine images.
 Making the OpenStack Image API service highly available in active / passive mode involves.
 Here is the documentation for installing OpenStack Image API service.
@@ -157,9 +141,7 @@ Connect to the Pacemaker cluster with crm configure, and add the following clust
 For example, you may enter edit p_ip_glance-api from the crm configure menu and edit the resource to match your preferred virtual IP address.
 Once completed, commit your configuration changes by entering commit from the crm configure menu.
 Pacemaker will then start the OpenStack Image API service, and its dependent resources, on one of your nodes.
-We have to use MySQL connection to store datas :
 Your OpenStack services must now point their OpenStack Image API configuration to the highly available, virtual cluster IP address — rather than a OpenStack Image API server’s physical IP address as you normally would.
-For OpenStack Compute, for example, if your OpenStack Image API service IP address is 192.168.42.104 as in the configuration explained here, you would use the following line in your nova.conf file :
 Making the Cinder API service highly available in active / passive mode involves.
 First of all, you need to download the resource agent to your system :
 You may now proceed with adding the Pacemaker configuration for Cinder API resource.
@@ -167,7 +149,6 @@ Connect to the Pacemaker cluster with crm configure, and add the following clust
 For example, you may enter edit p_ip_cinder-api from the crm configure menu and edit the resource to match your preferred virtual IP address.
 Once completed, commit your configuration changes by entering commit from the crm configure menu.
 Pacemaker will then start the Cinder API service, and its dependent resources, on one of your nodes.
-We have to use MySQL connection to store datas :
 Your OpenStack services must now point their Cinder API configuration to the highly available, virtual cluster IP address — rather than a Cinder API server’s physical IP address as you normally would.
 Making the OpenStack Networking Server service highly available in active / passive mode involves.
 First of all, you need to download the resource agent to your system :
@@ -217,10 +198,8 @@ When we’re talking about High Availability, however, we’re talking about not
 In this case, we’re going to choose the MySQL database, along with Galera for synchronous multi-master replication.
 The choice of database isn’t a foregone conclusion; you’re not required to use MySQL.
 It is, however, a fairly common choice in OpenStack installations, so we’ll cover it here.
-MySQL with Galera Rather than starting with a vanilla version of MySQL and then adding Galera to it, you will want to install a version of MySQL patched for wsrep (Write Set REPlication) from https://launchpad.net/codership-mysql/0.7
 Note that the installation requirements are a bit touchy; you will want to make sure to read the README file so you don’t miss any steps.
 Once you’ve completed the installation, you’ll need to make a few configuration changes:
-In the system-wide my.conf file, make sure mysqld isn’t bound to 127.0.0.1, and that / etc/mysql/conf.d/ is included.
 When adding a new node, you must configure it with a MySQL account that can access the other nodes so that it can request a state snapshot from one of those existing nodes.
 Next connect as root and grant privileges to that user:
 You’ll also need to remove user accounts with empty usernames, as they cause problems:
@@ -230,14 +209,11 @@ It might also mean configuring any NAT firewall between nodes to allow direct co
 Creating the cluster In creating a cluster, you first start a single instance, which creates the cluster.
 The rest of the MySQL instances then connect to that cluster.
 For example, if you started on 10.0.0.10 by executing the command:
-You also have the option to set the wsrep_cluster_address in the /etc/mysql/ conf.d/wsrep.cnf file, or within the client itself.
 In fact, for some systems, such as MariaDB or Percona, this may be your only option.) For example, to check the status of the cluster, open the MySQL client and check the status of the various parameters:
 You should see a status that looks something like this:
 Other ways to provide a Highly Available database MySQL with Galera is by no means the only way to achieve database HA.
-MariaDB (https:// mariadb.org/) and Percona (http://www.percona.com/) also work with Galera.
 RabbitMQ RabbitMQ is the default AMQP server used by many OpenStack services.
 Install RabbitMQ This setup has been tested with RabbitMQ 2.7.1
-On Ubuntu / Debian RabbitMQ is packaged on both distros:
 On Fedora / RHEL RabbitMQ is packaged on both distros:
 Configure RabbitMQ Here we are building a cluster of RabbitMQ nodes to construct a RabbitMQ broker.
 Mirrored queues in RabbitMQ improve the availability of service since it will be resilient to failures, but we have to consider that while exchanges and bindings will survive the loss of individual nodes, queues and their messages will no because a queue and its contents is located on one node.

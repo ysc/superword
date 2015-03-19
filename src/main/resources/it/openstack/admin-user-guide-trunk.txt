@@ -30,9 +30,6 @@ Instances View, launch, create a snapshot from, stop, pause, or reboot instances
 Images & Snapshots View images, instance snapshots, and volume snapshots created project users, plus any images that are publicly available.
 Create, edit, and delete images, and launch instances from images and snapshots.
 Access & Security Use the following tabs to complete these tasks:
-Security Groups tab. View, create, edit, and delete security groups and security group rules.
-Keypairs tab. View, create, edit, and import keypairs, and delete keypairs.
-Floating IPs tab. Allocate an IP address to or release it from a project.
 Stacks Use REST API to orchestrate multiple composite cloud applications.
 OpenStack dashboard—Admin tab Enables administrative users to view usage and manage instances, volumes, flavors, images, projects, users, services, and quotas.
 Resource Usage Use the following tabs to view the following usages:
@@ -132,9 +129,10 @@ Choose the admin project from the CURRENT PROJECT drop-down list.
 The images that you can administer for cloud users appear on this page.
 In the Create An Image window, enter or select the following values:
 Image File Alternatively, browse to find the image file on your machine.
+Public Select this option to make the image public to all users.
 It might take some time before the status changes from queued to active.
 Choose the admin project from the CURRENT PROJECT drop-down list.
-Clear this check box to make the image an image.
+You cannot change the kernel ID, RAM disk ID, or architecture attributes for an image.
 Choose the admin project from the CURRENT PROJECT drop-down list.
 Manage flavors In OpenStack, a flavor defines the compute, memory, and storage capacity of a virtual server that users can launch.
 As an administrative user, you can create, edit, and delete flavors.
@@ -203,15 +201,15 @@ For example, to see the version of the nova client, run the following command:
 To see the version of the keystone client, run the following command:
 Get help for client commands To get usage information, including a list of commands with descriptions, for a client, run the following command:
 For example, to get help information for the swift client, run the following command:
-Positional arguments: delete               Delete a container or objects within a container downlad              Download objects from containers list                 Lists the containers for the account or the objects for a container post                 Updates meta information for the account, container, or object stat                 Displays information for the account, container, or object upload               Uploads files or directories to the given container.
+Positional arguments: <subcommand> delete               Delete a container or objects within a container downlad              Download objects from containers list                 Lists the containers for the account or the objects for a container post                 Updates meta information for the account, container, or object stat                 Displays information for the account, container, or object upload               Uploads files or directories to the given container.
 Depending on your credentials, you might not have permission to use every command.
 After the help command, you can enter a command name to get help for that command, as follows:
 For example, to get help for the glance image-show command, enter the following command:
 The command returns a description of the command and its positional and optional arguments:
+Positional arguments: <IMAGE>           Name or ID of image to describe.
 Optional arguments: --human-readable  Print image size in a human-friendly format.
 Manage projects, users, and roles As a cloud administrator, you manage projects, users, and roles.
 Projects are organizational units in the cloud to which you can assign users.
-You can define actions for OpenStack service roles in the /etc/PROJECT/policy.json files.
 For example, define actions for Compute service roles in the /etc/nova/ policy.json file.
 You can manage projects, users, and roles independently from each other.
 During cloud set up, the operator defines at least one project, user, and role.
@@ -246,7 +244,6 @@ Manage project security Security groups are sets of IP filter rules that are app
 Group rules are project specific; project members can edit the default rules for their group and add new rule sets.
 All projects have a "default" security group which is applied to any instance that has no other defined security group.
 Unless you change the default, this security group denies all incoming traffic and allows only outgoing traffic to your instance.
-You can use the allow_same_net_traffic option in the /etc/nova/nova.conf file to globally control whether the rules applies to hosts which share a network.
 True (default), hosts on the same subnet are not filtered and are allowed to pass all types of traffic between them.
 On a flat network, this allows all instances from all projects unfiltered communication.
 With VLAN networking, this allows access between instances within the same project.
@@ -294,15 +291,10 @@ The operator might restrict image upload and management to only cloud administra
 You can upload images through the glance client or the Image Service API.
 You can also use the nova client to list images, set, and delete image metadata, delete images, and take a snapshot of a running instance to create an image.
 You can use grep to filter the list, as follows:
-To store location metadata for images, which enables direct file access for a client, update the /etc/glance/glance.conf file with the following statements:
 After you restart the Image Service, you can use the following syntax to view the image's location information:
-Acceptable formats are ami, ari, aki, vhd, vmdk, raw, qcow2, vdi, and iso.
-For example, if the image data is stored in swift, you could specify swift:// account:key@example.com/container/obj.
 Alternatively, you can pass images to the client through stdin.
-Currently libvirt will determine the disk/cdrom/vif device models based on the configured hypervisor type (libvirt_type in /etc/nova/nova.conf)
 For the sake of optimal performance, it will default to using virtio for both disk and VIF (NIC) models.
 The downside of this approach is that it is not possible to run operating systems that lack virtio drivers, for example, BSD, Solaris, old Linux, and old Windows.
-If you specify a VIF model that is not supported, the instance fails to launch.
 The valid model values depend on the libvirt_type setting, as shown in the following tables:
 Create image (nova) You can use the nova client to list images, set and delete image metadata, delete images, and take a snapshot of a running instance to create an image.
 The safest approach is to shut down the instance before you take a snapshot.
@@ -315,7 +307,6 @@ Only the tenant who creates the image has access to it.
 Troubleshoot image creation • You cannot create a snapshot from an instance that has an attached volume.
 Make sure the version of qemu you are using is version 0.14 or greater.
 Older versions of qemu result in an "unknown option -s" error message in the nova-compute.log.
-Examine the /var/log/nova-api.log and /var/log/nova-compute.log log files for error messages.
 Manage volumes A volume is a detachable block storage device, similar to a USB hard drive.
 To create and manage volumes, you use a combination of nova and cinder client commands.
 Migrate a volume As an administrator, you can migrate a volume with its data from one location to another in a manner that is transparent to users and workloads.
@@ -334,7 +325,6 @@ To create a flavor, specify a name, ID, RAM size, disk size, and the number of V
 After you create a flavor, assign it to a project by specifying the flavor name or ID and the tenant ID:
 Delete a flavor • Delete a specified flavor, as follows:
 Select hosts where instances are launched With the appropriate permissions, you can select which host instances are launched on and which roles can boot instances on this host.
-To select the host where instances are launched, use the --availability_zone zone:host parameter on the nova boot command,
 To specify which roles can launch an instance on a specified host, enable the create:forced_host option in the policy.json file.
 By default, this option is enabled for only the admin role.
 To view the list of valid compute hosts, use the nova hypervisor-list command, as follows:
@@ -343,13 +333,15 @@ Evacuate instances If a cloud compute node fails due to a hardware malfunction o
 To preserve user data on server disk, you must configure shared storage on the target host.
 Also, you must validate that the current VM host is down.
 To find a different host for the evacuated instance, run this command to list hosts:
-You can pass the instance password to the command by using the --password the command finishes successfully.
+You can pass the instance password to the command by using the --password <pwd> option.
+If you do not specify a password, one is generated and printed after the command finishes successfully.
 The command evacuates an instance from a down host to a specified host.
 The instance is booted from a new disk, but preserves its configuration including its ID, name, uid, IP address, and so on.
 To preserve the user disk data on the evacuated server, deploy OpenStack Compute with shared file system.
 Manage IP addresses Each instance can have a private, or fixed, IP address and an IP address, often public, that is movable from instance to instance called a floating IP address.
 Private IP addresses are used for communication between instances and public ones are used for communication with the outside world.
 When you launch an instance, it is automatically assigned a private IP address that stays the same until you explicitly terminate the instance.
+Rebooting an instance has no effect on its private IP address.
 The cloud operator must configure a pool of floating IP addresses.
 Then, you can allocate a certain number of floating IP addresses from this pool to a project.
 A project quota defines the maximum number of floating IP addresses for the project.
@@ -391,7 +383,6 @@ To view a list of options for the quota-update command, run:
 Manage Block Storage service quotas As an administrative user, you can update the OpenStack Block Storage Service quotas for a project.
 You can also update the quota defaults for a new project.
 As an administrative user, you can view and update Block Storage Service quotas.
-To update a default value for a new project, update the property in the /etc/ cinder/cinder.conf file.
 View Block Storage Service quotas for a project, as follows:
 To update Block Storage Service quotas, place the tenant ID in a usable variable, as follows:
 Manage Networking service quotas A quota limits the number of available resources.
@@ -438,7 +429,6 @@ Then, for each item in the list, run the swift download -o - command.
 Pipe the output into grep to filter the PUT requests.
 List the object names that begin with a specified string.
 For each item in the list, run the swift download -o - command.
-Example A.2. Positional arguments catalog             List service catalog, possibly filtered by service.
 Defaults to env[OS_CACERT] --insecure            Explicitly allow keystoneclient to perform "insecure" TLS (https) requests.
 The server's certificate will not be verified against any certificate authorities.
 Defaults to env[OS_CACHE] --force-new-token     If the keyring is available and in use, token will always be stored and fetched from the keyring until the token has expired.
@@ -448,7 +438,6 @@ This file can optionally be prepended with the private key.
 This option is not necessary if your key is prepended to your cert file.
 Without this option glance looks for the default system CA certificates.
 The server's certificate will not be verified against any certificate authorities.
-Example A.11. Positional arguments absolute-limits     Print a list of absolute limits for a user.
 Defaults to env[OS_CACERT] --insecure            Explicitly allow novaclient to perform "insecure" SSL (https) requests.
 The server's certificate will not be verified against any certificate authorities.
 The server's certificate will not be verified against any certificate authorities.
@@ -463,14 +452,11 @@ Many resources are available to help you run and use OpenStack.
 Members of the OpenStack community can answer questions and help with bug suspicions.
 We are constantly improving and adding to the main features of OpenStack, but if you have any problems, do not hesitate to ask.
 Use the following resources to get OpenStack support and troubleshoot your existing installations.
-To provide feedback on documentation, join and use the Mailing List, or report a bug.
 The following books explain how to install an OpenStack cloud and its associated components:
 The following books explain how to configure and run an OpenStack cloud:
 The following books explain how to use the OpenStack dashboard and command-line clients:
 The following documentation provides reference and guidance information for the OpenStack APIs:
 The Training Guides offer software training for cloud administration and management.
-Use the ask.openstack.org site to ask questions and get answers.
-When you visit the http:// ask.openstack.org site, scan the recently asked questions to see whether your question has already been answered.
 Be sure to give a clear, concise summary in the title and provide as much detail as possible in the description.
 Paste in your command output or stack traces, links to screen shots, and so on.
 OpenStack mailing lists A great way to get answers and insights is to post your question or problematic scenario to the OpenStack mailing list.
@@ -483,22 +469,16 @@ If you search for specific information, such as about networking or nova, you ca
 More is being added all the time, so be sure to check back often.
 You can find the search box in the upper right corner of any OpenStack wiki page.
 The Launchpad Bugs area The OpenStack community values your set up and testing efforts and wants your feedback.
-To log a bug, you must sign up for a Launchpad account at https://launchpad.net/+login.
 You can view existing bugs and report bugs in the Launchpad Bugs area.
 Use the search feature to determine whether the bug has already been reported or even better, already fixed.
 If it still seems like your bug is unreported, fill out a bug report.
 Paste in your command output or stack traces, links to screen shots, and so on.
-Be sure to include the software and package versions that you are using, especially if you are using a development branch, such as, "Grizzly release" vs git commit bc79c3ecc55929bac585d04a03475b72e06a3208
 Any deployment specific information is helpful, such as Ubuntu 12.04 or multi-node install.
 The OpenStack IRC channel The OpenStack community lives and breathes in the #openstack IRC channel on the Freenode network.
 You can hang out, ask questions, or get immediate feedback for urgent and pressing issues.
-To install an IRC client or use a browser-based client, go to http:// webchat.freenode.net/
 You can also use Colloquy (Mac OS X, http://colloquy.info/), mIRC (Windows, http://www.mirc.com/), or XChat (Linux)
 When you are in the IRC channel and want to share code or command output, the generally accepted method is to use a Paste Bin.
 Just paste your longer amounts of text or logs in the web form and you get a URL you can paste into the channel.
-You can find a list of all OpenStack-related IRC channels at https://wiki.openstack.org/wiki/IRC.
-Documentation feedback To provide feedback on documentation, join and use the Mailing List, or report a bug.
-OpenStack distribution packages The following Linux distributions provide community-supported packages for OpenStack:
 Manage projects and users Consequences of disabling projects and users Create a project Update a project Modify user assignments for a project Delete projects Create a user account Disable or enable a user Delete users Manage project security Create a security group Add a security group rule Delete a security group rule Delete a security group.
 Manage instances Create instance snapshots Control the state of an instance Track usage.
 Manage volumes and volume types Create a volume type Delete volume types Delete volumes.
@@ -511,4 +491,3 @@ Manage images List or get details for images (glance) Create or update an image 
 Select hosts where instances are launched Evacuate instances Manage IP addresses Manage quotas Manage Compute service quotas View and update Compute quotas for a tenant (project) View and update Compute quotas for a tenant user.
 Manage Networking service quotas Basic quota configuration Configure per-tenant quotas.
 Analyze log files Upload and analyze log files Download and analyze an object.
-Appendix A. Command reference keystone commands glance commands neutron commands nova commands cinder commands swift commands heat commands ceilometer commands.

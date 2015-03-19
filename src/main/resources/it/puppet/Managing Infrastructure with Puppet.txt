@@ -1,4 +1,3 @@
-O’Reilly books may be purchased for educational, business, or sales promotional use.
 Managing Infrastructure with Puppet, the image of an English setter, and related trade dress are trademarks of O’Reilly Media, Inc.
 Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks.
 Where those designations appear in this book, and O’Reilly Media, Inc., was aware of a trademark claim, the designations have been printed in caps or initial caps.
@@ -33,7 +32,6 @@ It provides a declarative language syntax and an abstraction layer that allow yo
 In this chapter, I’ll cover the basics of the Puppet programs, the language syntax, and some simple class and resource definitions.
 Getting the Software A Puppet deployment comes with a couple of pieces of software.
 For the most part, these can be installed from your chosen Linux distribution’s package manager.
-Alternatively, you can use the packages or source provided by Puppet Labs at http://www .puppetlabs.com/misc/download-options/
 In my examples, I’ve used Ubuntu Linux 11.04, but the packages are very similar in each distro.
 There are generally two packages: the Puppet package itself, which comes with Facter, and the Puppet Master server.
 For the purposes of this chapter, the Puppet and Facter package will suffice.
@@ -67,7 +65,6 @@ The first thing you should do is run puppet describe --list.
 This will provide a list of the available resource “types” you have to work with out of the box:
 We’ll primarily be concerned with the file, exec, cron, user, group, and package types.
 In addition to these built-in types, a large variety of user-contributed modules add functionality for nearly every commonly used configuration scenario.
-Documentation of the built-in types can be found on the Puppet Labs documentation site at http://docs .puppetlabs.com/references/2.6.0/type.html.
 To get some detail about each of these resource types, you can use puppet describe type.
 This will output Puppet’s documentation on that particular resource type including parameters and often usage examples as well:
 For most systems, these entries will just be in `/etc/hosts`, but some systems (notably OS X) will have different solutions.
@@ -90,7 +87,6 @@ The path, mode, and content parameters are fairly mundane, but the require param
 The Puppet agent doesn’t have any innate sense of order of execution when it is run on a manifest or set of manifests.
 Things will happen in random sequence unless constrained by some dependencies.
 The above statement specifies that the file definition ntp.conf requires that the package ntp be installed before it is created.
-Conversely, we could have specified in the package slightly more streamlined implementation:
 The most obvious change here is that we’ve moved the file content to an external source.
 We’ve told Puppet to go and look in /etc/nfs/configs for a file named ntp.conf and put it in /etc/ntp.conf.
 For the moment, we’ll use an NFS mount to distribute our configuration files.
@@ -135,6 +131,7 @@ Each type has a set of “provider” backends that specify what to do with all 
 Each type also has a specified default provider, depending on the nature of the machine you are executing on.
 In the package definition for ntp we have not told Puppet how to install the package or what commands to use.
 Instead it knows that we are on an Ubuntu system and has a specified default provider of “apt”
+The providers can be explicitly passed in a parameter such as provider => apt,, but this is generally unnecessary and even undesirable.
 If you were writing Puppet automation for a heterogeneous environment with both CentOS and Ubuntu hosts, it would benefit you to allow Puppet to make the choice.
 It’s a great habit to write your manifests to be as operating system independent as you can manage.
 Not only will it help make your system more versatile, but it will make it convenient for others in the community to reuse when you graciously contribute it back!
@@ -146,7 +143,6 @@ To ascertain what OS it’s running on, Puppet uses the Facter library and looks
 These facts are also available to us in the manifests themselves.
 If we would rather make explicit decisions about what to do in different situations (like on different operating systems), we can do that with facts.
 In this example, I’ve added a selector operation into the source parameter.
-This specifies that if the $operatingsystem fact is Ubuntu, we should use the source file at /mnt/nfs/ configs/ubuntu-ntp.conf; else we should use the default source file.
 Here we’ve made a simple decision tree that prints out a notice depending on the OS type and version reported by Facter.
 Notices can be useful for logging of Puppet runs and reporting on exceptional conditions.
 Puppet can be very verbose about what changes it’s made, but custom logging is convenient:
@@ -156,7 +152,6 @@ This manual execution is useful for writing and testing Puppet manifests, but as
 The Puppet Master Running a central Puppet Master server will allow us to build configurations that are specific to a particular system and then hand them out to be executed on demand.
 It can be a central repository for the configuration of all servers in your data center, allowing for the centralized deployment of updates and applications.
 Once the Puppet Master is installed, you’ll have an empty Puppet repository in /etc/ puppet.
-When the Puppet Master starts up, the first file it loads is /etc/puppet/manifests/ site.pp.
 Generally this file will include a nodes.pp file as well as set some default parameters.
 The Puppet Master and agent communicate over tcp port 8140
 Make sure that any applicable firewall settings allow communication on that port between the two.
@@ -165,26 +160,21 @@ First, you’ll need to have both agent and master installed.
 For simplicity’s sake, these can be on the same system.
 This site.pp includes our nodes.pp and sets up a couple of defaults.
 When Puppet makes some change to the filesystem, such as overwriting a config file with an update, it will make a backup of the original.
-When we define a filebucket on our Puppet Master server (which we assume to have the hostname puppet.example.com), we can then tell all the file type resource declarations to default their backup to that bucket.
 The way that I’ve set up that default here is called a metaparameter.
 When I declare a capitalized file resource with no title, the parameters I specify for it will become the default for that resource type.
 I’ve also specified a metaparameter default for the path of the exec resource type.
 Exec is used to execute arbitrary commands from the agent and it is convenient to have a standard default path set to look for executables:
-In this example, I’ve defined a node explicitly as puppet.example.com and also as a default.
 The Puppet Master matches nodes based upon their hostnames and will fall back to a default node declaration if a matching node is not found.
 In this case, either way, the apps::ntp class will be applied to the node:
 Modules for Organization The Puppet structure that stores sets of related classes is called a module.
 The Puppet Master has an autoloader that expects your classes to be in certain subdirectory structures of the /etc/modules directory.
-Files that the class will distribute should live in /etc/puppet/modules/mymodule/files, and ERB templates in /etc/puppet/modules/mymodule/templates.
 Now that we’ve told our Puppet Master how to identify our agent and what to do with it, we need to put the ntp manifest that we created earlier into the apps::ntp class.
 This way, when the agent runs it will execute our ntp installation just as it did when it was applied with the puppet apply command.
 You’ll notice that the source parameter has changed for our ntp.conf file.
 I’ve defined a string here that points to a place where our Puppet server expects module files to be kept.
-This puppet:///modules/apps/ntp/ntp.conf location maps to the /etc/puppet/ modules/apps/files/ntp/ntp.conf location on our Puppet Master.
 This allows us to distribute files from the master to the clients without having to jump through any extra hoops, such as setting up nfs.
 Make sure to copy the ntp.conf file to the proper place on the master before continuing:
 With our node defined and importing the ntp class that we’ve written, we can now test out the agent.
-On the Puppet agent node, run sudo puppetd --test --noop --server puppet.example.com.
 This will tell the agent to run without daemonizing into the background (--test) and without actually modifying anything (--noop)
 The first run will not obtain a configuration from the Puppet Master because the agent has not yet been authenticated.
 The next step in getting our agent and master talking is to have the Puppet Master sign our agent’s SSL certificate.
@@ -193,18 +183,15 @@ This will list all of the certificates in our Puppet Master’s certificate stor
 Certificates that are signed will have a + in front of them, and unsigned certificates will not.
 You should see a certificate for your agent that is not yet signed.
 This will sign all the outstanding requests and allow those agents to talk to the master.
-You can define client node names in the /etc/puppet/autosign.conf file in the format agenthost.example.com or even *.example.com.
 Names matching these patterns will be signed automatically by the master.
 At this point, we should have a fully functional master and agent pair.
 The client certificate is signed, the node has a definition, and there is a class for the ntp installation assigned to it.
-Let’s prove that it works by running sudo puppetd --test --server puppet.example.com on our client.
 You should see the agent run through our manifest and install ntp.
 Congratulations, you’ve taken a big step toward implementing a scalable configuration management architecture.
-Some deployments will need more complicated logic than examples to help you out.
+Some deployments will need more complicated logic than packages and configuration files, but there are plenty of resource types, plug-ins, and examples to help you out.
 In the next chapter, we’ll look at the more advanced features of Puppet that will let you take these simple configuration definitions and apply them in a larger-scale fashion.
 Puppet in the Ubuntu Cloud If you’re using Ubuntu virtual images (on Amazon AWS or Ubuntu Enterprise Cloud), you will have a neat feature called cloud-init.
 Cloud-init provides a boot hook that can consume data from an input on instance launch and do things like install packages or execute scripts.
-On your instance there will be an example at  /usr/share/doc/cloud-init/ examples/cloud-config-puppet.txt that describes how to install Puppet at boot and contact a Puppet Master:
 At the simplest, all that needs to be specified in this file is your Puppet server and the node name to identify the new instance (cert name)
 Before we can get into a full-scale example, we need to add more tools to our Puppet workbench.
 Puppet provides several layers of abstraction to give you a variety of options for structuring configurations.
@@ -242,21 +229,20 @@ If you need to use a variable from one class in another, be sure that you can gu
 Puppet also supports an extensive set of comparison and arithmetic operators (even Backus-Naur Form!) for expressions as variable values.
 See the Puppet language guide at http://docs.puppetlabs.com/guides/lan guage_guide.html for complete documentation.
 Templates Often you’ll want to maintain configuration files for applications that are different between servers.
-If you have a couple of configurations, it’s easy enough to maintain multiple files, but what if you have a very large number of differing configurations? We can manage this situation by writing ERB templates and populating the templates with.
+If you have a couple of configurations, it’s easy enough to maintain multiple files, but what if you have a very large number of differing configurations? We can manage this situation by writing ERB templates and populating the templates with node-specific information.
 Here we have a file resource that creates an Apache config file named by the fqdn variable.
 We’ll assume that Facter is populating this variable with the fully qualified.
 The file contents are generated by an ERB template and then it notifies an exec that enables the site and notifies Apache to restart.
-Next we’ll write our template and place it in the expected location at /etc/puppet/templates/apachesite.erb:
 This is just a normal Apache vhost stanza, with the exception of the inline included name variable.
-All variables in the current scope are available to you in this manner and out-of-scope variables in other classes can be accessed by this lookupvar function, like so: scope.lookupvar('externalclass::myvariable')
 Injecting variables into config file templates like this will let us drastically reduce the number of individual configuration files we need to maintain.
-Documentation for the ERB templating system can be found at http:// www.ruby-doc.org/stdlib/libdoc/erb/rdoc/, and there are plenty of online tutorials on complex templating.
 I’ve tried to give you a few real-world examples of how to implement the various features of Puppet, but the applications are vast and varied.
 I suggest that you take a while to peruse the community repository of Puppet modules at http://forge.puppetlabs.com/
 There are plenty of great patterns of implementation and organization in these projects, and you may even come across an out-of-the-box solution to a problem of your own.
 Centralized auth is prone to failure and proper redundancy is painful to manage.
 Often password auth is well managed, but key distribution is difficult, or vice versa.
-We can use Puppet to manage users and groups and distribute Gone are the days of writing big ugly scripts to push users and keys out to your whole farm of servers.
+We can use Puppet to manage users and groups and distribute public keys.
+It can even enforce file and directory permissions and set password hashes.
+Gone are the days of writing big ugly scripts to push users and keys out to your whole farm of servers.
 We’ll see how to accomplish this in a less painful manner using Puppet.
 Building the Framework First, we’ll need a framework that can build user accounts in a repeatable fashion given a set of user attributes.
 We’ll use a definition to make a reusable structure that can implement the user type repeatedly with different inputs.
@@ -313,7 +299,6 @@ Alternatively, there is a community Puppet module that can be used for installat
 The plugin.psk secret must match between the server and client, as it is used for messaging encryption.
 This config assumes that you have Puppet installed and looks for the class file at the default location and sets the fact source to Facter:
 In order for the Facter fact source to work correctly, you will need to distribute the Facter plug-in for MCollective to the servers.
-The plug-in source can be fetched from GitHub at https://github.com/puppetlabs/mcollective-plugins/tree/master/facts/facter/ and installed to the server under $libdir/mcollective.
 Remember to restart MCollective after copying the files so that MCollective will recognize the new agent.
 MCollective Client You’ll need to install and configure the client in the same fashion.
 These configuration files contain secrets that can be used to publish commands onto the MCollective channel.
@@ -322,7 +307,6 @@ It is of utmost importance that access to the secrets and the Stomp server be ca
 MCollective Commands With both the servers and a client configured, we’re ready to start issuing MCollective commands.
 When run without any argument, mc-find-hosts will list all of the MCollective servers that are currently active and listening:
 We can also get some information about our individual MCollective nodes.
-Agents: discovery       filemgr        package iptables        nrpe           rpcutil process         puppetd service.
 This is already a useful tool for diagnostics and inventory on all of your Puppet-managed servers, but MCollective also lets us execute agents on the target systems, filtered by any of these attributes, facts, agents, or classes.
 For example, if our servers run Apache and we need to restart all of the Apaches on all of our servers, we could use the mcservice agent to do this:
 These sorts of filters make remote execution of tasks on particular subsets of servers very easy.
@@ -332,19 +316,14 @@ This is not convenient, for instance, if you would like to use Puppet to coordin
 If you would like some control over the sequence and timing of the Puppet runs, you can use the MCollective puppetd agent and forgo the polling behavior of the agent daemon.
 Since Puppet is built in to MCollective, it is not necessary to run the agent on boot either.
 So long as MCollective and Puppet are both installed, we can execute Puppet as we like.
-The agent can be downloaded from GitHub at https://github.com/puppetlabs/mcollec tive-plugins/tree/master/agent/puppetd/ and, as with the Facter plug-in, should be.
 Once it’s installed, you will be able to kick off a Puppet run on all or some of your servers with the following command:
 If you don’t mind the default polling behavior of the Puppet agent, you can also use the puppetd MCollective agent to selectively enable or disable Puppet on sets of your instances as well as initiate one-off runs of the agent.
-If you still want to have Puppet run on a regular basis to ensure configuration correctness, but need to avoid polling “stampedes,” take a look at the PuppetCommander project at http://projects.puppetlabs.com/ projects/mcollective-plugins/wiki/ToolPuppetcommander.
 It uses MCollective’s puppetd module to centrally coordinate Puppet runs so as to avoid overwhelming a Puppet Master.
 It will also give you the power to specify which nodes or classes to run automatically.
 Finally, there is an mc-rpc command that serves as a sort of metacommand, allowing access to all of the available agents.
 We can execute the puppetd agent, for example, with the following syntax:
-Alternatively, we can use mc-rpc to read out the documentation for a particular agent: :> mc-rpc --agent-help puppetd SimpleRPC Puppet Agent.
 You’ve seen the basic features of MCollective in this chapter.
 It works as a great orchestration tool for Puppet, allowing you greater control over your Puppet agents and more insight into your configurations through Facter.
 Beyond this, the agents are fairly simple to write and can be used to accomplish any task that you might want to execute in a distributed fashion across all or part of your infrastructure.
-Puppet Labs provides documentation on extending MCollective with custom agents with SimpleRPC at http: //docs.puppetlabs.com/mcollective/simplerpc/agents.html.
 He is a specialist in scalable infrastructure, virtualization, cloud infrastructure, and computer security.
 Colophon The animal on the cover of Managing Infrastructure with Puppet is an English setter.
-The text font is Linotype Birka; the heading font is Adobe Myriad Condensed; and the code font is LucasFont’s TheSansMonoCondensed.

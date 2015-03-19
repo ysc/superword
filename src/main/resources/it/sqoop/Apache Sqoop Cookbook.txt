@@ -17,7 +17,7 @@ Sqoop enabled users with vast troves of information stored in existing SQL table
 As Sqoop matures, a renewed focus on SQL-oriented analytics continues to make it relevant: systems like Cloudera Impala and Dremel-style analytic engines offer powerful distributed analytics with SQLbased languages, using the common data substrate offered by HDFS.
 The variety of data sources and analytic targets presents a challenge in setting up effective data transfer pipelines.
 Data sources can have a variety of subtle inconsistencies: different DBMS providers may use different dialects of SQL, treat data types differently, or use distinct techniques to offer optimal transfer speeds.
-Depending on whether you’re a different file format or compression algorithm when writing data to HDFS.
+Depending on whether you’re importing to Hive, Pig, Impala, or your own MapReduce pipeline, you may want to use a different file format or compression algorithm when writing data to HDFS.
 Sqoop helps the data engineer tasked with scripting such transfers by providing a compact but powerful tool that flexibly negotiates the boundaries between these systems and their data layouts.
 The internals of Sqoop are described in its online user guide, and Hadoop: The Definitive Guide (O’Reilly) includes a chapter covering its fundamentals.
 But for most users who want to apply Sqoop to accomplish specific imports and exports, The Apache Sqoop Cookbook offers guided lessons and clear instructions that address particular, common data management tasks.
@@ -53,16 +53,12 @@ For example, writing a program that uses several chunks of code from this book d
 Selling or distributing a CD-ROM of examples from O’Reilly books does require permission.
 Answering a question by citing this book and quoting example code does not require permission.
 Incorporating a significant amount of example code from this book into your product’s documentation does require permission.
-Supplemental material (code examples, exercises, etc.) is available for download at https://github.com/jarcec/Apache-Sqoop-Cookbook.
 An attribution usually includes the title, author, publisher, and ISBN.
-If you feel your use of code examples falls outside fair use or the permission given above, feel free to contact us at permissions@oreilly.com.
-Safari® Books Online Safari Books Online is an on-demand digital library that delivers expert content in both book and video form from the world’s leading authors in technology and business.
 Technology professionals, software developers, web designers, and business and creative professionals use Safari Books Online as their primary resource for research, problem solving, learning, and certification training.
 Safari Books Online offers a range of product mixes and pricing programs for organizations, government agencies, and individuals.
 For more information about Safari Books Online, please visit us online.
 How to Contact Us Please address comments and questions concerning this book to the publisher:
 We have a web page for this book, where we list errata, examples, and any additional information.
-To comment or ask technical questions about this book, send email to bookques tions@oreilly.com.
 For more information about our books, courses, conferences, and news, see our website at http://www.oreilly.com.
 Acknowledgments Without the contributions and support from the Apache Sqoop community, this book would not exist.
 Without that support, there would be no Sqoop, nor would Sqoop be successfully deployed in production at companies worldwide.
@@ -157,7 +153,6 @@ Problem You’ve successfully installed and configured Sqoop, and now you want t
 Solution Sqoop is a command-line tool that can be called from any shell implementation such as bash or zsh.
 An example Sqoop command might look like the following (all parameters will be described later in the book):
 The most important operations are import for transferring data from a database to Hadoop and export for transferring data from Hadoop to a database.
-PROPERTY_ARGS are a special set of parameters that are book)
 Property parameters are followed by SQOOP_ARGS that contain all the various Sqoop parameters.
 You can specify EXTRA_ARGS for specialized connectors, which can be used to enter additional parameters specific to each connector.
 Sqoop has a bewildering number of command-line parameters (more than 60)
@@ -170,7 +165,6 @@ Then provide the full context of your problem with details on observed or desire
 If appropriate, include a minimal self-reproducing example so that others can reproduce the problem you’re facing.
 Discussion Before sending email to the mailing list, it is useful to read the Sqoop documentation and search the Sqoop mailing list archives.
 Most likely your question has already been asked, in which case you’ll be able to get an immediate answer by searching the archives.
-If it seems that your question hasn’t been asked yet, send it to user@sqoop.apache.org.
 If you aren’t already a list subscriber, your email submission will be rejected.
 Your question might have to do with your Sqoop command causing an error or giving unexpected results.
 In the latter case, it is necessary to include enough data to reproduce the error.
@@ -185,11 +179,9 @@ In this chapter we will cover the basic use cases of Sqoop, describing various s
 We will be describing various Sqoop features through examples that you can copy and paste to the console and then run.
 In order to do so, you will need to first set up your relational database.
 For the purpose of this book, we will use a MySQL database with the account sqoop and password sqoop.
-You can easily create the credentials using the script mysql.credentials.sql uploaded to the GitHub project associated with this book.
 You can always change the examples if you want to use different credentials or connect to a different relational system (e.g., Oracle, PostgreSQL, Microsoft SQL Server, or any others)
 As Sqoop is focused primarily on transferring data, we need to have some data already available in the database before running the Sqoop commands.
 To have something to start with, we’ve created the table cities containing a few cities from around the world (see Table 2-1)
-You can use the script mysql.tables.sql from the aforementioned GitHub project to create and populate all tables that are needed.
 Problem You have a table in a relational database (e.g., MySQL) and you need to transfer the table’s contents into Hadoop’s Distributed File System (HDFS)
 Solution Importing one table with Sqoop is very simple: you issue the Sqoop import command and specify the database credentials and the name of the table to transfer.
 Discussion Importing an entire table is one of the most common and straightforward use cases of Sqoop.
@@ -198,7 +190,8 @@ The example table cities will be imported as the following file:
 Note that this CSV file will be created in HDFS (as opposed to the local filesystem)
 You can inspect the created files’ contents by using the following command:
 In this example, Sqoop’s main binary was called with a couple of parameters, so let’s discuss all of them in more detail.
-The first parameter after the sqoop executable is transfer data from the relational database into Hadoop.
+The first parameter after the sqoop executable is import, which specifies the appropriate tool.
+The import tool is used when you want to transfer data from the relational database into Hadoop.
 Later in the book we will discuss the export tool, which is used to transfer data in the opposite direction (Chapter 5)
 The next parameter, --connect, contains the JDBC URL to your database.
 The syntax of the URL is specific for each database, so you need to consult your DB manual for the proper format.
@@ -224,7 +217,6 @@ Use the --target-dir parameter to specify the directory on HDFS where Sqoop shou
 For example, use the following command to import the table cities into the directory /etl/input/cities:
 To specify the parent directory for all your Sqoop jobs, instead use the --warehousedir parameter:
 Discussion By default, Sqoop will create a directory with the same name as the imported table inside your home directory on HDFS and import all data there.
-For example, when the user jarcec imports the table cities, it will be stored in /user/jarcec/cities.
 This directory can be changed to any arbitrary directory on your HDFS using the --targetdir parameter.
 The only requirement is that this directory must not exist prior to running the Sqoop command.
 Sqoop will reject importing into an existing directory to prevent accidental overwriting of data.
@@ -289,13 +281,11 @@ Problem You want to decrease the overall size occupied on HDFS by using compress
 Discussion Sqoop takes advantage of the inherent parallelism of Hadoop by leveraging Hadoop’s execution engine, MapReduce, to perform data transfers.
 As MapReduce already has excellent support for compression, Sqoop simply reuses its powerful abilities to provide compression options.
 By default, when using the --compress parameter, output files will be compressed using the GZip codec, and all files will end up with a .gz extension.
-You can choose any other codec using the --compression-codec parameter.
 Another benefit of leveraging MapReduce’s compression abilities is that Sqoop can make use of all Hadoop compression codecs out of the box.
 You don’t need to enable compression codes within Sqoop itself.
 That said, Sqoop can’t use any compression algorithm not known to Hadoop.
 Prior to using it with Sqoop, make sure your desired codec is properly installed and configured across all nodes in your cluster.
 As Sqoop delegates compression to the MapReduce engine, you need to make sure the compressed map output is allowed in your Hadoop configuration.
-For example, if in the mapred-site.xml file, the property mapred.output.compress is set to false with the final flag, then Sqoop won’t be able to compress the output files even when you call it with the --compress parameter.
 The selected compression codec might have a significant impact on subsequent processing.
 Some codecs do not support seeking to the middle of the compressed file without reading all previous content, effectively preventing Hadoop from processing the input files in a parallel manner.
 You should use a splittable codec for data that you’re planning to use in subsequent processing.
@@ -361,7 +351,6 @@ To allow easier integration with additional Hadoop ecosystem components, Sqoop d
 For text-based columns that are defined with type VARCHAR, CHAR, NCHAR, TEXT, and a few others, you can override the default substitution string using the parameter --null-string.
 For all other column types, you can override the substitution string with the --null-nonstring parameter.
 Some of the connectors might not support different substitution strings for different column types and thus might require you to specify the same value in both parameters.
-Internally, the values specified in the --null(-non)-string parameters are encoded as a string constant in the generated Java code.
 You can take advantage of this by specifying any arbitrary string using octal representation without worrying about proper encoding.
 An unfortunate side effect requires you to properly escape the string on the command line so that it can be used as a valid Java string constant.
 Your shell will try to unescape the parameters for you, so you need to enclose those parameters in single quotes (')
@@ -376,16 +365,15 @@ Tables will be imported in sequential order to avoid any unnecessary burden on t
 If you need to import all but a few tables, you can use the parameter --excludetables that accepts a comma-separated list of table names that should be excluded from the bulk import.
 For example, if you need to import all tables from the database except cities and countries, you would use the following command:
 Importing all tables will internally call the usual import tool for transferring each table.
-You’ll find that many of the import parameters can’t be used in conjunction with the.
+You’ll find that many of the import parameters can’t be used in conjunction with the import-all-tables tool.
 For example, you can’t use the parameter --target-dir, as that would instruct Sqoop to import all tables into the same directory, resulting in a total file mess on HDFS.
 Using the --warehouse-dir parameter is fine, as this parameter can be easily used for all imported tables.
-You can take advantage of the parameter --exclude-tables to skip using the import tool, which allows you to specify additional parameters.
+You can take advantage of the parameter --exclude-tables to skip importing tables that need special parameters; you can then import them separately using the import tool, which allows you to specify additional parameters.
 So far we’ve covered use cases where you had to transfer an entire table’s contents from the database into Hadoop as a one-time operation.
 What if you need to keep the imported data on Hadoop in sync with the source table on the relational database side? While you could obtain a fresh copy every day by reimporting all data, that would not be optimal.
 The amount of time needed to import the data would increase in proportion to the amount of additional data appended to the table daily.
 This would put an unnecessary performance burden on your database.
-Why reimport data that has already been imported? For transferring deltas of data, Sqoop offers the ability to do incremental.
-Examples in this chapter use the table visits, which can be created by the script mysql.tables.sql described in Chapter 2
+Why reimport data that has already been imported? For transferring deltas of data, Sqoop offers the ability to do incremental imports.
 Problem You have a database table with an INTEGER primary key.
 You are only appending new rows, and you need to periodically sync the table’s state to Hadoop for further processing.
 Solution Activate Sqoop’s incremental feature by specifying the --incremental parameter.
@@ -410,7 +398,9 @@ This ensures that Sqoop can pick up changed rows accurately.
 The onus is on your application to reliably update this column on every row change.
 Any row that does not have a modified column, as specified in the --check-column parameter, won’t be imported.
 Internally, the lastmodified incremental import consists of two standalone MapReduce jobs.
-The first job will import the delta of changed data similarly to normal job will take both the old and new data and will merge them together into the final output, preserving only the last updated value for each row.
+The first job will import the delta of changed data similarly to normal import.
+This import job will save data in a temporary directory on HDFS.
+The second job will take both the old and new data and will merge them together into the final output, preserving only the last updated value for each row.
 As in the case of the append type, all you need to do for subsequent incremental imports is update the value of the --last-value parameter.
 For convenience, it is printed out by Sqoop on every incremental import execution.
 Problem Incremental import is a great feature that you’re using a lot.
@@ -432,7 +422,6 @@ As a next step, you would like to automate the process and start the jobs automa
 Unfortunately, each execution requires you to enter a password, which is not easily automated by a script.
 Solution Sqoop offers two ways to run jobs from within the metastore without requiring any user input.
 The first and more secure method is by using the parameter --password-file to pass in the file containing the password.
-The second, less secure method is to set the property sqoop.metastore.client.record.password in the sqoop-site.xml to true:
 While using the password file is considered safer, in order to secure it, you need to restrict access to the password file.
 The Sqoop job will be executed with the permissions of the user running the --exec operation rather than the user who created the saved job.
 You might need to share the file between the two users.
@@ -454,13 +443,9 @@ Problem You’ve started using Sqoop’s built-in metastore, and it’s performi
 As a next step you would like to run the metastore as a service, shared by clients on multiple physical machines.
 Solution Sqoop’s metastore can easily be started as a service with the following command:
 Other clients can connect to this metastore by specifying the parameter --meta-connect in the command line with the URL of this machine.
-For example, to create a new saved job in the remote metastore running on the host mestastore.example.com, you can execute the following command:
 Discussion Running the metastore as a service will start the embedded HSQLDB database that will be exposed to the rest of your cluster.
-The default port is 16000, and you can configure it in the sqoop-site.xml file with the sqoop.metastore.server.port configuration property.
-In order to reuse the shared metastore, you can either use the parameter --metaconnect on every Sqoop execution or save the value into the sqoop-site.xml configuration file in the property sqoop.metastore.client.autoconnect.url:
 The previous chapters covered the use cases where you had an input table on the source database system and you needed to transfer the table as a whole or one part at a time into the Hadoop ecosystem.
 This chapter, on the other hand, will focus on more advanced use cases where you need to import data from more than one table or where you need to customize the transferred data by calling various database functions.
-The normalized variant of the table cities is called normcities and will be created and populated automatically via the script mysql.tables.sql as described in Chapter 2
 Problem You need to import one main table; however, this table is normalized.
 The important values are stored in the referenced dictionary tables, and the main table contains only numeric foreign keys pointing to the values in the dictionaries rather than to natural keys as in the original cities table.
 You would prefer to resolve the values prior to running Sqoop and import the real values rather than the numerical keys for the countries.
@@ -473,7 +458,8 @@ Discussion The free-form query import is one of the advanced features of Sqoop.
 As with all advanced software features, it gives you great power.
 There is a lot to be aware of when using free-form query imports.
 By using query imports, Sqoop can’t use the database catalog to fetch the metadata.
-This is one of the reasons why using table import might be faster than the equivalent free-form query otherwise be populated automatically.
+This is one of the reasons why using table import might be faster than the equivalent free-form query import.
+Also, you have to manually specify some additional parameters that would otherwise be populated automatically.
 This parameter usually automatically defaults to the primary key of the main table.
 The third required parameter is --target-dir, which specifies the directory on HDFS where your data should be stored.
 The free-form query import can’t be used in conjunction with the \--warehouse-dir parameter.
@@ -483,7 +469,8 @@ Sqoop will automatically substitute this placeholder with the generated conditio
 Sqoop will concurrently run several instances of your query at the same time for different slices of data.
 With one straightforward join, this won’t be an issue, but it can be an issue for more complex queries.
 If your query needs more than a few seconds in order to start sending data, it might not be suitable for the free-form query import.
-If this is the case, you can always run the expensive query once prior to Sqoop.
+If this is the case, you can always run the expensive query once prior to Sqoop import and save its output in a temporary table.
+Then you can use table import to transfer the data into Hadoop.
 Problem You found free-form query import to be very useful for your use case.
 Unfortunately, prior to starting any data transfer in MapReduce, Sqoop takes a long time to retrieve the minimum and maximum values of the column specified in the --split-by parameter that are needed for breaking the data into multiple independent tasks.
 Solution You can specify any valid query to fetch minimum and maximum values of the --splitby column using the --boundary-query parameter:
@@ -503,15 +490,14 @@ There is no requirement to reference any table used in the --query parameter ins
 As the output of the boundary query serves as the basis for importing data, it is imperative that the return value not skew the import process.
 Problem You run several concurrent free-form query imports from various databases at the same time on your Hadoop cluster.
 All MapReduce jobs are named QueryResult.jar, so it’s very hard to see which MapReduce job belongs to which imported query.
-Solution You can use the command-line parameter --mapreduce-job-name to specify the name of the generated MapReduce job.
 This name will then show up in the JobTracker web UI.
 To name your job normcities, you would use the following command:
 Discussion Sqoop follows the default behavior of Hadoop in using the submitted JAR name for the MapReduce job name.
 In a table import, the JAR is named after the table name, resulting in unique JAR and therefore also MapReduce job names.
 In the free-form query import case, with no single table involved, Sqoop will use QueryResult as the base name for the JAR.
 All query imports will look exactly the same on the JobTracker web UI.
-You can use the --mapreduce-job-name parameter to choose a name for your job.
 Problem You have more than one table that you’re joining in your free-form query.
+Your Sqoop import is failing with an error message about duplicate columns, similar to the following one:
 Solution You might need to use SQL projection to rename columns in the query so that each column in the output result set has a unique name.
 For example, to import city names from the tables cities and normcities, you can use the following query:
 Discussion During initial preparation and before submitting the MapReduce job, Sqoop performs several actions.
@@ -543,9 +529,6 @@ It seems that each row is inserted in a separate insert statement.
 Is there a way to batch multiple insert statements together?
 Solution Tailored for various databases and use cases, Sqoop offers multiple options for inserting more than one row at a time.
 First, you can enable JDBC batching using the --batch parameter:
-The second option is to use the property sqoop.export.records.per.statement to specify the number of records that will be used in each insert statement:
-Finally, you can set how many rows will be inserted per transaction with the sqoop.export.statements.per.transaction property:
-Sqoop defaults to disabled batching and to 100 for both sqoop.export.records.per.statement and sqoop.export.statements.per.transaction properties.
 Discussion These methods all look at batching from different perspectives that you can combine as you see fit.
 The JDBC interface exposes an API for doing batches in a prepared statement with multiple sets of values.
 With the --batch parameter, Sqoop can take advantage of this.
@@ -553,13 +536,11 @@ This API is present in all JDBC drivers because it is required by the JDBC inter
 Whereas some database drivers use the ability to send multiple rows to remote databases inside one request to achieve better performance, others might simply send each query separately.
 Some drivers cause even worse performance when running in batch mode due to the extra overhead introduced by serializing the row in internal caches before sending it row by row to the database server.
 The second method of batching multiple rows into the same query is by specifying multiple rows inside one single insert statement.
-When setting the property sqoop.export.records.per.statement to a value of two or more, Sqoop will create the following query:
 As the query is completely generated by Sqoop, the JDBC driver doesn’t alter it, sending it to the remote database as is.
 Unfortunately, not all databases support multiple rows in a single insert statement.
 Common relational databases like MySQL, Oracle, and PostgreSQL do support this, but some data warehouses might not.
 The Sqoop export will fail if the remote database server does not accept the generated query.
 The third batching mechanism does not try to achieve better performance by putting multiple rows together as the previous two options did.
-The value specified in sqoop.ex port.statements.per.transaction determines how many insert statements will be issued on the database prior to committing the transaction and starting a new one.
 Higher values of this property lead to longer-lived transactions and remove the overhead introduced by creating and finishing the transaction.
 However, the exact behavior depends on the underlying database and its functionality.
 If your database requires a special table-level write lock for inserting rows into a table, using a higher value for statements per transaction might lead to significantly decreased performance.
@@ -583,7 +564,6 @@ Some extended attributes do not make a difference to Sqoop: your target table mi
 Ultimately, it’s the user’s responsibility to make sure the data export is valid when the tables are not defined in exactly the same way.
 The staging table is not automatically created by Sqoop and must exist prior to starting the export process.
 In addition, it needs to be empty in order to end up with consistent data.
-You can specify the parameter --clear-staging-table to instruct Sqoop to automatically clean the staging table for you.
 If supported by the database, Sqoop will use a TRUNCATE operation to clean up the staging table as quickly as possible.
 Problem You previously exported data from Hadoop, after which you ran additional processing that changed it.
 Instead of wiping out the existing data from the database, you prefer to just update any changed rows.
@@ -635,15 +615,12 @@ There is a limitation to keep in mind when using the --columns parameter while e
 As Sqoop uses INSERT statements to transfer data from Hadoop, the database must allow inserting new rows with only specified columns.
 Columns that are not being exported must either allow NULL values or contain a default value that your DB engine could use.
 Problem Your Hadoop processing uses custom string constants to encode missing values, and you need Sqoop to properly use them rather than insisting on the default null.
-Solution You can override the NULL substitution characters by setting the --input-nullstring and --input-null-non-string parameters to any value.
 For example, use the following command to override it to \N:
 Discussion Similar to import mode, Sqoop in export mode allows you to override the default string constant used for encoding missing values in the database, the so-called NULL value.
 Sqoop has different parameters for specifying the substitution string for import and export.
 The export variants of parameters always start with the word input, whereas the import parameters do not.
-Specifically for text-based columns, defined as VARCHAR, CHAR, NCHAR, TEXT, and a few others, you can use the parameter --input-null-string.
-Independent of this parameter, for all other column data types you can use the --input-null-non-string parameter.
 Some of the connectors might not support different substitution strings for different column types and so might require you to specify the same value for both parameters.
-If, in your workflow, your data is first imported to Hadoop and subsequently exported back, it’s important to keep the parameters of the with failing jobs or even corrupted data.
+If, in your workflow, your data is first imported to Hadoop and subsequently exported back, it’s important to keep the parameters of the import and associated export job in sync; otherwise, you might end up with failing jobs or even corrupted data.
 This is especially the case when you’re using Sqoop to integrate with a downstream system like Hive that uses different NULL substitution constants.
 Sqoop fails on the export command with the following exception:
 Solution Check your map task logs to see what is happening.
@@ -660,6 +637,7 @@ Problem You are using Oozie in your environment to schedule Hadoop jobs and woul
 Solution Oozie includes special Sqoop actions that you can use to call Sqoop in your workflow.
 Discussion Starting from version 3.2.0, Oozie has built-in support for Sqoop.
 You can use the special action type in the same way you would execute a MapReduce action.
+The first option is to use one tag, <command>, to list all the parameters, for example:
 In this case, Oozie will take the entire content of the <command> tag and split it by spaces into a list of parameters.
 It’s important to note that Oozie will not do any escaping as in a shell environment.
 For example, the fragment --table "my table" will be split into three separate parameters: --table, "my, and table"
@@ -668,7 +646,6 @@ Having spaces inside of a <command> tag might not be obvious, especially when yo
 The preferred way to use Sqoop in Oozie is with <arg> tags.
 Problem Your Sqoop command line works when directly executed from the command line.
 Character parameter '|' has multiple characters; only the first will be used.
-Got error creating database manager: java.io.IOException: No manager for connect string: "jdbc:teradata..."
 Solution You do not need to escape your parameters when using Oozie.
 All escape sequences and the surrounding single and double quotes must be removed.
 Consider, for example, the following Sqoop execution in a shell:
@@ -682,7 +659,7 @@ Oozie, on the other hand, does not use a shell to execute Sqoop.
 It will directly pass all the parameters as they are without any modifications.
 To get Sqoop to behave the same way, you need to remove all the escaping that you’ve introduced on account of the shell.
 One small exception is Oozie’s built-in expression language, which will still be interpreted.
-Problem You are using Sqoop parameters entered with -D, for example -Dsqoop.export.state in Oozie.
+However, it seems that they are ignored when you use them in Oozie.
 Solution You need to put property parameters entered with -D in the configuration section of the Sqoop action, for example:
 Discussion Property parameters entered with -D are processed differently than the usual Sqoop parameters.
 Whereas the normal command-line parameters are passed directly and are fully processed by Sqoop, the property parameters are preprocessed before the Sqoop execution and put into a Hadoop configuration object that Sqoop will load and use.
@@ -691,17 +668,8 @@ Oozie has a very generic way of altering the default configuration object using 
 You need to put all -D parameters that you’re using into the configuration section in order to properly propagate them into Sqoop.
 Problem Sqoop works correctly when executed from the command line, but in Oozie it cannot find the JDBC drivers.
 Solution You need to install the JDBC drivers into Oozie separately.
-You have two options: install the driver either into your workflow’s lib/ directory or into the shared action library location usually found at /user/oozie/share/lib/sqoop/
 Discussion Due to licensing, Sqoop does not ship with any JDBC drivers.
 You have to manually download the drivers from the applicable vendors’ websites and install them into Sqoop,
-Oozie doesn’t use your local installation of Sqoop, even when it’s available on the same machine as the Oozie server.
-It always uses the version available in its share libs, which is a special location on HDFS where Oozie keeps libraries for special actions.
-This share lib path is customizable and can be changed in the oozie.service.WorkflowAppService.system.libpath property.
-You have two options for installing the additional JDBC drivers for Oozie.
-The first and simpler method is to put them directly into the shared lib location in Sqoop’s own subfolder (by default, /user/${user.name}/share/lib/sqoop)
-This directory is shared across all Sqoop actions in all workflows, so you have to do it only once.
-The second option requires you to install the JDBC driver JAR files separately into each workflow’s lib/ directory.
-As this second method requires multiple copies of the same files, it’s preferable to use the shared lib directory instead.
 See Also You can find details about where to retrieve JDBC drivers in Recipe 1.2
 Problem You would like Sqoop to import your data directly into Hive.
 Add the parameter --hive-import to your command to enable it:
@@ -711,19 +679,17 @@ If the table already exists, Sqoop will import data into the existing table.
 If you’re creating a new Hive table, Sqoop will convert the data types of each column from your source table to.
 Usually this conversion is straightforward: for example, JDBC types VARCHAR, CHAR, and other string-based types are all mapped to Hive STRING.
 Sometimes the default mapping doesn’t work correctly for your needs; in those cases, you can use the parameter --map-column-hive to override it.
-This parameter expects specify which column should be matched to which type in Hive.
+This parameter expects a comma-separated list of key-value pairs separated by the equal sign (=) in order to specify which column should be matched to which type in Hive.
 For example, if you want to change the Hive type of column id to STRING and column price to DECIMAL, you can specify the following Sqoop parameters:
 During a Hive import, Sqoop will first do a normal HDFS import to a temporary location.
 After a successful import, Sqoop generates two queries: one for creating a table and another one for loading the data from a temporary location.
 You can specify any temporary location using either the --target-dir or --warehouse-dir parameter.
-It’s the temporary location, as it may cause issues with loading data in the second step.
 If your table already exists and contains data, Sqoop will append to the newly imported data.
 You can change this behavior by using the parameter --hive-overwrite, which will instruct Sqoop to truncate an existing Hive table and load only the newly imported one.
 This parameter is very helpful when you need to refresh Hive’s table data on a periodic basis.
 See Also When you’re overriding Hive type, you might also need to override the Java mapping described in Recipe 2.8
 Problem You want to import data into Hive on a regular basis (for example, daily), and for that purpose your Hive table is partitioned.
 You would like Sqoop to automatically import data into the partition rather than only to the table.
-In order to take advantage of this functionality, you need to specify two additional parameters: --hive-partition-key,
 For example, if your partition column is called day and you want to import your data into the value 2013-05-22, you would use the following command:
 Discussion Sqoop mandates that the partition column be of type STRING.
 The current implementation is limited to a single partition level.
@@ -732,15 +698,12 @@ This limitation will most likely be removed in future Sqoop releases.
 Hive’s partition support is implemented with virtual columns that are not part of the data itself.
 Each partition operation must contain the name and value of the partition.
 Sqoop can’t use your data to determine which partition this should go into.
-Instead Sqoop relies on the user to specify the parameter --hive-partition-value with an appropriate value.
 Problem You’ve imported the data directly into Hive using Sqoop’s --hive-import feature.
 Solution This issue is quite often seen when the data contains characters that are used as Hive’s delimiters.
-If removing the special characters is not an option in your use case, you can take advantage of the parameter --hive-delims-replacement, which will accept a replacement string.
 Instead of removing separators completely, they will be replaced with a specified string.
 Discussion Sqoop will, by default, import data into comma-separated text files where each line represents one row.
 However, if your data contains the new-line character (\n), such a row will create two separate lines that will consequently be processed as two separate rows by Hive.
 Consequently, Hive will show a higher row count than your source table.
-You can instruct Sqoop to clean up your data either with --hive-drop-import-delims or --hive-delims-replacement parameters.
 Even though both parameters contain hive in their names, they are not restricted to working in tandem with the --hive-import parameter.
 They can be used in any import job using text files to ensure that the output files have one line per imported row.
 Also, as they target the default delimiters, using them with custom delimiters is not recommended, as they will always remove or substitute only the default delimiters.
@@ -760,11 +723,11 @@ Subsequently, it will start processing the value for each column.
 The first column is of type int and contains the string constant null, which is not a valid number value.
 Instead of throwing a parsing exception at this point, Hive will substitute NULL for this cell.
 The second column is of type string and contains the string constant.
-Similarly, when you export data from Hive into your relational database, you should use the parameters --input-null-string and --input-null-non-string and set both to value \N.
 Table 6-1 contains a list of recommended parameters for NULL substitution strings for both import and export:
 Problem Instead of importing data into an HDFS file or a Hive table, you would like to transfer it into HBase, Hadoop’s real-time database.
 To enable import into HBase, you need to supply two additional parameters: --hbase-table and --column-family.
-The parameter --hbase-table specifies the name of the table in HBase to which you want to Sqoop will import your table’s data.
+The parameter --hbase-table specifies the name of the table in HBase to which you want to import your data.
+The parameter --column-family specifies into which column family Sqoop will import your table’s data.
 For example, you can import the table cities into HBase with the same table name and use the column family name world:
 Discussion To insert data into HBase there are three mandatory parameters: the table name, a column family name within the table, and the id of the row into which you are inserting data.
 Sqoop uses one table and one column family per import job, so you have to specify them using the --hbase-table and --column-family parameters on the command line.
@@ -774,12 +737,10 @@ To identify each individual row in HBase, Sqoop defaults to the column name spec
 Each input row from your source table will be transformed into a single PUT operation and inserted into HBase.
 Each column except the row key will be converted into text and inserted as a cell value.
 Both the HBase table and the column family must exist prior to running the Sqoop import command.
-If you want Sqoop to create the table automatically, you’ll need to specify the parameter --create-hbasetable.
 Problem You’ve imported your table directly into HBase, but it seems that there are fewer rows than in your source table.
-Solution You might need to enable inserting the row key into the value using the property sqoop.hbase.add.row.key, for example:
 Discussion HBase does not allow the insertion of empty values: each cell needs to have at least one byte.
 Sqoop serialization, however, skips all columns that contain a NULL value, resulting in skipping rows containing NULL value in all columns.
-This explains why Sqoop sqoop.hbase.add.row.key instructs Sqoop to insert the row key column twice, once as a row identifier and then again in the data itself.
+This explains why Sqoop imports fewer rows than are available in your source table.
 Even if all other columns contain NULL, at least the column used for the row key won’t be null, which will allow the insertion of the row into HBase.
 Problem Imports into HBase take significantly more time than importing as text files in HDFS.
 Solution Create your HBase table prior to running Sqoop import, and instruct HBase to create more regions with the parameter NUMREGIONS.
@@ -795,12 +756,10 @@ Due to its versatility, Sqoop transfers data from a variety of relational databa
 While working with these database systems, you may encounter issues specific to a system vendor.
 This chapter guides you through common installation, connection, and syntax issues.
 If your subsequent processing expects different values, you need to override those defaults.
-Solution Specify the extra parameters --boolean-true-string and --boolean-false-string to override the default value to a different string.
 Discussion The PostgreSQL direct connector uses the COPY (SELECT QUERY) TO STDOUT clause for retrieving data from your database that will by default use the string constants TRUE and FALSE when importing data from Boolean and Bit columns.
 The PostgreSQL direct connector only supports import and delegates the export to the nondirect JDBC connector.
-Therefore, both parameters, --boolean-true-string and --boolean-falsestring, are applicable only to import and will be ignored during export operation.
 See Also The reason for the extra -- between the Sqoop arguments and extra arguments is explained in Recipe 1.4
-PostgreSQL Problem You are taking advantage of custom schemas in PostgreSQL and you need Sqoop to.
+PostgreSQL Problem You are taking advantage of custom schemas in PostgreSQL and you need Sqoop to import and export tables from there.
 Solution Use the extra parameter --schema for specifying a custom schema name.
 For example, to import data from table cities stored in schema us you can use the following command:
 Discussion Sqoop does not have a notion of custom schemas, and so it supports only tables stored in the default schema named public.
@@ -815,20 +774,20 @@ It allows a user to load data into a PostgreSQL server at a high speed by bypass
 Using the pg_bulk load utility with Sqoop is very simple, as Sqoop has built-in support for it.
 As with other direct connectors, you need to have the pg_bulkload utility available on all nodes in your Hadoop cluster because Sqoop’s tasks can be executed on any TaskTracker node.
 You can specify the path to the utility with the pgbulkload.bin property.
-For example, if you installed the utility in /usr/local/bin/pg_bulkload, you can use the following Sqoop command:
 Problem While importing data from MySQL, Sqoop throws an exception about a communication failure:
-Solution First, rule out connectivity and permission issues for the user to access the database over connection string or increase the value for the wait_timeout property on the MySQL server side.
+Solution First, rule out connectivity and permission issues for the user to access the database over the network.
 Discussion Verify that you can connect to the database from the node where you are running Sqoop by using the following command in your shell:
 If this works, it rules out any problem with the client network configuration or security/ authentication configuration.
 Please note that Sqoop will also require database connectivity from all nodes in your Hadoop cluster.
 The MySQL configuration option wait_timeout can cause connections to close when they are idle for too long.
-As Sqoop is reusing the same connection on the client side, you might experience communication failures if the value of wait_timeout property is connection string, which uses an alternative timeout period.
+As Sqoop is reusing the same connection on the client side, you might experience communication failures if the value of wait_timeout property is too low.
 Another solution is to increase the value for the wait_timeout property on the MySQL side.
 Problem You are using direct import from MySQL into Hive.
 You’ve noticed that the Hive shell correctly displays NULL values as the string NULL; however, you are not able to select those rows using the IS NULL condition in queries.
 Solution You need to disable direct import and use the JDBC method by omitting the --direct parameter, so that you can instruct Sqoop to use Hive-specific NULL substitution strings.
 Discussion The MySQL direct connector uses a native utility called mysqldump to perform a highly efficient data transfer between the MySQL server and Hadoop cluster.
-This utility unfortunately does not support using custom NULL substitution strings and will always as the Hive shell will display the value as NULL as well.
+This utility unfortunately does not support using custom NULL substitution strings and will always import missing values as a string constant NULL.
+This is very confusing on the Hive side, as the Hive shell will display the value as NULL as well.
 It won’t be perceived as a missing value, but as a valid string constant.
 You need to turn off direct mode (by omitting the --direct option) in order to override the default NULL substitution string.
 Problem You’ve modified data sets in Hadoop and you want to propagate those changes back to your MySQL database.
@@ -853,11 +812,11 @@ By default, Oracle will automatically uppercase all table and usernames if they 
 Sqoop will use the current username if you don’t specify the explicit table owner inside the --table parameter.
 Problem You need to import or export an Oracle table using a synonym rather than a real table name.
 Solution In order to reference Oracle synonyms, you need to switch to the Generic JDBC Connector because the specialized Oracle connector does not support them.
-You can instruct Sqoop to use the Generic JDBC Connector by specifying the parameter --connectionmanager with the full class name of the connector.
 For example, to import synonym CIT, you would use the following Sqoop command:
 Discussion The built-in Oracle connector queries the catalog object ALL_TAB_COLUMNS in order to retrieve a table’s column names and associated data types.
 Unfortunately, Oracle is storing synonyms in a different catalog object and thus the Connector can’t fetch the metadata properly, resulting in import or export failure.
-The Generic JDBC Connector does not use catalog tables and views, and so it doesn’t won’t transfer any data as the condition is always false but will return correct metadata for transported data.
+The Generic JDBC Connector does not use catalog tables and views, and so it doesn’t have issues with synonyms.
+Instead it will issue a query with the clause WHERE 1=0 that won’t transfer any data as the condition is always false but will return correct metadata for transported data.
 Returned metadata will contain the basic information required, like column count, names, and associated types; however, it lacks any advanced information like whether the table is partitioned or not.
 Although the Generic JDBC Connector works quite nicely here, it can’t take full advantage of your database server.
 Problem Sqoop does a great job transferring data between Oracle and Hadoop.
@@ -870,16 +829,8 @@ This lowers disk operations on the database server, significantly improving perf
 You are encouraged to download, install, and use the OraOop connector instead of the built-in one.
 See Also Detailed instructions about the installation of special connectors are covered in Recipe 1.3
 Problem You are importing a table containing a DATE column from Oracle database into Avro format, but you’re getting the following exception:
-The first is to set the property oraoop.timestamp.string to the value false to disable OraOop’s default date-tostring mapping.
 The second option is to map all DATE columns to String using the --map-columnjava parameter.
 For example, if your table contains two DATE columns, namely CREATED and UPDATED, you would use the following Sqoop command:
-Discussion Avro encoding doesn’t have an indicator to say which field is next.
-It just encodes one field after another and in the order they appear in the schema definition.
-Since there is no way for the parser to know that a field has been skipped, there is no such thing as an optional field in Avro.
-Unions are encoded with an extra byte to inform the parser which of the possible union types to use, followed by the value itself.
-By making a union with the null type, you can make a field optional.
-In every generated Avro schema, all columns are encoded as a union of null with a real type in order to allow correct processing of missing values.
-The first is to disable the implicit mapping to String in OraOop by setting the property oraoop.timestamp.string to the value.
 The second option is to force Sqoop to generate a different schema by mapping all DATE columns into String as OraOop expects.
 Problem You are not sure when to use OraOop, the built-in Oracle connector, or the Generic JDBC Connector.
 If OraOop does not work for your use case, the next best alternative is the built-in connector.
@@ -895,7 +846,6 @@ If you would prefer to explicitly choose which connector will be used rather tha
 Problem You are doing a Sqoop export to Teradata using the Generic JDBC Connector and it fails with the following exception:
 Discussion Sqoop, by default, creates INSERT statements for multiple rows in one query, which is a quite common SQL extension implemented by most of the database systems.
 Unfortunately, Teradata does not support this extension, and therefore you need to disable this behavior in order to export data into Teradata.
-See Also Property sqoop.export.records.per.statement was further described in Recipe 5.2
 Problem You have a Teradata appliance as your enterprise data warehouse system and you need to import and export data from there to Hadoop and vice versa.
 Solution Download, install, and use the Cloudera Teradata Connector, which is available for free on the Cloudera website.
 Discussion The Cloudera Teradata Connector is a specialized connector for Teradata that is not part of the Sqoop distribution.

@@ -1,13 +1,10 @@
-It is the first system to distribute data at global scale and support externally-consistent distributed transactions.
 This paper describes how Spanner is structured, its feature set, the rationale underlying various design decisions, and a novel time API that exposes clock uncertainty.
 This API and its implementation are critical to supporting external consistency and a variety of powerful features: nonblocking reads in the past, lock-free read-only transactions, and atomic schema changes, across all of Spanner.
-Spanner is a scalable, globally-distributed database designed, built, and deployed at Google.
 At the highest level of abstraction, it is a database that shards data across many sets of Paxos [21] state machines in datacenters spread all over the world.
 Replication is used for global availability and geographic locality; clients automatically failover between replicas.
 Spanner automatically reshards data across machines as the amount of data or the number of servers changes, and it automatically migrates data across machines (even across datacenters) to balance load and in response to failures.
 Spanner is designed to scale up to millions of machines across hundreds of datacenters and trillions of database rows.
 Applications can use Spanner for high availability, even in the face of wide-area natural disasters, by replicating their data within or even across continents.
-Spanner’s main focus is managing cross-datacenter replicated data, but we have also spent a great deal of time in designing and implementing important database features on top of our distributed-systems infrastructure.
 Even though many projects happily use Bigtable [9], we have also consistently received complaints from users that Bigtable can be difficult to use for some kinds of applications: those that have complex, evolving schemas, or those that want strong consistency in the presence of wide-area replication.
 As a consequence, Spanner has evolved from a Bigtable-like versioned key-value store into a temporal multi-version database.
 Data is stored in schematized semi-relational tables; data is versioned, and each version is automatically timestamped with its commit time; old versions of data are subject to configurable garbage-collection policies; and applications can read data at old timestamps.
@@ -17,7 +14,6 @@ Applications can specify constraints to control which datacenters contain which 
 Data can also be dynamically and transparently moved between datacenters by the system to balance resource usage across datacenters.
 Second, Spanner has two features that are difficult to implement in a distributed database: it.
 These features enable Spanner to support consistent backups, consistent MapReduce executions [12], and atomic schema updates, all at global scale, and even in the presence of ongoing transactions.
-These features are enabled by the fact that Spanner assigns globally-meaningful commit timestamps to transactions, even though transactions may be distributed.
 Spanner is the first system to provide such guarantees at global scale.
 The key enabler of these properties is a new TrueTime API and its implementation.
 The API directly exposes clock uncertainty, and the guarantees on Spanner’s timestamps depend on the bounds that the implementation provides.
@@ -26,12 +22,10 @@ Google’s cluster-management software provides an implementation of the TrueTim
 This implementation keeps uncertainty small (generally less than 10ms) by using multiple modern clock references (GPS and atomic clocks)
 Section 2 describes the structure of Spanner’s implementation, its feature set, and the engineering decisions that went into their design.
 Section 3 describes our new TrueTime API and sketches its implementation.
-Section 4 describes how Spanner uses TrueTime to implement externally-consistent distributed transactions, lockfree read-only transactions, and atomic schema updates.
 This section describes the structure of and rationale underlying Spanner’s implementation.
 It then describes the directory abstraction, which is used to manage replication and locality, and is the unit of data movement.
 Finally, it describes our data model, why Spanner looks like a relational database instead of a key-value store, and how applications can control data locality.
 Given that Spanner manages data globally, there will be only a handful of running universes.
-We currently run a test/playground universe, a development/production universe, and a production-only universe.
 Spanner is organized as a set of zones, where each zone is the rough analog of a deployment of Bigtable.
 The set of zones is also the set of locations across which data can be replicated.
 Zones can be added to or removed from a running system as new datacenters are brought into service and old ones are turned off, respectively.
@@ -82,8 +76,6 @@ Movedir is also used to add or remove replicas to Paxos groups [25], because Spa
 Movedir is not implemented as a single transaction, so as to avoid blocking ongoing reads and writes on a bulky data move.
 Instead, movedir registers the fact that it is starting to move data and moves the data in the background.
 When it has moved all but a nominal amount of the data, it uses a transaction to atomically move that nominal amount and update the metadata for the two Paxos groups.
-A directory is also the smallest unit whose geographicreplication properties (or placement, for short) can be specified by an application.
-The design of our placement-specification language separates responsibilities for managing replication configurations.
 Administrators control two dimensions: the number and types of replicas, and the geographic placement of those replicas.
 An application controls how data is replicated, by tagging each database and/or individual directories with a combination of those options.
 For example, an application might store each end-user’s data in its own directory, which would enable user A’s data to have three replicas in Europe, and user B’s data to have five replicas in North America.
@@ -100,9 +92,7 @@ We believe it is better to have application programmers deal with performance pr
 The application data model is layered on top of the directory-bucketed key-value mappings supported by the implementation.
 An application creates one or more databases in a universe.
 Each database can contain an unlimited number of schematized tables.
-Tables look like relational-database tables, with rows, columns, and versioned values.
 We will not go into detail about the query language for Spanner.
-It looks like SQL with some extensions to support protocol-buffer-valued fields.
 Spanner’s data model is not purely relational, in that rows must have names.
 More precisely, every table is required to have an ordered set of one or more primary-key columns.
 This requirement is where Spanner still looks like a key-value store: the primary keys form the name for a row, and each table defines a mapping from the primary-key columns to the non-primary-key columns.
@@ -116,11 +106,7 @@ Each row in a directory table with key K, together with all of the rows in desce
 The figure also illustrates the interleaved layout for the example database: for.
 Figure 4: Example Spanner schema for photo metadata, and the interleaving implied by INTERLEAVE IN.
 This interleaving of tables to form directories is significant because it allows clients to describe the locality relationships that exist between multiple tables, which is necessary for good performance in a sharded, distributed database.
-TT.after(t) true if t has definitely passed TT.before(t) true if t has definitely not arrived.
-This section describes the TrueTime API and sketches its implementation.
-We leave most of the details for another paper: our goal is to demonstrate the power of having such an API.
-TrueTime explicitly represents time as a TTinterval, which is an interval with bounded time uncertainty (unlike standard time interfaces that give clients no notion of uncertainty)
-The endpoints of a TTinterval are of that is guaranteed to contain the absolute time during the interval’s width, and the average error bound as �
+Without it, Spanner would not know the most important locality relationships.
 The underlying time references used by TrueTime are GPS and atomic clocks.
 TrueTime uses two forms of time reference because they have different failure modes.
 Atomic clocks can fail in ways uncorrelated to GPS and each other, and over long periods of time can drift significantly due to frequency error.
@@ -135,12 +121,7 @@ Every daemon polls a variety of masters [29] to reduce vulnerability to errors f
 Some are GPS masters chosen from nearby datacenters; the rest are GPS masters from farther datacenters, as well as some Armageddon masters.
 Daemons apply a variant of Marzullo’s algorithm [27] to detect and reject liars, and synchronize the local machine clocks to the nonliars.
 To protect against broken local clocks, machines that exhibit frequency excursions larger than the worstcase bound derived from component specifications and operating environment are evicted.
-Between synchronizations, a daemon advertises a slowly increasing time uncertainty.
 Table 2: Types of reads and writes in Spanner, and how they compare.
-The remaining 1 ms comes from the communication delay to the time masters.
-Excursions from this sawtooth are possible in the presence of failures.
-For example, occasional time-master unavailability can cause datacenter-wide increases in �
-Similarly, overloaded machines and network links can result in occasional localized � spikes.
 This section describes how TrueTime is used to guarantee the correctness properties around concurrency control, and how those properties are used to implement features such as externally consistent transactions, lockfree read-only transactions, and non-blocking reads in the past.
 These features enable, for example, the guarantee that a whole-database audit read at a timestamp t will see exactly the effects of every transaction that has committed as of t.
 Going forward, it will be important to distinguish writes as seen by Paxos (which we will refer to as Paxos writes unless the context is clear) from Spanner client writes.
@@ -176,16 +157,17 @@ Note that whenever a timestamp s is assigned, smax is advanced to s to preserve 
 Define the start and commit events for a transaction Ti by estarti and e.
 The protocol for executing transactions and assigning timestamps obeys two rules, which together guarantee this invariant, as shown below.
 Define the arrival event of the commit request at the coordinator leader for a write Ti to be eserveri.
-Start The coordinator leader for a write Ti assigns a commit timestamp si no less than the value of participant leaders do not matter here; Section 4.2.1 describes how they are involved in the implementation of the next rule.
+Note that the participant leaders do not matter here; Section 4.2.1 describes how they are involved in the implementation of the next rule.
 Commit Wait The coordinator leader ensures that clients cannot see any data committed by Ti until TT.after(si) is true.
 Commit wait ensures that si is less than the absolute commit time of Ti, or si < tabs(e.
 The implementation of commit wait is described in Section 4.2.1
 The monotonicity invariant described in Section 4.1.2 allows Spanner to correctly determine whether a replica’s state is sufficiently up-to-date to satisfy a read.
 Every replica tracks a value called safe time tsafe which is the.
-Because timestamps increase monotonically and writes are applied in order, writes will no longer occur at or below tPaxossafe with respect to Paxos.
+A replica can satisfy a read at a timestamp t if t <= tsafe.
 For a participant slave, tTMsafe actually refers to the replica’s leader’s transaction manager, whose state the slave can infer through metadata passed on Paxos writes.) If there are any such transactions, then the state affected by those transactions is indeterminate: a participant replica does not know yet whether such transactions will commit.
 As we discuss in Section 4.2.1, the commit protocol ensures that every participant knows a lower bound on a prepared transaction’s timestamp.
 Every participant leader (for a group g) for a transaction Ti assigns a prepare timestamp spreparei,g to its prepare record.
+The coordinator leader ensures that the transaction’s commit timestamp si >= s.
 A read-only transaction executes in two phases: assign a timestamp sread [8], and then execute the transaction’s reads as snapshot reads at sread.
 The snapshot reads can execute at any replicas that are sufficiently up-to-date.
 However, such a timestamp may require the execution of the data reads at sread to block if tsafe has not advanced sufficiently.
@@ -206,17 +188,15 @@ It then chooses a prepare timestamp that must be larger than any timestamps it h
 Each participant then notifies the coordinator of its prepare timestamp.
 The coordinator leader also first acquires write locks, but skips the prepare phase.
 It chooses a timestamp for the entire transaction after hearing from all other participant leaders.
-The commit timestamp s must be greater or equal to all prepare timestamps (to satisfy the constraints at the time the coordinator received its commit message, and greater than any timestamps the leader has assigned to previous transactions (again, to preserve monotonicity)
 The coordinator leader then logs a commit record through Paxos (or an abort if it timed out while waiting on the other participants)
-Before allowing any coordinator replica to apply the commit record, the coordinator leader waits until TT.after(s), so as to obey the commit-wait rule described in Section 4.1.2
-After commit wait, the coordinator sends the commit timestamp to the client and all other participant leaders.
-All participants apply at the same timestamp and then release locks.
 Assigning a timestamp requires a negotiation phase between all of the Paxos groups that are involved in the reads.
 As a result, Spanner requires a scope expression for every read-only transaction, which is an expression that summarizes the keys that will be read by the entire transaction.
-If the scope’s values are served by a single Paxos group, then the client issues the read-only transaction to be the timestamp of the last committed write at a Paxos and therefore be ordered after it.
+If the scope’s values are served by a single Paxos group, then the client issues the read-only transaction to that group’s leader.
+The current Spanner implementation only chooses a timestamp for a read-only transaction at a Paxos leader.) That leader assigns sread and executes the read.
+Define LastTS() to be the timestamp of the last committed write at a Paxos group.
+If there are no prepared transactions, the assignment sread = LastTS() trivially satisfies external consistency: the transaction will see the result of the last write, and therefore be ordered after it.
 If the scope’s values are served by multiple Paxos groups, there are several options.
-The most complicated option is to do a round of communication with all of Spanner currently implements a simpler choice.
-The client avoids a negotiation round, and just has its reads safe time to advance)
+The most complicated option is to do a round of communication with all of the groups’s leaders to negotiate sread based on LastTS()
 All reads in the transaction can be sent to replicas that are sufficiently up-to-date.
 It would be infeasible to use a standard transaction, because the number of participants (the number of groups in a database) could be in the millions.
 Bigtable supports atomic schema changes in one datacenter, but its schema changes block all operations.
@@ -226,13 +206,17 @@ As a result, schema changes across thousands of servers can complete with minima
 Second, reads and writes, which implicitly depend on the schema, synchronize with any registered schema-change timestamp at time t: they may proceed if their timestamps precede t, but they must block behind the schemachange transaction if their timestamps are after t.
 Without TrueTime, defining the schema change to happen at t would be meaningless.
 As a result, no reads can occur at later timestamps, even if the reads do not conflict with the transaction.
-Such false conflicts can be removed by augmenting tTMsafe with a fine-grained mapping from key ranges to preparedtransaction timestamps.
 This information can be stored in the lock table, which already maps key ranges to lock metadata.
 When a read arrives, it only needs to be checked against the fine-grained safe time for key ranges with which the read conflicts.
-We have not yet implemented this optimization.) When a read-only transaction arrives, its timestamp can for the key ranges with which the transaction conflicts, unless there is a conflicting prepared transaction (which can be determined from fine-grained safe time)
-That is, a snapshot read at t cannot execute at Paxos groups whose last write happened before t.
-Spanner addresses this problem by taking advantage of the disjointness of leader-lease intervals.
-Because the timestamps promised beyond the end of its leader lease, it must first extend its.
+As a result, the execution of the read could be delayed.
+This weakness can be remedied similarly by augmenting LastTS() with a fine-grained mapping from key ranges to commit timestamps in the lock table.
+We have not yet implemented this optimization.) When a read-only transaction arrives, its timestamp can be assigned by taking the maximum value of LastTS() for the key ranges with which the transaction conflicts, unless there is a conflicting prepared transaction (which can be determined from fine-grained safe time)
+Because the timestamps promised by MinNextTS() lie within a leader’s lease, the disjointness invariant enforces MinNextTS() promises across leaders.
+If a leader wishes to advance MinNextTS() beyond the end of its leader lease, it must first extend its.
+Note that smax is always advanced to the highest value in MinNextTS() to preserve disjointness.
+A leader by default advances MinNextTS() values every 8 seconds.
+Thus, in the absence of prepared transactions, healthy slaves in an idle Paxos group can serve reads at timestamps greater than 8 seconds old in the worst case.
+A leader may also advance MinNextTS() values on demand from slaves.
 We first measure Spanner’s performance with respect to replication, transactions, and availability.
 We then provide some data on TrueTime behavior, and a case study of our first client, F1
 Clients and zones were placed in a set of datacenters with network distance of less than 1ms.
@@ -244,7 +228,6 @@ As the number of replicas increases, the latency to achieve a quorum becomes les
 For the throughput experiments, clients issued sufficiently many operations so as to saturate the servers’
 Snapshot reads can execute at any up-to-date replicas, so their throughput increases almost linearly with the number of replicas.
 Single-read read-only transactions only execute at leaders because timestamp assignment must happen at leaders.
-Read-only-transaction throughput increases with the number of replicas because the number of effective spanservers increases: in the experimental setup, the number of spanservers equaled the number of replicas, and leaders were randomly distributed among the zones.
 Figure 5 illustrates the availability benefits of running Spanner in multiple datacenters.
 It shows the results of three experiments on throughput in the presence of datacenter failure, all of which are overlaid onto the same time scale.
 Killing Z1 while giving the leaders time to handoff leadership to.
@@ -256,13 +239,6 @@ Soon after each lease from a dead leader expires, a new leader is elected.
 Approximately 10 seconds after the kill time, all of the groups have leaders and throughput has recovered.
 Shorter lease times would reduce the effect of server deaths on availability, but would require greater amounts of lease-renewal network traffic.
 We are in the process of designing and implementing a mechanism that will cause slaves to release Paxos leader leases upon leader failure.
-Our machine statistics show that bad CPUs are 6 times more likely than bad clocks.
-That is, clock issues are extremely infrequent, relative to much more serious hardware problems.
-As a result, we believe that TrueTime’s implementation is as trustworthy as any other piece of software upon which Spanner depends.
-The data shows that these two factors in determining the base value of � are generally not a problem.
-However, there can be significant tail-latency issues that cause higher values of �
-The reduction in tail latencies beginning on March 30 were due to networking improvements that reduced transient network-link congestion.
-We continue to investigate and remove causes of TrueTime spikes.
 This backend was originally based on a MySQL database that was manually sharded many ways.
 The uncompressed dataset is tens of terabytes, which is small compared to many NoSQL instances, but was large enough to cause difficulties with sharded MySQL.
 The MySQL sharding scheme assigned each customer and all related data to a fixed shard.
@@ -315,9 +291,6 @@ We are actively improving its monitoring and support tools, as well as tuning it
 In addition, we have been working on improving the functionality and performance of our backup/restore system.
 We are currently implementing the Spanner schema language, automatic maintenance of secondary indices, and automatic load-based resharding.
 Optimistically doing reads in parallel may be a valuable strategy to pursue, but initial experiments have indicated that the right implementation is non-trivial.
-Given that we expect many applications to replicate their data across datacenters that are relatively close to each other, TrueTime � may noticeably affect performance.
-Time-master-query intervals can be reduced, and better clock crystals are relatively cheap.
-Time-master query latency could be reduced with improved networking technology, or possibly even avoided through alternate time-distribution technology.
 Although Spanner is scalable in the number of nodes, the node-local data structures have relatively poor performance on complex SQL queries, because they were designed for simple key-value accesses.
 Algorithms and data structures from DB literature could improve singlenode performance a great deal.
 Second, moving data automatically between datacenters in response to changes in client load has long been a goal of ours, but to make that goal effective, we would also need the ability to move client-application processes between datacenters in an automated, coordinated fashion.
@@ -336,6 +309,3 @@ The end of an architectural era: (it’s time for a complete rewrite)”
 The simplest means to ensure the disjointness of Paxosleader-lease intervals would be for a leader to issue a synchronous Paxos write of the lease interval, whenever it would be extended.
 A subsequent leader would read the interval and wait until that interval has passed.
 TrueTime can be used to ensure disjointness without these extra log writes.
-The potential ith leader keeps a lower bound on the start of a lease vote from replica r as.
-A replica r obeys the singlevote rule: it will not grant another lease vote until TT.after(tendi,r ) is true.
-To enforce this rule across different incarnations of r, Spanner logs a lease vote at the granting replica before granting the lease; this log write can be piggybacked upon existing Paxos-protocol log writes.

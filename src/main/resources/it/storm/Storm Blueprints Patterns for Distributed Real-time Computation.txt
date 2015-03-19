@@ -17,11 +17,8 @@ Vincent Gijsen is essentially a people's person, and he is passionate about.
 In his spare time, he likes to get his hands dirty with.
 Sonal Raj is a geek, a "Pythonista", and a technology enthusiast.
 He has given talks at PyCon India on Storm and Neo4J and has published.
-You might want to visit www.PacktPub.com for support files and downloads.
 Did you know that Packt offers eBook versions of every book published, with.
-At www.PacktPub.com, you can also read a collection of free technical articles,
 Do you need instant solutions to your IT questions? PacktLib is Packt's online.
-If you have an account with Packt at www.PacktPub.com, you can use this to access PacktLib today and view nine entirely free books.
 The demand for timely, actionable information is pushing software systems to.
 Additionally, as the number of connected devices increases and as these.
 Specifically, data generation is now viewed as a series of discrete events.
@@ -44,7 +41,6 @@ Hadoop enthusiasts will also find this book a good introduction to Storm.
 The book provides examples that apply Storm to a broad range of problems.
 In this book, you will find a number of styles of text that distinguish between.
 Code words in text, database table names, folder names, filenames, file.
-The three key configuration files for this example are: core-site.xml, yarn-site.xml, and hdfs-site.xml."
 When we wish to draw your attention to a particular part of a code block, the.
 Warnings or important notes appear in a box like this.
 If there is a topic that you have expertise in and you are interested in either.
@@ -57,9 +53,7 @@ Once your errata are verified, your submission will be accepted.
 Piracy of copyright material on the Internet is an ongoing problem across all.
 At Packt, we take the protection of our copyright and licenses very.
 If you come across any illegal copies of our works, in any form, on.
-Please contact us at <copyright@packtpub.com> with a link to the suspected pirated material.
 We appreciate your help in protecting our authors, and our ability to bring you.
-You can contact us at <questions@packtpub.com> if you are having a problem with any aspect of the book, and we will do our best to address it.
 In this chapter, we will introduce you to the core concepts involved in creating.
 We will begin with an overview of Storm's data structures and move on to.
 By the end of the chapter, you will have gained a basic understanding of the.
@@ -94,19 +88,34 @@ You can download the example code files for all Packt books you have purchased f
 Maven will download the Storm library and all its dependencies.
 To keep things simple, our SentenceSpout implementation will simulate a data source by creating a static list of sentences that gets iterated.
 The BaseRichSpout class is a convenient implementation of the ISpout andIComponent interfaces and provides default implementations for methods we don't need in this example.
+The open() method is defined in the ISpout interface and is called whenever a spout component is initialized.
+The open() method takes three parameters: a map containing the Storm configuration,
+The nextTuple() method represents the core of any spout implementation.
 Storm calls this method to request that the spout emit tuples to the output.
 Here, we just emit the sentence at the current index, and increment.
 The BaseRichBolt class is another convenience class that implements both theIComponent and IBolt interfaces.
 Extending this class frees us from having to implement methods we're not concerned with and lets us focus on.
-The core functionality of the SplitSentenceBolt class is contained in the bolt receives a tuple from a stream to which it subscribes.
+The prepare() method defined by the IBolt interface is analogous to the open() method of ISpout.
+This is where you would prepare resources such as database connections during bolt initialization.
+The core functionality of the SplitSentenceBolt class is contained in the execute()method defined by IBolt.
+This method is called every time the bolt receives a tuple from a stream to which it subscribes.
+The WordCountBolt class (Example 1.3) is the topology component that actually maintains the word count.
+The reason behind this pattern lies in the fact that when a topology is deployed, its component spouts.
+In theexecute() method, we look up the count for the word received (initializing it to 0 if necessary), increment and store the count, and then emit a new tuple consisting of the word and current count.
 The purpose of the ReportBolt class is to produce a report of the counts for each word.
 One difference between the report bolt and the other bolts we've written so far.
-Storm calls this method when a bolt is about to be output our final counts when the topology shuts down, but typically,
+The report bolt also introduces the cleanup() method defined in the IBolt interface.
+Storm calls this method when a bolt is about to be shutdown.
+We exploit the cleanup()method here as a convenient way to output our final counts when the topology shuts down, but typically,
+One important thing to keep in mind about the IBolt.cleanup() method when writing bolts is that there is no guarantee that Storm will call it when a.
 The full source for the ReportBolt class is listed in Example 1.4
 Now that we've defined the spout and bolts that will make up our computation,
 Storm topologies are typically defined and run (or submitted if the topology is.
+In this example, we begin by defining string constants that will serve as unique identifiers for our.
+We begin the main() method by instantiating our spout and bolts and creating an instance of TopologyBuilder.
 TheTopologyBuilder class provides a fluent-style API for defining the data flow between components in a topology.
 The next step is to register SplitSentenceBolt and establish a subscription to the stream emitted by the SentenceSpout class:
+The setBolt() method registers a bolt with the TopologyBuilder class and returns an instance of BoltDeclarer that exposes methods for defining the input source(s) for a bolt.
 Here we pass in the unique ID we defined for.
 We will explain stream groupings in detail shortly in our discussion of parallelism in Storm.
 As you'll learn, there are times when it's imperative that tuples containing.
@@ -115,9 +124,10 @@ In this case, we want all tuples emitted by WordCountBolt routed to a single Rep
 With our data flow defined, the final step in running our word count.
 Here, we're running Storm in local mode using Storm's LocalCluster class to simulate a full-blown Storm cluster within our local development.
 Local mode is a convenient way to develop and test Storm.
-In this example, we create a LocalCluster instance and call of backtype.storm.Config, and theTopology object returned by in local mode has the same signature as the method to deploy a topology in.
+As you'll see in the next chapter, the submitTopology() method used to deploy a topology in local mode has the same signature as the method to deploy a topology in.
 Storm will merge its predefined default configuration values with the contents.
 In this sense, the Config object represents a set of configuration parameters that are global to all components in a topology.
+The main() method will submit the topology, wait for ten seconds while it runs, kill (undeploy) the.
 Recall from the introduction that Storm allows a computation to scale.
 To understand how parallelism works, we must first explain the four main.
 Each node is configured to run one or more workers.
@@ -128,8 +138,8 @@ As you can see, the only parallelism we have is at the thread level.
 Let's start by increasing the number of workers and executors assigned to run.
 Assigning additional workers is an easy way to add computational power to a topology, and Storm provides the means to do so through its API as well as pure configuration.
 Whichever method we choose, our component spouts and bolts do not have to change, and can be reused as is.
-In the previous version of the word count topology, we introduced the Config object largely unused.
-To increase the number of workers assigned to a topology, we simply.
+In the previous version of the word count topology, we introduced the Config object that gets passed to the submitTopology() method at deployment time but left it largely unused.
+To increase the number of workers assigned to a topology, we simply call thesetNumWorkers() method of the Config object:
 This assigns two workers to our topology instead of the default of one.
 While this will add computation resources to our topology, in order to effectively utilize those.
 As we've seen, Storm creates a single task for each component defined in a topology, by default, and assigns a single executor for each task.
@@ -138,6 +148,7 @@ The number of executors assigned to a given component is configured by setting a
 To illustrate this feature, let's modify our topology definition to parallelize SentenceSpout such that it is assigned two tasks and each task is assigned its own executor thread:
 If we're using one worker, the execution of our topology now looks like the following:
 Next, we will set up the split sentence bolt to execute as four tasks with two executors.
+We'll also configure the word count bolt to run as four tasks, each with its own executor thread:
 With two workers, the execution of the topology will now look like the following diagram:
 With the topology parallelism increased, running the updated WordCountTopology class should yield higher total counts for each word:
 It's important to point out that increasing the number of workers has no effect when running a topology in local mode.
@@ -154,11 +165,14 @@ Global grouping: This routes all tuples in a stream to a single task,
 The global grouping should be used with caution since it will route.
 None grouping: The none grouping is functionally equivalent to the.
 Direct grouping: With a direct grouping, the source stream decides.
+It and can only be used on streams that have been declared direct streams.
 Local or shuffle grouping: The local or shuffle grouping is similar.
 In addition to the predefined groupings, you can define your own stream.
-The WorkerTopologyContext object provides contextual information about the topology, and.
+The prepare() method is called at runtime to initiate the grouping with information the grouping implementation can use to make decisions on how.
 The most useful parameter is targetTasks, which is a list of all the task identifiers the grouping needs to take into account.
+The chooseTasks() method returns a list of task identifiers to which a tuple should be sent.
 To illustrate the importance of stream groupings, let's introduce a bug into our.
+Begin by modifying the nextTuple() method of SentenceSpout so it only emits each sentence once:
 The bug we introduced will only be manifested if the.
 This underscores the importance of testing topologies with various parallelism.
 In general, you should avoid storing state information in a bolt since any time a worker fails and/or has its tasks reassigned, that information will be lost.
@@ -172,7 +186,9 @@ If all bolts in the tree acknowledge tuples derived from the trunk tuple, the.
 If any of the bolts in the tree explicitly fail a tuple, or if processing of.
 Storm's ISpout interface defines three methods involved in the reliability API: nextTuple,ack, and fail.
 As we've seen before, when Storm requests that a spout emit a tuple, it calls.
+The first step in implementing guaranteed processing is to assign the outbound tuple a unique ID and pass that value to.
 Assigning the tuple a message ID tells Storm that a spout would like to.
+If processing succeeds, the spout's ack() method will be called with the message ID assigned to the tuple.
 Implementing a bolt that participates in guaranteed processing involves two.
 Anchoring to an incoming tuple when emitting a derived tuple.
 Anchoring to a tuple means that we are creating a link between an incoming.
@@ -259,7 +275,6 @@ Under Debian-based Linux distributions, the supervisord package is named supervi
 Supervisord's configuration file will automatically include any files matching the.
 For each Storm daemon command we want to run under supervision, we'll.
 A unique (within the supervisord configuration) name for the service under supervision.
-Whether or not the command/service should be automatically restarted if it.
 Create the following three files to set up the Storm daemons to be.
 Once those files have been created, stop and start the supervisord service with.
 The supervisord service will load the new configurations and start the Storm.
@@ -271,12 +286,11 @@ Supervisor: Check the supervisor.log file under /var/log/storm to check for erro
 So far, we've relied on the default Storm configuration that defaults to.
 Next, we'll explore the various configuration options Storm provides and how.
 The listing below provides a minimal storm.yaml file with entries that you must override:
-List of hosts in the zookeeper cluster storm.zookeeper.servers: - "localhost"
 List of hosts that are Storm DRPC servers (optional) # drpc.servers:
 Since we're running a single node ZooKeeper on the same machine as the other Storm daemons, the default value of localhost is acceptable.
 Workers need to know which node is the master in order to download topology JAR files and configurations.
 It is defined as a list of port numbers that the workers will listen on, and the number of port numbers listed will control how many worker slots are available on the supervisor node.
-For example, if we have a cluster with three supervisor nodes, and each node is configured with three Storm will use ports 6700-6703, a total of four slots per supervisor node.
+By default, Storm will use ports 6700-6703, a total of four slots per supervisor node.
 This setting determines where the nimbus and supervisor processes will store that information.
 The directory specified here must exist with appropriate permissions so the process owner (in our case, the Storm user) can read and write to the directory.
 The contents of this directory must persist as long as the cluster is running, so it is best to avoid using /tmp where the contents might be deleted by the operating system.
@@ -286,7 +300,6 @@ Setting this value too low may cause tuples to be replayed repeatedly.
 For this setting to take effect, a spout must be configured to emit anchored tuples.
 Depending on the execute latency of downstream bolts, the default behavior can overwhelm the topology, leading to message timeouts.
 Setting this value to a non-null number greater than 0 will cause Storm to pause streaming.
-This setting, along with topology.message.timeout.secs, are two of the most important parameters when tuning a topology for performance.
 For this setting to take effect, a spout must be configured to emit anchored tuples.
 The Storm executable is a multipurpose command used for everything from.
 The basic syntax for the Storm command is as follows:
@@ -299,16 +312,14 @@ Any configuration parameters in this file will override Storm's built-in default
 Usage: storm ui This launches the Storm UI daemon that provides a web-based UI for monitoring Storm clusters.
 Storm's management commands are used to deploy and manage topologies.
 The only required configuration parameter is the hostname of the.
-It runs uploads the topology_jar file to nimbus for distribution to the cluster.
 Once submitted, Storm will activate the topology and start processing.
 If a topology with that name already exists on the cluster, thejar command will fail.
 It is common practice to specify the topology name in the command-line arguments so that the topology can be named at the time of submission.
-Storm will first deactivate the topology's spouts for the duration of the topology's configured topology.message.timeout.secs to allow all tuples actively being processed to complete.
 Storm will then halt the workers and attempt to clean up any saved states.
-Specifying a wait time with the -w switch will overridetopology.message.timeout.secs with the specified interval.
 The functionality of the kill command is also available in the Storm UI.
 Usage: storm deactivate topology_name The deactivate command tells Storm to stop streaming tuples from the specified topology's spouts.
 Usage: storm activate topology_name The activate command tells Storm to resume streaming tuples from the specified topology's spouts.
+The rebalance command instructs Storm to redistribute tasks among workers in a cluster without killing and resubmitting the topology.
 For example, this might be necessary when a new supervisor node has been added to a cluster—since it is a new node, none of the tasks of existing topologies would have been assigned to workers on that node.
 The rebalance command also allows you to alter the number of workers assigned to a topology and change the number of executors assigned to a given task with the -n and -eswitches respectively.
 When the rebalance command is run, Storm will first deactivate the topology, wait for the configured time for outstanding tuples to finish processing, then redistribute workers evenly among supervisor nodes.
@@ -317,11 +328,9 @@ Usage: storm remoteconfvalue conf-name The remoteconfvalue command is used to lo
 Note that this applies to the global cluster configuration and does not take into account individual overrides made at the topology level.
 Usage: storm repl The repl command opens a Clojure REPL session configured with Storm's local classpath.
 Usage: storm classpath The classpath command prints the classpath used by the Storm client.
-Usage: storm localconfvalue conf-name The localconfvalue command looks up a configuration key from the consolidated configuration, that is, from ~/.storm/storm.yaml and Storm's built-in defaults.
 Now that we have a running cluster, let's revisit our earlier word.
 The previous example used Storm's LocalCluster class to run in local mode:
 Submitting a topology to a remote cluster is simply a matter of using.
-Storm'sStormSubmitter class, which exposes a method with the same name and signature:
 When developing Storm topologies, you usually aren't going to want to change.
 The standard way to handle this is to add an if/else.
 To deploy the updated word count topology to a running cluster, first perform.
@@ -341,7 +350,6 @@ To illustrate how Puppet manifests translate to installed software and system's.
 To get the latest version of Puppet, we need to configure apt-get to use the.
 Next, save the preceding example manifest to a file named init.pp and use Puppet to apply the manifest:
 When the command completes, check to see whether the zookeeper service is.
-If we were to manually stop the zookeeper service and rerun the puppet apply command, Puppet would not install the packages again (since they are.
 While standalone Puppet manifests make it easy to define the state of an.
 Fortunately, Puppet has the concept of classes and modules that can be.
 Consider a situation with Storm where we have multiple classes of nodes.
@@ -351,7 +359,6 @@ In the preceding example, we've redefined the zookeeper manifest to be.
 On the second line, the zookeeper class includes another class, jdk, which will include the class definition for a resource that will include the state necessary for a.
 Puppet also leverages the Ruby ERB templating system that allows you to.
 Consider the following Puppet file declaration that's used to generate.
-This declaration tells Puppet to create the file, storm.yaml, under /etc/storm/ from thestorm.yaml.erb template:
 The conditional logic and variable expansion in the template allow us to define.
 We've briefly introduced the concepts of Puppet manifests, classes, and.
 At this point, you're probably wondering how to define variables in.
@@ -369,7 +376,6 @@ Finally, we may want to define host-specific parameters in files that use the.
 We've only scratched the surface of what's possible with Puppet and Hiera.
 The Chapter 2source code directory contains additional examples and documentation on how to use Puppet to automate deployment and.
 In this chapter, we've covered the steps necessary to install and configure.
-Storm in both a single-node (pseudo-distributed) configuration as well as a.
 Storm daemons and command line utilities used to deploy and manage.
 Finally, we offered a brief introduction to the Puppet framework and showed.
 We'd encourage you to explore the additional code and documentation.
@@ -391,7 +397,6 @@ To fulfill these requirements, we will need to count the occurrences in our.
 The preceding code shows the wiring between the different Trident functions.
 The events are then filtered by theDiseaseFilter function, which filters out occurrences of diseases that we are not concerned with.
 Then, the HourAssignment function assigns an hour to the event and adds a key to the tuple, which comprises the city, hour, and disease code.
-The counts are then passed along to the OutbreakDetectorfunction, which thresholds the count, emitting an alert when the threshold is exceeded.
 In the following section, we will take a deeper look.
 Let's first take a look at the spout in the topology.
 Non-transactional spouts provide no guarantee on the composition of the.
@@ -399,7 +404,6 @@ Opaque spouts guarantee that batches are non-overlapping, but the contents.
 The interface for a spout looks like the following code snippet:
 In Trident, the spout does not actually emit the tuples.
 The Emitter function is responsible for emitting the tuples, and.
-The TridentSpout function simply provides accessor methods to theBatchCoordinator and Emitter functions and declares the fields that the spout will emit.
 The generic class is the metadata that is required to replay a batch.
 The BatchCoordinator class is implemented as a Storm Bolt operating in a single thread.
 For our example, if we do no coordination, the following is the coordination.
@@ -407,6 +411,7 @@ The second component in a Trident spout is the Emitter function.
 The Emitter functionperforms the function of the Storm spout using a collector to emit tuples.
 The interface for an Emitter function looks like the following code snippet:
 As shown in the preceding code, the Emitter function has only one job—to emit the tuples for a given batch.
+For this example, we will randomly assign a latitude and longitude, keeping it roughly within the.
 One of these diagnosis codes is randomly assigned to the event.
 In this example, we will use an object to encapsulate the diagnosis event.
 There is a balancing act between object encapsulation and use of.
@@ -444,6 +449,7 @@ In this way, functions can also be used to filter tuples.
 The first function in our topology is the CityAssignment function that looks like the following code snippet:
 In this function, we use a static initializer to create a map of the cities we care.
 Forsample data, the function has a map that contains the coordinates.
+In the execute() method, the function loops through the cities and calculates the distance between the event and the city.
 Once the function determines the closest city, it emits the code for that city in.
 The number of function fields declared must align with the number of values.
 The next function in our topology, HourAssignment, is used to convert the timestamp into an hour since epoch, which can then be used to group.
@@ -452,12 +458,21 @@ The final two functions in our topology detect the outbreak and alert us about.
 This function extracts the count for the specific city, disease, and hour.
 The final function in our topology simply dispatches the alert (and terminates.
 A CombinerAggregator is used to combine a set of tuples into a single field.
+Storm calls the init() method with each tuple, and then repeatedly calls the combine()method until the partition is processed.
+The values passed into the combine() method are partial aggregations, the result of combining the values returned by calls to init()
+Partitions are discussed more in the following sessions, but a partition is effectively a subset of a stream of tuples.
 If a partition is empty, then Storm emits the value returned by.
+Storm calls the init() method to retrieve the initial value.
+Then reduce() is called with each tuple until the partition is fully processed.
+The first parameter into the reduce()method is the cumulative partial aggregation.
+The Aggregator interface's aggregate() method is similar to the execute() method of a Function interface, but it also includes a parameter for the value.
 This allows theAggregator to accumulate a value as it processes the tuples.
-Notice that with anAggregator, since the collector is In our example topology, we leveraged a built-in aggregator named Count.
+Notice that with anAggregator, since the collector is passed into both the aggregate() method as well as the complete() method, you can emit any arbitrary number of tuples.
+In our example topology, we leveraged a built-in aggregator named Count.
 The implementation for Count looks like the following code snippet:
 We apply both grouping and counting in our example topology to count the.
 Recall that Storm partitions the stream across the available hosts.
+It groups all the tuples that share the same value for the named field into the same partition.
 To do this, Storm must send the like tuples to the same host.
 After repartitioning, the aggregate function is run on each group within each partition.
 In our example, we are grouping by city, hour, and disease.
@@ -467,16 +482,17 @@ Trident has a first-level primitive for state, but like the Storm.
 API, it makes a few assumptions about what is being stored as state or how.
 At the highest level, Trident exposes aState interface as follows:
 Like functions, there are methods on the Stream objects that introduce state-based operations into a topology.
-In our topology, we group by the key generated by the HourAssignmentfunction.
 On the Stream object, the following methods allow the topology to read and write state information:
+The stateQuery() method creates an input stream from state, and the various flavors of the partitionPersist() method allow a topology to update state information from tuples in a stream.
 In addition to the methods on the Stream object, the GroupedStream object allows a topology to aggregate statistics from a set of tuples and.
+Like the base Stream object, the stateQuery() method creates an input stream from state.
+The various flavors of persistAggregate() allow a topology to update state information from tuples in a stream.
 This would enable a report similar to the following table:
 To achieve this, we want to persist with the counts that we generate in the.
 We can use the GroupedStream interface (shown previously) returned by the groupByfunction and call the persistAggregate method.
 Specifically, the following is the call we make in the example topology:
 To understand persistence, we will first focus on the first parameter to this.
 Trident uses a factory pattern to generate instances of State.
-The OutbreakTrendFactory is the factory our topology provides to Storm.
 The factory returns the State object that Storm uses to persist with information.
 Non-Transactional For persistence mechanisms that do not have rollback capabilities and where updates are permanent and commits are ignored.
 For persistence that is idempotent, provided the batch contains the same tuples.
@@ -501,7 +517,6 @@ As shown in the preceding code, to leverage the MapState objects, we simply pass
 In our example topology, we do not actually persist with the values.
 Simply changing the backing map instance that we pass into the constructor of.
 Executing this method will submit the topology to a local cluster.
-The threshold in theOutbreakDetector class is set such that the count will quickly exceed the threshold, at which point the program.
 Notice that the coordinator is notified upon successful completion of the.
 In this chapter, we created a topology that processes diagnosis information to.
 Later on in this book, we will leverage these same constructs and.
@@ -525,7 +540,6 @@ However, as you'll see, any existing application that uses either the logback or
 The logback framework has an extension mechanism that allows you to add.
 Like Storm, Kafka is designed to scale horizontally on commodity software to.
 The Kafka spout reads data from a Kafka queue and emits it to a Storm or.
-Kafka spout are available from the clojars.org Maven repository (https://clojars.org/storm/storm-kafka)
 Our topology will consist of a collection of both built-in and custom Trident.
 When a pattern is detected, the topology will emit a tuple.
 We'll begin by installing the necessary software: Apache Kafka and OpenFire.
@@ -546,11 +560,11 @@ The application component is a simple Java class that uses the Simple.
 We will simulate an application that begins by generating warning messages.
 Log a warning message every second for 15 seconds (rapid state)
 The goal of the application is to generate a simple pattern that our storm.
-LOG.warn("This is a warning (rapid // return to slow state LOG.warn("This is a warning (slow.
 The logback framework provides a simple extension mechanism that allows.
-Logback includes the ch.qos.logback.core.AppenderBase abstract class that makes it easy to implement the Appender interface.
 The AppenderBase class defines a single abstract method as follows:
 The eventObject parameter represents a logging event and includes properties such as the date of the event, the log level (DEBUG, INFO, WARN, and so on), as well as the log message itself.
+In addition to the append() method, the AppenderBase class defines two additional lifecycle methods that we will need to override:
+The start() method is called during the initialization of the logback framework, and thestop() method is called upon deinitialization.
 We will override these methods to set up and tear down our connection to the.
 The source code for the KafkaAppender class is listed as follows:
 As you will see, the JavaBean-style accessors in this class allow us to.
@@ -560,15 +574,10 @@ A Formatter implementation's job is to take an ILoggingEvent object and turn it 
 The following logback configuration file illustrates the usage of the appender.
 This example does not define a custom Formatter implementation, so the KafkaAppender class will default to using the MessageFormatter class and just write the log message data to Kafka and discard any additional.
 The Storm application we're building is time sensitive: if we're tracking the.
-A naïve approach would be to simply assign the event a time using.
 In order to account for this situation, we need to capture the time of the event.
 Fortunately, theILoggingEvent class includes a timestamp, in milliseconds since the epoch, that the event occurred.
-To include the metadata included in ILoggingEvent, we'll create a custom Formatterimplementation that encodes the log event data in JSON format as follows:
-The bulk of the JsonMessageFormatter class code uses ajava.lang.StringBuilder class to create JSON from the ILoggingEvent object.
 While we could have used a JSON library to do the work, the JSON data we're generating is simple and adding an additional.
-The one JavaBean property exposed by JsonMessageFormatter is the expectJsonBoolean used to specify whether the log message passed to the Formatter implementation should be treated as JSON.
 If set to False, the log message will be treated as a string and wrapped in double quotes,
-The following is a sample logback configuration file that illustrates the usage.
 If set to "false", the log message will be treated as a string, and wrapped in quotes.
 Otherwise it will be treated as a parseable JSON object.
 Since the analytics topology we are building is more concerned with event.
@@ -577,20 +586,15 @@ Determine if the moving average has crossed a specified threshold.
 The topology is depicted in the following diagram with the Trident stream.
 The first step in creating the log analysis topology is to configure the Kafka.
 This code first creates a new TridentTopology instance, and then uses the Kafka Java API to create a list of Kafka hosts with which to connect (since.
-Next, we create theTridentKafkaConfig object, passing it the host list and a unique identifier.
 The data our application writes to Kafka is a simple Java string, so we use.
 The StringScheme class will read data from Kafka as a string and output it in a tuple field named str.
 By default, upon deployment the Kafka spout will attempt to read from the.
 Kafka queue where it last left off by querying ZooKeeper for state information.
-This behavior can be overridden by calling the forceOffsetTime(long time) method of theTridentKafkaConfig class.
 The time parameter can be one of the following three values:
-Time in milliseconds: Given a specific date in milliseconds (for reading from that point in time.
 After setting up the spout configuration, we create an instance of the Opaque.
 The data stream coming from the Kafka spout will contain a single field (str) containing the JSON data from the log event.
-The JsonProjectFunction constructor takes a Fields object parameter that will determine what values to emit as a list of key names to look up from.
 When the function receives a tuple, it will parse the JSON in the.
 The following code creates a Fields object with a list of field names to extract from the JSON.
-It then creates a new Stream object from the spout stream, selects the str tuple field as the input to the JsonProjectFunction constructor, constructs theJsonProjectFunction constructor, and specifies that the fields selected from the JSON will also be output from the function:
 Consider that the following JSON message is received from the Kafka spout:
 This would mean that the function would output the following tuple values:
 In order to calculate the rate at which log events occur, without the need to.
@@ -611,22 +615,20 @@ To counteract this effect, we can introduce the concept of a sliding.
 An implementation of an exponentially weighted moving average is listed as.
 These correspond to the standard alpha values used to calculate load averages in UNIX.
 Thealpha value can also be specified manually, or as a function of an alpha window.
+The mark() methods are used to update the moving average.
+Without arguments, themark() method will use the current time to calculate the average.
 Because we want to use the original timestamp from the log event, we.
+The getAverage() method returns the average time between calls to mark() in milliseconds.
 As you'll probably notice, using an exponentially weighted moving average can.
 Finding the right set of values for an alpha as well as the.
-To use our EWMA class in a Trident topology, we'll create a subclass of Trident'sBaseFunction abstract class named MovingAverageFunction that wraps an instance of EWMA, as shown in the following code snippet:
 Trident are additive, meaning they add values to the tuples in a stream.
 This means that after processing, the tuple might look like the following code.
-To use the function, we create an instance of the EWMA class and pass it to theMovingAverageFunction constructor.
-We apply the function to the as shown in the following code snippet:
+We apply the function to the stream with theeach() method, selecting the timestamp field as the input, as shown in the following code snippet:
 For our use case, we want to be able to define a rate threshold that triggers a.
 The job of the function will be to determine whether the new value of the.
 We will leverage that value to filter out events that do not represent a state change.
-The ThresholdFilterFunction class defines an inner enumeration to represent the state (above threshold or below)
 We then compare it to the last state to see if.
-After passing through the ThresholdFilterFunction class, tuples in the input stream will contain a new Boolean value that we can use to easily filter.
 Any tuples containing False for the input value will be filtered out of the resulting stream.
-The first line creates a ThresholdFilterFunction instance with a threshold of 50.0
 We then create a new stream using the averageStream as input to the threshold function, and select the average tuple field as input.
 We also assign names (change andthreshold) to the fields added by the function.
 Finally, we apply the BooleanFilterclass to create a new stream that will only contain tuples that represent a change in threshold comparison.
@@ -638,15 +640,20 @@ The following code snippet demonstrates the usage of the Smack API to send a.
 The code connects to the XMPP server at jabber.org and logs in with a.
 Based on this simple example, we will create a class.
 The class will establish a long-lived connection to an XMPP.
-To make the XMPPFunction class more reusable, we'll introduce the MessageMapperinterface that defines a method to format the data from a Trident tuple to a string suitable for an instant message notification, as shown.
+Also, in the execute() method it will create an XMPP message based on the tuple received.
 We'll delegate message formatting to an instance of MessageMapper in the XMPPFunctionclass as shown in the following code snippet:
 The XMPPFunction class begins by defining several string constants that are used to look up values from the Storm configuration passed to.
+In the prepare() method, we look up the configuration parameters (server, username,to address, and so on) for the XMPPConnection class and open the connection.
 The final necessary piece of our notification mechanism is to implement.
 We now have all the components necessary to build our log analysis topology.
+Then, the buildTopology() method creates all the stream connections between the Kafka spout and our Trident functions and filters.
+The main() method then submits the topology to a cluster: a local cluster if the topology is being run in the local mode or a remote cluster when run in the.
 We begin by configuring the Kafka spout to read from the same topic that our.
-Next, we set up the JsonProjectFunction class to parse the raw JSON received from Kafka and emit the values that we're interested in.
+This will avoid the replay of all the old messages that we may not be interested in.
+Theproject() method is useful for paring down tuple streams to just the essential fields, and it is especially important while repartitioning streams that.
 The resulting stream now contains just the data we need.
 Finally, we apply the BooleanFilter class and connect the resulting stream to theXMPPFunction class.
+The main() method of the topology simply populates a Config object with the properties needed by the XMPPFunction class and submits the topology.
 To run the analysis topology, first make sure that ZooKeeper, Kafka, and.
 OpenFire are all up and running by using the procedures outlined earlier in.
 When the topology activates, the storm XMPP user will connect to the XMPP.
@@ -676,7 +683,6 @@ Kafka Spout gives us transactional, exactly-once semantics, and built-in fault.
 Titan is a distributed graph database optimized for storing and querying graph.
 Like Storm and Kafka, Titan databases can run as a cluster and can.
 Titan stores its data in one of the three configurable storage backends: Apache.
-Consistency: All clients see the current data regardless of modifications · Availability: The system continues to operate as expected despite node.
 For our use case, consistency is not critical to our application.
 A graph is a network of objects (vertices) with directed connections (edges)
 In this example, users are represented by vertices (nodes), and relationships.
@@ -699,7 +705,8 @@ Rexster: Rexster is a graph server that exposes Blueprints graphs through a REST
 For our purposes, we will be focusing on the Blueprints API for populating a.
 Blueprints API to create the graph depicted in the previous diagram:
 Later, we will demonstrate how to connect to a distributed graph database.
-You may be wondering why we are passing null as a parameter to essentially a suggestion to the underlying Blueprints implementation for a unique ID for the object.
+You may be wondering why we are passing null as a parameter to theaddVertex() and addEdge() methods at the first argument.
+This argument is essentially a suggestion to the underlying Blueprints implementation for a unique ID for the object.
 Passing in null as the ID simply has the effect of letting the underlying implementation assign an ID to the new object.
 Gremlin is a high-level Java API built on the top of the Pipes and Blueprints.
 In addition to querying a graph, it is also easy to create and manipulate graphs.
@@ -709,16 +716,14 @@ If you haven't done so already, set up ZooKeeper and.
 Kafka according to the instructions in the ZooKeeper installation section.
 To install Titan, download the Titan 0.3.x complete package from Titan's.
 Titan's complete distribution package includes everything that is necessary for.
-Both Storm and Titan use the Kryo (https://code.google.com/p/kryo/) library for Java object serialization.
 At the time of writing, Storm and Titan use different versions of the Kryo library, which will cause problems when the two are used in conjunction.
 To patch Titan in order to properly enable serialization between Storm and.
 Titan, replace thekryo.jar file in the Titan distribution with the kryo.jar file that comes with Storm:
 At this point, you can test the installation by running the Gremlin shell:
-GraphOfTheGodsFactory is a class included with Titan that will create and populate a Titan database with a sample graph that represents the.
+Passing a directory path to the create() method will return a Blueprints graph implementation, specifically.
 Since the Gremlin shell is a Groovy REPL, we can.
 In order to download and run Cassandra, we need to execute the following.
 The default file that comes with the Cassandra distribution will create a.
-The most common problems are usually related to the lack of file-write permissions.
 To run Titan with Cassandra, we need to configure it to connect to our.
 As you can probably surmise, this configures Titan to connect to the.
 For this project, we may not need to actually run the Titan server.
@@ -737,39 +742,37 @@ These modules can be included in the project by adding the following Maven depen
 The easiest way to do this is to create the file in the resourcesfolder of your Maven project.
 We're now ready to use the Twitter4J client to connect to Twitter's.
 The purpose of our Twitter client is straightforward; it will perform the following functions:
-The StatusListenerinterface is used as an asynchronous event handler that is notified whenever a stream-related event occurs:
 After registering the listener, we create a FilterQuery object to filter the stream based on a set of keywords.
 For convenience, we use the program arguments as the list of keywords so the filter criteria can be easily changed from the command line.
-The TwitterStatusListener class performs most of the heavy lifting in our application.
-The StatusListener class defines several callback methods for our primary interest, since it is the method that gets calls whenever a new Tweet arrives.
+The StatusListener class defines several callback methods for events that can occur during the lifetime of a stream.
+The onStatus() method is our primary interest, since it is the method that gets calls whenever a new Tweet arrives.
 In addition to the raw text of the status message, the Status object includes convenient methods for accessing all the associated metadata, such as user information, the hashtags, URLs, and user mentions contained in the tweet.
+The bulk of our onStatus() method builds up the JSON structure before finally logging it to the Kafka queue via the Logback Kafka Appender.
 The Twitter graph topology will read raw tweet data from the Kafka queue,
 Finally, by using the generic Blueprints API, our Trident state implementation.
-The following is a code snippet explaining the JSONProjectFunction class:
 The heart of the topology will be a Trident state implementation responsible.
 Recall that a Trident state implementation consists of three components:
 StateFactory: The StateFactory interface defines the method Trident uses to create the persistent State objects.
-State: The Trident State interface defines after a Trident batch partition is written to the backing store.
+State: The Trident State interface defines the beginCommit() and commit()methods that are called before and after a Trident batch partition is written to the backing store.
 In addition to these abstractions provided by Trident, we will introduce two.
 Before diving in to the Trident state implementation, let's quickly look at these interfaces.
 The GraphFactory interface contract is simple: given a Map object that represents theStorm and topology configuration, return.
-This interface allows us to plug in any Blueprints-compatible graph.
-The GraphTupleProcessor interface provides an abstraction between the Trident state implementation and any use-case-specific business logic.
+Later, we will implement this interface to return a connection to a Titan graph database.
 Given a graph object, TridentTuple, and TridentCollector, manipulating the graph and optionally emitting additional tuples is the job of.
 Later in the chapter, we will implement this interface to populate a graph based on the content of a Twitter status message.
 Trident's StateFactory interface represents the entry point for a state implementation.
 In our use case, we're not concerned with partitions, so.
-Our GraphState class provides implementations called when a batch partition is about to take place and when it has.
 The code snippet of the GraphState class is as follows:
+If theupdate() method succeeds for all batch partitions, the Trident transaction will complete and the State.commit() method will be called.
+Notice that the update() method that actually updates the graph state is simply a public method of the GraphState class and not overridden.
 As you will see, we will have the opportunity to call this method directly in.
-Storm will call (potentially repeatedly in the case of batch failures/replays)
+The GraphUpdater class implements the updateState() method that Storm will call (potentially repeatedly in the case of batch failures/replays)
 The GraphFactory interface we defined earlier creates a TinkerPop Graph implementation, where a Map object represents a Storm configuration.
 The following code illustrates how to create TitanGraph backed by Cassandra:
 In order to populate the graph database with relationships gleaned from.
 The following code illustrates parsing the Twitter status message's JSON object and.
 Extract and project only the data we are interested in.
 Build and connect the Trident GraphState implementation to our stream.
-The TwitterStreamConsumer class will connect to the Twitter Streaming API and begin queuing data to Kafka.
 Depending on the popularity of the keywords used for the query, it may.
 To query the graph, we need to launch the Gremlin shell and create.
 The g variable now contains a Graph object we can use to issue graph traversal queries.
@@ -801,6 +804,7 @@ In a game of alternating turns, the depth indicates how.
 In our use case, the Storm topology need not track the depth.
 Storm topology explore endlessly (or until there are no new boards returned.
 Typically, each player is given a set amount of time and must make his or her.
+After the algorithm checks for the base case, it calls the move() method, which returns boards for all possible moves.
 The Negamax algorithm accomplishes the same more succinctly by alternating the sign of the score.
 Additionally, in a real-world scenario, we might apply Alpha-Beta pruning, which attempts to trim the branches of the tree that are explored.
 The algorithm only considers branches that fall within a threshold.
@@ -828,7 +832,6 @@ Once we find a construct to implement the recursion, we need to be able to.
 If we map our algorithm directly to Storm constructs, we would expect a.
 The isLeaf filter decides whether this is an end state (for example, win, loss, or draw)
 If the currentBoard field is not an end state, the GenerateBoards function emits all the new boards, replacing the value.
-The GenerateBoardsfunction could emit the tuple back through the spout or directly into the isLeaf filter, bypassing the spout.
 If the isLeaf filter determines that this is an end state, we need to score thecurrentBoard field and then update all the parents to reflect that new score.
 TheScoreFunction computes the score of the board and persists that to the GameTree State.
 To update the parents, we iterate over each of the parents and query the.
@@ -866,7 +869,6 @@ If the node is a leaf node, the board is queued on the Scoring Queue using.
 Then, the Scoring Function emits a tuple for the current node and.
 In the following design, we will demonstrate how we accommodate.
 However, before we move on to the design, notice that because we introduced.
-The topology has enumerated and queued the descendants of a node · The topology has queued the node for scoring.
 In the second topology, a tuple is acknowledged when the current board and.
 Also notice that we do not need to introduce new fields or mutate existing.
 The second topology is the same but adds a single additional field to capture the score.
@@ -878,6 +880,8 @@ In a real production implementation, we would most likely use a.
 We will look at each of the topologies in depth, but first, let's have a look at the.
 To simplify things, we've encapsulated the game logic and the.
 The Board class encapsulates the board itself in a multidimensional string array as a member variable.
+Notice also that the Board class provides a toKey() method.
+This key uniquely represents the board and is what we will use as a unique identifier.
 To completely represent the game state, we also need to know which player is.
 This is the GameState object whose listing is shown in the following code snippet:
 There is nothing terribly surprising in this class except for.
@@ -891,7 +895,7 @@ Note that queues are instances of a BlockingQueue instance within a map, which l
 This is a handy class when testing topologies that use a single queue as the input and output (that is,
 The main method in this class is the emitBatch implementation for the Emitter interface.
 This simply reads from the queue while it has data and while the maximum batch size has not been reached.
-The listing for theLocalQueueFunction class is shown in the following code snippet:
+The enqueue() method is used by our LocalQueueFunction class to complete the recursion.
 Note that the function is actually instantiated with the emitter function used by the spout.
 This allows the function to enqueue data directly into the spout.
 Again, this construct is useful when developing recursive topologies, but real.
@@ -906,7 +910,6 @@ TheScoreFunction scores the current board and emits that score for each board in
 The listing for ScoreFunction is shown in the following code snippet:
 The function simply scores the current board and emits a tuple for the current.
 Then, the function loops through the player emitting tuples for each.
-Always compute things from X's perspective // We'll flip things when we interpret it if it is O's turn.
 Notice in the preceding code that we used a mutex to sequence the updates to scores, thereby eliminating the race condition mentioned earlier.
 This only works because we are operating in a single/local JVM.
 When this topology is deployed to a real cluster, this will not work; however, we do have a few options to address the issue.
@@ -916,7 +919,6 @@ This is certainly a viable approach, but distributed locks come at a cost to per
 Every operation incurs overhead to accommodate what in reality might be an infrequent occurrence.
 Another pattern that might be useful is the retry when stale approach.
 In this scenario, along with the data, we also pull back a version number, timestamp, or checksum.
-Then, we perform a conditional update, including the version/timestamp/checksum information in a clause that will fail the update if that metadata has changed (for example, adding the WHEREclause to the UPDATE statement in the SQL/CQL paradigm)
 If the metadata has changed, it indicates that the value on which we based our decision is now stale and we should reselect the data.
 With retries, in the extreme case where there is a tremendous amount of contention, a thread may have to be retried a number of times in order to commit an update.
 However, with distributed locking, you may run into timeout issues if a single thread gets stuck, loses communication with the server, or fails entirely.
@@ -944,8 +946,10 @@ First, we will have a look at the code for the topology:
 This is passed in as an argument to thenewDRPCStream call, which is the crux of a DRPC topology.
 From there on, the topology functions as a normal topology.
 You can see the actual remote procedure call takes place via.
+Presently, the signature for that method takes and returns only strings.
 Since the current signature only accepts strings, we need to marshal the input.
 This takes place in the ArgsFunction as shown in the following code snippet:
+The second parameter to the call we made to client.execute() was a string that contained our input.
 In this case, you can see it in the topology.
 In order to marshal that string into a board, we.
 The next two functions applied in the DRPC topology demonstrate the reuse.
@@ -955,8 +959,10 @@ These are the scores for each of the children boards.
 To determine our next best move, we simply need to.
 We created an aggregating function named FindBestMove as shown in the following code snippet:
 In this case, we want to emit the best possible move, combined with its score.
+If you recall, for aggregation, Trident initially calls the init() method, which returns the initial aggregate value.
 Note that the score variable of the BestMove class is seeded with the absolute minimum value.
-Then, the function to incorporate the tuple into the aggregate value.
+Then, Trident makes subsequent calls to the aggregate() method, which allows the function to incorporate the tuple into the aggregate value.
+Finally, Trident calls the complete() method when all values of tuples have been aggregated.
 It is in this method that we emit the final best move.
 In this example, it is O's turn, and he or she has a scoring opportunity.
 What we showed is local invocation of a DRPC topology.
@@ -1002,7 +1008,6 @@ The preceding diagram lays out the event processing downstream from Storm.
 What is important to recognize in many real-time analytics engines is the.
 If we re-examine Trident's state classifications, there are three different.
 Transactional state requires the contents of each batch to be constant over.
-Summarizing the Javadoc for the storm.trident.state.State object, there are three different kinds of state:
 The system is idempotent as long as all batches are identical.
 The previous state is stored along with the batch identifier to tolerate changing batch composition in the event of replay.
 It is important to realize that introducing state into a topology effectively.
@@ -1067,10 +1072,14 @@ It is important to note that this approach succeeds because we are using a.
 With the design in place, we can turn our attention to the implementation.
 The sequence diagram for the implementation is shown as follows:
 The preceding diagram implements the state machine shown in the design.
-Once the real-time server is started, Druid polls the StormFirehose object the Firehose object's implementation should block until data is available.
+Once the real-time server is started, Druid polls the StormFirehose object using the hasMore()method.
+The contract with Druid specifies that the Firehose object's implementation should block until data is available.
 While Druid is polling and the Firehose object is blocking, Storm delivers tuples into the DruidState object's message buffer.
-Druid begins pulling data from the StormFirehose object via contents of the partition, it places the partition in limbo, and releases control.
+When the batch is complete, Storm calls the commit() method on the DruidState object.
+Druid begins pulling data from the StormFirehose object via the nextRow() method.
+When the StormFirehose object exhausts the contents of the partition, it places the partition in limbo, and releases control.
 Finally, when the commit method is called on the StormFirehose, the.
+When Druid calls run(), the implementation moves the partition to completion.
 First, we will look at the Storm side of the equation.
 That abstraction shielded us from the details of sequential batch processing.
 In this scenario, we need more control over the persistence process than what.
@@ -1080,7 +1089,7 @@ The factory also implements the StateFactory interface from Storm, which allows 
 As you can see in the preceding code, the State object is a message buffer.
 It delegates the actual commit logic to the Firehose object, which we will examine shortly.
 However, there are a few critical lines in this class that.
-We will dive deeper into the state storage when we examine the DruidPartitionStatus object.
+The conditional logic in the commit() method on the State object checks the ZooKeeper status to determine if this partition was already successfully.
 Even though Storm should never call those methods concurrently, we chose to.
 As shown in the preceding code, the updater simply loops through the tuples.
 Before we turn our attention to the Druid side of the implementation, we.
@@ -1095,13 +1104,18 @@ For more information on the JSON polymorphism, refer to the following.
 For more information on the spec file, refer to the following website:
 Now, we can turn our attention to the Druid side of the.
 Firehose is the main interface one must implement to contribute data into a Druid real-time server.
-As stated in the preceding code, Jackson is the means through whichFirehoseFactory objects are registered.
 Thus, the name specified as the@JsonTypeName must align with the type specified in the spec file.
 The meat of the implementation is in the StormFirehose class.
 Within this class, there are four critical methods that we will examine one by.
+The sendMessages() method is the entry point into the StormFirehose class.
 It is effectively the handoff point between Storm and Druid.
-If that we examined in the preceding code is released.
+Then, it blocks waiting for Druid to fully consume the batch.
+Then, the flow proceeds to the nextRow() method, which is shown as follows:
+If there are no remaining messages in the queue, the sendMessages() method that we examined in the preceding code is released.
 We are at a risk of losing the data entirely in the event of a.
+Druid will then poll the hasMore() method, which is shown in the following code:
+Since the queue is empty, the method will block until sendMessage() is called again.
+This leaves only one remaining piece of the puzzle, the commit() method.
 This method returns Runnable, which is called by Druid after it's finished persisting the messages.
 As you can see in the following code, the Runnable does nothing but moves the transactions into the completed state in Zookeeper.
 Now that we have examined all of the code, we can take a look at how the state.
@@ -1180,8 +1194,6 @@ In general, this is a great pattern to deploy if your organization has data.
 Additionally, and arguably just as important as our ability to tolerate faults in.
 For this example, we will again use Trident and build on the topology that we.
 The TwitterSpout performs the search against the Twitter API periodically, emitting the tweets that it returns into a Trident stream.
-The TweetSplitterFunction then parses the tweets and emits a tuple for each word in the tweets.
-The WordFrequencyFunctionenriches each tuple with the count for that word from a random sample of the English language.
 Finally, we let Druid consume that information to perform the aggregations.
 Druid partitions the data into temporal slices and persists that data.
 In this case, because the persistence mechanism is our means of addressing.
@@ -1193,7 +1205,6 @@ In reality, the system would most likely be monitoring multiple search phrases a
 Twitter4J API, and the Emitter function is not much more than a thin glue layer between that API and the Storm API.
 In a more complex scenario, one might also tap into the Twitter Firehose and use a queue to buffer the live updates before emitting them into Storm.
 The following are the key lines in the Emitter portion of the spout:
-The first function that the tweet passes through is the TweetSplitterFunction.
 This function simply parses the tweet and emits one tuple per word in the tweet.
 In a more sophisticated NLP system, this function will do more than simply split the tweet by whitespace.
 An NLP system would most likely try to parse the tweet, assigning parts of speech to the words and associating them with one another.
@@ -1208,7 +1219,8 @@ However, if we were calculating a true likelihood, we would need to consider the
 The execute method of the function is straightforward and simply adds the baseline count to the tuple.
 However, if we examine the method that retrieves the count from the HashMapclass, notice that it includes a DEFAULT_BASELINE.
 This is the value used when the system encounters a word that was not in the original corpus.
-Since Twitter feeds contain many abbreviations, acronyms, and other terms that are not found typically in standard text, the DEFAULT_BASELINE becomes an unique because they pertain to the searchphrase field.
+Since Twitter feeds contain many abbreviations, acronyms, and other terms that are not found typically in standard text, the DEFAULT_BASELINE becomes an important configuration parameter.
+In some cases, unique words are important and unique because they pertain to the searchphrase field.
 Others are anomalies because the sample corpus differs from the target corpus.
 Ideally, the raw baseline counts would be drawn from the same source that the analytics are targeting.
 In this case, it would be ideal to have both word and n-gram counts calculated using the entire Twitter Firehose.
@@ -1216,14 +1228,12 @@ We will not go into the details of a full multidata center Cassandra deployment 
 Instead, for this example, we will keep it simple and use the local file storage.
 In the preceding code, the function simply persists the tuple in the native format that Druid expects to consume in the Hadoop indexing job.
 This code is inefficient in that we are opening up the file for writing each time.
-Alternatively, we could have implemented additionalStateFactory and State objects that persisted the tuples; however, since this is just an example, we can tolerate the inefficient file access.
 Additionally, notice that we generate a timestamp here that is not re-emitted with the tuple.
 Ideally, we would generate a timestamp and add it to the tuple, which would then be used downstream by Druid to align the temporal partitioning.
 Even though this function does not enrich the tuple at all, it must still re-emit the tuple.
 Since functions can also act as filters, it is the obligation of the function to declare which tuples are passed downstream.
 The function writes the following lines to the nlp.json file:
 The Druid integration is the same that was used in the previous chapter.
-The State implementation then communicates with a StormFirehoseFactoryimplementation and a StormFirehose implementation for Druid.
 At the heart of this implementation is the StormFirehose implementation, which maps the tuples into input rows for Druid.
 The second contains the dimensions for that row, which is what.
 Druid will use to perform the aggregations, and determines what queries you.
@@ -1265,7 +1275,6 @@ The corresponding reduce function looks like the following code snippet:
 The MapReduce function would then group the values for each key and pass.
 With Hadoop as the background, let's take a look at our setup for Druid.
 The runtime properties for the Master and Compute nodes are largely the.
-Path on local FS for storage of segments; # dir will be created if needed.
 Also, note that if you are running the Master and Compute servers on the.
 Druid packages all the server components and their dependencies into a single.
 Using this JAR file, you can start the Master and.
@@ -1277,7 +1286,6 @@ The HadoopDruidIndexer function uses a JSON configuration file much like thereal
 The file is specified on the command line when the Hadoop job is started, as shown in the following code snippet:
 The following is the batchConfig.json file we used in this example:
 The two fields of particular interest are thepathSpec and rollupSpec fields.
-The pathSpec field contains the location of the file that was written by the PersistenceFunction.
 The rollupSpec field contains the same aggregation functions that we included in the realtime.spec file during transactional processing.
 Additionally, notice that the timestamp column and format are specified, which aligns with the field that we are outputting in the persisted file:
 The HadoopDruidIndexer function loads the preceding configuration file and performs themap/reduce functions to construct the index.
@@ -1288,13 +1296,8 @@ The preceding properties are set on nearly all Hadoop jobs.
 They set the input and output classes for each phase of the processing and the classes that implement the Mapper andReducer interfaces.
 For a complete description of Hadoop job configurations, visit the following URL:http://hadoop.apache.org/docs/r0.18.3/mapred_tutorial.html#Job+Configuration.
 The job configuration also specifies the input paths, which specify the files or other data sources for processing.
-Within the call to config.addInputPaths, Druid adds the files from the pathSpec field to the Hadoop configuration for processing, as shown in the following code snippet:
 You can see that out-of-the-box, Druid only supports instances of FileInputFormat.
 As an exercise for the reader, it might be fun to enhance the DruidHadoopIndexer function to support direct reads from Cassandra, as envisioned in the hypothetical architecture.
-Looking back at the job configuration, the Mapper class used by Druid is theIndexGeneratorMapper class, and the Reducer class is theIndexGeneratorReducer class.
-Let's first have a look at the map function within the IndexGeneratorMapper class.
-TheIndexGeneratorMapper class actually subclasses from HadoopDruidIndexerMapper, which contains the implementation of the map method, delegating it to theIndexGeneratorMapper class to emit the actual values, as we see in the following code.
-Within HadoopDruidIndexerMapper, we see the map method implementation as follows:
 We can see that the superclass map method handles rows that do not parse, marking them invalid, and checks to see if the row contains the necessary data to carry out the map.
 Specifically, the superclass ensures that the row contains a timestamp.
 The map requires the timestamp because it partitions the data into time slices (that is, buckets) as we see in theabstract method call to innerMap, which is shown as follows:
@@ -1382,9 +1385,6 @@ The ResourceManager has various subcomponents, each of which acts as a server th
 All of the servers are configured within the yarn-site.xml file.
 For this example, we will use the following YARN configuration:
 The first four variables in the preceding configuration file assign host and ports for the subcomponents.
-Setting the yarn.acl.enable variable to False disables security on the YARN cluster.
-The yarn.nodemanager.local-dirs variable specifies the place on the local filesystem where YARN will place the data.
-Finally, the yarn.nodemanager.aux-services variable starts an auxiliary service within the NodeManager's runtime to support MapReduce jobs.
 Since our Pig scripts compile down into MapReduce jobs, they depend on this variable.
 Like the NameNode, start the ResourceManager with the following command line:
 Again, check for the existence of the process with jps, monitor the logs for exceptions, and then you should be able to navigate to the UI which by default runs on port 8088
@@ -1414,7 +1414,6 @@ To monitor whether Storm-YARN will continue to require a pre-existing ZooKeeper 
 With the the Storm framework in HDFS and the YAML file configured, the.
 You specify the location of the YAML file, the queue for YARN, a name for the.
 Queues in YARN are beyond the scope of this discussion, but by default YARN is configured with a default queue that is used in the preceding command line.
-If you are running Storm on a pre-existing cluster, examine capacity-scheduler.xml in the YARN configuration to locate potential queue names.
 After executing the preceding command line, you should see the application.
 Clicking on the application shows where the application master is deployed.
 Drilling down one more level, you will be able to see the logfiles for Storm, as.
@@ -1427,7 +1426,6 @@ You should see the familiar Storm UI as shown in the.
 In the preceding statement, the appId parameter corresponds to the appId parameter assigned to Storm-YARN, and it is visible in the Hadoop administration screen.
 Storm-YARN will use the local Hadoop configuration to locate the master Hadoop node.
 If you are launching from a machine that is not a part of the Hadoop cluster, you will need to configure that machine with the Hadoop environment variables and configuration files.
-Thus, you will need the following variables configured inyarn-site.xml: yarn.resourcemanager.address.
 With both the batch and real-time infrastructure in place, we can focus on the.
 First, we will take a look at the processing in Pig, and then we will.
 The Pig script is shown in the following code snippet:
@@ -1441,7 +1439,6 @@ No filter is necessary since we simply want a count of the impressions by.
 The first element in the output is the campaign identifier.
 In the preceding topology, we fork the stream into two separate.
 Those two streams are then joined using the topology.join method.
-Thus, the cardinality of that stream is smaller than that of the impressions_stream, which means that tuples are lost in the join process.
 Operations such as join are well defined for discrete sets, but it is unclear how to translate their definitions into a real-time world of infinite event streams.
 Instead, we will use Trident's state construct to share the counts between the.
 This is shown in the corrected topology in the following diagram:
@@ -1486,7 +1483,7 @@ To create a new key pair, click on the Key Pairs link to open the key pair manag
 You will be prompted to give the key pair a name.
 At this point, depending on which browser you are using, you will be prompted to download your private certificate file or the file will be downloaded automatically.
 It's very important that you keep this file safe since the key will give you full administrator access to any EC2 images launched with that key.
-Immediately after downloading your private key, you should change its file permissions so it is not.
+Immediately after downloading your private key, you should change its file permissions so it is not publicly readable; for example, with UNIX, use the following command:
 Many SSH clients will look at the permissions of the key file and issue a warning or refuse to use a key file that is publicly readable.
 Once you have created a key pair, you are ready to launch an EC2 instance.
 The first step in launching an EC2 machine is to select an Amazon Machine Image (AMI)
@@ -1519,8 +1516,6 @@ Whirr gives you three options for specifying your cloud credentials:
 We'll use the last option as it is the most convenient as follows:
 Now that we have Whirr installed, let's turn our attention toward cluster.
 Let's start by looking at the minimum configuration necessary to launch a.
-The whirr.cluster-name property simply assigns a unique identifier to the cluster and is used when running management commands such as listing the.
-The whirr.instance-template property defines the number of nodes in a cluster and the services that run on each node.
 With just these two properties defined, we have enough to tell Whirr how to.
 However, there are a few options that you will typically want.
 For example, we'll want Whirr to use the dedicated key pair we.
@@ -1531,7 +1526,6 @@ Finally, we've specified that we want our cluster deployed in the us-east-1regio
 For a complete list of public AMIs, perform the following steps:
 From the EC2 Management Console, select a region from the drop-down menu in the upper-right corner.
 Our configuration file for a ZooKeeper cluster now looks like the following.
-If we save those properties to a file named zookeeper.properties, we can then launch the cluster with the following command:
 When the command completes, Whirr will output the list of instances created.
 You can log in to instances using the following SSH commands:
 To destroy a cluster, run whirr destroy-cluster with the same options used to launch it.
@@ -1544,26 +1538,18 @@ Before we get into the details of configuring Whirr for Storm, let's take a look
 Only one node per cluster should be assigned with this role.
 This role should only be assigned to nodes that also have the storm-supervisor role.
 You must have at least one ZooKeeper node in a Storm cluster, and for multi-node ZooKeeper clusters, the number of nodes should be odd.
-To use these roles in a Whirr configuration, we specify them in the whirr.instance-template property in the following format:
-For example, to create a single-node pseudocluster, where all Storm's daemons are run on one machine, we would use the following value for whirr.instance-template:
 If we wanted to create a multinode cluster with one node running Nimbus and Storm UI, three nodes running the supervisor and logviewer daemons, and a 3-node ZooKeeper cluster, we would use the following configuration:
-Whirr Storm will generate a storm.yaml configuration file with values for nimbus.host,storm.zookeeper.servers, and drpc.servers that are automatically calculated based on the hostnames of nodes in the cluster and which roles they have been assigned with.
 All other Storm configuration parameters will inherit default values unless specifically overridden.
-Note that if you attempt to override values for nimbus.host,storm.zookeeper.servers, or drpc.servers, Whirr Storm will ignore it and log a warning message.
 Although Whirr Storm will automatically calculate and configure thenimbus.host value for the cluster, you will still need to tell the Storm executable the host name of the Nimbus host when running the command locally.
 The easiest way to do this, and the most convenient if you have multiple clusters, is to specify a hostname for nimbus with the –c flag as follows:
 Other Storm configuration parameters can be specified in the Whirr configuration file by adding a property with a key prefixed with whirr-storm.
-For example, to set a value for the topology.message.timeout.secs parameter, we would add it to the Whirr configuration file as follows:
 The preceding code would result in the following line in storm.yaml:
-Configuration parameters that accept a list of values can be expressed in the Whirr configuration file as a comma-separated list, such as the following configuration forsupervisor.slots.ports:
 When a new machine instance is launched on EC2, most of its network ports are blocked by a firewall by default.
 To enable network communication between instances, you must explicitly configure firewall rules to allow ingress and egress on specific ports between hosts.
 By default, Whirr Storm will automatically create the security groups and firewall rules necessary for Storm components to communicate, such as opening the Nimbus Thrift port for topology submission and opening port 2181 between Nimbus and Supervisor nodes, and ZooKeeper nodes as shown in the following diagram:
 However, in many cases, Storm's worker processes will need to communicate with other services on arbitrary ports.
 For example, if you have a spout that consumes data from an external queue or a bolt that writes to a database, you will need additional firewall rules to enable that interaction.
 Consider a scenario where we have a spout reading data from a Kafka queue and streaming data to a bolt that writes to a Cassandra database.
-In such scenarios, we would set up our cluster with the following whirr.instance-template value:
-For this situation, Whirr Storm has the configuration propertywhirr.storm.supervisor.firewall-rules that allows you to open arbitrary ports on other nodes in the cluster.
 The property value is a comma-delimited list of role-port pairs as shown in the following code snippet:
 For example, to set up the rules for our scenario, we would use the following setting:
 Vagrant (http://www.vagrantup.com) is a tool similar to Apache Whirr in that.
@@ -1596,7 +1582,6 @@ Vagrant supports provisioning with shell scripts as well Puppet and Chef.
 We'll use the shell provisioner since it is the easiest to start with as it does not require any additional knowledge aside from basic shell scripting.
 To illustrate how Vagrant shell provisioning works, we'll modify our Vagrant project to install the Apache web server in the Vagrant virtual machine.
 We will begin by creating a simple shell script to install Apache2 using Ubuntu's APT package manager.
-Save the following script as install_apache.sh in the same directory as the Vagrantfile:
 Next, we'll modify our Vagrantfile to execute our script when Vagrant provisions our virtual machine by adding the following line:
 If your virtual machine is still running, kill it now by running vagrant destroy, then execute vagrant up to bring up a new virtual machine.
 When Vagrant completes, you should be able to view the default Apache page by pointing your browser tohttp://localhost:8080 on the host machine.
@@ -1615,29 +1600,23 @@ The install-storm.sh script leverages the existence of the Vagrant shared direct
 This allows us to keep the storm.yaml and logback.xml files in a convenient location right next to the Vagrantfile.
 In the storm.yaml file, we will use hostnames instead of IP addresses and let Vagrant configure the name resolution as shown in the following code snippet:
 The supervisord service is installed by the install-storm.sh script, but we still need to configure it to manage the Storm daemons.
-The configure-supervisord.sh script expects a single argument representing the name of the Storm service to manage.
 For our Storm cluster, we will create a cluster with one ZooKeeper node, one Nimbus node, and one or more Supervisor nodes.
 Because the Vagrantfile is written in Ruby, we have access to many of Ruby's language features, which will allow us to.
 We will, for example, make the number of Supervisor nodes easily configurable.
 In the storm.yaml file, we used hostnames rather than IP addresses, which means our machines must be able to resolve names to IP addresses.
 Vagrant does not come with a facility for managing entries in the /etc/hosts file, but fortunately, there is a Vagrant plugin that does.
-Before we delve into the Vagrantfile for the Storm cluster, install thevagrant-hostmanager plugin (https://github.com/smdahlen/vagrant-hostmanager) using the following command:
-The vagrant-hostmanager plugin will set up hostname resolution for all the machines in our cluster.
 It also has an option to add the name resolution between the host machine and virtual machines.
 Next, let's look at the complete Vagrantfile and walk through it line by line:
 The first line of the file tells the Ruby interpreter to require the uri module, which we will use for URL parsing.
 Next, we set up some variables representing the URL of the Storm distribution archive, the number of Supervisor nodes we want, and the name of the Vagrant box type for our virtual machines.
 These variables are intended to be changed by the user.
 These values will be passed as arguments to the provisioning scripts.
-Here, we are telling the vagrant-hostmanager plugin to manage the hostname resolution between the host machine and virtual machines and that it should manage the /etc/hostsfiles on the virtual machines as well.
 The next block checks to see whether the Storm distribution archive has already been downloaded; if not, it uses the wget command to download it as shown in the following code snippet:
 The preceding code will download the Storm archive to the same directory as theVagrantfile, thus making it accessible to the provisioning scripts in the /vagrant shared directory.
 The next two code blocks configure ZooKeeper and Nimbus and are relatively straightforward.
 They contain two new directives we have not seen before:
-The zookeeper.vm.network directive signals Vagrant to assign a specific IP address to the virtual machine using the VirtualBox host-only network adapter.
 The next line tells Vagrant to set the hostname on the virtual machine to a specific value.
 Finally, we invoke the provisioning scripts appropriate for each node.
-It will dynamically set the virtual machine name, hostname, and IP address based on the number of Supervisor nodes specified by theSTORM_SUPERVISOR_COUNT variable.
 With our cluster defined in the Vagrantfile and our provisioning scripts in place, we're ready to launch the Vagrant cluster with vagrant up.
 With four machines and a considerable amount of software to install on each, this will take a while.
 Once Vagrant has finished launching the cluster, you should be able to view the Storm UI from the host machine at http://nimbus:8080
@@ -1646,7 +1625,6 @@ In this chapter, we've just scratched the surface of deploying Storm in a cloud.
 We encourage you to explore both cloud hosting providers such as AWS as.
 URL, for account signing up / Setting up an AWS account.
 Storm cluster, configuring with / Configuring a Storm cluster with Whirr.
-Titan, starting with / Starting Titan with the Cassandra backend.
 Titan, setting up for / Setting up Titan to use the Cassandra storage.
 Furnace project / Accessing the graph – the TinkerPop stack.
 Compute node / Integrating a non-transactional system, The Druid setup.

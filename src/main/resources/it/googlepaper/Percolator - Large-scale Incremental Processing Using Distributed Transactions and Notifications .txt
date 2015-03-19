@@ -30,10 +30,6 @@ In addition to reasoning about concurrency, programmers of an incremental system
 To assist them in this task, Percolator provides observers: pieces of code that are invoked by the system whenever a user-specified column changes.
 Percolator applications are structured as a series of observers; each observer completes a task and creates more work for “downstream” observers by writing to the table.
 An external process triggers the first observer in the chain by writing initial data into the table.
-Percolator was built specifically for incremental processing and is not intended to supplant existing solutions for most data processing tasks.
-Computations where the result can’t be broken down into small updates (sorting a file, for example) are better handled by MapReduce.
-Also, the computation should have strong consistency requirements; otherwise, Bigtable is sufficient.
-Finally, the computation should be very large in some dimension (total data size, CPU required for transformation, Bigtable can be handled by traditional DBMSs.
 Within Google, the primary application of Percolator is preparing web pages for inclusion in the live web search index.
 By converting the indexing system to an incremental system, we are able to process individual documents as they are crawled.
 The system has also been used to render pages into images; Percolator tracks the relationship between web pages and the resources they depend on, so pages can be reprocessed when any depended-upon resources change.
@@ -49,7 +45,6 @@ Each cell contains a value: an uninterpreted array of bytes.
 Internally, to support snapshot isolation, we represent each cell as a series of values indexed by timestamp.)
 The design of Percolator was influenced by the requirement to run at massive scales and the lack of a requirement for extremely low latency.
 Relaxed latency requirements let us take, for example, a lazy approach to cleaning up locks left behind by transactions running on failed machines.
-This lazy, simple-to-implement approach potentially delays transaction commit by tens of seconds.
 This delay would not be acceptable in a DBMS running OLTP tasks, but it is tolerable in an incremental processing system building an index of the web.
 Percolator has no central location for transaction management; in particular, it lacks a global deadlock detector.
 This increases the latency of conflicting transactions but allows the system to scale to thousands of machines.
@@ -65,17 +60,16 @@ Bigtable allows users to control the performance characteristics of the table by
 The columns in each locality group are stored in their own set of SSTables, which makes scanning them less expensive since the data in other columns need not be scanned.
 The decision to build on Bigtable defined the overall shape of Percolator.
 Percolator maintains the gist of Bigtable’s interface: data is organized into Bigtable rows and columns, with Percolator metadata stored alongside in special columns (see Figure 5)
-Percolator’s API closely resembles Bigtable’s API: the Percolator library largely consists of Bigtable operations wrapped in Percolator-specific computation.
 The challenge, then, in implementing Percolator is providing the features that Bigtable does not: multirow transactions and the observer framework.
 Percolator users write their transaction code in an imperative language (currently C++) and mix calls to the Percolator API with their code.
 Figure 2 shows a simplified version of clustering documents by a hash of their contents.
+In this example, if Commit() returns false, the transaction has conflicted (in this case, because two URLs with the same content hash were processed simultaneously) and should be retried after a backoff.
+Calls to Get() and Commit() are blocking; parallelism is achieved by running many transactions simultaneously in a thread pool.
 While it is possible to incrementally process data without the benefit of strong transactions, transactions make it more tractable for the user to reason about the state of the system and to avoid the introduction of errors into a long-lived repository.
 For example, in a transactional web-indexing system the programmer can make assumptions like: the hash of the contents of a document is always consistent with the table that indexes duplicates.
 Without transactions, an ill-timed crash could result in a permanent error: an entry in the document table that corresponds to no URL in the duplicates table.
 Transactions also make it easy to build index tables that are always up to date and consistent.
 Note that both of these examples require transactions that span rows, rather than the single-row transactions that Bigtable already provides.
-Percolator stores multiple versions of each data item using Bigtable’s timestamp dimension.
-Multiple versions are required to provide snapshot isolation [5], which presents each transaction with the appearance of reading from a stable snapshot at some timestamp.
 Figure 2: Example usage of the Percolator API to perform basic checksum clustering and eliminate documents with the same content.
 Figure 3: Transactions under snapshot isolation perform reads at a start timestamp (represented here by an open square) and writes at a commit timestamp (closed circle)
 Snapshot isolation does not provide serializability; in particular, transactions running under snapshot isolation are subject to write skew [5]
@@ -88,25 +82,20 @@ By contrast, any node in Percolator can (and does) issue requests to directly mo
 Locks must persist in the face of machine failure; if a lock could disappear between the two phases of com3
 The transfer transaction begins by locking Bob’s account balance by writing the lock column.
 The transaction also writes data at its start timestamp, 7
-The transaction now locks Joe’s account and writes Joe’s new balance (again, at the start timestamp)
-The lock is a secondary for the transaction and contains a reference to the primary lock due to a crash, a transaction that wishes to clean up the lock needs the location of the primary to synchronize the cleanup.
 The transaction has now reached the commit point: it erases the primary lock and replaces it with a write record at a new timestamp (called the commit timestamp): 8
 The write record contains a pointer to the timestamp where the data is stored.
 The transaction completes by adding write records and deleting locks at the secondary cells.
 Figure 4: This figure shows the Bigtable writes performed by a Percolator transaction that mutates two rows.
 Each Percolator column is stored as 3 Bigtable columns: data, write metadata, and lock metadata.
 The lock service must provide high throughput; thousands of machines will be requesting locks simultaneously.
+The lock service should also be low-latency; each Get() operation requires reading locks in addition to data, and we prefer to minimize this latency.
 Given these requirements, the lock server will need to be replicated (to survive failure), distributed and balanced (to handle load), and write to a persistent data store.
 Bigtable itself satisfies all of our requirements, and so Percolator stores its locks in special in-memory columns in the same Bigtable that stores data and reads or modifies the locks in a Bigtable row transaction when accessing data in that row.
 These various metadata columns used by the system are described in Figure 5
-The transaction’s constructor asks the timestamp oracle for a start timestamp (line 6), which commit, which is coordinated by the client.
+The transaction’s constructor asks the timestamp oracle for a start timestamp (line 6), which determines the consistent snapshot seen by Get()
+Calls to Set() are buffered (line 7) until commit time.
+The basic approach for committing buffered writes is two-phase commit, which is coordinated by the client.
 Transactions on different machines interact through row transactions on Bigtable tablet servers.
-In the first phase of commit (“prewrite”), we try to lock all the cells being written.
-To handle client failure, we designate one lock arbitrarily as the primary; we’ll discuss this mechanism below.) The transaction reads metadata to check for conflicts in each cell being written.
-There are two kinds of conflicting metadata: if the that snapshot isolation guards against.
-If the transaction sees another lock at any timestamp, it also aborts (line 34)
-It’s possible that the other transaction is just being slow to release its lock after having already committed below our start timestamp, but we consider this unlikely, so we abort.
-If there is no conflict, we write the lock and.
 At the beginning of the second phase, the client obtains the commit timestamp from the timestamp oracle (line 48)
 Then, at each cell (starting with the primary), the client releases its lock and make its write visible to readers by replacing the lock with a write record.
 The write record indicates to readers that committed data exists in this cell; it contains a pointer to the start timestamp where readers can find the actual data.
@@ -139,10 +128,11 @@ To save RPC overhead (at the cost of increasing transaction latency) each Percol
 As the oracle becomes more loaded, the batching naturally increases to compensate.
 Batching increases the scalability of the oracle but does not affect the timestamp guarantees.
 Our oracle serves around 2 million timestamps per second from a single machine.
+The transaction protocol uses strictly increasing timestamps to guarantee that Get() returns all committed writes before the transaction’s start timestamp.
 To see how it provides this guarantee, consider a transaction R reading at timestamp TR and a transaction W that committed at timestamp TW < TR; we will show that R sees W’s writes.
 Since TW < TR, we know that the timestamp oracle gave out TW before or in the same batch as TR; hence, W requested TW before R received TR.
 We know that R can’t do reads before receiving its start timestamp TR and that W wrote locks before requesting its commit timestamp TW.
-Therefore, the above property guarantees that W must have at least written all its locks block until the lock is released.
+Therefore, the above property guarantees that W must have at least written all its locks before R did any reads; R’s Get() will see either the fullycommitted write record or the lock, in which case W will block until the lock is released.
 Transactions let the user mutate the table while maintaining invariants, but users also need a way to trigger and run the transactions.
 In Percolator, the user writes code (“observers”) to be triggered by changes to the table, and we link all the observers into a binary running alongside every tablet server in the system.
 Each observer registers a function and a set of columns with Percolator, and Percolator invokes the function after data is written to one of those columns in any row.
@@ -153,7 +143,7 @@ Notifications are similar to database triggers or events in active databases [29
 In particular, the triggered observer runs in a separate transaction from the triggering write, so the triggering write and the triggered observer’s writes are not atomic.
 Notifications are intended to help structure an incremental computation rather than to help maintain data integrity.
 This difference in semantics and intent makes observer behavior much easier to understand than the complex semantics of overlapping triggers.
-Percolator applications consist of very few observers — the Google indexing so it is clear what observers are active.
+Each observer is explicitly constructed in the main() of the worker binary, so it is clear what observers are active.
 It is possible for several observers to observe the same column, but we avoid this feature so it is clear what observer will run when a particular column is written.
 Users do need to be wary about infinite cycles of notifications, but Percolator does nothing to prevent this; the user typically constructs.
 The converse is not true, however: multiple writes to an observed column may cause the corresponding observer to be invoked only once.
@@ -193,6 +183,7 @@ This led us to devise a way to notify a cell without the possibility of transact
 We implement this weak notification by writing only to the Bigtable “notify” column.
 To preserve the transactional semantics of the rest of Percolator, we restrict these weak notifications to a special type of column that cannot be written, only notified.
 The weaker semantics also mean that multiple observers may run and commit as a result of a single weak notification (though the system tries to minimize this occurrence)
+This has become an important feature for managing conflicts; if an observer.
 One of the inefficiencies of Percolator relative to a MapReduce-based system is the number of RPCs sent per work-unit.
 When writing a lock, we must do a read-modify-write operation requiring two Bigtable RPCs: one to read for conflicting locks or writes and another to write the new lock.
 To reduce this overhead, we modified the Bigtable API by adding conditional mutations which implements the read-modify-write step in a single RPC.
@@ -307,7 +298,6 @@ In this experiment, we configured the benchmark with increasing numbers of custo
 This experiment also provides an opportunity to measure the overheads in Percolator relative to a DBMS.
 This comparison is very rough: the Nehalem cores in the comparison machine are significantly faster than the cores in our test cell (small-scale testing on Nehalem processors shows that they are 20-30% faster per-thread compared to the cores in the test cluster)
 However, we estimate that Percolator uses roughly 30 times more CPU per transaction than the benchmark system.
-On a cost-per-transaction basis, the gap is likely much less than 30 since our test cluster uses cheaper, commodity hardware compared to the enterprise-class hardware in the reference machine.
 In Percolator we not only interposed an operating system between our database and the hardware, but also several layers of software and network links.
 The conventional wisdom is correct: this arrangement has a cost.
 To illustrate these overheads in Percolator, consider the act of mutating the database.

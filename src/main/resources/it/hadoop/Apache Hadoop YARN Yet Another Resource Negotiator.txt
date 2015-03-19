@@ -1,11 +1,5 @@
-Benjamin Reed f Eric Baldeschwielerh h: hortonworks.com, m: microsoft.com, i: inmobi.com, y: yahoo-inc.com, f: facebook.com.
-The initial design of Apache Hadoop [1] was tightly focused on running massive, MapReduce jobs to process a web crawl.
-This broad adoption and ubiquitous usage has stretched the initial design well beyond its intended target, exposing two key shortcomings: 1) tight coupling of a specific programming model with the resource management infrastructure, forcing developers to abuse the MapReduce programming model, and 2) centralized handling of jobs’ control flow, which resulted in endless scalability concerns for the scheduler.
 In this paper, we summarize the design, development, and current state of deployment of the next generation of Hadoop’s compute platform: YARN.
 The new architecture we introduced decouples the programming model from the resource management infrastructure, and delegates many scheduling functions (e.g., task faulttolerance) to per-application components.
-Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page.
-Copyrights for components of this work owned by others than the author(s) must be honored.
-To copy otherwise, or republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.
 Apache Hadoop began as one of many open-source implementations of MapReduce [12], focused on tackling the unprecedented scale required to index web crawls.
 Its execution architecture was tuned for this use case, focusing on strong fault tolerance for massive, data-intensive computations.
 In many large web companies and startups, Hadoop clusters are the common place where operational data are stored and processed.
@@ -67,7 +61,6 @@ Due to the complex state stored for each job, an implementation preserving jobs 
 While fault tolerance is a core design principle, the surface exposed to user applications is vast.
 Given various availability issues exposed by the single point of failure, it is critical to continuously monitor workloads in the cluster for dysfunctional jobs.
 More subtly, because the JobTracker needs to allocate tracking structures for every job it initializes, its admission control logic includes safeguards to protect its own availability; it may delay allocating fallow cluster resources to jobs because the overhead of tracking them could overwhelm the JobTracker process.
-All these concerns may be grouped under the need for [R6:] Reliability/Availability.
 As Hadoop managed more tenants, diverse use cases, and raw data, its requirements for isolation became more stringent, but the authorization model lacked strong, scalable authentication—a critical feature for multitenant clusters.
 R7:] Secure and auditable operation must be preserved in YARN.
 Developers gradually hardened the system to accommodate diverse needs for resources, which were at odds with the slot-oriented view of resources.
@@ -100,10 +93,6 @@ To address the requirements we discussed in Section 2, YARN lifts some functions
 Specifically, a per-cluster ResourceManager (RM) tracks resource usage and node liveness, enforces allocation invariants, and arbitrates contention among tenants.
 By separating these duties in the JobTracker’s charter, the central allocator can use an abstract description of tenants’ requirements, but remain ignorant of the.
 That responsibility is delegated to an ApplicationMaster (AM), which coordinates the logical plan of a single job by requesting resources from the RM, generating a physical plan from the resources it receives, and coordinating the execution of that plan around faults.
-The RM runs as a daemon on a dedicated machine, and acts as the central authority arbitrating resources among various competing applications in the cluster.
-In order to enforce and track such assignments, the RM interacts with a special system daemon running on each node called the NodeManager (NM)
-NMs are responsible for monitoring resource availability, reporting faults, and container lifecycle management (e.g., starting, killing)
-The RM assembles its global view from these snapshots of NM state.
 Jobs are submitted to the RM via a public submission protocol and go through an admission control phase during which security credentials are validated and various operational and administrative checks are performed [R7]
 Accepted jobs are passed to the scheduler to be run.
 Once the scheduler has enough resources, the application is moved from accepted to running state.
@@ -118,10 +107,7 @@ The form of these requests includes specification of locality preferences and pr
 The RM will attempt to satisfy the resource requests coming from each application according to availability and scheduling policies.
 When a resource is allocated on behalf of an AM, the RM generates a lease for the resource, which is pulled by a subsequent AM heartbeat.
 A token-based security mechanism guarantees its authenticity when the AM presents the container lease to the NM [R4]
-Once the ApplicationMaster discovers that a container is available for its use, it encodes an application-specific launch request with the lease.
-Overall, a YARN deployment provides a basic, yet robust infrastructure for lifecycle management and monitoring of containers, while application-specific semantics are managed by each framework [R3,R8]
 In the remainder of this section, we provide details for each of the main components.
-In the following, we focus on the public protocol between RM and AM, as this best represents the various applications/frameworks running on it.
 The RM matches a global model of the cluster state against the digest of resource requirements reported by.
 Once started, the process obtains its payload from the AM across the network, rather than from the local daemon.
 This makes it possible to tightly enforce global scheduling properties (different schedulers in YARN focus on different global properties, such as capacity or fairness), but it requires the scheduler to obtain an accurate understanding of applications’ resource requirements.
@@ -129,10 +115,6 @@ Communication messages and scheduler state must be compact and efficient for the
 The way resource requests are captured strikes a balance between accuracy in capturing resource needs and compactness.
 Fortunately, the scheduler only handles an overall resource profile for each application, ignoring local optimizations and internal application flow.
 ApplicationMasters codify their need for resources in terms of one or more ResourceRequests, each of which tracks:
-This allows more uniform requests to be represented compactly as aggregates.
-Furthermore, this design would allow us to impose size limits on ResourceRequests, thus leveraging the roll-up nature of ResourceRequests as a lossy compression of the application preferences.
-This makes communication and storage of such requests efficient for the scheduler, and it allows applications to express their needs clearly [R1,R5,R9]
-The roll-up nature of these requests also guides the scheduler in case perfect locality cannot be achieved, towards good alternatives (e.g., rack-local allocation, if the desired node is busy)
 This resource model serves current applications well in homogeneous environments, but we expect it to evolve over time as the ecosystem matures and new requirements emerge.
 Recent and developing extensions include: explicit tracking of gang-scheduling needs, and soft/hard constraints to express arbitrary co-location or disjoint placement.9
 The scheduler tracks, updates, and satisfies these requests with available resources, as advertised on NM heartbeats.
@@ -156,12 +138,6 @@ Based on the containers it receives from the RM, the AM may update its execution
 In contrast to some resource models, the allocations to an application are late binding: the process spawned is not bound to the request, but to the lease.
 The conditions that caused the AM to issue the request may not remain true when it receives its resources, but the semantics of the container are fungible and frameworkspecific [R3,R8,R10]
 The AM will also update its resource asks to the RM as the containers it receives affect both its present and future requirements.
-By way of illustration, the MapReduce AM optimizes for locality among map tasks with identical resource requirements.
-When running on HDFS, each block of input data is replicated on k machines.
-When the AM receives a container, it matches it against the set of pending map tasks, selecting a task with input data close to the container.
-If the AM decides to run a map task mi in the container, then the hosts storing replicas of mi’s input data are less desirable.
-This relationship between hosts remains opaque to the RM; similarly, if mi fails, the AM is responsible for updating its demand to compensate.
-These services are either provided by ApplicationMasters or by framework daemons.
 Since the RM does not interpret the container status, the AM determines the semantics of the success or failure of the container exit status reported by NMs through the RM.
 Since the AM is itself a container running in a cluster of unreliable hardware, it should be resilient to failure.
 We discuss the model for fault tolerance in section 3.6
@@ -216,7 +192,6 @@ With that, we conclude our coverage of the architecture and dive into YARN’s r
 We are aware of active use of YARN within several large companies.
 We then follow it up with a discussion on few of the popular frameworks that have already been ported to YARN.
 Yahoo! upgraded its production grids from one of the stable branches of classic Hadoop to YARN.
-An important caveat in interpreting the following statistics: the results we are about to present come from a real-life upgrading experience on large clusters, where the focus has been on maintaining the availability of a critical shared resource and not on scientific repeatability/consistency, as in a typical synthetic experiment.
 To help the reader easily interpret results, we will report a few global statistics, then focus on a large grid for which hardware has (mostly) not changed before and after the upgrade, and finally characterize the workload shift on that specific grid.
 Significant gains in resource utilization delivered by YARN have increased the number of jobs that each grid can sustain.
 This has simply removed the need to scale further for the moment, and has even allowed the operational team to delay the re-provisioning of over 7000 nodes that have been decommissioned.
@@ -227,7 +202,6 @@ Scalability concerns within YARN have been observed on a few large clusters with
 This is the busiest cluster at Yahoo! which is consistently being pushed close to its limit.
 Another crucial metric to estimate efficiency of a cluster management system is the average resource utilization.
 Again, the shift in workload makes the statistics we are about to discuss less useful for direct comparison, but we observed a significant increase in CPU-utilization.
-In aggregate, this indicates 7000 more cores completely busy running user code.
 This is consistent with the increase in number of jobs and tasks running on the cluster we discussed above.
 One of the most important architectural differences that partially explains these improvements is the removal of the static split between map and reduce slots.
 In Figure 3, we plot several job statistics over time: concurrently running and pending containers, jobs submitted, completed, running and pending.
@@ -245,7 +219,6 @@ We briefly summarize some projects either native to YARN or ported to the platfo
 Apache Hadoop MapReduce already works on top of YARN with almost the same feature-set.
 It is tested at scale, rest of ecosystem projects like Pig, Hive, Oozie, etc.
 The MapReduce community has made sure that applications written against 1.x can run on top of YARN in a fully binary compatible manner (mapred APIs) or just by recompiling (source compatibility for mapreduce APIs)
-Apache Tez is an Apache project (Incubator at the time of this writing) which aims to provide a generic directedacyclic-graph (DAG) execution framework.
 One of its goals is to provide a collection of building blocks which can be composed into an arbitrary DAG (including a simple 2-stage (Map and Reduce) DAG to maintain compatibility with MapReduce)
 Tez provides query execution systems like Hive and Pig with a more natural model for their execution plan, as against forcing these plans to be transformed into MapReduce.
 The current focus is on speeding up complex Hive and Pig queries which typically require multiple MapReduce jobs, allowing to run as a single Tez job.
@@ -271,7 +244,6 @@ In this section, we present more specific experimental results to demonstrate so
 The summary of results is provided in the following table:
 MapReduce continues to be the most important and commonly used application on top of YARN.
 Each node runs a DataNode and a NodeManager with 24GB RAM allocated for containers.
-JobTracker/ResourceManager run on a dedicated machine so is the HDFS NameNode.
 The shuffle benchmark calibrates how fast the intermediate outputs from m maps are shuffled to n reduces using only synthetic data; records are neither read from nor written to HDFS.
 While the sort benchmark would typically benefit from improvements to the HDFS data path, both benchmarks perform better on YARN primarily due to significant improvements in the MapReduce runtime itself: map-side sort improvements, a reduce client that pipelines and batches transfers of map output, and a server-side shuffle based on Netty [3]
 The scan and DFSIO jobs are canonical benchmarks used to evaluate HDFS and other distributed filesystems run under Hadoop MapReduce; the results in table 1 are a coarse measure of the effect attributable to HDFS in our experiments.
@@ -307,15 +279,12 @@ Others have recognized the same limitations in the classic Hadoop architecture, 
 These systems share a common inspiration, and the high-level goal of improving scalability, latency and programming model flexibility.
 The many architectural differences are a reflection of diverse design priorities, and sometimes simply the effect of different historical contexts.
 While a true quantitative comparison is impossible to provide, we will try to highlight some of the architectural differences and our understanding of their rationale.
-This reflects a greater focus on scalability, but makes it harder to enforce global properties such as capacity/fairness/deadlines.
 To this goal the authors seem to rely on coordinated development of the various frameworks that will be respectful of each other at runtime.
 This is sensible for a closed-world like Google, but not amenable to an open platform like Hadoop where arbitrary frameworks from diverse independent sources are share the same cluster.
 Corona uses push based communication as opposed to the heartbeat based control-plane framework approach in YARN and other frameworks.
-The latency/scalability trade- offs are non-trivial and would deserve a detailed comparison.
 While Mesos and YARN both have schedulers at two levels, there are two very significant differences.
 First, Mesos is an offer-based resource manager, whereas YARN has a request-based approach.
 Our approach was necessary to support the location based allocation.
-Second, instead of a per-job intraframework scheduler, Mesos leverages a pool of central schedulers (e.g., classic Hadoop or MPI)
 On the other side, per-job ApplicationMaster might result in greater overhead than the Mesos approach.
 Cosmos closely resembles Hadoop 2.0 architecturally with respect to storage and compute layers with the key difference of not having a central resource manager.
 However, it seems to be used for a single application type: Scope [8]
@@ -339,7 +308,6 @@ Last but not the least, Apache Hadoop YARN continues to be a community driven op
 Users submitted MapReduce jobs to the JT which coordinated its execution across the TTs.
 A TT was configured by an operator with a fixed number of map slots and reduce slots.
 TTs periodically heartbeated into the JT to report the status of running tasks on that node and to affirm its liveness.
-On a heartbeat, the JT updated its state corresponding to the tasks running on that node, taking actions on behalf of that job (e.g.,scheduling failed tasks for re-execution), matching fallow slots on that node against the scheduler invariants, matching eligible jobs against available resources, favoring tasks with data local to that node.
 As the central arbiter of the compute cluster, the JT was also responsible for admission control, tracking the liveness of TTs (to re-execute running tasks or tasks whose output becomes unavailable), launching tasks speculatively to route around slow nodes, reporting job status to users through a web server, recording audit logs and aggregate statistics, authenticating users and many other functions; each of these limited its scalability.
 Scope: easy and efficient parallel processing of massive data sets.
 Mesos: a platform for fine-grained resource sharing in the data center.

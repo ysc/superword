@@ -55,7 +55,6 @@ However, our core data model is not restricted to our particular RPC framework; 
 Formally, we model Dapper traces using trees, spans, and annotations.
 In a Dapper trace tree, the tree nodes are basic units of work which we refer to as spans.
 The edges indicate a casual relationship between a span and its parent span.
-Independent of its place in a larger trace tree, though, a span is also a simple log of timestamped records which encode the span’s start and end time, any RPC timing data, and zero or more application-specific annotations as discussed in Section 2.3
 We illustrate how spans form the structure of a larger trace in Figure 2
 Dapper records a human-readable span name for each span, as well as a span id and parent id.
 Figure 2: The causal and temporal relationships between five spans in a Dapper trace tree.
@@ -79,7 +78,6 @@ We have instrumented that framework to define spans around all RPCs.
 The span and trace ids are transmitted from client to server for traced RPCs.
 For RPC-based systems like those in wide use at Google, this is an essential instrumentation point.
 We plan to instrument nonRPC communication frameworks as they evolve and find a user base.
-Dapper trace data is language-independent and many traces in production combine data from processes written in both C++ and Java.
 In Section 3.2 we discuss the level of application transparency we were able to achieve in practice.
 The instrumentation points described above are sufficient to derive detailed traces of complex distributed systems, making the core Dapper functionality available to otherwise unmodified Google applications.
 However, Dapper also allows application developers to enrich Dapper traces with additional information that may be useful to.
@@ -87,7 +85,6 @@ We allow users to define timestamped annotations through a simple API, the heart
 In order to protect Dapper users from accidental overzealous logging, individual trace spans have a configurable upper-bound on their total annotation volume.
 Application-level annotations are not able to displace the structural span or RPC information regardless of application behavior.
 In addition to simple textual annotations, Dapper also supports a map of key-value annotations that give developers more tracing power, such as maintaining counters, logging binary messages, and transporting arbitrary userdefined data along with a traced request within a process.
-These key-value annotations are used to define application-specific equivalence classes within the context of distributed traces.
 Low overhead was a key design goal for Dapper, since service operators would be understandably reluctant to deploy a new tool of yet unproven value if it had any significant impact on performance.
 Moreover, we wanted to allow developers to use the annotation API without fear of the additional overhead.
 We have also found that some classes of Web services are indeed sensitive to instrumentation overheads.
@@ -98,7 +95,6 @@ First, span data is written (1) to local log files.
 A trace is laid out as a single Bigtable row, with each column corresponding to a span.
 Bigtable’s support for sparse table layouts is useful here since individual traces can have an arbitrary number of spans.
 Dapper also provides an API to simplify access to the trace data in our repository.
-Developers at Google use this API to build both general-purpose and applicationspecific analysis tools.
 Section 5.1 contains more information about its usage thus far.
 The Dapper system as described performs trace logging and collection out-of-band with the request tree itself.
 In many of the larger systems at Google, it is not uncommon to find traces with thousands of spans.
@@ -122,7 +118,6 @@ The implementation of key-value annotations adds an additional 500 lines of code
 Dapper penetration can be assessed in two dimensions: the fraction of production processes that can generate Dapper traces (i.e., those that are linked with Dapperinstrumented runtime libraries) and the fraction of production machines running Dapper’s trace collection daemon.
 Dapper’s daemon is part of our basic machine image, making it present on virtually every server at Google.
 It is difficult to determine the precise fraction of Dapper-ready processes since processes generating no trace information are invisible to Dapper.
-However, given how ubiquitous Dapper-instrumented libraries are, we estimate that nearly every Google production process supports tracing.
 There are cases where Dapper is unable to follow the control path correctly.
 These typically stem from the use of non-standard control-flow primitives, or when Dapper mistakenly attributes causality to unrelated events.
 Dapper provides a simple library to help developers control trace propagation manually as a work-around.
@@ -133,7 +128,6 @@ In fact it was off by default during its early days, until we built confidence i
 The Dapper team performs occasional audits looking for changes to configurations where tracing is turned off by a service owner.
 Such changes are rare and usually stem from concerns about monitoring overhead.
 All of these changes to date have been reverted upon further investigation and measurement of the actual overhead, which has been immaterial.
-Programmers tend to use application-specific annotations either as a kind of distributed debug log file or to classify traces by some application-specific feature.
 For example, all Bigtable requests are annotated with the name of the table being accessed.
 It is worth noting that our Java developers who have adopted the annotation API have made more annotations per span than their C++ counterparts thus far.
 This may be because our Java workloads tend to be closer to the end user; these sorts of applications often handle a wider mix of requests and consequently have comparatively complex control paths.
@@ -178,10 +172,6 @@ Our production clusters presently generate more than 1 terabyte of sampled trace
 Dapper users would like trace data to remain available for at least two weeks after it was initially logged from a production process.
 The benefits of increased trace data density must then be weighed against the cost of machines and disk storage for the Dapper repositories.
 Sampling a high fraction of requests also brings the Dapper collectors uncomfortably close to the write throughput limit for the Dapper Bigtable repository.
-In order to maintain flexibility around both the material resource requirements and the cumulative Bigtable write throughput, we added support for additional sampling in the collection system itself.
-If z is less than our collection sampling coefficient, we keep the span and write it to the Bigtable.
-By depending on the trace id for our sampling decision, we either sample or discard entire traces rather than individual spans within traces.
-We have found that this additional configuration parameter makes the administration of our collection pipeline much simpler, as we can easily adjust our global write rate by changing a single parameter in a configuration file.
 It would be simpler if there was only one sampling parameter for the entire tracing and collection system, but it is not feasible to quickly adjust the runtime sampling configuration in all deployed binaries.
 We have chosen a runtime sampling rate which yields slightly more data than we can write to our repositories, and we throttle that write rate with the secondary sampling coefficient in the collection system.
 Dapper pipeline maintenance is easier since we can augment or diminish our global coverage.
@@ -230,8 +220,6 @@ In that mode of operation, the data is available within seconds of real time.
 Those numbers are consistent from month to month modulo internal announcements of new features.
 It is common for users to send out links to specific traces of interest which will inevitably generate much one-time, short-duration traffic in the trace inspector.
 Dapper is used widely at Google, both directly through the Dapper user interface and indirectly through the programmatic APIs or applications built on top of those APIs.
-The Google AdWords system is built around a large database of keyword targeting criteria and associated textual advertisements.
-When new keywords or advertisements are either inserted or modified, they must be checked for adherence to service policy terms (such as.
 When it came time to re-engineer one of Ads Review’s services from the ground up, the team used Dapper iter9
 Figure 6: A typical user workflow in the general-purpose Dapper user interface.
 Dapper helped them improve their service in the following ways:
@@ -278,7 +266,6 @@ Google devotes substantial human and material resources to its networking fabric
 Not surprisingly, network operators have long had access to monitoring information from individual pieces of hardware, and custom tools and dashboards were built to give a birds-eye view.
 Network operators had reasonable visibility into the overall health of our wide-area network, but, when there were problems, they had few tools which could properly attribute network load to an application-level culprit.
 Though Dapper was not designed for link-level monitoring, we have found that it is well-suited to the task of application-level analysis of inter-cluster network activity.
-Google was able to leverage the Dapper platform to build a continuously-updating console showing the most active application-level endpoints for inter-cluster network traffic.
 Furthermore, using Dapper we are able to point to the causal trace root for these expensive network requests rather than restricting ourselves to the two peer machines in isolation.
 The dashboard was built on top of the Dapper APIs in less than 2 weeks.
 Many storage systems at Google are composed of multiple independently complex layers of distributed infrastructure.
@@ -338,7 +325,6 @@ Dapper is deployed across virtually all of Google’s systems, and has allowed t
 Dapper’s utility to developers and operations teams is evidenced by the popularity of the main tracing user interface and illustrated here through examples of use cases, even some which were not anticipated by its designers.
 To our knowledge, this is the first article to report on a large, production distributed systems tracing framework.
 In fact our main contributions derive from the fact that we report retrospectively on a system that has been operational for over two years.
-We have found, for example, that the decision to combine a minimal applicationtransparent tracing functionality with a simple API for programmers to enhance traces has been worthwhile.
 We believe that Dapper achieves a higher degree of application-level transparency than previous annotationbased distributed tracing systems, as demonstrated by the small number of workloads that required manual intervention.
 While this has been facilitated by the somewhat unusual homogeneity of our computing deployment, it.
 Most importantly, our design suggests some sufficient conditions for realizing application-level transparency which we hope might help others develop solutions for more heterogeneous environments.

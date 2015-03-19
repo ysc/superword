@@ -75,7 +75,6 @@ To learn more about the data set, refer to the documentation included with the d
 In the examples, we parse the data set with a helper function that we wrote.
 This function takes in a line of StackOverflow data and returns a HashMap.
 This HashMap stores the labels as the keys and the actual data as the value.
-This helper function parses the stackoverflow into a Map for us.
 Conventions Used in This Book The following typographical conventions are used in this book: Italic.
 Indicates new terms, URLs, email addresses, filenames, and file extensions.
 Constant width Used for program listings, as well as within paragraphs to refer to program elements such as variable or function names, databases, data types, environment variables, statements, and keywords.
@@ -89,14 +88,11 @@ Selling or distributing a CD-ROM of examples from O’Reilly books does require 
 Answering a question by citing this book and quoting example code does not require permission.
 Incorporating a significant amount of example code from this book into your product’s documentation does require permission.
 An attribution usually includes the title, author, publisher, and ISBN.
-If you feel your use of code examples falls outside fair use or the permission given above, feel free to contact us at permissions@oreilly.com.
-Safari® Books Online Safari Books Online (www.safaribooksonline.com) is an on-demand digital library that delivers expert content in both book and video form from the world’s leading authors in technology and business.
 Technology professionals, software developers, web designers, and business and creative professionals use Safari Books Online as their primary resource for research, problem solving, learning, and certification training.
 Safari Books Online offers a range of product mixes and pricing programs for organizations, government agencies, and individuals.
 For more information about Safari Books Online, please visit us online.
 How to Contact Us Please address comments and questions concerning this book to the publisher:
 We have a web page for this book, where we list errata, examples, and any additional information.
-To comment or ask technical questions about this book, send email to bookques tions@oreilly.com.
 For more information about our books, courses, conferences, and news, see our website at http://www.oreilly.com.
 Acknowldgements Books published by O’Reilly are always top notch and now we know why first hand.
 The support staff, especially our editor Andy Oram, has been extremely helpful in guiding us through this process.
@@ -126,7 +122,8 @@ Designing good software is challenging for a number of reasons, and similar chal
 Just as good programmers can produce bad software due to poor design, good programmers can produce bad MapReduce algorithms.
 With MapReduce we’re not only battling with clean and maintainable code, but also with the performance of a job that will be distributed across hundreds of nodes to compute over terabytes and even petabytes of data.
 In addition, this job is potentially competing with hundreds of others on a shared cluster of machines.
-This makes choosing the right design to solve your problem with MapReduce extremely dive into some design patterns in the chapters following this one, we’ll talk a bit about how and why design patterns and MapReduce together make sense, and a bit of a history lesson of how we got here.
+This makes choosing the right design to solve your problem with MapReduce extremely important and can yield performance gains of several orders of magnitude.
+Before we dive into some design patterns in the chapters following this one, we’ll talk a bit about how and why design patterns and MapReduce together make sense, and a bit of a history lesson of how we got here.
 Design Patterns Design patterns have been making developers’ lives easier for years.
 They are tools for solving problems in a reusable and general way so that the developer can spend less time figuring out how he’s going to overcome a hurdle and move onto the next one.
 They are also a way for veteran problem solvers to pass down their knowledge in a concise way to younger generations.
@@ -186,7 +183,8 @@ It passes the data to the mapper in the form of a key/value pair.
 Usually the key in this context is positional information and the value is the chunk of data that composes a record.
 Customized record readers are outside the scope of this book.
 We generally assume you have an appropriate record reader for your data.
-The decision of what is the key and value here is not arbitrary and is very will be grouped on and the value is the information pertinent to the analysis in the reducer.
+The decision of what is the key and value here is not arbitrary and is very important to what the MapReduce job is accomplishing.
+The key is what the data will be grouped on and the value is the information pertinent to the analysis in the reducer.
 Plenty of detail will be provided in the design patterns in this book to explain what and why the particular key/value is chosen.
 One major differentiator between MapReduce design patterns is the semantics of this pair.
 It takes the intermediate keys from the mapper and applies a user-provided method to aggregate values in the small scope of that one mapper.
@@ -198,7 +196,8 @@ Many new Hadoop developers ignore combiners, but they often provide extreme perf
 We will point out which patterns benefit from using a combiner, and which ones cannot use a combiner.
 A combiner is not guaranteed to execute, so it cannot be a part of the overall algorithm.
 By default, the partitioner interrogates the object for its hash code, which is typically an md5sum.
-Then, the partitioner performs a modulus operation by the number the keyspace evenly over the reducers, but still ensures that keys with the same value in different mappers end up at the same reducer.
+Then, the partitioner performs a modulus operation by the number of reducers: key.hashCode() % (number of reducers)
+This randomly distributes the keyspace evenly over the reducers, but still ensures that keys with the same value in different mappers end up at the same reducer.
 The default behavior of the partitioner can be customized, and will be in some more advanced patterns, such as sorting.
 The partitioned data is written to the local file system for each map task and waits to be pulled by its respective reducer.
 This step takes the output files written by all of the partitioners and downloads them to the local machine in which the reducer is running.
@@ -217,8 +216,6 @@ Hadoop Example: Word Count Now that you’re refreshed on the steps of the whole
 It is a straightforward application of MapReduce and MapReduce can handle it extremely efficiently.
 In this particular example, we’re going to be doing a word count over user-submitted comments on StackOverflow.
 The content of the Text field will be pulled out and preprocessed a bit, and then we’ll count up how many times we see each word.
-The number of the PostId and the UserId are foreign keys to other portions of the data set.
-We’ll show how to join these datasets together in the chapter on join patterns.
 The first chunk of code we’ll look at is the driver.
 The driver takes all of the components that we’ve built for our MapReduce job and pieces them together to be submitted to execution.
 The purpose of the driver is to orchestrate the jobs.
@@ -233,9 +230,6 @@ Once some of the punctuation and random text is cleaned up, the text string is s
 Then the intermediate key produced is the word and the value produced is simply “1.” This means we’ve seen this word once.
 Even if we see the same word twice in one line, we’ll output the word and “1” twice and it’ll be taken care of in the end.
 Eventually, all of these ones will be summed together into the global count of that word.
-Grab the "Text" field, since that is what we are counting over.
-Tokenize the string by splitting it up on whitespace into //  something we can iterate over, //  then send the tokens away.
-The first function, MRDPUtils.transformXmlToMap, is a helper function to parse a line of Stack Overflow data in a generic manner.
 You’ll see it used in a number of our examples.
 It basically takes a line of the StackOverflow XML (which has a very predictable format) and matches up the XML attributes with the values into a Map.
 This code is a bit more complicated than the driver (for good reason!)
@@ -306,7 +300,6 @@ If you emit the fields in the mapper you want to group on as your key, the group
 Numerical Summarizations Pattern Description The numerical summarizations pattern is a general pattern for calculating aggregate statistical values over your data is discussed in detail.
 Be careful of how deceptively simple this pattern is! It is extremely important to use the combiner properly and to understand the calculation you are performing.
 Group records together by a key field and calculate a numerical aggregate per group to get a top-level view of the larger data set.
-Consider θ to be a generic numerical summarization function we wish to execute over of θ include a minimum, maximum, average, median, and standard deviation.
 Many data sets these days are too large for a human to get any real meaning out it by reading through it manually.
 For example, if your website logs each time a user logs onto the website, enters a query, or performs any other notable action, it would be extremely difficult to notice any real usage patterns just by reading through terabytes of log files with a text reader.
 If you group logins by the hour of the day and perform a count of the number of records in each group, you can plot these counts on a histogram and recognize times when your website is more active.
@@ -316,16 +309,9 @@ All of these types of questions can be answered through numerical summarizations
 Numerical summarizations should be used when both of the following are true:
 Figure 2-1 shows the general structure of how a numerical summarization is executed in MapReduce.
 The breakdown of each MapReduce component is described in detail:
-The mapper outputs keys that consist of each field to group by, and values consisting of any pertinent numerical items.
-Imagine the mapper setting up a relational table, where the columns relate to the fields which the function θ will be executed over and each row contains an individual record output from the mapper.
-The output value of the mapper contains the values of each column and the output key determines the table as a whole, as each table is created by MapReduce’s grouping functionality.
 Grouping typically involves sending a large subset of the input data down to finally be reduced.
 Each input record is most likely going to be output from the map phase.
 Make sure to reduce the amount of data being sent to the reducers by choosing only the fields that are necessary to the analytic and handling any bad input conditions properly.
-The combiner can greatly reduce the number of intermediate key/value pairs to be sent across the network to the reducers for some numerical summarization functions.
-If the function θ is an associative and commutative operation, it can be used for this purpose.
-That is, if you can arbitrarily change the order of the values and you can group the computation arbitrarily, you can use a combiner here.
-Discussions of such combiners are given in the examples following this section.
 Numerical summaries can benefit from a custom partitioner to better distribute key/value pairs across n number of reduce tasks.
 The need for this is rare, but can be done if job execution time is critical, the amount of data is huge, and there is severe data skew.
 A custom partitioner is often overlooked, but taking the time to understand the distribution of output keys and partitioning based on this distribution will improve performance when grouping (and everything else, for that matter)
@@ -338,7 +324,6 @@ An example of a word count application can be seen in Chapter 1
 Record count A very common analytic to get a heartbeat of your data flow rate on a particular interval (weekly, daily, hourly, etc.)
 Min/Max/Count An analytic to determine the minimum, maximum, and count of a particular event, such as the first time a user posted, the last time a user posted, and the number of times they posted in between that time period.
 You don’t have to collect all three of these aggregates at the same time, or any of the other use cases listed here if you are only interested in one of them.
-Average/Median/Standard deviation Similar to Min/Max/Count, but not as straightforward of an implementation because these operations are not associative.
 A combiner can be used for all three, but requires a more complex approach than just reusing the reducer implementation.
 The Numerical Aggregation pattern is analogous to using aggregates after a GROUP BY in SQL:
 Aggregations performed by jobs using this pattern typically perform well when the combiner is properly used.
@@ -357,8 +342,6 @@ While these values can be crammed into a Text object with some delimiter, it is 
 Not only is it cleaner, but you won’t have to worry about any string parsing when it comes time to grab these values from the reduce phase.
 These custom writable objects are used throughout other examples in this pattern.
 Other writables used in this chapter are very similar to this and are omitted for brevity.
-Read the data out in the order it is written, // creating new Date objects from the UNIX timestamp.
-Write the data out in the order it is read, // using the UNIX timestamp to represent the Date.
 The mapper will preprocess our input values by extracting the XML attributes from each input record: the creation data and the user identifier.
 The creation date is parsed into a Java Date object for ease of comparison in the combiner and reducer.
 The output key is the user ID and the value is three columns of our future output: the minimum date, the maximum date, and the number of comments this user has created.
@@ -368,10 +351,7 @@ In the mapper, we’ll set both min and max to the comment creation date.
 The date is output twice so that we can take advantage of the combiner optimization that is described later.
 The third column will be a count of 1, to indicate that we know this user posted one comment.
 Eventually, all of these counts are going to be summed together and the minimum and maximum date will be determined in the reducer.
-This object will format the creation date string into a Date object.
-Grab the "CreationDate" field since it is what we are finding // the min and max value of.
 Grab the “UserID” since it is what we are grouping by.
-Set the minimum and maximum date values to the creationDate.
 The reducer iterates through the values to find the minimum and maximum dates, and sums the counts.
 We start by initializing the output result for each input group.
 For each value in this group, if the output result’s minimum is not yet set, or the value’s minimum is less than result’s current minimum, we set the result’s minimum to the input value.
@@ -379,8 +359,6 @@ The same logic applies to the maximum, except using a greater than operator.
 Each value’s count is added to a running sum, similar to the word count example in the introductory chapter.
 After determining the minimum and maximum dates from all input values, the final count is set to our output value.
 The input key is then written to the file system along with the output value.
-Iterate through all input values for this key // If the value's min is less than the result's min // Set the result's min to value's.
-If the value's max is more than the result's max // Set the result's max to value's.
 The reducer implementation just shown can be used as the job’s combiner.
 As we are only interested in the count, minimum date, and maximum date, multiple comments from the same user do not have to be sent to the reducer.
 The minimum and maximum comment dates can be calculated for each local map task without having an effect on the final minimum and maximum.
@@ -406,7 +384,6 @@ The output value is two columns, the comment count and the average length of the
 Because the mapper operates on one record at a time, the count is simply 1 and the average length is equivalent to the comment length.
 These two values are output in a custom Writable, a CountAverageTuple.
 This type contains two float values, a count, and an average.
-Grab the "CreationDate" field, // since it is what we are grouping by.
 The reducer code iterates through all given values for the hour and keeps two local variables: a running count and running sum.
 For each value, the count is multiplied by the average and added to the running sum.
 After iteration, the input key is written to the file system with the count and average, calculated by dividing the running sum by the running count.
@@ -432,7 +409,6 @@ Problem: Given a list of user’s comments, determine the median and standard de
 The mapper will process each input record to calculate the median comment length within each hour of the day.
 The output key is the hour of day, which is parsed from the CreationDate XML attribute.
 The output value is a single value: the comment length.
-Grab the "CreationDate" field, // since it is what we are grouping by.
 The reducer code iterates through the given set of values and adds each value to an in-memory list.
 After iteration, the comment lengths are sorted to find the median value.
 If the list has an odd number of entries, the median value is set to the middle value.
@@ -443,24 +419,14 @@ Finally, the median and standard deviation are output along with the input key.
 The reducer requires all the values associated with a key in order to find the median and standard.
 Because a combiner runs only over a map’s locally output intermediate key/ value pairs, being able to calculate the full median and standard deviation is impossible.
 However, the next example describes aa more complex implementation that uses a custom combiner.
-The following implementation is differentiated from the previous median and standard deviation example by reducing the memory footprint.
-Inserting every value into a list will result in many duplicate elements.
-One way to get around this duplication is to keep a count of elements instead.
-The core concept is the same: all the values are iterated through in the reduce phase and stored in an in-memory data structure.
-The data structure and how it is searched are all that has changed.
-Instead of having a bonus, a combiner can be used to help aggregate counts of comment lengths and output the map in a Writable object to be used later by the reducer.
-The following descriptions of each code section explain the solution to the problem.
 Problem: Given a list of user’s comments, determine the median and standard deviation of comment lengths per hour of day.
 The mapper processes each input record to calculate the median comment length based on the hour of the day during which the comment was posted.
 The output key is the hour of day, which is parsed from the creation date XML attribute.
 The output value is a SortedMapWritable object that contains one element: the comment length and a count of “1”
 This map is used more heavily in the combiner and reducer.
 Grab the "CreationDate" field, // since it is what we are grouping by.
-Write out the user ID with min max dates and count.
 The reducer code iterates through the given set of SortedMapWritable to aggregate all the maps together into a single TreeMap, which is a implementation of SortedMap.
 The key is the comment length and the value is the total count associated with the comment length.
-The code finds the list index where the median would be by dividing the total number of comments by two.
-Once this condition is met, if there is an even number of comments and medianIndex is equivalent to previousComment, the median is reset to the average of the previous length and current length.
 Next, the standard deviation is calculated by iterating through the TreeMap again and finding the sum of squares, making sure to multiply by the count associated with the comment length.
 The median and standard deviation are output with the input key, the hour during which these comments were posted.
 Unlike the previous examples, the combiner for this algorithm is different from the reducer.
@@ -531,7 +497,8 @@ The single reduce will sum all the input values and output the final record coun
 This works very well, but it can be done more efficiently using counters.
 Instead of writing any key value pairs at all, simply use the framework’s counting mechanism to keep track of the number of input records.
 This requires no reduce phase and no summation! The framework handles monitoring the names of the counters and their associated values, aggregating them across all tasks, as well as taking into account any failed task attempts.
-Say you want to find the number of times your employees log into your heavily used filter conditions while parsing through your web logs.
+Say you want to find the number of times your employees log into your heavily used public website every day.
+Assuming you have a few dozen employees, you can apply filter conditions while parsing through your web logs.
 At the end of the job, simply grab the counters from the framework and save them wherever your heart desires—the log, local file system, HDFS, etc.
 Some counters come built into the framework, such as number of input/output records and bytes.
 Hadoop allows for programmers to create their own custom counters for whatever their needs may be.
@@ -575,8 +542,6 @@ We keep a set of all the state abbreviations in-memory to prevent creating an ex
 If a state is recognized, the counter for the state is incremented by one and the loop is broken.
 Counters are identified by both a group and a name.
 Here, the group is “State” (identified by a public String variable) and the counter name is the state abbreviation code.
-CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SF", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY" };
-Look for a state abbreviation code if the // location is not null or empty.
 The driver code is mostly boilerplate, with the exception of grabbing the counters after the job completes.
 These counter values are also output when the job completes, so writing to stdout may be redundant if you are obtaining these values by scraping log files.
 The output directory is then deleted, success or otherwise, as this job doesn’t create any tangible output.
@@ -739,12 +704,10 @@ The following descriptions of each code section explain the solution to the prob
 Problem: Given a list of user’s comments, filter out a majority of the comments that do not contain a particular keyword.
 To demonstrate how to use Hadoop Bloom filters, the following code segment generates a Bloom filter off a predetermined set of words.
 This is a generic application that takes in an input gzip file or directory of gzip files, the number of elements in the file, a desired false positive rate, and finally the output file name.
-Calculate our vector size and optimal K value based on approximations.
 A new BloomFilter object is constructed using the optimal vector size and optimal number of hash functions (k) based on the input parameters.
 Each file returned from listStatus is read line-by-line, and each line is used to train the Bloom filter.
 After all the input files are ready, the Bloom filter is serialized to the filename provided at the command line.
 Because a BloomFilter is also a Writable object, serializing it is fairly trivial.
-Simply use the FileSystem object to create a new FSDataOutputStream, pass the stream to the filter’s write method, then just flush and close the stream!
 This Bloom filter can later be deserialized from HDFS just as easily as it was written.
 Just open up the file using the FileSystem object and pass it to BloomFilter.read Fields.
 Deserialization of this Bloom filter is demonstrated in the setup method of the following Mapper code.
@@ -757,7 +720,6 @@ The comment is tokenized into words, and each word is cleaned of any extraneous 
 If the word is a member, the entire record is output to the file system.
 A Bloom filter is trained on the bytes of the word.
 Unless case sensitivity matters in you algorithm, it is best to trim the string and make the string all lower case when training and testing the filter.
-Get the value for the comment // For each word in the comment // If the word is in the filter, output the record and break break;
 Because this is a map-only job, there is no combiner or reducer.
 All output records will be written directly to the file system.
 Bloom filters can assist expensive operations by eliminating unnecessary ones.
@@ -775,8 +737,6 @@ In the map method, the user’s ID is extracted from each record and checked aga
 If the test is positive, HBase is queried with the user ID to get the rest of the data associated with that user.
 Here, we nullify the possibilities of outputting false positives by verifying that the user’s actual reputation is at least 1,500
 If it is, the record is output to the file system.
-If this user ID is in the set // Get the reputation from the HBase table.
-If the reputation is at least 1500, // write the record to the file system.
 As this is a map-only job, there is no combiner or reducer.
 All output records will be written directly to the file system.
 Query Buffer Optimization The previous example is a fairly naive way of querying HBase.
@@ -853,18 +813,12 @@ A TreeMap is a subclass of Map that sorts on key.
 Then, if there are more than ten records in our TreeMap, the first element (lowest value) can be removed.
 After all the records have been processed, the top ten records in the TreeMap are output to the reducers in the cleanup method.
 This method gets called once after all key/value pairs have been through map, just like how setup is called once before any calls to map.
-Add this record to our map with the reputation as the key.
-If we have more than ten records, remove the one with the lowest rep // As this tree map is sorted in descending order, the user with // the lowest reputation is the last key.
 Overall, the reducer determines its top ten records in a way that’s very similar to the mapper.
-Because we configured our job to have one reducer using job.setNumReduceTasks(1) and we used NullWritable as our key, there will be one input group for this reducer that contains all the potential top ten records.
 The reducer iterates through all these records and stores them in a TreeMap.
 If the TreeMap’s size is above ten, the first element (lowest value) is remove from the map.
 After all the values have been iterated over, the values contained in the TreeMap are flushed to the file system in descending order.
 This ordering is achieved by getting the descending map from the TreeMap prior to outputting the values.
 This can be done directly in the reduce method, because there will be only one input group, but doing it in the cleanup method would also work.
-Stores a map of user reputation to the record // Overloads the comparator to order the reputations in descending order.
-If we have more than ten records, remove the one with the lowest rep // As this tree map is sorted in descending order, the user with // the lowest reputation is the last key.
-Output our ten records to the file system with a null key.
 There is no need for a combiner in this job, although the reducer code could technically be used.
 The combiner would simply output the same ten records and thus cause unnecessary processing.
 Also, this job is hardcoded to find the top ten records, but could easily be configured to find the top K records using a variable captured in the setup method.
@@ -962,7 +916,6 @@ HBase is able to store data in a semi-structured and hierarchical fashion well.
 MongoDB would also be a good candidate for storing this type of data.
 The following should be true for this pattern to be appropriate:
 You have data sources that are linked by some set of foreign keys.
-If you wish to combine multiple data sources into a hierarchical data structure, a Hadoop class called MultipleInputs from org.apache.hadoop.mapre duce.lib.input is extremely valuable.
 MultipleInputs allows you to specify different input paths and different mapper classes for each input.
 If you are loading data from only one source in this pattern, you don’t need this step.
 The mappers load the data and parse the records into one cohesive format so that your work in the reducers is easier.
@@ -1020,16 +973,10 @@ We know which record is which by the flag we added to the value.
 These flags are removed when assigning post or adding the list.
 Then, if the post is not null, an XML record is constructed with the post as the parent and comments as the children.
 We chose to use an XML library to build the final record, but please feel free to use whatever means you deem necessary.
-For each input value // If this is the post record, store it, minus the flag // Else, it is a comment record.
-Add it to the list, minus // the flag // If there are no comments, the comments list will simply be empty.
-If post is not null, combine post with its comments.
 The nestElements method takes the post and the list of comments to create a new string of XML to output.
 It uses a DocumentBuilder and some additional helper methods to copy the Element objects into new ones, in addition to their attributes.
 This copying occurs to rename the element tags from row to either post or comment.
 The final Document is then transformed into an XML string.
-Copy the attributes of the original post element to the new one.
-Copy the attributes of the original comment element to // the new one.
-Transform the document into a String of XML and return.
 This is a continuation of the previous example and will use the previous analytic’s output as the input to this analytic.
 Now that we have the comments associated with the posts, we are going to associate the post answers with the post questions.
 This needs to be done because posts consist of both answers and questions and are differentiated only by their PostTypeId.
@@ -1041,12 +988,9 @@ Problem: Given the output of the previous example, perform a self-join operation
 The first thing the mapper code does is determine whether the record is a question or an answer, because the behavior for each will be different.
 For a question, we will extract Id as the key and label it as a question.
 For an answer, we will extract ParentId as the key and label it as an answer.
-If postType is 1, it is a question // Else, it is an answer.
 The reducer code is very similar to the that in the previous example.
 It iterates through the input values and grabs the question and answer, being sure to remove the flag.
 It then nests the answers inside the question in the same fashion as the previous example.
-If this is the post record, store it, minus the flag // Else, it is a comment record.
-If post is not null // nest the comments underneath the post element.
 Partitioning Pattern Description The partitioning pattern moves the records into categories (i.e., shards, partitions, or bins) but it doesn’t really care about the order of records.
 The intent is to take similar records in a data set and partition them into distinct, smaller data sets.
 So looking at just one of these subsets requires an entire scan of all of the data.
@@ -1103,12 +1047,10 @@ The mapper pulls the last access date out of each input record.
 This date is output as the key, and the full input record is output as the value.
 This is so the partitioner can do the work of putting each record into its appropriate partition.
 This key is later ignored during output from the reduce phase.
-This object will format the creation date string into a Date object.
 The partitioner examines each key/value pair output by the mapper to determine which partition the key/value pair will be written.
 Each numbered partition will be copied by its associated reduce task during the reduce phase.
 The setConf method is called during task construction to configure the partitioner.
 Here, the minimum value of the last access date is pulled from the configuration.
-The driver is responsible for calling LastAccess DatePartitioner.setMinLastAccessDate during job configuration.
 This date is used to subtract from each key (last access date) to determine what partition it goes to.
 The reducer code is very simple since we simply want to output the values.
 The work of partitioning has been done at this point.
@@ -1141,8 +1083,6 @@ MultipleOutputs takes in a name, bins, that is used in the mapper to write diffe
 The name is essentially the output directory of the job.
 Output counters are disabled by default, so be sure to turn those on if you don’t expect a large number of named outputs.
 We also set the number of reduce tasks to zero, as this is a map-only job.
-Configure the MultipleOutputs by adding an output called "bins" // With the proper output format and mapper key/value pairs MultipleOutputs.addNamedOutput(job, "bins", TextOutputFormat.class,
-Enable the counters for the job // If there are a significant number of different named outputs, this // should be disabled.
 The setup phase creates an instance of MultipleOutputs using the context.
 The mapper consists of several if-else statements to check each of the tags of a post.
 If the post contains the tag, it is written to the bin.
@@ -1156,8 +1096,6 @@ In the following example, bin_name will be, hadoop-tag, pig-tag, hive-tag, hbase
 Note that setting the output format of the job to a NullOutputFormat will remove these empty output files when using the mapred package.
 In the newer API, the output files are not committed from their _tem porary directory into the configured output directory in HDFS.
 This may be fixed in a newer version of Hadoop.
-If this tag is one of the following, write to the named bin.
-If the post contains the word "hadoop", write it to its own bin.
 Total Order Sorting Pattern Description The total order sorting pattern is concerned with the order of the data from record to record.
 You want to sort your data in parallel on a sort key.
 Sorting in MapReduce, or more generally in parallel, is not easy.
@@ -1194,11 +1132,9 @@ The order phase is a relatively straightforward application of MapReduce that us
 The mapper extracts the sort key in the same way as the analyze step.
 However, this time the record itself is stored as the value instead of being ignored.
 A custom partitioner is used that loads up the partition file.
-In Hadoop, you can use the TotalOrderPartitioner, which is built specifically for this purpose.
 It takes the data ranges from the partition file produced in the previous step and decides which reducer to send the data to.
 The shuffle and sort take care of the heavy lifting.
 The reduce function simply takes the values that have come in and outputs them.
-The number of reducers needs to be equal to the number of partitions for the TotalOrderPartitioner to work properly.
 Note that the number of ranges in the intermediate partition needs to be equal to the number of reducers in the order step.
 If you decide to change the number of reducers and you’ve been reusing the same file, you’ll need to rebuild it.
 If you want to have a primary sort key and a secondary sort key, concatenate the keys, delimited by something.
@@ -1222,7 +1158,6 @@ Also, there are two sets of MapReduce jobs, one for analyze and one for order.
 Let’s break the driver down into two sections: building the partition list via sampling, then performing the sort.
 The first section parses the input command line arguments and creates input and output variables from them.
 It creates path files to the partition list and the staging directory.
-The partition list is used by the TotalOrderPartitioner to make sure the key/value pairs are sorted properly.
 The staging directory is used to store intermediate output between the two jobs.
 There is nothing too special with the first job configuration.
 The main thing to note is that the first job is a map-only only job that uses a SequenceFi leOutputFormat.
@@ -1239,13 +1174,8 @@ After the partition file is written, the job is executed.
 The partition file and staging directory are then deleted, as they are no longer needed for this example.
 If your data distribution is unlikely to change, it would be worthwhile to keep this partition file around.
 It can then be used over and over again for this job in the future as new data arrives on the system.
-Here, use the identity mapper to output the key/value pairs in // the SequenceFile.
-Set the number of reduce tasks to an appropriate number for the // amount of data being sorted.
-Use the InputSampler to go through the output of the previous // job, sample it, and create the partition file InputSampler.writePartitionFile(orderJob,
 This mapper simply pulls the last access date for each user and sets it as the sort key for the record.
-These key/value pairs, per our job configuration, are written to a SequenceFile that is used to create the partition list for the TotalOrderPartitioner.
 This job simply uses the identity mapper to take each input key/value pair and output them.
-Because the TotalOrderPartitioner took care of all the sorting, all the reducer needs to do is output the values with a NullWritable object.
 This will produce a part file for this reducer that is sorted by last access date.
 The partitioner ensures that the concatenation of all these part files (in order) produces a totally ordered data set.
 Shuffling Pattern Description The total order sorting and shuffling patterns are opposites in terms of effect, but the latter is also concerned with the order of data in records.
@@ -1289,9 +1219,6 @@ Each XML attribute is looked at, and an action is taken based on the attribute t
 If it is a user ID or row ID, it is ignored.
 If it is a creation date, the characters following the ‘T’ are removed to ignore the time.
 A random key is generated and output along with the newly constructed record.
-If it is a user ID or row ID, ignore it.
-If it is a CreationDate, remove the time from the date // i.e., anything after the 'T' in the value.
-Set the sort key to a random value and output.
 This reducer class just outputs the values in order to strip out the random key.
 Having all your data in one giant data set is a rarity.
 For example, presume you have user information stored in a SQL database because it is updated frequently.
@@ -1409,26 +1336,18 @@ After all values are binned in either list, the actual join logic is executed us
 The join logic differs slightly based on the type of join, but always involves iterating through both lists and writing to the Context object.
 The type of join is pulled from the job configuration in the setup method.
 Let’s look at the main reduce method before looking at the join logic.
-Execute our join logic now that the lists are filled.
 The input data types to the reducer are two Text objects.
 The input key is the foreign join key, which in this example is the user’s ID.
 Any type of data formatting you would want to perform should be done here prior to outputting.
 For simplicity, the raw XML value from the left data set (users) is output as the key and the raw XML value from the right data set (comments) is output as the value.
 If both the lists are not empty, simply perform two nested for loops and join each of the values together.
-If both lists are not empty, join A with B.
 For a left outer join, if the right list is not empty, join A with B.
 If the right list is empty, output each record of A with an empty string.
-For each entry in A, // If list B is not empty, join A and B // Else, output A by itself.
 A right outer join is very similar, except switching from the check for empty elements from B to A.
 If the left list is empty, write records from B with an empty output key.
-For each entry in B, // If list A is not empty, join A and B // Else, output B by itself.
 A full outer join is more complex, in that we want to keep all records, ensuring that we join records where appropriate.
 If list A is not empty, then for every element in A, join with B when the B list is not empty, or output A by itself.
-If list A is not empty // For each entry in A // If list B is not empty, join A with B.
-Else, output A by itself // If list A is empty, just output B.
 For an antijoin, if at least one of the lists is empty, output the records from the nonempty list with an empty Text object.
-If list A is empty and B is empty or vice versa.
-Iterate both A and B with null values // The previous XOR check will make sure exactly one of // these lists is empty and therefore the list will be skipped.
 Be considerate of follow on data parsing to ensure proper field delimiters.
 A record that contains the proper structure but with null fields should be generated instead of outputting an empty object.
 Because the join logic is performed on the reduce side, a combiner will not provide much optimization in this example.
@@ -1452,12 +1371,10 @@ The driver code is slightly different in that we use the DistributedCache to sto
 This is omitted in the following code, as more information on how to use a Bloom filter with the DistributedCache can be found in the Appendix A.
 The user ID is pulled from the XML record along with the reputation.
 If the reputation is greater than 1,500, the record is output along with the foreign key (user ID)
-If the reputation is greater than 1,500, // output the user ID with the value.
 The Bloom filter is initially deserialized from the DistributedCache prior to any calls to the map method.
 After deserialization, the user ID is pulled from the XML record and used for the membership test of the Bloom filter.
 If the test passes, the record is output along with the foreign key (user ID)
 In this algorithm, we don’t need to verify the user’s reputation in the reducer prior to writing to the file system.
-While false positive records were output from the CommentJoinMapperWithBloom, they won’t be joined up with users on the reduce side since there will be nothing to join them with.
 The main gain we received out of this Bloom filter was vastly reducing the number of comments output to the mapper phase.
 Be conscious of Bloom filter false positives and how they will affect your reduce side join operation.
 Replicated Join Pattern Description A replicated join is a special type of join operation between one large and many small data sets that can be performed on the map-side.
@@ -1504,14 +1421,12 @@ This user ID is then used to retrieve a value from the HashMap built during the 
 If a value is found, the input value is output along with the retrieved value.
 If a value is not found, but a left outer join is being executed, the input value is output with an empty Text object.
 That’s all there is to it! The input data is enriched with the data stored in memory.
-If the user information is not null, then output // If we are doing a left outer join, // output the record with an empty value.
 Composite Join Pattern Description A composite join is a specialized type of join operation that can be performed on the map-side with many very large formatted inputs.
 Using this pattern completely eliminates the need to shuffle and sort all the data to the reduce phase.
 However, it requires the data to be already organized or prepared in a very specific way.
 Composite joins are particularly useful if you want to join very large data sets together.
 However, the data sets must first be sorted by foreign key, partitioned by foreign key, and read in a very particular manner in order to use this type of join.
 With that said, if your data can be read in such a way or you can prepare your data, a composite join has a huge leg-up over the other types.
-Hadoop has built in support for a composite join using the CompositeInputFormat.
 This join utility is restricted to only inner and full outer joins.
 The inputs for each mapper must be partitioned and sorted in a specific way, and each input dataset must be divided into the same number of partitions.
 In addition to that, all the records for a particular foreign key must be in the same partition.
@@ -1540,23 +1455,17 @@ The data preparation job is typically a MapReduce job, but if the data sets rare
 Thus, the cost of producing these prepared data sets is averaged out over all of the runs.
 To meet the preconditions of a composite join, both the user and comment data sets have been preprocessed by MapReduce and output using the TextOutputFormat.
 The key of each data set is the user ID, and the value is either the user XML or comment XML, based on the data set.
-Hadoop has a KeyValueTextOutputFormat that can parse these formatted data sets exactly as required.
 The key will be the output key of our format job (user ID) and the value will be the output value (user or comment data)
 Each data set was sorted by the foreign key, the caveat being that they are sorted as Text objects rather than LongWritable objects.
-This is because the CompositeInputFormat uses Text objects as the key for comparisons when doing the join.
 Each data set was then gzipped to prevent it from being split.
 The driver code demonstrates how to configure MapReduce to handle the join, while the mapper code is trivial.
 The following descriptions of each code section explain the solution to the problem.
 Problem: Given two large formatted data sets of user information and comments, enrich the comments with user information data.
 The driver parses the input arguments for the job: the path to the user data, the path to the comment data, the analytic output directory, and the type of join (inner or outer)
-The CompositeInputFormat utilizes the older mapred API, but configuration is similar to the mapreduce API.
 The most important piece of configuration is setting the input format and then configuring the join expression.
 The input format has a static helper function to create the join expression itself.
 It takes in the join type (inner or outer), the input format class used to parse all the data sets, and then as many Path or String objects as desired, which represent the data sets to join together.
 That’s all there is to it! After setting the remaining required parameters, the job is run until completion and the program exits.
-For the curious reader, more information about the details of the magic join expression can be found in the CompositeInputFormat documentation.
-The CompositeInputFormat will parse all of our input files and output // records to our mapper.
-The composite input format join expression will set how the records // are going to be read in, and in what input format.
 The input to the mapper is the foreign key and a TupleWritable.
 This tuple contains a number of Text objects equivalent to the number of data sets.
 As far as position is concerned, the ordering of the Text objects maps directly to how it was configured.
@@ -1564,7 +1473,6 @@ The first input path is the zeroth index, the second input path is the first ind
 The mapper simply grabs the objects from the tuple and outputs them.
 There are only two data sets to be joined in this example, so they are output as the key and value.
 If more were used, the strings would need be concatenated in some manner prior to being output.
-Get the first two elements in the tuple and output them.
 This pattern has no reducer or combiner implementation because it is map only.
 Cartesian Product Pattern Description The Cartesian product pattern is an effective way to pair every record of multiple inputs with every other record.
 This functionality comes at a cost though, as a job using this pattern can take an extremely long time to complete.
@@ -1603,18 +1511,12 @@ The following descriptions of each code section explain the solution to the prob
 Problem: Given a groomed data set of StackOverflow comments, find pairs of comments that are similar based on the number of like words between each pair.
 This is a homegrown Hadoop implementation of this problem for version 1.0.3 to demonstrate the idea behind how a cross product can be executed using MapReduce.
 Future versions of Hadoop MapReduce will have this functionality packaged with the distribution!
-The CartesianImportFormat piggybacks on a large portion of the CompositeInputFormat seen in the previous example of a composite join.
 It is implemented to support a Cartesian product for just two data sets for demonstration purposes in order to keep the code more simple.
 A single data set can be used as both the left and right data sets, as we do for this example.
-During job setup, getInputSplits creates the cross product of the input splits of both data sets into a list of CompositeInputSplits.
 This is done by creating the underlying input format for each data set to get the splits, and then calculating the cross product.
 These input splits are then assigned to map task across the cluster for processing.
-For each of the left input splits // For each of the right input splits // Create a new composite input split composing of the two ++i;
-String inputFormatClass, String inputPath, int numSplits) // Create a new instance of the input format.
-The driver sets the necessary parameters for using the CartesianInputFormat.
 The same input path is used as both data sets for the input format, as we are performing a comparison between pairs of comments.
 The record reader is where the magic happens of performing the cross product.
-During task setup, getRecordReader is called by the framework to return the CartesianRecordReader.
 The constructor of this class creates two separate record reader objects, one for each split.
 The first call to next reads the first record from the left data set for the mapper input key, and the first record from the right data set as the mapper input value.
 This key/ value pair is then given to the mapper for processing by the framework.
@@ -1623,12 +1525,10 @@ In this case, a flag is set and the do-while will loop backwards, reading the se
 The right record reader is reset, and the process continues.
 This process completes until the left record reader returns false, stating there are no more key/value pairs.
 At this point, the record reader has given the Cartesian product of both input splits to the map task.
+Some of the more simple methods to adhere to the RecordReader interface are missing for brevity, such as close() and getPos()
+There are also some optimization opportunities that could be implemented, such as forcing the record reader to the next left record if you know it is not going to be useful.
 In this example, if the left record contains only one word in it and we are looking for pairs of comments that have a minimum of 3 common words, it doesn’t make much sense to read the entire right input split because no output is going to be made.
-If we are to go to the next left key/value pair // Read the next key value pair, false means no more pairs // If no more, then this task is nearly finished break; // If we aren't done, set the value to the key and set // our flags.
-Read the next key value pair from the right data set.
-If success, set the value // Otherwise, this right data set is complete // and we should go to the next left pair.
-This loop will continue if we finished reading key/value // pairs from the right data set.
-Return true if a key/value pair was read, false otherwise return !alldone;
+Store configuration to re-create the right record reader private FileInputFormat rightFIF; private JobConf rightConf; private InputSplit rightIS; private Reporter rightReporter;
 For each Text object, it reads the word tokens into a set.
 The sets are then iterated to determine how many common words there are between the two.
 If there are more then ten words, the pair is output to the file system.
@@ -1655,10 +1555,9 @@ The two ways of doing this is to either load the data through the file system AP
 A major problem with MapReduce chains is the size of the temporary files.
 In some cases, they may be tiny, which will cause a significant amount of overhead in firing up way too many map tasks to load them.
 In a nonchained job, the number of reducers typically depends more on the amount of data they are receiving than the amount of data you’d like to output.
-When chaining, the size of the output files is likely more output files about the size of one block on the distributed filesystem.
+When chaining, the size of the output files is likely more important, even if the reducers will take a bit longer.
+Try to shoot for output files about the size of one block on the distributed filesystem.
 Just play around with the number of reducers and see what the impact is on performance (which is good advice in general)
-The other option is to consistently use CombineFileInputFormat for jobs that load intermittent output.
-CombineFileInputFormat takes smaller blocks and lumps them together to make a larger input split before being processed by the mapper.
 With the Driver Probably the simplest method for performing job chaining is to have a master driver that simply fires off multiple job-specific drivers.
 There’s nothing special about a MapReduce driver in Hadoop; it’s pretty generic Java.
 It doesn’t derive from some sort of special class or anything.
@@ -1670,6 +1569,9 @@ Lack of discipline here can surprisingly fill up your cluster rather quickly.
 Also, be careful of how much temporary data you are actually creating because you’ll need storage in your file system to store that data.
 You can pretty easily extrapolate this approach to create chains that are much longer than just two jobs.
 Just be sure to keep track of all of the temporary paths and optionally clean up the data not being used anymore as the job runs.
+You can also fire off multiple jobs in parallel by using Job.submit() instead of Job.wait ForCompletion()
+The submit method returns immediately to the current thread and runs the job in the background.
+Use Job.is Complete(), a nonblocking job completion check, to constantly poll to see whether all of the jobs are complete.
 The other thing to pay attention to is job success.
 It’s not good enough to just know that the job completed.
 You also need to check whether it succeeded or not.
@@ -1690,9 +1592,9 @@ Also to enrich each user with his or her reputation from a separate data set whe
 Before we look at the driver, let’s get an understanding of the mapper and reducer for both jobs.
 The mapper records the user ID from each record by assigning.
 This value is later used in the driver to calculate the average number of posts per user.
+The AVERAGE_CALC_GROUP is a public static string at the driver level.
 It simply iterates through the input values (all of which we set to 1) and keeps a running sum, which is output along with the input key.
 A different counter is also incremented by one for each reduce group, in order to calculate the average.
-Increment user counter, as each reduce group represents one user.
 It is doing a few different things to get the desired output.
 The average number of posts per user is pulled from the Context object that was set during job configuration.
 This is used to write the output to different bins.
@@ -1703,13 +1605,11 @@ The input value is parsed to get the user ID and number of times posted.
 This is done by simply splitting on tabs and getting the first two fields of data.
 Then the mapper sets the output key to the user ID and the output value to the number of posts along with the user’s reputation, delimited by a tab.
 The user’s number of posts is then compared to the average, and the user is binned appropriately.
-An optional fourth parameter of MultipleOutputs.write is used in this example to name each part file.
 A constant is used to specify the directory for users based on whether they are below or above average in their number of posts.
 The filename in the folder is named through an extra /part string.
 This becomes the beginning of the filename, to which the framework will append -m-nnnnn, where nnnnn is the task ID number.
 With this name, a folder will be created for both bins and the folders will contain a number of part files.
 This is done for easier input/output management for the next example on parallel jobs.
-String line; // For each record in the user file // Get the user ID and reputation // Map the user ID to the reputation userIdToReputation.put(parsed.get("Id"),
 Now let’s take a look at this more complicated driver.
 It is broken down into two sections for discussion: the first job and the second job.
 The first job starts by parsing command-line arguments to create proper input and output directories.
@@ -1717,7 +1617,6 @@ It creates an intermediate directory that will be deleted by the driver at the e
 A string is tacked on to the name of the output directory here to make our intermediate output directory.
 This is fine for the most part, but it may be a good idea to come up with a naming convention for any intermediate directories to avoid conflicts.
 If an output directory already exists during job submission, the job will never start.
-Set our mapper and reducer, we can use the API's long sum reducer for // a combiner!
 The first job is checked for success before executing the second job.
 This seems simple enough, but with more complex job chains it can get a little annoying.
 Before the second job is configured, we grab the counter values from the first job to get the average posts per user.
@@ -1727,7 +1626,6 @@ The job is then executed and the framework takes over from there.
 Lastly and most importantly, success or failure, the intermediate output directory is cleaned up.
 Leaving any intermediate output will fill up a cluster quickly and require you to delete the output by hand.
 If you won’t be needing the intermediate output for any other analytics, by all means delete it in the code.
-Add two named outputs for below/above average MultipleOutputs.addNamedOutput(binningJob, MULTIPLE_OUTPUTS_BELOW_NAME, TextOutputFormat.class,
 The driver in parallel job chaining is similar to the previous example.
 The only big enhancement is that jobs are submitted in parallel and then monitored until completion.
 However, they require the previous example to have completed successfully.) This has the added benefit of utilizing cluster resources better to have them execute simultaneously.
@@ -1747,10 +1645,8 @@ The Job objects for both are then returned and monitored for job completion.
 So long as either job is still running, the driver goes back to sleep for five seconds.
 Once both jobs are complete, they are checked for success or failure and an appropriate log message is printed.
 An exit code is then returned based on job success.
-It looks very standard to any other configuration, except Job.submit is used rather than Job.waitForCompletion.
 This will submit the job and then immediately return, allowing the application to continue.
 As we saw, the returned Job is monitored in the main method until completion.
-Submit job and immediately return, rather than waiting for completion return job;
 With Shell Scripting This method of job chaining is very similar to the previous approach of implementing a complex job flow in a master driver that fires off individual job drivers, except that we do it in a shell script.
 Each job in the chain is fired off separately in the way you would run it from the command line from inside of a shell script.
 This has a few major benefits and a couple minor downsides.
@@ -1769,7 +1665,6 @@ In this example, we use the Bash shell to tie together the basic job chaining an
 The script is broken into two pieces: setting variables to actually execute the jobs, and then executing them.
 Input and outputs are stored in variables to create the a number of executable commands.
 There are two commands to run both jobs, cat the output to the screen, and cleanup all the analytic output.
-The next part of the script echos each command prior to running it.
 It executes the first job, and then checks the return code to see whether it failed.
 If it did, output is deleted and the script exits.
 If the second job completes successfully, the output of each job is written to the log file and all the output is deleted.
@@ -1794,7 +1689,6 @@ Here, we parse the command line arguments and create all the paths we will need 
 We take special care when naming the variables to know our data flows.
 The first job is then configured via a helper function and executed.
 Upon completion of the first job, we invoke Configuration methods in helper functions to create three ControlledJob objects.
-The binningControlledJob has no dependencies, other than verifying that previous job executed and completed successfully.
 The next two jobs are dependent on the binning ControlledJob.
 These two jobs will not be executed by JobControl until the binning job completes successfully.
 If it doesn’t complete successfully, the other jobs won’t be executed at all.
@@ -1803,7 +1697,6 @@ The call to JobControl.run will block until the group of jobs completes.
 We then check the failed job list to see if any jobs failed and set our exit code accordingly.
 Following are all the helper methods used to create the actual Job or Configuration objects.
 There are three separate methods, the final method being used twice to create the identical parallel jobs.
-Set our mapper and reducer, we can use the API's long sum reducer for // a combiner!
 Chain Folding Chain folding is an optimization that is applied to MapReduce job chains.
 Basically, it is a rule of thumb that says each record can be submitted to multiple mappers, or to a reducer and then a mapper.
 Such combined processing would save a lot of time reading files and transmitting data.
@@ -1886,7 +1779,6 @@ This mapper implementation is fed the output from the previous mapper.
 It reads the users data set during the setup phase to create a map of user ID to reputation.
 This map is used in the calls to map to enrich the output value with the user’s reputation.
 This new key is then output along with the input value.
-String line; // For each record in the user file // Get the user ID and reputation.
 This reducer implementation sums the values together and outputs this summation with the input key: user ID and reputation.
 This mapper uses MultipleOutputs to bin users into two data sets.
 The input key is parsed to pull out the reputation.
@@ -1901,7 +1793,8 @@ This can be used in case the mapper or reducer has overlapping configuration par
 No special configuration is required, so we simply pass in empty JobConf objects.
 The seventh parameter in the signature is a flag as to pass values in the chain by reference or by value.
 This is an added optimization you can use if the collector does not modify the keys or values in either the mapper or the reducer.
-Here, we make these assumptions, In addition to configuring the chain mappers and reducers, we also add the user data set to the DistributedCache so our second mapper can perform the enrichment.
+Here, we make these assumptions, so we pass objects by reference (byValue = false)
+In addition to configuring the chain mappers and reducers, we also add the user data set to the DistributedCache so our second mapper can perform the enrichment.
 We also set configure the MultipleOutputs and use a NullOutputFormat rather than the typical TextOutputFormat.
 Use of this output format will prevent the framework from creating the default empty part files.
 Job Merging Like job folding, job merging is another optimization aimed to reduce the amount of I/ O through the MapReduce pipeline.
@@ -1957,7 +1850,6 @@ This is a necessary change so we can have the same type of intermediate key/valu
 The anonymizeMap method generates an anonymous record from the input value, whereas the distinctMap method grabs the user ID from the record and outputs it.
 Each helper math method parses the input record, but this parsing should instead be done inside the actual map method, The resulting Map<String,String> can then be passed to both helper methods.
 Any little optimizations like this can be very beneficial in the long run and should be implemented!
-Otherwise, set our output key to the user's id, // tagged with a "D"
 The reducer’s calls to setup and cleanup handle the creation and closing of the MultipleOutputs utility.
 The reduce method checks the tag of each input key and calls a helper reducer method based on the tag.
 The reduce methods are passed the Text object inside the TaggedText.
@@ -2036,12 +1928,10 @@ As long as you can write key/value pairs to some other source with Java (e.g., a
 Just make sure whatever you are writing to can handle the large number of connections from the many tasks.
 The OutputFormat abstract class contains three abstract methods for implementation: checkOutputSpecs.
 This method is used to validate the output specification for the job, such as making sure the directory does not already exist prior to it being submitted.
-For file-based output, a FileOutputCommitter can be used to handle all the heavy lifting.
 It will create temporary output directories for each map task and move the successful output to the configured output directory when necessary.
 RecordWriter The RecordWriter abstract class writes key/value pairs to a file system, or another output.
 Unlike its RecordReader counterpart, it does not contain an initialize phase.
 However, the constructor can always be used to set up the record writer for whatever is needed.
-Any parameters can be passed in during construction, because the record writer instance is created via OutputFormat.getRecordWriter.
 The RecordWriter abstract class is a much simpler interface, containing only two methods: write.
 This method is called by the framework for each key/value pair that needs to be written.
 The implementation of this method depends very much on your use case.
@@ -2080,11 +1970,7 @@ All the output is written to the given output directory.
 The identity mapper is used for this job, and the reduce phase is disabled by setting the number of reduce tasks to zero.
 There is no implementation for any of the overridden methods, or for methods requiring return values return basic values.
 This input split is used to trick the framework into assigning a task to generate the random data.
-The input format has two main purposes: returning the list of input splits for the framework to generate map tasks from, and then creating the Random StackOverflowRecordReader for the map task.
 We override the getSplits method to return a configured number of FakeInputSplit splits.
-When the framework calls createRecordReader, a RandomStackOverflowRecordReader is instantiated, initialized, and returned.
-Create a number of input splits equivalent to the number of tasks.
-InputSplit split, TaskAttemptContext context) // Create a new RandomStackOverflowRecordReader and initialize it return rr;
 This record reader is where the data is actually generated.
 It is given during our FakeInputSplit during initialization, but simply ignores it.
 The number of records to create is pulled from the job configuration, and the list of random words is read from the DistributedCache.
@@ -2092,9 +1978,6 @@ For each call to nextKeyValue, a random record is created using a simple random 
 The body of the comment is generated by a helper function that randomly selects words from the list, between one and thirty words (also random)
 The counter is incremented to keep track of how many records have been generated.
 Once all the records are generated, the record reader returns false, signaling the framework that there is no more input for the mapper.
-This object will format the creation date string into a Date // object.
-Get the number of records to create from the configuration.
-If we still have records to create // Generate random data.
 External Source Output Pattern Description As stated earlier in this chapter, the external source output pattern writes data to a system outside of Hadoop and HDFS.
 You want to write MapReduce output to a nonnative location.
 With this pattern, we are able to output data from the MapReduce framework directly to an external source.
@@ -2138,7 +2021,6 @@ Each hash is given a key to identify the hash.
 Every hash can store more than four billion field-value pairs.
 The sections below with its corresponding code explain the following problem.
 Problem: Given a set of user information, randomly distributed user-to-reputation mappings to a configurable number of Redis instances in parallel.
-The RedisHashOutputFormat is responsible for establishing and verifying the job configuration prior to being submitted to the JobTracker.
 Once the job has been submitted, it also creates the RecordWriter to serialize all the output key/value pairs.
 However, we are not bound to using HDFS, as we will see in the RecordWriter later on.
 The output format contains configuration variables that must be set by the driver to ensure it has all the information required to do its job.
@@ -2146,13 +2028,10 @@ Here, we have a couple public static methods to take some of the guess work out 
 This output format takes in a list of Redis instance hosts as a CSV structure and a Redis hash key to write all the output to.
 In the checkOutputSpecs method, we ensure that both of these parameters are set before we even both launching the job, as it will surely fail without them.
 The getRecordWriter method is used on the back end to create an instance of a Re cordWriter for the map or reduce task.
-Here, we get the configuration variables required by the RedisHashRecordWriter and return a new instance of it.
-This record writer is a nested class of the RedisHashOutputFormat, which is not required but is more of a convention.
 The details of this class are in the following section.
 The output committer is used by the framework to manage any temporary output before committing in case the task fails and needs to be reexecuted.
 For this implementation, we don’t typically care whether the task fails and needs to be re-executed.
 An output committer is required by the framework, but the NullOutputFor mat contains an output committer implementation that doesn’t do anything.
-The RedisHashRecordWriter handles connecting to Redis via the Jedis client and writing out the data.
 Each key/value pair is randomly written to a Redis instance, providing an even distribution of all data across all Redis instances.
 The constructor stores the hash key to write to and creates a new Jedis instance.
 The code then connects to the Jedis instance and maps it to an integer.
@@ -2160,7 +2039,6 @@ This map is used in the write method to get the assigned Jedis instance.
 The hash code is the key is taken modulo the number of configured Redis instances.
 The key/value pair is then written to the returned Jedis instance to the configured hash.
 Finally, all Jedis instances are disconnected in the close method.
-Get the Jedis instance that this key/value pair will be // written to.
 The Mapper instance is very straightforward and looks like any other mapper.
 The user ID and reputation are retrieved from the record and then output.
 The output format does all the heavy lifting for us, allowing it to be reused multiple times to write whatever we want to a Redis hash.
@@ -2205,15 +2083,11 @@ The RedisInputSplit represents the data to be processed by an individual Mapper.
 In this example, we store the Redis instance hostname as the location of the input split, as well as the hash key.
 The input split implements the Writable interface, so that it is serializable by the framework, and includes a default constructor in order for the framework to create a new instance via reflection.
 We return the location via the getLocations method, in the hopes that the JobTracker will assign each map task to a TaskTracker that is hosting the data.
-The RedisHashInputFormat mirrors that of the RedisHashOutput Format in many ways.
 It contains configuration variables to know which Redis instances to connect to and which hash to read from.
-In the getSplits method, the configuration is verified and a number of RedisHashInputSplits is created based on the number of Redis hosts.
 This will create one map task for each configured Redis instance.
-The Redis hostname and hash key are stored in the input split in order to be retrieved later by the RedisHashRecordReader.
 The createRecordReader method is called by the framework to get a new instance of a record reader.
 The record reader’s initialize method is called by the framework, so we can just create a new instance and return it.
 Again by convention, this class contains two nested classes for the record reader and input split implementations.
-The RedisHashRecordReader is where most of the work is done.
 The initialize method is called by the framework and provided with an input split we created in the input format.
 Here, we get the Redis instance to connect to and the hash key.
 We then connect to Redis and get the number of key/value pairs we will be reading from Redis.
@@ -2225,8 +2099,6 @@ Once we have exhausted all the key/ value pairs, false is returned so the map ta
 The other methods of the record reader are used by the framework to get the current key and value for the mapper to process.
 The getProgress method is useful for reporting gradual status to the JobTracker and should also be reused if possible.
 Since we pulled all the information and disconnected from Redis in the initialize method, there is nothing to do here.
-Get all the key/value pairs from the Redis instance and store // them in memory.
-If the key/value map still has values // Get the current entry and set the Text objects to the entry return true; // No more values? return false.
 Much like the previous example’s driver, we use the public static methods provided by the input format to modify the job configuration.
 Since we are just using the identity mapper, we don’t need to set any special classes.
 The number of reduce tasks is set to zero to specify that this is a map-only job.
@@ -2284,14 +2156,8 @@ This output format accepts our custom class as the output key and a Text object 
 Any other classes will cause errors when trying to write any output.
 Since our record writer implementation is coded to a specific and known output, there is no need to verify any output specification of the job.
 An output committer is still required by the framework, so we use NullOutputFormat’s output committer.
-The RedisLastAccessRecordWriter is templated to accept the same classes as the output format.
-The construction of the class connects to all six Redis instances and puts them in a map.
-This map stores the month-to-Redis-instance mappings and is used in the write method to retrieve the proper instance.
-The write method then uses a map of month int to a three character month code for serialization.
-This means all the hashes in Redis are named based on the three-character month code.
 The mapper code parses each input record and sets the values for the output RedisKey and the output value.
 The month of the last access data is parsed via the Calendar and SimpleDateFormat classes.
-This object will format the creation date string into a Date object.
 The driver looks very similar to a more basic job configuration.
 All the special configuration is entirely handled by the output format class and record writer.
 This example demonstrates how to query for the information we just stored in Redis.
@@ -2305,7 +2171,6 @@ The sections below with its corresponding code explain the following problem.
 Problem: Given a query for user to reputation mappings by months, read only the data required to satisfy the query in parallel.
 Instead of storing one hash key, we are going to store multiple hash keys.
 This is because the data is partitioned based on month, instead of all the data being randomly distributed in one hash.
-This input format class intelligently creates RedisLastAccessInputS plit objects from the selected months of data.
 It initially creates a hash map of host-to-input splits in order to add the hash keys to the input split, rather than adding both months of data to the same split.
 If a split has not been created for a particular month, a new one is created and the month hash key is added.
 Otherwise, the hash key is added to the split that has already been created.
@@ -2313,8 +2178,6 @@ A List is then created out of the values stored in the map.
 This will create a number of input splits equivalent to the number of Redis instances required to satisfy the query.
 There are a number of helpful hash maps to help convert a month string to an integer, as well as figure out which Redis instance hosts which month of data.
 The initialization of these hash maps are ommitted from the static block for brevity.
-Initialize month to Redis instance map // Initialize month 3 character code to integer.
-The RedisLastAccessRecordReader is a bit more complicated than the other record readers we have seen.
 It needs to read from multiple hashes, rather than just reading everything at once in the initialize method.
 In nextKeyValue, a new connection to Redis is created if the iterator through the hash is null, or if we have reached the end of all the hashes to read.
 If the iterator through the hashes does not have a next value, we immediately return false, as there is no more data for the map task.
@@ -2322,8 +2185,6 @@ Otherwise, we connect to Redis and pull all the data from the specific hash.
 The hash iterator is then used to exhaust all the field value pairs from Redis.
 A do-while loop is used to ensure that once a hash iterator is complete, it will loop back around to get data from the next hash or inform the task there is no more data to be read.
 The implementation of the remaining methods are identical to that of the RedisHash RecordReader and are omitted.
-Get an iterator of all the hash keys we want to read.
-If the key/value map still has values // Get the current entry and set // the Text objects to the entry.
 The driver code sets the months most recently accessed passed in via the command line.
 This configuration parameter is used by the input format to determine which Redis instances to read from, rather than reading from every Redis instance.
 Again, it uses the identity mapper rather than performing any analysis on the data retrieved.
@@ -2374,7 +2235,6 @@ We’ll see some design patterns that will still exist but just aren’t used ve
 We will likely eventually see ApplicationMaster patterns for building completely new frameworks for solving a type of problem.
 Patterns as a Library or Component Over time, as patterns get more and more use, someone may decide to componentize that pattern as a built-in utility class in a library.
 This type of progression is seen in traditional design patterns, as well, in which the library parameterizes the pattern and you just interact with it, instead of reimplementing the pattern.
-This is seen with several of the custom Hadoop MapReduce pieces that exist in the core Hadoop libraries, such as TotalOrderPartitioner, ChainReducer, and MultipleOutputs.
 This is very natural from a standpoint of code reuse.
 The patterns in this book are presented to help you start solving a problem from scratch.
 By adding a layer of indirection, modules that set up the job for you and offer several parameters as points of customization can be helpful in the long run.
@@ -2442,7 +2302,6 @@ Tweaking Your Bloom Filter Before training a Bloom filter with the elements of a
 If you know this ahead of time, a Bloom filter can be sized appropriately to have a hand-picked false positive rate.
 The lower the false positive rate, the more bits required for the Bloom filter’s array.
 Figure A-1 shows how to calculate the size of a Bloom filter with an optimal-k.
-Gets the optimal Bloom filter sized based on the input parameters and the * optimal number of hash functions.
 The optimal-k is defined as the number of hash functions that should be used for the Bloom filter.
 With a Hadoop Bloom filter implementation, the size of the Bloom filter and the number of hash functions to use are given when the object is constructed.
 Using the previous formula to find the appropriate size of the Bloom filter assumes the optimalk is used.
@@ -2456,8 +2315,4 @@ Shook graduated with a BS in Computer Science from the University of Maryland, B
 Seeking new challenges, he enrolled in the graduate program at UMBC with a focus on distributed computing technologies.
 Shook is involved in developing and instructing training curriculum for both Hadoop and Pig.
 He spends what little free time he has working on side projects and playing video games.
-It is originally from China, and in the 19th century the Emperor of China kept all Père David’s deer in special hunting grounds.
-However, at the turn of the century, the remaining population in the hunting grounds were killed in a number of natural and man-made events, making the deer extinct in China.
-Its coat ranges from reddish in the summer to grey in the winter.
-Père David’s deer is considered a semiaquatic animal, as it enjoys swimming.
 Many remark that it has the tail of a donkey, the hoofs of a cow, the neck of a camel, and the antlers of a deer.

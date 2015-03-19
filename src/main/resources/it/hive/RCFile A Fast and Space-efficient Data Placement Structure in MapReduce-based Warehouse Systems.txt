@@ -1,4 +1,3 @@
-Abstract—MapReduce-based data warehouse systems are playing important roles of supporting big data analytics to understand quickly the dynamics of user behavior trends and their needs in typical Web service providers and social network sites (e.g., Facebook)
 In such a system, the data placement structure is a critical factor that can affect the warehouse performance in a fundamental way.
 We have examined three commonly accepted data placement structures in conventional databases, namely rowstores, column-stores, and hybrid-stores in the context of large data analysis using MapReduce.
 We show that they are not very suitable for big data processing in distributed systems.
@@ -132,11 +131,10 @@ Data storage size with different row group sizes in RCFile.
 We can see that a large row group size can certainly improve the data compression efficiency and decrease the storage size.
 Therefore, we could not use a small row group size with the requirement of reducing storage space.
 The relationship between row group size and lazy decompression: Though a large row group size helps decrease the storage size for a table, it may hurt the data read performance, since a small row group size is a better choice to gain the performance advantage of lazy decompression than a large row group size.
-Consider assume that in an HDFS block, only one record of the table can case where the row group size is as large as possible so that the HDFS block contains only one row group.
+We now consider an extreme case where the row group size is as large as possible so that the HDFS block contains only one row group.
 In this case, RCFile will decompress column e first to check the where condition, and find that the condition can be satisfied in this row group.
 Therefore, RCFile will also decompress all the other four columns (a, b, c, d) since they are needed by the query.
 However, since only one record in the HDFS block is.
-If we use a small row group size, then there is only all other row groups are useless for this query.
 Therefore, only in the useful row group, all the five columns (a, b, c, d, e) need to be decompressed.
 In other useless row groups, only column e needs to be decompressed, and the other four columns will not be decompressed, since the where condition cannot be satisfied.
 Users should choose the row group size to consider both.
@@ -147,17 +145,17 @@ Second, it can also be directly accessed through its interfaces exposed by RCFil
 When using RCFile in a MapReduce program via these interfaces, there are two major configurations.
 RCFileRecordReader needs to know which columns of the table are needed.
 The following code example demonstrates how to set such information.
-After the setting, the configuration of hive.io.file.readcolumn.ids will be (2,3)
 Second, when using RCFile as output, the number of columns needs to be specified in RCFileOutputFormat.
 The following code example shows the methods to set and get the number of columns.
-The call of RCFileOutputFormat.setColumnNumber will set the configuration value of hive.io.rcfile.column.number.conf.
-RCFileOutputFormat.getColumnNumber can be used to get the number of columns.
 RCFile Reader and Writer RCFile also provides Reader and Writer to allow applications to use RCFile in their own ways.
 RCFile Writer is simple since it only supports data appending.
 The following code example outlines how to use row-wise reading methods of RCFile.
 Line 10 uses method setReadColumnIDs to pass the information of needed columns to RCFile.
 Actually, according to lazy decompression, a column will not be decompressed until one of its field is being deserialized.
 The following code example shows the deserialization of a field in column i.
+Reader() Create RCFile reader getPosition() Get the current byte offset from the beginning close() Close the reader.
+If yes, advance the current reader pointer to the next record.
+If yes, discard all bytes of the current row group and advance the current reader pointer to the next row group.
 The experiments were done in a Facebook cluster with 40 nodes.
 In our experiments, we have used the Hadoop 0.20.1, and the most recent version of Hive.
 In the second group, we have evaluated the performance of RCFile from the perspectives of both storage space and query execution, by using different row group sizes and different workloads.
@@ -224,9 +222,6 @@ This is expected since Query B has a where condition that causes more computatio
 Second, however, for RCFile with the row group size, the average mapper time of Query B is significantly shorter than that of Query A.
 This reflects the performance benefit of lazy decompression of RCFile.
 Due to the existence of a where condition in Query B, a lazy decompression can avoid to decompress unnecessary data and thus improve query execution performance.
-We have introduced and evaluated the row-store, the column-store/column-group, and the hybrid PAX store implemented in conventional database systems in Section II.
-Detailed comparison, analysis, and improvement of these three structures in data compression and query performance can be found in [17][15][24][18][12][11]
-In the context of MapReduce-based data warehouse systems, Zebra [20] was the first effort to utilize the columnstore/column-group in the Yahoo Pig system on top of Hadoop.
 As we have discussed in Section II and evaluated in Section V, Zebra’s performance is highly dependent on how column groups have been pre-defined.
 The most recently related work to RCFile is a data storage component in the Cheetah system [25]
 Like RCFile, the Cheetah system also first horizontally partitions a table into small units (each unit is called a cell),
@@ -234,15 +229,4 @@ However, Cheetah will further use Gzip to compress the whole cell.
 Thus, during query execution, Cheetah has to read from the storage and decompress the whole cell before processing any data in a cell.
 Compared to Cheetah, RCFile can skip unnecessary column reads by independent column compression, and avoid unnecessary column decompression by the lazy decompression technique.
 The major difference between RCFile and Bigtable/Hbase is that RCFile serves as a storage structure for the almost read-only data warehouse system, while Bigtable/Hbase is mainly a low-level key-value store for both read- and write-intensive applications.
-Our solution RCFile is designed to meet all the four goals, and has been implemented on top of Hadoop.
-First, RCFile has comparable data loading speed and workload adaptivity with the row-store.
-Second, RCFile is read-optimized by avoiding unnecessary column reads during table scans.
-Third, RCFile uses column-wise compression and thus provides efficient storage space utilization.
-RCFile has been integrated into Hive, and plays an important role in daily Facebook operations.
-It is now used as the default storage structure option for internal data processing systems at Facebook.
-In order to improve storage space utilization, all the recent data generated by various Facebook applications since 2010 have been stored in the RCFile structure, and the Facebook data infrastructure team is currently working to transform existing data sets stored in the row-store structure at Facebook into the RCFile format.
-RCFile has been adopted in data processing systems beyond the scope of Facebook.
-An integration of RCFile to Pig is being developed by Yahoo! RCFile is used in another Hadoop-based data management system called Howl (http://wiki.apache.org/pig/Howl)
-In addition, according to communications in the Hive development community, RCFile has been successfully integrated into other MapReduce-based data analytics platforms.
-We believe that RCFile will continue to play its important role as a data placement standard for big data analytics in the MapReduce environment.
 We thank anonymous reviewers for their feedback to improve the readability of the paper.

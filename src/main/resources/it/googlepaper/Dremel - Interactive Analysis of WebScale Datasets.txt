@@ -57,18 +57,12 @@ Hence, A.B.C can be retrieved without reading A.E, A.B.D, etc.
 The challenge that we address is how to preserve all structural information and be able to reconstruct records from an arbitrary subset of fields.
 Next we discuss our data model, and then turn to algorithms and query processing.
 In this section we present Dremel’s data model and introduce some terminology used later.
-Atomic types in dom comprise integers, floating-point numbers, strings, etc.
-Field i in a record has a name Ai and an optional multiplicity label.
-Repeated fields (∗) may occur multiple times in a record.
-They are interpreted as lists of values, i.e., the order of field occurences in a record is significant.
-Otherwise, a field is required, i.e., must appear exactly once.
 It depicts a schema that defines a record type Document, representing a web document.
 A Document has a required integer DocId and optional Links, containing a list of Forward and Backward entries holding DocIds of other web pages.
 A document can have multiple Names, which are different URLs by which the document can be referenced.
 A Name contains a sequence of Code and (optional) Country pairs.
 We will use these sample records to explain the algorithms in the next sections.
 The fields defined in the schema form a tree hierarchy.
-The full path of a nested field is denoted using the usual dotted notation, e.g., Name.Language.Code.
 The nested data model backs a platform-neutral, extensible mechanism for serializing structured data at Google.
 Code generation tools produce bindings for programming languages such as C++ or Java.
 Cross-language interoperability is achieved using a standard binary on-the-wire representation of records, in which field values are laid out sequentially as they occur in the record.
@@ -82,12 +76,10 @@ We therefore introduce the concepts of repetition and definition levels, which a
 For reference, see Figure 3 which summarizes the repetition and definition levels for all atomic fields in our sample records.
 To disambiguate these occurrences, we attach a repetition level to each value.
 It tells us at what repeated field in the field’s path the value has repeated.
-The field path Name.Language.Code contains two repeated fields, Name and Language.
 Notice that the second Name in r1 does not contain any Code values.
 Code is a required field in Language, so the fact that it is missing implies that Language is not defined.
 In general though, determining the level up to which nested records exist requires extra information.
 To preserve this information, we add a NULL value with definition level 1 to the Links.Backward column.
-We use integer definition levels as opposed to is-null bits so that the data for a leaf field (e.g., Name.Language.Country) contains the information about the occurrences of its parent fields; an example of how this information is used is given in Section 4.3
 Each block contains the repetition and definition levels (henceforth, simply called levels) and compressed field values.
 NULLs are not stored explicitly as they are determined by the definition levels: any definition level smaller than the number of repeated and optional fields in a field’s path denotes a NULL.
 Definition levels are not stored for values that are always defined.
@@ -100,7 +92,6 @@ As illustrated earlier, repetition and definition levels may need to be computed
 Many datasets used at Google are sparse; it is not uncommon to have a schema with thousands of fields, only a hundred of which are used in a given record.
 Hence, we try to process missing fields as cheaply as possible.
 To produce column stripes, we create a tree of field writers, whose structure matches the field hierarchy in the schema.
-The basic idea is to update field writers only when they have their own data, and not try to propagate parent state down the tree unless absolutely necesName.Language.Country Name.Language.Code.
 Figure 5: Automaton for assembling records from two fields, and the records it produces.
 To do that, child writers inherit the levels from their parents.
 A child writer synchronizes to its parent’s levels whenever a new value is added.
@@ -114,24 +105,13 @@ Figure 4 shows an FSM that reconstructs the complete records in our running exam
 Once a DocId value is read, the FSM transitions to Links.Backward.
 After all repeated Backward values have been drained, the FSM jumps to Links.Forward, etc.
 The details of the record assembly algorithm are in Appendix B.
-To sketch how FSM transitions are constructed, let l be the next repetition level returned by the current field reader for field f.
-Starting at f in the schema tree, we find its ancestor that repeats at level l and select the first leaf field n inside that ancestor.
-This gives us an The details of the FSM construction algorithm are in Appendix C.
 If only a subset of fields need to be retrieved, we construct a simpler FSM that is cheaper to execute.
-Figure 5 depicts an FSM for reading the fields DocId and Name.Language.Country.
 This is important for applications that need to access, e.g., the Country appearing in the first Language of the second Name.
-In XPath, this would correspond to the ability to evaluate expressions like /Name[2]/Language[1]/Country.
-Dremel’s query language is based on SQL and is designed to be efficiently implementable on columnar nested storage.
-Defining the language formally is out of scope of this paper; instead, we illustrate its flavor.
-Each SQL statement (and algebraic operators it translates to) takes as input one or multiple nested tables and their schemas and produces a nested table and its output schema.
-Figure 6 depicts a sample query that performs projection, selection, path expressions.
-The query produces a nested result although no record constructors are present in the query.
 To explain what the query does, consider the selection operation (the WHERE clause)
 Think of a nested record as a labeled tree, where each label corresponds to a field name.
 The selection operator prunes away the branches of the tree that do not satisfy the specified conditions.
 Thus, only those nested records are retained where Name.Url is defined and starts with http.
 Each scalar expression in the SELECT clause emits a value at the same level of nesting as the most-repeated input field used in that expression.
-So, the string concatenation expression emits Str values at the level of Name.Language.Code in the input schema.
 The language supports nested subqueries, inter and intra-record aggregation, top-k, joins, user-defined functions, etc; some of these features are exemplified in the experimental section.
 We discuss the core ideas in the context of a read-only system, for simplicity.
 Many Dremel queries are one-pass aggregations; therefore, we focus on explaining those and use them for experiments in the next section.
@@ -156,7 +136,6 @@ When a leaf server cannot access one tablet replica, it falls over to another re
 The query dispatcher honors a parameter that specifies the minimum percentage of tablets that must be scanned before returning a result.
 Each server has an internal execution tree, as depicted on the.
 The internal tree corresponds to a physical query execution plan, including evaluation of scalar expressions.
-An execution plan for project-select-aggregate queries consists of a set of iterators that scan input columns in lockstep and emit results of aggregates and scalar functions annotated with the correct repetition and definition levels, bypassing record assembly entirely during query execution.
 Some Dremel queries, such as top-k and count-distinct, return approximate results using known one-pass algorithms (e.g., [4])
 In this section we evaluate Dremel’s performance on several datasets used at Google, and examine the effectiveness of columnar storage for nested data.
 The properties of the datasets used in our study are summarized in Figure 8
@@ -182,10 +161,6 @@ Retrieval time for columnar nested data grows linearly with the number of fields
 Record assembly and parsing are expensive, each potentially doubling the execution time.
 A natural question to ask is where the top and bottom graphs cross, i.e., record-wise storage starts outperforming columnar storage.
 In our experience, the crossover point often lies at dozens of fields but it varies across datasets and depends on whether or not record assembly is required.
-Next we illustrate a MR and Dremel execution on columnar vs.
-We consider a case where a single field is accessed, i.e., the performance gains are most pronounced.
-Execution times for multiple columns can be extrapolated using the results of Figure 9
-In this experiment, we count the average number of terms in a field txtField of table T1
 The number of records is stored in the variable numRecs.
 For each record, numWords is incremented by the number of terms in input.txtField returned by the CountWords function.
 After the program runs, the average term frequency can be computed as numWords/numRecs.
@@ -270,7 +245,6 @@ If the value is not NULL, which is determined by looking at its definition level
 Otherwise, we merely adjust the record structure without appending any value—which needs to be done if empty records are present.
 Recall that the definition level factors out required fields (only repeated and optional fields are counted)
 Procedure MoveToLevel transitions the record from the state of the lastReader to that of the nextReader (see Line 22)
-For example, suppose the lastReader corresponds to Links.Backward in Figure 2 and nextReader is Name.Language.Code.
 The method ends the nested record Links and starts new records Name and Language, in that order.
 Procedure ReturnsToLevel (Line 30) is a counterpart of MoveToLevel that only ends current records without starting any new ones.
 The algorithm takes as input the fields that should be populated in the records, in the order in which they appear in the schema.
@@ -281,12 +255,10 @@ The intuition is that we try to process each field one by one until the barrier 
 For each repetition level we encounter, we pick the left-most field in the sequence—that is the one we need to transition to when that repetition level is returned by a FieldReader.
 The gaps arise because not all repetition levels are present in the common repetition levels computed at Line 8
 If a FieldReader produces such a level, we need to continue constructing the nested record and do not need to bounce off the barrier.
-Figure 19 shows the algorithm used for evaluating select-projectaggregate queries in Dremel.
 The algorithm addresses a general case when a query may reference repeated fields; a simpler optimized version is used for flat-relational queries, i.e., those referencing only required and optional fields.
 The algorithm has two implicit inputs: a set of FieldReaders, one for each field appearing in the query, and a set of scalar expressions, including aggregate expressions, present in the query.
 The repetition level of a scalar expression (used in Line 8) is determined as the maximum repetition level of the fields used in that expression.
 In essence, the algorithm advances the readers in lockstep to the next set of values, and, if the selection conditions are met, emits the projected values.
 Selection and projection are controlled by two variables, fetchLevel and selectLevel.
-Figure 19: Algorithm for evaluating select-project-aggregate queries over columnar input, bypassing record assembly.
 In a similar vein, only expressions whose current repetition level is no less than selectLevel are emitted (Lines 7-10)
 The algorithm ensures that expressions at a higher-level of nesting, i.e., those having a smaller repetition level, get evaluated and emitted only once for each deeper nested expression.

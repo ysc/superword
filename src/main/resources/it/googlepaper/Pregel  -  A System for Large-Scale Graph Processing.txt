@@ -18,11 +18,6 @@ Relying on an existing distributed computing platform, often ill-suited for grap
 MapReduce [14], for example, is a very good fit for a wide array of largescale computing problems.
 To address distributed processing of large scale graphs, we built a scalable.
 This paper describes the resulting system, called Pregel1, and reports our experience with it.
-The high-level organization of Pregel programs is inspired by Valiant’s Bulk Synchronous Parallel model [45]
-Pregel computations consist of a sequence of iterations, called supersteps.
-During a superstep the framework invokes a userdefined function for each vertex, conceptually in parallel.
-The function specifies behavior at a single vertex V and a single superstep S.
-Messages are typically sent along outgoing edges, but a message may be sent to any vertex whose identifier is known.
 The vertex-centric approach is reminiscent of MapReduce in that users focus on a local action, processing each item independently, and the system composes these actions to lift computation to a large dataset.
 The synchronicity of this model makes it easier to reason about program semantics when implementing algorithms, and ensures that Pregel programs are inherently free of deadlocks and data races common in asynchronous systems.
 Because typical graph computations have many more vertices than machines, one should be able to balance the machine loads so that the synchronization between supersteps does not add excessive latency.
@@ -33,7 +28,6 @@ The directed edges are associated with their source vertices, and each edge cons
 A typical Pregel computation consists of input, when the graph is initialized, followed by a sequence of supersteps separated by global synchronization points until the algorithm terminates, and finishing with output.
 Within each superstep the vertices compute in parallel, each executing the same user-defined function that expresses the logic of a given algorithm.
 A vertex can modify its state or that of its outgoing edges, receive messages sent to it in the previous superstep, send messages to other vertices (to be received in the next superstep), or even mutate the.
-The Bridges of Ko¨nigsberg, which inspired his famous theorem, spanned the Pregel river.
 Edges are not first-class citizens in this model, having no associated computation.
 Algorithm termination is based on every vertex voting to halt.
 In superstep 0, every vertex is in the active state; all active vertices participate in the computation of any given superstep.
@@ -61,6 +55,10 @@ Writing a Pregel program involves subclassing the predefined Vertex class (see F
 Its template arguments define three value types, associated with vertices, edges, and messages.
 Each vertex has an associated value of the specified type.
 This uniformity may seem restrictive, but users can manage it by using flexible types like protocol buffers [42]
+The user overrides the virtual Compute() method, which will be executed at each active vertex in every superstep.
+Predefined Vertex methods allow Compute() to query information about the current vertex and its edges, and to send messages to other vertices.
+Compute() can inspect the value associated with its vertex via GetValue() or modify it via MutableValue()
+It can inspect and modify the values of out-edges using methods supplied by the out-edge iterator.
 Since their visibility is confined to the modified vertex, there are no data races on concurrent value access from different vertices.
 The values associated with the vertex and its edges are the only per-vertex state that persists across supersteps.
 Limiting the graph state managed by the framework to a single value per vertex or edge simplifies the main computation cycle, graph distribution, and failure recovery.
@@ -74,33 +72,31 @@ When the destination vertex of any message does not exist, we execute user-defin
 A handler could, for example, create the missing vertex or remove the dangling edge from its source vertex.
 Sending a message, especially to a vertex on another machine, incurs some overhead.
 This can be reduced in some cases with help from the user.
-For example, suppose that matters, as opposed to the individual values.
+For example, suppose that Compute() receives integer messages and that only the sum matters, as opposed to the individual values.
 In that case the system can combine several messages intended for a vertex V into a single message containing their sum, reducing the number of messages that must be transmitted and buffered.
-Combiners are not enabled by default, because there is no mechanical way to find a useful combining function that method.
-To enable this optimization the user subclasses There are no guarantees about which (if any) messages are combined, the groupings presented to the combiner, or the order of combining, so combiners should only be enabled for commutative and associative operations.
+Combiners are not enabled by default, because there is no mechanical way to find a useful combining function that is consistent with the semantics of the user’s Compute() method.
+To enable this optimization the user subclasses the Combiner class, overriding a virtual Combine() method.
+There are no guarantees about which (if any) messages are combined, the groupings presented to the combiner, or the order of combining, so combiners should only be enabled for commutative and associative operations.
 For some algorithms, such as single-source shortest paths (Section 5.2), we have observed more than a fourfold reduction in message traffic by using combiners.
 Pregel aggregators are a mechanism for global communication, monitoring, and data.
 Pregel includes a number of predefined aggregators, such as min, max, or sum operations on various integer or string types.
 For instance, a sum aggregator applied to the out-degree of each vertex yields the.
 More complex reduction operators can generate histograms of a statistic.
-For supersteps until an and aggregator determines that all vertices satisfy some condition, and then another branch can be executed until termination.
+For instance, one branch of Compute() can be executed for the supersteps until an and aggregator determines that all vertices satisfy some condition, and then another branch can be executed until termination.
 A min or max aggregator, applied to the vertex ID, can be used to select a vertex to play a distinguished role in an algorithm.
 To define a new aggregator, a user subclasses the predefined Aggregator class, and specifies how the aggregated value is initialized from the first input value and how multiple partially aggregated values are reduced to one.
 By default an aggregator only reduces input values from a single superstep, but it is also possible to define a sticky aggregator that uses input values from all supersteps.
 This is useful, for example, for maintaining a global edge count that is adjusted only when edges are added or removed.
-Each vertex is assigned to a priority bucket based on its tentative distance.
-In one superstep, the vertices contribute their indices to a min aggregator.
-The minimum is broadcast to all workers in the next superstep, and the vertices in the lowest-index bucket relax edges.
 A clustering algorithm, for example, might replace each cluster with a single vertex, and a minimum spanning tree algorithm might remove all but the tree edges.
-Just as a issue requests to add or remove vertices or edges.
+Just as a user’s Compute() function can send messages, it can also issue requests to add or remove vertices or edges.
 Multiple vertices may issue conflicting requests in the same superstep (e.g., two requests to add a vertex V , with different initial values)
 We use two mechanisms to achieve determinism: partial ordering and handlers.
 As with messages, mutations become effective in the superstep after the requests were issued.
 Within that superstep removals are performed first, with edge removal before vertex removal, since removing a vertex implicitly removes all of its out-edges.
-Additions follow removals, with vertex addition before edge addition, and all mutations precede.
+Additions follow removals, with vertex addition before edge addition, and all mutations precede calls to Compute()
 If there are multiple requests to create the same vertex in the same superstep, then by default the system just picks one arbitrarily, but users with special needs may specify a better conflict resolution policy by defining an appropriate handler method in their Vertex subclass.
 The same handler mechanism is used to resolve conflicts caused by multiple vertex removal requests, or by multiple edge addition or removal requests.
-We delegate the resolution to handlers to an issue in practice.
+We delegate the resolution to handlers to keep the code of Compute() simple, which limits the interaction between a handler and Compute(), but has not been an issue in practice.
 Our coordination mechanism is lazy: global mutations do not require coordination until the point when they are applied.
 Pregel also supports purely local mutations, i.e., a vertex adding or removing its own outgoing edges or removing itself.
 Local mutations cannot introduce conflicts and making them immediately effective simplifies distributed programming by using an easier sequential programming semantics.
@@ -122,7 +118,7 @@ It is not assigned any portion of the graph, but is responsible for coordinating
 The workers use the cluster management system’s name service to discover the master’s location, and send registration messages to the master.
 The master determines how many partitions the graph will have, and assigns one or more partitions to each worker machine.
 Having more than one partition per worker allows parallelism among the partitions and better load balancing, and will usually improve performance.
-Each worker is responsible for maintaining the state of its method on its vertices, and managing messages to and from other workers.
+Each worker is responsible for maintaining the state of its section of the graph, executing the user’s Compute() method on its vertices, and managing messages to and from other workers.
 Each worker is given the complete set of assignments for all workers.
 The master assigns a portion of the user’s input to each worker.
 The input is treated as a set of records, each of which contains an arbitrary number of vertices and edges.
@@ -130,21 +126,13 @@ The division of inputs is orthogonal to the partitioning of the graph itself, an
 If a worker loads a vertex that belongs to that worker’s section of the graph, the appropriate data structures (Section 4.3) are immediately updated.
 Otherwise the worker enqueues a message to the remote peer that owns the vertex.
 After the input has finished loading, all vertices are marked as active.
+Compute() for each active vertex, delivering messages that were sent in the previous superstep.
 Messages are sent asynchronously, to enable overlapping of computation and communication and batching, but are delivered before the end of the superstep.
 When the worker is finished it responds to the master, telling the master how many vertices will be active in the next superstep.
 This step is repeated as long as any vertices are active, or any messages are in transit.
 After the computation halts, the master may instruct each worker to save its portion of the graph.
-Worker failures are detected using regular“ping”messages that the master issues to workers.
 If a worker does not receive a ping message after a specified interval, the worker process terminates.
 If the master does not hear back from a worker, the master marks that worker process as failed.
-When one or more workers fail, the current state of the partitions assigned to these workers is lost.
-The master reassigns graph partitions to the currently available set of workers, and they all reload their partition state from the most recent available checkpoint at the beginning of a superstep S.
-That checkpoint may be several supersteps earlier than the latest superstep S′ completed by any partition before the failure, requiring that recovery repeat the missing supersteps.
-We select checkpoint frequency based on a mean time to failure model [13], balancing checkpoint cost against expected recovery cost.
-Confined recovery is under development to improve the cost and latency of recovery.
-In addition to the basic checkpoints, the workers also log outgoing messages from their assigned partitions during graph loading and supersteps.
-Recovery is then confined to the lost partitions, which are recovered from checkpoints.
-The system recomputes the missing supersteps up to S′ using logged messages from healthy partitions and recalculated ones from recovering partitions.
 This approach saves compute resources during recovery by only recomputing lost partitions, and can improve the latency of recovery since each worker may be recovering fewer partitions.
 Saving the outgoing messages adds overhead, but a typical machine has adequate disk bandwidth to ensure that I/O does not become the bottleneck.
 Confined recovery requires the user algorithm to be deterministic, to avoid inconsistencies due to mixing saved messages from the original execution with new messages from the recovery.
@@ -152,12 +140,13 @@ Randomized algorithms can be made deterministic by seeding a pseudorandom number
 Nondeterministic algorithms can disable confined recovery and fall back to the basic recovery mechanism.
 A worker machine maintains the state of its portion of.
 Conceptually this can be thought of as a map from vertex ID to the state of each vertex, where the state of each vertex consists of its current value, a list of its outgoing edges (the vertex ID for the edge’s target, and the edge’s current value), a queue containing incoming messages, and a flag specifying whether the vertex is active.
-When the worker performs a superstep it loops through all an iterator to the incoming messages, and an iterator to the outgoing edges.
+When the worker performs a superstep it loops through all vertices and calls Compute(), passing it the current value, an iterator to the incoming messages, and an iterator to the outgoing edges.
 There is no access to incoming edges because each incoming edge is part of a list owned by the source vertex, in general on a different machine.
 For performance reasons, the active vertex flags are stored separately from the incoming message queues.
 Furthermore, while only a single copy of the vertex and edge values exists, two copies of the active vertex flags and the incoming message queue exist: one for the current superstep and one for the next superstep.
 While a worker processes its vertices in superstep S it is simultaneously, in another thread, receiving messages from other workers executing the same superstep.
 Similarly, arrival of a message for a vertex V means that V will be active in the next superstep, not necessarily the current one.
+When Compute() requests sending a message to another vertex, the worker process first determines whether the destination vertex is owned by a remote worker machine, or by the same worker that owns the sender.
 In the remote case the message is buffered for delivery to the destination worker.
 When the buffer sizes reach a threshold, the largest buffers are asynchronously flushed, delivering each to its destination worker as a single network message.
 In the local case an optimization is possible: the message is placed directly in the destination vertex’s incoming message queue.
@@ -177,9 +166,7 @@ When a worker executes a superstep for any partition of the graph, the worker co
 At the end of the superstep workers form a tree to reduce partially reduced aggregators into global values and deliver them to the master.
 The master sends the global values to all workers at the beginning of the next superstep.
 Its vertex value type is double to store a tentative PageRank, and its message type is double to carry PageRank fractions, while the edge value type is void because edges do not store information.
-We assume that the graph is initialized so that in superstep 0, the value of each vertex each vertex sends along each outgoing edge its tentative.
-Starting from superstep 1, each vertex sums up the values arriving on messages into sum and sets its own tentative PageRank to halt.
-In practice, a PageRank algorithm would run until convergence was achieved, and aggregators would be useful for detecting the convergence condition.
+In each of the first 30 supersteps, each vertex sends along each outgoing edge its tentative.
 The singlesource shortest paths problem requires finding a shortest path between a single source vertex and every other vertex in the graph.
 The s-t shortest path problem requires finding a single shortest path between given vertices s and t; it has obvious practical applications like driving directions and has received a great deal of attention.
 For simplicity and conciseness, we focus here on the singlesource variant that fits Pregel’s target of large-scale graphs very well, but offers more interesting scaling data than the s-t shortest path problem.
@@ -193,7 +180,6 @@ The value INF denotes that the vertex cannot be reached at all.) Termination is 
 Since the receiving vertex is ultimately only interested in the minimum, this algorithm is amenable to optimization using a combiner (Section 3.2)
 The combiner shown in Figure 6 greatly reduces the amount of data sent between workers, as well as the amount of data buffered prior to executing the next superstep.
 While the code in Figure 5 only computes distances, modifying it to compute the shortest paths tree as well is quite straightforward.
-Such advanced algorithms can also be expressed in the Pregel framework.
 A maximal matching is one to which no additional edge can be added without sharing an endpoint.
 In the Pregel implementation of this algorithm the vertex value is a tuple of two values: a flag indicating which set the vertex is in (L or R), and the name of its matched vertex once known.
 The edge value has type void (edges carry no information), and the messages are boolean.
@@ -213,7 +199,6 @@ A semi-cluster in a social graph is a group of people who interact frequently wi
 What distinguishes it from ordinary clustering is that a vertex may belong to more than one semi-cluster.
 Its input is a weighted, undirected graph (represented in Pregel by constructing each edge twice, once in each direction) and its output is at most Cmax semi-clusters, each containing at most Vmax vertices, where Cmax and Vmax are user-specified parameters.
 Each vertex V maintains a list containing at most Cmax semi-clusters, sorted by score.
-Vertex V iterates over the semi-clusters c1,...,ck sent to it on the previous superstep.
 Vertex V updates its list of semi-clusters with the semiclusters from c1, ..., ck, c.
 The algorithm terminates either when the semi-clusters stop changing or (to improve performance) when the number of supersteps reaches a user-specified limit.
 At that point the list of best semi-cluster candidates for each vertex may be aggregated into a global list of best semi-clusters.
@@ -222,11 +207,6 @@ The time for initializing the cluster, generating the test graphs in-memory, and
 Since all experiments could run in a relatively short time, failure probability was low, and checkpointing was disabled.
 Although the previous experiments give an indication of how Pregel scales in workers and graph size, binary trees are obviously not representative of graphs encountered in practice.
 Therefore, we also conducted experiments with random graphs that use a log-normal distribution of outdegrees,
-Such a distribution resembles many real-world largescale graphs, such as the web graph or social networks, where most vertices have a relatively small degree but some outliers are much larger—a hundred thousand or more.
-Running shortest paths for the largest graph took a little over 10 minutes.
-In all experiments the graph was partitioned among workers using the default partitioning function based on a random hash; a topology-aware partitioning function would give better performance.
-Therefore, the results of the experiments in this section should not be interpreted as the best possible runtime of shortest paths using Pregel.
-Instead, the results are meant to show that satisfactory performance can be obtained with relatively little coding effort.
 It is similar in concept to MapReduce [14], but with a natural graph API and much more efficient support for iterative computations over the graph.
 Pregel is also different because it implements a stateful model where long-lived processes compute, communicate, and modify local state, rather than a dataflow model where any process computes solely on input data and produces output data input by other processes.
 Pregel was inspired by the Bulk Synchronous Parallel model [45], which provides its synchronous superstep model of computation and communication.
@@ -240,9 +220,6 @@ The most critical difference is that Pregel provides fault-tolerance to cope wit
 CGMgraph [8] is similar in concept, providing a number of parallel graph algorithms using the Coarse Grained Multicomputer (CGM) model based on MPI.
 Its underlying distribution mechanisms are much more exposed to the user, and the focus is on providing implementations of algorithms rather than an infrastructure to be used to implement them.
 CGMgraph uses an object-oriented programming style, in contrast to the generic programming style of Parallel BGL and Pregel, at some performance cost.
-Other than Pregel and Parallel BGL, there have been few systems reporting experimental results for graphs at the scale of billions of vertices.
-The largest have reported results from custom implementations of s-t shortest path, rather than from general frameworks.
-They attribute the better performance to ghost cells, and observe that their implementation begins to get worse performance above 32 processors.
 The contribution of this paper is a model suitable for.
 Based on the input from our users we think we have succeeded in making this model useful and usable.
 Dozens of Pregel applications have been deployed, and many more are being designed, implemented, and tuned.
@@ -261,8 +238,4 @@ Some such algorithms can be transformed into more Pregelfriendly variants, for e
 A practical concern is that Pregel is becoming a piece of production infrastructure for our user base.
 We are no longer at liberty to change the API without considering compatibility.
 However, we believe that the programming interface we have designed is sufficiently abstract and flexible to be resilient to the further evolution of the underlying system.
-Our interns, Punyashloka Biswal and Petar Maymounkov, provided initial evidence of Pregel’s applicability to matchings and clustering, and Charles Reiss automated checkpointing decisions.
-Sierra Michels-Slettvet advertised Pregel to various teams within Google computing over interesting but less known graphs.
-Finally, we thank all the users of Pregel for feedback and many great ideas.
-Bader and Kamesh Madduri, Designing multithreaded algorithms for breadth-first search and st-connectivity on the Cray MTA-2, in Proc.
 Daly, A higher order estimate of the optimum checkpoint interval for restart dumps.

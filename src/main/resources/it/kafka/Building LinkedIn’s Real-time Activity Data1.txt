@@ -121,7 +121,6 @@ Each of these servers has a fairly high connection fan-in and fan-out, with over
 In addition to these live consumers we have numerous large Hadoop clusters which consume infrequent, high-throughput, parallel bursts as part of the offline data load.
 We handle multiple data centers as follows: producers always send data to a cluster in their local data center, and these clusters replicate to a central cluster that provides a unified view of all messages.
 This replication works through the normal consumer API, with the central destination cluster acting as a consumer on the source clusters in the online data centers.
-This delay comes largely from throughput-enhancing batching optimizations that will be described in the next section.
 Disabling these in performance experiments gives end-to-end round trips of only a few milliseconds but incurs lots of small random I/O operations.
 Figure 2: A simplified view of how the data pipeline fits into LinkedIn’s data center topology.
 Our configuration always sends live traffic to a local Kafka cluster and these live clusters are replicated to an aggregate cluster which contains a full view of all data for processing or loading into Hadoop.
@@ -151,7 +150,8 @@ We performed a series of simple experiments on a configuration that matches our 
 The Kafka producer client can be configured to send messages in either a synchronous or asynchronous fashion.
 The async mode allows the client to batch small random messages into larger data chunks before sending it over the network.
 This allows us to implement a precise timeout and message count threshold that triggers the send, guaranteeing that we never batch more than a given number of messages and that no message is held for more than a configurable number of milliseconds.
-This precise control is performed this batching only on a per-topic basis, however performance analysis showed it to be very effective and there are many low-volume topics, so we reworked our APIs to support a “multisend” operation.
+This precise control is important since messages sent asynchronously are at risk of loss if the application crashes.
+Originally we performed this batching only on a per-topic basis, however performance analysis showed it to be very effective and there are many low-volume topics, so we reworked our APIs to support a “multisend” operation.
 This allows us to group messages for low-volume topics into batches with the high-volume topics and further reduce the number of small requests.
 The broker does not do further batching of filesystem writes as we found the cost of a buffered write to be extremely low, especially after the client side batching has taken place.
 Instead we simply rely on the filesystem pagecache to buffer writes and delay the flush to disk to batch the expensive physical disk writes.
@@ -170,7 +170,6 @@ This bandwidth is more expensive per-byte to scale than disk I/O, CPU, or networ
 There are two basic approaches to shrinking data: exploiting explicit structure in message serialization and exploiting implicit structure using compression.
 We extract repeated known structure from the messages by associating schemas with the topics that capture the repeated field names and type information used for efficient storage.
 Schemas have other benefits in ensuring compatibility and allowing integration which we will discuss in a later section.
-Though Kafka itself is serialization-agnostic, LinkedIn has standardized on the use of Apache Avro [4] as the schema and serialization language for all of its activity data messages as well as data in Hadoop and most other data systems.
 In uncompressed form our Avro data was roughly 7 times smaller than XML messages in the activity logging system we replaced.
 One advantage of traditional file-logging is that it naturally allows compressing an entire log file as a single stream, whereas no messaging system we are aware of provides this kind of batch compression of messages.
 Most messages are small and once they are encoded in a compact serialization format have little redundancy on their own.

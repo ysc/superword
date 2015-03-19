@@ -55,9 +55,7 @@ For example, writing a program that uses several chunks of code from this book d
 Selling or distributing a CD-ROM of examples from O’Reilly books does require permission.
 Answering a question by citing this book and quoting example code does not require permission.
 Incorporating a significant amount of example code from this book into your product’s documentation does require permission.
-All the code samples used in this book in addition to many others that supplement this learning effort can be found, fully open sourced, at https://github.com/gradleware/oreilly -gradle-book-examples We appreciate, but do not require, attribution.
 An attribution usually includes the title, author, publisher, and ISBN.
-If you feel your use of code examples falls outside fair use or the permission given above, feel free to contact us at permissions@oreilly.com.
 With a subscription, you can read any page and watch any video from our library online.
 Access new titles before they are available for print, and get exclusive access to manuscripts in development and post feedback for the authors.
 Copy and paste code samples, organize your favorites, download chapters, bookmark key sections, create notes, print out pages, and benefit from tons of other time-saving features.
@@ -89,7 +87,8 @@ Ant and Maven have occupied opposing positions on the build continuum, to the be
 Ant chooses to offer extreme flexibility to the user, imposing no conventions whatsoever, and not wanting to impose any heavyweight dependency management infrastructure on the build.
 Apache Ivy later added badly needed dependency management to Java builds, but still didn’t address the lack of conventions inherent in Ant.
 Maven, on the other hand, offered rigid standards and support for dependency management, but its standards were often overbearing, and deviating from them often proved more difficult than expected.
-Ant and Maven have shared considerable success in the Java marketplace, despite sensible middle ground between both extremes, offering thoughtful conventions for your build to follow, and making it easy for you to extend or redefine those conventions when you want to.
+Ant and Maven have shared considerable success in the Java marketplace, despite important shortcomings in both tools.
+On the one hand, Gradle presents itself as a sensible middle ground between both extremes, offering thoughtful conventions for your build to follow, and making it easy for you to extend or redefine those conventions when you want to.
 Gradle provides out-of-the-box build conventions and at the same time realizes that no one set of standards can accurately reflect every build.
 Gradle therefore intends to be a means of developing organization- and project-specific build standards.
 It is best thought of not as a set of opinions on build standards, but as a toolkit for developing and extending those standards with a rich, descriptive language.
@@ -98,7 +97,6 @@ If you want to download JAR files and manage dependencies by hand in a local pro
 This flexibility is important in many cases, but especially when migrating builds to Gradle: regardless of the legacy build’s opinions on dependency management, Gradle will not oppose them.
 Gradle is rich in features, but is not such an opinionated framework that it will fight you when you want to do things your own way.
 It offers conventions to those who want them, flexibility to those who need it, and a toolkit for turning that flexibility into domain-specific build standards that you can write on your own.
-Apart from its nuanced position on the convention/configuration continuum, it offers no shortage of helpful, high-productivity features absent from other build tools.
 Build Files in Groovy A potentially complex build file demands an expressive format.
 It seemed to be human-readable, and it was very easy to write code to parse it.
 However, a decade of experience has shown that large and complex XML files are only easy for machines to read, not for humans.
@@ -128,7 +126,6 @@ In Gradle, a plugin may provide configurable build actions by introducing one or
 Using and extending the Gradle DSL are usually preferable to writing code in your build file.
 While you are always free to solve problems in a locally optimized way by writing Groovy code inside your build, the most maintainable builds will eventually refactor this code into organized plug-ins that expose new build language idioms to the build files that use them.
 Thus you can express the activities of your build in a high-level, declarative language that is meaningful in your business and technology domain.
-MacOS Installation with Brew Gradle is maintained in the community-supported MacOS package manager, Homebrew, or “brew” for short.
 To install Gradle using brew, simply type the following from a Terminal window:
 Brew will install and build any dependencies, then place the Gradle executable in your path.
 Linux and MacOS Installation To install Gradle on *nix operating systems like Linux and MacOS, follow this command-line script:
@@ -161,7 +158,6 @@ Notice not only that the Java code has been compiled and its class file placed i
 This is all a result of the conventions of Gradle’s Java plug-in.
 We didn’t have to make a single decision or write a line of configuration.
 And let it not go without saying that we can run our nascent Java application as shown in Example 1-7
-Running Hello World Java $ java -cp build/classes/main/ org.gradle.example.simple.HelloWorld hello, world.
 There is a much longer story to tell about the Java plug-in, which will be covered in a separate volume.
 If you want to get started now, you should also check out the online documentation.
 If you had to write a real-world build file to build and run a Java program, you would want to use the application plug-in, which is a core plug-in available with every installation of Gradle.
@@ -169,6 +165,7 @@ The Gradle Command Line The preceding examples have shown Gradle running from th
 Gradle is designed to support firstclass IDE integration at a deep architectural level, but the command line is anything but a second-class citizen.
 In this book, we will work primarily from the command line.
 We won’t go over all possible command line options, but here’s what you need to be productive right away:
+This is a useful mechanism for passing parameters into a build from the command line.
 This generates a lot of output, but can be quite useful for troubleshooting build problems.
 Normally, stack trace logging is suppressed, so this is a helpful switch when debugging a broken build.
 The stack trace is abbreviated by removing frames related to purely internal Groovy method calls.
@@ -183,11 +180,10 @@ Let’s take a look at the different ways of defining a task, the two key aspect
 Declaring a Task In the introduction, we saw how to create a task and assign it behavior all at the same time.
 However, there’s an even simpler way to create a task.
 You can see the results of this by running gradle tasks (Example 2-2)
-Gradle’s report of the newly created task -----------------------------------------------------------Root Project -----------------------------------------------------------Help tasks ---------dependencies - Displays the dependencies of root project 'task-lab'
 Task Action However, executing this task with gradle hello will not produce any result, because we haven’t yet assigned the task an action.
 Previously, we assigned an action to a task with the left-shift operator (Example 2-3)
-Giving a task a trivial action to perform println 'hello, world'
 In this case, Gradle has overloaded << to append a code block to the list of actions a task performs.
+This is equivalent to the doLast() method we’ll cover later in the chapter.
 However, we now have the flexibility of accruing action code in the task by referring to the task object we’ve created (Example 2-4)
 Appending a task’s actions one at a time task hello.
 Now we can recover our familiar build output (Example 2-5)
@@ -216,16 +212,7 @@ Every task you declare is actually a task object contained within the overall pr
 A task object has properties and methods just like any other object.
 We can even control the type of each task object, and access unique, type-specific functionality accordingly.
 By default, each new task receives the type of DefaultTask.
-Like java.lang.Object in Java code, every Gradle task descends from this object type—even tasks that extend the DefaultTask type with a type of their own.
 Let’s take a look at the methods and properties each and every Gradle task has.
-A depended-on task will always run before the task that depends on it.
-If task world depends on task hello, we could use the code shown in Example 2-9
-Different ways of calling the dependsOn method // Declare that world depends on hello // Preserves any previously defined dependencies as well dependsOn createSchema.
-An alternate way to express the same dependency dependsOn << createSchema.
-Do the same using single quotes (which are usually optional) dependsOn 'createSchema'
-Explicitly call the method on the task object task loadTestData loadTestData.dependsOn createSchema.
-If task loadTestData depends on tasks createSchema and compileTestClasses, we could use the code shown in Example 2-10
-Explicitly call the method on the task object task world world.dependsOn compileTestClasses, createSchema.
 During the execution phase, the action block of every relevant task is executed.
 The doFirst method allows you to add a bit of behavior to the beginning of an existing action, even if that action is defined by a build file or a plug-in you don’t control.
 Calling doFirst multiple times keeps appending new blocks of action code to the beginning of the task’s execution sequence.
@@ -233,25 +220,20 @@ You can invoke the doFirst method directly on the task object, passing a closure
 The closure contains the code to run before the task’s existing action.
 As we’ve already mentioned, a closure is a block of Groovy code inside a pair of curly braces.
 You can pass a closure around just like any other object.
-Calling the doFirst method on the task object // This is the task's existing action println 'load test data'
 You can also invoke doFirst from within the task’s configuration block.
 Recall that the configuration block is a piece of executable code that runs before any task’s action runs, during the configuration phase of the build.
 In our earlier discussion of task configuration, you may have been wondering how you might practically use the configuration block.
 This example shows how you can call task methods from inside the configuration block, which makes a potentially very expressive format for modifying task behavior (Example 2-13)
-Calling the doFirst method inside the task’s configuration block println 'load test data'
 Each previous call’s action code is retained, and the new closure is appended to the start of the list to be executed in order.
 If we had to set up a database for integration testing (and wanted to do it a piece at a time), we might use the code shown in Example 2-14
-Repeated calls to doFirst are cumulative println 'load test data'
+Of course, it’s somewhat contrived to break one initialization sequence into three separate closures and calls to doFirst(), as we’ve done here.
+However, sometimes the initial definition of a task isn’t immediately available to change as you see fit—for example, in cases in which the task is defined in another build file that is impossible or impractical for you to modify.
 This kind of programmatic modification of that otherwise inaccessible build logic can be very powerful.
 So far, our examples have used a very simple syntax, which makes the mechanics of Gradle more obvious, though at the expense of a lot of repetition.
 In a real-world build (still relying on println statements in place of actual testing actions), we would be more likely to structure the task as done in Example 2-16
-Repeated calls to doFirst, refactored // Initial task definition (maybe not easily editable) println 'load test data'
-Our changes to the task (in a place we can edit them) println 'create database schema' println 'drop database schema'
 Note that we gather together the multiple calls to doFirst inside a single configuration block, and this occurs after the initial action is added to the world task.
 If there was a block of code you wanted to run after an existing task was done executing, you might do as shown in Example 2-17:
-An example of the doLast method println 'create database schema'
 Each succeeding call appends its closure to the end of the list to be executed in order (Example 2-18)
-Repeated calls to doLast are additive println 'create database schema'
 The value of the predicate is the value returned by the closure.
 Using this method, you can disable the execution of a task which might otherwise run as a normal part of the build’s dependency chain.
 In Groovy, the last statement of a closure is the closure’s return value, even if no return statement is given.
@@ -265,12 +247,8 @@ You can set any task’s enabled property to false to cause it not to run.
 Its dependencies will still execute the way they would if the task were enabled.
 The -b command line switch points Gradle to a nondefault build file.
 By default, it looks for a file called build.gradle, but this switch lets us point it at a different file.
-By default, a task’s path is simply the name of the task with a leading colon.
-A single-level build file that echoes its only task’s path println "THIS TASK'S PATH IS ${path}"
 The leading colon indicates that the task is located in the top-level build file.
 However, for a given build, not all tasks must be present in the top-level build file, since Gradle supports dependent subprojects, or nested builds.
-If the task existed in a nested build called subProject, then the path would be :subProject:echoMyPath.
-The Gradle logger implements the org.slf4j.Logger interface, but with a few extra logging levels added.
 The logging levels supported by the logger are as follows.
 Setting the log level to one enables log output from all succeeding log levels, with the exception of WARN and QUIET as noted:
 For high-volume logging messages which are of interest to the build developer, but should be suppressed during normal build execution.
@@ -283,25 +261,19 @@ Calls to the println method emit log statements at this level.
 Low-volume but important messages, alerting the executor of the build of potential problems.
 When the log level is set to WARN, QUIET-level messages are not emitted.
 Messages which should appear even if the quiet switch was specified on the Gradle command line.
-Executing Gradle with the -q command line option causes this to be the default log level.) System.out.println is directed to the logger at this log level.
 When the log level is set to QUIET, WARN-level messages are not emitted.
 Rare but critically important log messages which should be emitted in all cases.
-If the log level is set to ERROR, calls to System.out.println will not show up in the console.
-This slightly trickier Groovy code sets the log level to each of the valid options, attempting to emit a log message at each log level each time.
 As illustrated in the discussion of the logger property, the logging.level property can be read and written to change the logging level in use by the build.
-Setting the description and task behavior all in one println 'hello, world'
-The two ways of declaring task behavior and description separately println 'hello, world'
 This directory is generally available to a task needing a temporary place in which to store intermediate results of any work, or to stage files for processing inside the task.
 Dynamic Properties As we’ve seen, tasks come with a set of intrinsic properties which are indispensable to the Gradle user.
 However, we can also assign any other properties we want to a task.
 A task object functions like a hash map, able to contain whatever other arbitrary property names and values we care to assign to it (as long as the names don’t collide with the built-in property names)
 The job of the copyFiles is to collect files from several sources and copy them into a staging directory, which the createArtifact task will later assemble into a deployment artifact.
 The list of files may change depending on the parameters of the build, but the artifact must contain a manifest listing them, to satisfy some requirement of the deployed application.
-Build file showing a dynamic task property // Find files from wherever, copy them // (then hardcode a list of files for illustration)
 Besides the DefaultTask, there are task types for copying, archiving, executing programs, and many more.
 Declaring a task type is a lot like extending a base class in an object-oriented programming language: you can get certain methods and properties available in your task for free.
 This makes for very concise task definitions that can accomplish a lot.
-A complete task reference is beyond the scope of this volume, but here are a few.
+A complete task reference is beyond the scope of this volume, but here are a few important types with an example of how to use each.
 Copy A copy task copies files from one place into another (Example 2-33)
 In its most basic form, it copies files from one directory into another, with optional restrictions on which file patterns are included or excluded.
 The copy task will create the destination directory if it doesn’t already exist.
@@ -313,31 +285,29 @@ It packages the main source set and resources together with a trivial manifest i
 A simple example of the Jar task in the jar-task example project apply plugin: 'java'
 Note that the archive name and destination directory are easily configurable.
 Likewise, the manifest can be populated with custom attributes using a readable Groovy map syntax.
-The contents of the JAR are identified by the from sourceSets.main.classes line, which specifies that the compiled .class files of the main Java sources are to be included.
 The from method is identical to the one used in the CopyTask example, which reveals an interesting insight: the Jar task extends the Copy task.
 Even before we’ve seen exhaustive documentation of the Gradle object model and DSL, these details hint at the richness and order of the underlying structure.
-It would be natural build file, converts the string to a File object.
-Remember, you can always open the docs/dsl/index.html file for documentation on standard Gradle features like the Jar task.
+It would be natural just to assign a string to destinationDir, but the property expects an argument compatible with java.io.File.
+The file() method, which is always available inside a Gradle build file, converts the string to a File object.
 Complete documentation of the Jar task and its companion tasks is beyond the scope of this book.
-JavaExec hassle, but this task tries to take the hassle away and integrate command-line Java invocations into your build.
+JavaExec A JavaExec task runs a Java class with a main() method.
+Command-line Java can be a hassle, but this task tries to take the hassle away and integrate command-line Java invocations into your build.
 A Gradle task executing a command-line Java program (from the javaexec-task example) apply plugin: 'java'
-The classpath property in the encode task is set to something called configuration.runtime.
 A configuration is a collection of dependencies that have something in common.
 In this case, the runtime configuration holds all dependencies which must be available to the program at runtime.
 This is in contrast to dependencies which are needed only during compilation, or only while tests are running, or which are needed at compile time and runtime, but which are provided by a runtime environment like an application server.
 The configuration property in Gradle is a collection of all configurations defined by the build, each of which is a collection of actual dependencies.
 This build file declares an external dependency: the Apache Commons Codec library.
 Normally, we’d have to compile our Java file, then concoct a java command line including the path to the compiled class files and the JAR dependency.
-In this build file, however, we simply identify the main class to be run (org.gradle.example.command line.MetaphoneEncoder), provide it with some command line arguments in the form of a List, and point it at the Gradle classpath elements it needs.
 In this case, we may symbolically refer to the classes of the main sourceSet and all of the dependencies declared in the compile configuration.
 Custom Task Types There will be occasions in which Gradle’s built-in task types will not quite do the job, and instead, the most expressive way to develop your build will be to create a custom task.
 Custom Tasks Types in the Build File Suppose your build file needs to issue arbitrary queries against a MySQL database.
 There are several ways to accomplish this in Gradle, but you decide a custom task is the most expressive way to do it.
 The easiest way to introduce the task is simply to create it in your build script as shown here:
-A custom task to perform queries against a MySQL database (from the custom-task example)
 All custom tasks must extend this class or one of its descendants.
 A custom task can extend any task types other than DefaultTask.
-See Task Types for a description of the most important builtin task types.) The task declares properties (i.e., hostname, database, sql, etc.) in annotated with the @TaskAction annotation.
+See Task Types for a description of the most important builtin task types.) The task declares properties (i.e., hostname, database, sql, etc.) in conventional Groovy idiom.
+It then declares a single method, runQuery(), which is annotated with the @TaskAction annotation.
 The actual build tasks at the top of the build file all declare themselves to be of the MySqlTask type.
 By doing this, they automatically inherit the properties and action of that task class.
 Because most of the properties have defaults (some of which, like username and password, are obviously specific to the build), each invocation of the task has very little to configure.
@@ -351,8 +321,6 @@ The build is code, and complex build code should be treated as a first-class cit
 When custom task logic outgrows the build file, we can migrate it to the buildSrc directory at the project root.
 This directory is automatically compiled and added to the build classpath.
 Here is how we would alter the previous example to use the buildSrc directory.
-A build file using a custom task not defined in the build script.
-The definition of the custom task under the buildSrc directory.
 Note that the task definition in the buildSrc directory is very similar to the code included in the build script in the previous example.
 However, we now have a robust platform for elaborating on that simple task behavior, growing an object model, writing tests, and doing everything else we normally do when developing software.
 You have four options for where to put your custom Gradle build code.
@@ -361,12 +329,12 @@ The second is the buildSrc directory as we’ve shown here.
 The third is in a separate build script file imported into the main build script.
 The fourth is in a custom plug-in written in Java or Groovy.
 Programming Gradle with custom plug-ins will be the topic of a separate volume.
-The structure of a Gradle project with custom code in the buildSrc directory.
 Where Do Tasks Come From? So far, we’ve been creating tasks by coding them directly, either inside Gradle build scripts or in the buildSrc directory as Groovy code.
 This is a great way to learn about tasks, because it’s easy to see all of the moving parts in great detail.
 However, many of the tasks you use won’t be tasks you write; they’ll come from plug-ins.
 You’ve already seen an example of this in the section on building Java code.
-By applying the Java plug-in, the build script automatically inherits a set of tasks whose code you have to code them youself.
+By applying the Java plug-in, the build script automatically inherits a set of tasks whose code you never directly see.
+You can modify the behavior of these tasks using the task configuration, doFirst(), and doLast() methods we’ve covered in this chapter, but you don’t have to code them youself.
 The fact that Gradle is providing you with rich, extensible task functionality whose code you never have to look at—code you invoke through the.
 Gradle DSL, not through lots of literal Groovy code—is core to Gradle’s strategy of provding high extensibility with low complexity.
 Gradle also has a few built-in tasks, like tasks and properties.
@@ -387,7 +355,6 @@ In fact, it makes Gradle’s use of Ant simpler than directly using Ant, partly 
 Gradle brings in everything from the Ant namespace into the Gradle namespace such that using a core Ant task is as easy as calling ant.<taskname>
 Discussing the usage of Ant from Gradle provides a great bridge in terms of progressive migration to a pure Gradle strategy.
 Over time though, we believe you’ll desire to standardize on the more powerful Gradle feature set by using native Gradle components or by wraping any Ant behavior in a Gradle plug-in.
-The latter maintains the value of the functioning Ant behavior while fully enabling build-by-convention throughout the updated Gradle build ecosystem.
 With full awareness of the quantity of existing Ant infrastructure and value of leveraging it via the new build tool, Gradle ships with a full copy of Ant, thus making Ant’s default tasks available to every Gradle build.
 To aid with this mind-set remapping, we’ll discuss how Gradle compares to Ant, providing parallels in the approaches to writing builds and to each tool’s unique terminology.
 That would be the role that Gant fills, but Gradle has much more ambitious aims.
@@ -404,37 +371,28 @@ Gradle defines task to refer to any step of the directed acyclic graph.
 A property in Ant can be compared to a variable in Gradle.
 In the more powerful Groovy language that Gradle provides, variables can be typeless (as in Ant) or typed, if desired.
 Variables are available for reference in the parent Gradle project or any subprojects.
-Gradle calling the Ant Echo plug-in with an attribute ant.echo(message: greeting)
 In Example 3-4, we took a simple string and supplied it to the message parameter of the echo Ant task.
 It is useful to reiterate that no import-like plug-in statement was needed to make ant (a Groovy AntBuilder instance) available for invocation.
 Further, no command was needed to make the echo task available for calls.
 To fully discover which defined fields can be supplied with values, simply refer to the actual Ant Echo task documentation since Gradle provides a lightweight wrapper over the Ant implementation.
-Making just a minor change to this build, we will additionally use the Echo task’s documented ability to accept a message as the sole input as ant.echo(message: greeting)
 In Ant’s XML form (Example 3-5), this means that the greeting is put.
-In Gradle (Example 3-6), the equivalent syntax is passing the greeting string directly.
-Gradle calling the Ant Echo plug-in with a parameter ant.echo(greeting)
+In Gradle (Example 3-6), the equivalent syntax is passing the greeting string directly into the echo() call without naming the field to which the value should be assigned.
 This encompasses the basics of using Ant with Gradle, but hardly is the full breadth of such interoperation.
 Let’s go a step further with the importing of custom Ant Tasks, configuration of complex nested Ant structures, and weaving of dependence between Gradle tasks and Ant targets.
 Importing Custom Ant Tasks Using the core Ant tasks from Gradle was easy, but using a custom Ant task is nearly as simple.
 Just use the taskdef method on the AntBuilder instance according to the same recipes that would be used for its Ant invocations.
 For the first example, the Checkstyle Ant task will be loaded from a combination of a properties file and a set of local directory JARs.
-Gradle loading the Checkstyle Ant task via a resource //Load the custom task fileset(dir: 'libs/checkstyle', includes: '*.jar')
 In Example 3-7, the entire loading and execution of the custom Ant task happens within a single Gradle task.
-There is simply a mapping from the desired task name check style, to bring into the Ant namespace and the fully qualfied class that implements it, com.puppycrawl.tools.checkstyle.CheckStyleTask.
-Lastly, in Example 3-7, we invoke the checkstyle Ant task via a traditional-style method call to ant.checkstyle(...)
 The nested configurations via config and fileset directly correspond to the Checkstyle Ant equivalents as if this was being configured with Ant’s XML syntax.
 As a contrasting example, a custom Ant Task can be loaded using a combination of a Gradle configuration, a declared dependency, and Maven Central repository connectivity.
-Gradle loading the PMD Ant task via a Maven repository and Gradle configuration myPmd.
 In this more complex example of Example 3-9, we first establish a configuration for myPmd which is a preprocessing step prior to task executions.
 The configurations closure declares a grouping named myPmd for our subsequent declaration of JAR requirements via the dependencies closure.
 In the dependencies closure, we once address the myPmd grouping and indicate that it should download the PMD JAR as needed.
+The source of the download is declared as the special repository mavenCentral() via the.
 During the loading of the Ant task definition via ant.taskdef(///) call, the JAR downloaded as part of the myPmd configuration is added the myPmdTask classpath.
-Last, the myPmdTask is invoked via ant.myPmdTask(...) with the parameters passed to the Ant task in the same nested manner as Example 3-7
 Complex Ant Configuration In more complex Ant configurations, there typically are several nested elements in the build.xml syntax.
 Though Gradle provides a native class of tasks for archiving, and specifically a task type of Zip, a meaningful and straightforward example of using Ant’s zip task can display the native Ant XML configuration and the same independent configuration of said Ant task from within Gradle using the clearer AntBuilder notation.
 In Example 3-10, a very common configuration for preparing a compressed archive using Ant’s zip task and XML configuration is shown.
-It includes all files in any subdirectory of samples that ends with the extension .txt and writes it into a file named samples-from-gradle.zip.
-Gradle using Ant to zip the source files include(name: '**.txt')
 Importing an Entire Ant Build File Up to this point, we’ve dealt with interoperability of Ant and Gradle on a fine-grained level, either calling existing Ant tasks, creating new Ant tasks on the fly, or manipulating the results of Ant task calls with Groovy.
 But what if you want to bring everything in from an existing Ant build? Gradle handles that without even breaking a sweat.
 First, we begin with our traditional Ant project in Example 3-3
@@ -443,30 +401,21 @@ The result is an ability to treat the Ant build’s contents as a Gradle task fr
 This is an implementation of the Facade pattern; all the utility of the Ant build is maintained, but all the value that Gradle brings to builds is additionally available to the buildmaster.
 If we query Gradle for what Gradle tasks it knows about in Example 3-12, the answer will include the helloViaAttribute Ant target.
 Task list from the imported Ant project $ gradle tasks :tasks.
-Help tasks __________ dependencies - Displays the dependencies of root project 'ant-import-to-gradle'
 To see all tasks and more detail, run with --all.
 If we run the Gradle project requesting that the helloViaAttribute Gradle task be executed, we’ll get the bridged Ant behavior through a pure Gradle interface.
 Ant Target and Gradle Task Codependence Ant targets can even participate as a dependsOn of Gradle builds, as shown in Example 3-16
 Likewise, Ant targets can point to Gradle tasks as depends fields, as shown in Example 3-15
 The only requirement of the Ant and Gradle integration is that the more capable tool, Gradle, be the point of execution (see Example 3-17)
 Gradle must drive the initiation of the build, say from from the command line, IDE, or GUI, but can be either the subordinate or dominate player in the actual XML and Gradle build script flow.
-Define an Ant target and have it depend on a Gradle task.
 Define a task in Gradle that precedes the Ant target ant.importBuild 'build.xml'
 Using AntBuilder The power of using Ant with Gradle isn’t limited to just the prescribed approaches given thus far.
 Since the ant object is a full Groovy AntBuilder instance, existing paradigms and constructs from the Groovy language can be used here.
 Though comprehensive knowledge of Groovy is not a prerequisite, any increased understanding of Groovy has a direct benefit to the authoring of Gradle build files since Gradle supports the gamut of Groovy syntax.
 For example, to list the contents of a directory using an Ant FileScanner and Ant FileSet, just use the ant instance with Groovy closure nesting for Ant subelement access, as shown in Example 3-18
-Scan folders with Ant and iterate over the results in Gradle //Docs: http://ant.apache.org/manual/Types/fileset.html.
-Echo the Gradle project name via the ant echo plugin ant.echo(message: project.name) ant.echo(path) ant.echo("${projectDir}/samples")
-Gather list of files in a subdirectory fileset(dir:"samples") //Print each file to screen with the CWD (projectDir) path removed.
 The power of Groovy’s operators can also be leveraged inside AntBuilder calls, such as using the regular expression matcher inside an evaluation of all System properties in Example 3-19
-Use the Groovy regular expression operator in an AntBuilder output.
 In the ultimate combination, a progressive migration from Ant to Gradle can be greatly aided by the ability to bring Ant classpaths into the Gradle space.
 Use the Ant path references inside the Gradle build ant.importBuild 'build.xml'
-Set classpath to include the JAR println "The repositories bridged from Ant to Gradle are:" println repositories*.name.
 The Gradle build file that injects the build paths into Ant ant.importBuild 'build.xml'
-Ant paths injected by Gradle and then built using an Ant goal ant.path(id: 'gradlePathToLibs1', location: 'gradlelibs') // or // or ant.path(location: file('gradlelibs').absolutePath)
-No antBuild Task needs to be explicitly constructed // antBuild task is created by the build.xml import println "This Ant goal was converted to a Gradle task by the ant.importBuild call"
 A Harmonic Duo Over the course of this chapter, the examples have demonstrated the simplicity of integrating Ant with Gradle.
 The purpose of the cross-tool calls can either be that of a careful stepwise migration to Gradle, or the filling in for an absent Gradle plug-in with a well-established Ant equivalent.
 Gradle’s build tool compatibility represents an understanding of the real world of software engineering: migrations don’t always happen overnight and bridges to legacy technologies make Gradle an option for many more teams and projects.
@@ -504,8 +453,6 @@ That one line Gradle build file in Example 4-2, when executed with a mere gradle
 The described actions taken by Gradle are made evident by examining the files in the structure of the output directory.
 Maven Goals, Gradle Tasks The aforementioned minimalistic Gradle build also offered many of the tasks (nee Maven goals) we would have at our disposal with Maven.
 Let’s examine the names of these tasks by asking Gradle what it can offer us by invoking the tasks task.
-Documentation tasks ------------------javadoc - Generates Javadoc API documentation for the main source code.
-Help tasks ---------dependencies - Displays the dependencies of root project 'maven-gradle-comparison-simple'
 We see that tasks to clean, build, test, and JAR the project’s code are included via the simple inclusion of the java plug-in.
 The Standard Maven Coordinates, Gradle Properties That comparison of a one line build.gradle to the most minimal pom.xml was valid, but not completely controlled in the metadata values for groupId, artifactId, and version.
 In Gradle, the groupId is known just as group, the artifactId is known as name, and the version is identically version.
@@ -514,10 +461,8 @@ Growing our Gradle example to a more robust Maven POM equivalent, we’ll add th
 This is common in Gradle builds, even in the absence of the other group and artifact coordinates.
 The version property is defined in the Gradle DSL reference and is present in every type of build, even without the java plug-in.
 The archivesBase Name value is appended to the end of the produced JAR.
-Gradle build that includes a version number for the output artifact apply plugin: 'java'
 Recall that the artifact name defaults to the project’s directory name if no more precisely desired value is supplied as shown in Table 4-1
 Directory listing of output from the version-specified Gradle build $ tree.
-Next, using the knowledge gained in Table 4-1, we can control all values of the coordinates that would typically be set in a Maven-participating project.
 Note that the name field presented by the very foundation of Gradle is only mutable in the settings.gradle file, and if not supplied in settings.gradle, the archivesBaseName property is assigned a value instead.
 The archivesBaseName property is brought into existence by the java plug-in.
 Gradle 1.0 aims to simplify the field name mapping, doing away with archivesBaseName, and possibly providing a top level closure to configure the project’s Maven-equivalent coordinates.
@@ -532,11 +477,9 @@ The properties listed here have a wide range of rare to common in their frequenc
 Many have sensible defaults, such as status being set to release, and are thus only occasionally tuned to an alternative value.
 Adding the java plug-in as per the original sample build file introduces the additional properties shown in Example 4-8
 Dependencies It is rare to see a project stand alone, independent of any third party or in-house library.
-It almost goes without saying that a Java project will use some open source components such as log4j or commons-collections.
 Gradle offers both an Ivy and Maven dependency and repository compatibility layer, allowing for very simplistic and flexible specification of dependencies and repositories.
 A library is declared as a desired external dependency by a one-line listing in a closure named dependencies.
 The most concise form of expressing this is a colon-separated list of fields in a single string.
-Dependency on a library in the most concise syntax compile 'commons-beanutils:commons-beanutils:1.8.3'
 A more verbose form preferred by some, but accomplishing the same thing, is a fieldby-field list.
 What are these testCompile and compile phrases we see in Example 4-10? They are the scopes for which the declared external dependencies are to apply.
 With the java plug-in introduced, there are six available scopes (or configurations to use the precise Gradle term) to which dependencies can be assigned.
@@ -555,11 +498,9 @@ Ivy offers both a namesake format as well as compatibility with Maven repositori
 Gradle provides a bridge implementation to equally consume Ivy- or Maven-formatted repositories.
 Gradle goes far beyond just offering an API bridge to Ivy and Maven.
 It provides a Gradle-flavored DSL for both aforementioned dependency tools that make working with repositories quite simple.
+The ever-important Maven Central has its own predefined method mavenCentral()
 Since many organizations will need to additionally, or as a replacement, depend on a company-internal repository, that is equally easy with an addition of a URL to the mavenRepo configuration element of repositories in Example 4-15
 If your project needs a true Ivy repository with resolution customization, then Gradle is up to the task with a convenient ivy closure syntax, as shown in Example 4-16
-What if your dependencies aren’t yet in a standard repository, but rather are stored in.
-A flat filesystem repo // A single directory added to a custom-named repositories grouping.
-And a more convenient syntax for multiple directories added to the default grouping.
 Unit Testing Unit testing is enabled as soon as the java plug-in is included in a Gradle build script.
 There’s no additional effort to enable the testCompile dependency scope and test Classes task.
 However, the selection of a particular testing framework library still needs to be stated via the dependencies section of the build.gradle file.
@@ -567,15 +508,12 @@ This facilitates compiled tests being able to reference JUnit or TestNG annotati
 Enabling compilation of unit tests apply plugin: 'java' apply plugin: 'maven'
 The unit tests can be compiled via the testClasses task.
 However, it is far more common to both compile and execute the tests in one seamless step.
-The raw reports from the execution of the unit tests are written to the build/testresults directory and the distilled HTML output is written to the build/reports/tests directory.
 A sample HTML report from this unit test is handsomely formatted as shown in Figure 4-1
-Multiple Source Directories In Maven, it takes hackery and the help of the build-helper-maven-plug-in to add more than one source directory.
 This is one of those cases where constraints are helpful, right up to the point that you need to break them.
 Then, Maven causes you great pain to circumvent the limitation for your possibly very valid engineering reason.
 This is ultimately because the internal model of Maven is limited to just one source folder.
 On the other hand, Gradle offers you the convention of a single source folder, named src/main/java, but lets you add more directories very easily, should your build’s design call for it.
 A sourceSets entry named main is registered by default with the java plug-in and since that is a collection, we can simply modify it to give it an additional directory to scan during compilation, as shown in Example 4-23
-This add (while maintaining the default src/main/java) // can also be accomplished with a call: sourceSets.main.java.srcDirs 'srcAdditionalTwo/main/java'
 They are more than just a convenience for the build user, but rather a means to communicate which task was intended by the author to be the primary function of this build.
 Gradle has nearly the same facility, but has included support for multiple default tasks from the get-go.
 The Maven Plug-in It isn’t until the point at which we need to publish a Maven pom.xml file for our project to participate in Maven-compatible dependency resolution that we need to involve Gradle’s Maven plug-in.
@@ -584,7 +522,6 @@ If left empty, the project’s directory name is used, as per the defaults table
 A Gradle build file need only specify all the Maven coordinates if it wants precise control over each value.
 The full set of coordinates will be generated into the pom.xml file no matter what, simply with default values if not explicitly set.
 Gradle build that specifies all the usual Maven coordinates apply plugin: 'java' apply plugin: 'maven'
-Build directory listing from the fully coordinate-specified Gradle build $ tree.
 Alternatively, a configuration closure can be used to set the same information for the benefit of the generated pom.xml file.
 Using Configuration to control the generated POM apply plugin: 'java' apply plugin: 'maven'
 In either the approach of setting Gradle properties or authoring a configuration closure, we’ve simplified the setting of the standard Maven coordinates to their bare essence.
@@ -592,7 +529,6 @@ Both techniques equally shape the output of the JAR file’s name and the genera
 Installing to the Local Maven Repository (Cache) The Maven plug-in enabled Gradle to not only produce Maven-compatible pom.xml and JAR artifacts, but to install those to the local Maven repository.
 The standard ~/.m2/repository location is used as the destination, just as it would be from Maven.
 This install process, equivalent to mvn install, is guaranteed to be compatible with Maven because it actually uses the Maven Ant Tasks produced by the Maven team and hosted at Apache.
-The ~/.m2/settings.xml is consulted, as it would be with Maven, for an alternate location of the default local repository.
 Publishing to a Maven Repository After a successful Gradle build, a binary artifact such as a JAR should be deployed to a binary repository manager such as Artifactory or Nexus for team-wide consumption.
 Gradle again supports this as simply as its Maven predecessor would with a little configuration of the URL and transport, and then an equivalent to mvn deploy.
 As seen in the previous section, the maven plug-in for Gradle offers pom.xml and metadata file generation in addition to local installation to the ~/.m2/repository directory.
@@ -644,6 +580,7 @@ Displaying the Gradle worker JVMs with the jps utility $ jps.
 We can see that five GradleWorkerMain instances are indeed busy, running tests as per our Example 5-2 specifications.
 TestNG A more recent testing framework, TestNG, has been gaining traction in the Java space as of late.
 It is also an easy testing framework to use with Gradle.
+Only the modest addition of the useTestNG() call to the test closure is needed in addition to the refactoring of the unit test class.
 Lastly, when tests start to bifurcate into both unit and integration tests, which among many differentiators, typically means short and long running respectively, a need to also have the tool respect those separations arises.
 Gradle handles this with aplomb with a simple specification of a pattern of tests to include in each grouping as shown in Example 5-7
 Separating tests into unit and integration tests apply plugin: 'java'
@@ -651,7 +588,6 @@ This same goal of separating unit and integration tests could also be accomplish
 The sourceSet and configuration distinction (one for unitTest and one for integrationTest) has JAR dependency precision, but also more verbosity.
 This is similar to the technique employed by the Gradle plug-in in that it has a distinct set of files (src/main/groovy) and dependencies (like the Groovy core library)
 A Spock specification, since run under the umbrella of JUnit, can be executed by the mere addition of Spock’s JAR to Gradle’s dependencies.
-The standard results for JUnit executions also apply to Spock, providing a consistent summary of both traditional and specification-style test execution results, as shown in Figure 5-2
 Geb and EasyB Geb can be thought of as the furthest reaches of test automation on the JVM with Groovy-based control of web browsers for testing what is primarily thought of as a task for Selenium/WebDriver.
 There are a growing number of developers writing about and demonstrating this powerful combination of driving a browser from JUnit all the way to specification formats like easyB.
 Gradle can easily drive a Geb and easyB combination with just a few additional dependencies and an Ant task defintion, as shown in Example 5-10
@@ -693,16 +629,15 @@ Consequently, a richer API than the include method is available.
 In general, any part of the Gradle API that affects the structure of the build graph can be called in this file.
 We haven’t looked in detail at what these API calls are yet, but later on in this chapter, we’ll look at some of them when we extract parts of the subproject build files into the top-level build file.
 The top-level build file looks as shown in Example 6-2
-The root project build file, when subprojects have individual build files evaluationDependsOn(':codec')
 This Groovy code declares a list of four strings (each of which is the name of a poet), then iterates over that list.
 This line creates a dynamic task in the top-level project named after each poet.
 The args parameter expects a List, so we use Groovy list literal syntax to wrap the poet variable.
 There are a few things in this build file that we haven’t seen yet.
-First of all, note that the dependencies aren’t vectors describing a JAR file in a repository, but they are belonging to a subproject.
+First of all, note that the dependencies aren’t vectors describing a JAR file in a repository, but they are projects.
+The project() method queries the Gradle DAG and returns the project object belonging to a subproject.
 The colon at the beginning of the project name indicates the root of the project tree, in a similar way that a forward slash indicates the root directory in a Unix filesystem, or a backslash indicates the root directory on Windows.
 The project name following the colon is the project name as given in settings.gradle.
 This top-level project’s dependencies block indicates that it depends on the codec and content subprojects.
-The dynamic tasks created in this build file are JavaExec tasks, each of which runs the org.gradle.example.codedpoet.Command Line class, passing in the name of the poet as a command-line argument.
 Most importantly, each task’s classpath property is given two arguments: the runtimeClasspath of the top-level project, and the runtimeClasspath of the :codec project.
 The codec project’s classpath must be added to the JavaExec task explicitly because the codec introduces a dependency of its own: namely, the Apache commons-codec library.
 It is very typical for subprojects to have their own dependencies, either stored locally.
@@ -725,10 +660,14 @@ However, the build.gradle files in the codec and content subproject directories 
 They are replaced with configuration in the master build file (Example 6-6)
 This ensure that codec build objects will exist in the graph before the rest of this build file is evaluated.
 The allprojects method passes all of its configuration to all projects in the build, including the root and all subprojects.
+The project() method gives us direct access to the configuration of the codec subproject.
+Using this syntax, we can configure any project in the graph.
 In the unified build, all three projects need the Java plug-in, so we apply that plug-in inside the allprojects closure.
 If we had configuration to apply only to subprojects, we could use the subprojects method instead.
-The codec project has some individual configuration needs that don’t apply to the other can access the project graph of any configured subproject.
-The power and flexibility of which is implicitly the object being operated on by all of the methods normally called in a Gradle build file.
+The codec project has some individual configuration needs that don’t apply to the other two projects in the build, and we can apply this configuration by using the project() method.
+Using this syntax, we can access the project graph of any configured subproject.
+The power and flexibility of this syntax is difficult to overstate.
+The object returned by project() is a Project object, which is implicitly the object being operated on by all of the methods normally called in a Gradle build file.
 Just as repositories and dependencies are configured in this block, tasks could be created or modified, new Java SourceSets defined, plug-ins applied, or any other Gradle configuration operation performed.
 The ability to access the Project object from the top-level build file gives us complete control over the structure of the entire build.
 This feature is much more consequential than its ordinary-seeming syntax would suggest.
@@ -739,7 +678,6 @@ As an alternative to these, you may find that the most expressive way to describ
 Let’s rework the build files from the previous two examples to reflect such a hybrid configuration.
 The new root-level build file still contains an allprojects configuration, applying the Java plug-in to all projects.
 Otherwise, it looks just like the root project build file from the individual build file example.
-The build file of the root-level project in the hybrid multiproject build case.
 Since the dependency and repository configuration of the codec project were specific to that project, we push that configuration back down into its build file as shown in Example 6-8:
 Note that we do not apply the Java plug-in in the code project’s build file, since the Java plug-in is a common configuration step that is done in the root-level build.gra dle file.
 Because of this, there is no need to provide a build file for the content subproject, since that very simple build relies entirely on the defaults provided by the Java plug-in, which is applied by the root project.
@@ -772,5 +710,4 @@ He lives in Littleton, CO, with the wife of his youth and their three children.
 Matthew is an energetic fifteen-year veteran of enterprise software development, worldtraveling open source educator, and co-founder of Ambient Ideas, LLC, a U.S.
 His current topics of research center around project automation, including: build tools (Gradle, Leiningen, Maven, Ant), distributed version control (Git, Mercurial), testing frameworks (Geb, Spock, JUnit, TestNG, Mockito), continuous integration (Jenkins, Hudson, Bamboo) and code quality metrics (Sonar, CodeNarc, PMD)
 Colophon The animal on the cover of Building and Testing with Gradle, first edition, is a bush wren.
-The text font is Linotype Birka; the heading font is Adobe Myriad Condensed; and the code font is LucasFont’s TheSansMonoCondensed.
 Properties of DefaultTask didWork enabled path logger logging description temporaryDir.

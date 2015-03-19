@@ -2,7 +2,6 @@ O’Reilly logo is a registered trademark of O’Reilly Media, Inc.
 From startups to the Fortune 500, smart companies are betting on data-driven insight, seizing the opportunities that are emerging from the convergence of four powerful trends:
 Get control over big data and turn it into insight with O’Reilly’s Strata offerings.
 Find the inspiration and information to create new products or revive existing ones, understand customer behavior, and get the data edge.
-O’Reilly books may be purchased for educational, business, or sales promotional use.
 Scaling CouchDB, the image of a chough, and related trade dress are trademarks of O’Reilly Media, Inc.
 Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks.
 Where those designations appear in this book, and O’Reilly Media, Inc., was aware of a trademark claim, the designations have been printed in caps or initial caps.
@@ -36,7 +35,6 @@ Before you can scale CouchDB, you need to define your scaling goals.
 Once you have defined your goals then you can design your system.
 You should test the scalability of your system before it is deployed.
 See Chapter 6 for information about how to perform distributed load testing on your system using Tsung.
-When your system has been deployed to production, you should continue to monitor its performance and resource utilization using a tool such as Munin (a CouchDB plugin for Munin is available at https://github.com/strattg/munin-plugin-couchdb) or Nagios.
 You can monitor an individual node by issuing a GET HTTP request to /_stats which will return various statistics about the CouchDB node.
 What is Scalability? It’s important to note the distinctions between performance, vertical scaling, and horizontal scaling.
 Performance typically refers to properties of a system such as response time or throughput.
@@ -155,7 +153,6 @@ This second parameter contains the details of the replication request including 
 For example, req.query is a JSON object of query parameters (query_params from the replication request)
 Here is a design document containing the above filter, given the name authors:
 To use this filter during replication (the create_target parameter tells CouchDB to create the target database before replication):
-Here’s what the updated filter function would look like in a design document: "_id":"_design/default",
 If you know the exact IDs of the documents you want to replicate, then you can specify those instead of using a filter:
 Conflict Resolution When replicating, you will inevitably run into document update conflicts.
 This can happen when a document with the same ID has been updated independently on two or more CouchDB nodes.
@@ -170,8 +167,6 @@ First, CouchDB looks at the incrementing part of the revision number (the part b
 If both documents have the same number of revisions, then CouchDB simply does an ASCII comparison of the revision number and the document with the highest sort order wins.
 It is always a good idea to handle conflicts within your application by automatically merging documents in a way that makes sense to your application, or by presenting the conflict to an end user to resolve.
 If you’d like, you can verify this by querying the conflicted document on catalog-a, setting the conflicts query parameter to true:
-Based on this response, we can tell that revision 1-8e68b2b2f14a81190889dab9d04481d2 (the one with the comma) was picked by CouchDB as the winner.
-We can see here that revision 1-25042aaa901375bfd7cb63d189275197 is, in fact, the one with the missing comma.
 Since each is mutually exclusive, you will need to pick one if you are following along (or start this example again from the beginning for each)
 Picking the Same Revision as CouchDB If you pick the same revision to win as CouchDB picked, then you could just do nothing.
 However, the conflict will continue to be listed and, assuming you have an automated process to deal with conflicts, your application will continue to deal with the conflict indefinitely.
@@ -211,34 +206,29 @@ The details of this configuration are beyond the scope of this book.
 Apache was chosen as the load balancer for this scenario because it is relatively easy to configure and has the basic capabilities needed.
 Your hosting provider may also offer its own, proprietary load balancing tools.
 For example, Amazon has a tool called Elastic Load Balancing and Rackspace provides a service called Rackspace Cloud Load Balancers (in beta as of this writing)
-CouchDB Nodes In the following scenario, we will send write requests to one master node with a domain name of couch-master.example.com and distribute read requests to three nodes on machines with domain names of couch-a.example.com, couch-b.example.com, and couch-c.example.com.
 Install CouchDB on the master node and on all three slave nodes:
 We need to configure CouchDB to allow connections from the outside world.
 Unless your server is behind a firewall, this configuration change will allow anyone to access your CouchDB database.
-If you can’t connect remotely to one or more of the CouchDB nodes, then double-check that the bind_address in /etc/couchdb/local.ini is set to each machine’s correct IP address, respectively, and that you have restarted CouchDB.
 At this point we have four CouchDB databases, on four different nodes, running independently.
 If we write data to the master node, it will not be replicated to any of the slave nodes yet.
 Pull replication is when replication is triggered from the same node as the target.
 Push replication is when replication is triggered from the same node as the source.
-Set up a pull replication with couch-a.example.com pulling changes from couchmaster.example.com:
-Set up a pull replication with couch-b.example.com pulling changes from couchmaster.example.com:
-Set up a pull replication with couch-c.example.com pulling changes from couchmaster.example.com:
 You may want to set up replication using a separate, private, network so that you can have dedicated bandwidth for private and public requests.
 It has many features including a proxy server and a load balancer (as of version 2.1)
-In this exercise, we will create our load balancer on a machine with a domain name of couch-proxy.example.com..
-On couch-proxy.example.com, edit /etc/apache2/httpd.conf and add the following (it is likely that the file will be empty to start with):
-To instead balance by busyness, add the order doesn’t matter.
 You will also need to configure your virtual host to enable the rewrite engine and inherit the rewrite options from the server configuration above.
-Let’s take a look at each line of the /etc/apache2/httpd.conf configuration file.
 If you have mod_deflate enabled then this module will add a Vary HTTP header with a value of Accept-Encoding.
 A Vary HTTP header informs a client as to what set of request-header fields it is permitted to base its caching on.
 Since mod_deflate may be adding this header, and CouchDB uses the Accept header to vary the media type (reflected in a ContentType header with either a value of text/plain or application/json), it’s a good idea to make sure that clients know to also vary their caching based on the Accept HTTP header, and not just the Accept-Encoding HTTP header.
 The line beginning with Header add Set-Cookie sets a cookie named NODE on the client.
 The value of this cookie will be the route name associated with the load balancer member that served the request.
 This allows for sticky sessions meaning that, once a client has been routed to a specific load balancer member, that client’s requests will continue to be routed to that same load balancer member node.
-This provides more consistency only be sent if the load balancer route has changed.
-A later configuration directive will define what requests should be sent to.
-Keep the maximum number of connections to each CouchDB node low 4 may seem like a very low number, CouchDB will respond to each request very quickly and allow for a high level of throughput.
+The path=/api part indicates to the client the URL path for which the cookie is valid.
+A later configuration directive will define what requests should be sent to this load balancer.
+The three BalancerMember lines each add a member to the load balancer.
+The max=4 parameters indicate the maximum number of connections that the proxy will allow to the backend server.
+The ProxySet stickysession=NODE directive indicates to the load balancer the cookie name to use (in this case NODE) when determining which route to use.
+Keep the maximum number of connections to each CouchDB node low (e.g., max=4)
+While 4 may seem like a very low number, CouchDB will respond to each request very quickly and allow for a high level of throughput.
 If the proxy server has enough memory and is configured to allow enough concurrent clients itself, then it can effectively queue requests for the backend servers.
 If we didn’t need to proxy requests based on the HTTP method, we could have used the ProxyPass directive.
 The next line sets up a rewrite condition that says to only run the subsequent rewrite rule if the request HTTP method is POST, PUT, DELETE, MOVE, or COPY:
@@ -247,15 +237,11 @@ This one says to only run the subsequent rewrite rule if the request HTTP method
 The subsequent rewrite rule then proxies all requests to URIs starting with /api to the equivalent URI on the couch-master load balancer (again, only if the previous rewrite condition has been met):
 The following ProxyPassReverse directives instructs Apache to adjust the URLs in the HTTP response headers to match that of the proxy server, instead of the reverse proxied server.
 This is mainly useful for the Location header that is sent when CouchDB creates a new document:
-Open /etc/apache2/apache2.conf and look for the ServerLimit, ThreadsPerChild, and MaxClients directives.
 These directives are intended to prevent your server from running out of memory and swapping, which would significantly decrease performance.
 Testing Test your load balancer by making an HTTP request to the proxy server:
 It should proxy the request through to one of the CouchDB nodes and respond as follows (your details will be different):
 Let’s try and POST a new document to the load balancer, treating it as if it’s a CouchDB node:
 Let’s try and GET the newly created document from the load balancer, again treating it as if it’s a CouchDB node:
-If you GET the newly created document from couch-a.example.com, then you should get the exact same response:
-If you GET the newly created document from couch-b.example.com, then you should get the exact same response:
-Finally, if you GET the newly created document from couch-c.example.com, then you should get the exact same response:
 If the document did not replicate from one CouchDB node to the other, then make sure that continuous replication is running.
 See Chapter 6 for information about how to perform distributed load testing.
 To increase, please see the ServerLimit directive.” As mentioned before, Apache limits the MaxClients to the ServerLimit multiplied by the ThreadsPerChild.
@@ -326,36 +312,15 @@ We will be using Tsung on Ubuntu, but these steps can be easily adapted to other
 Tsung can generate GET and POST HTTP requests and, as of version 1.2.1, PUT and DELETE HTTP requests.
 Depending on the number of testing servers used, Tsung can simulate hundreds of thousands of concurrent users.
 Given enough servers, you could even simulate millions of concurrent users.
-Installing Tsung In the following examples, we will have two testing clients with domain names of testa.example.com and test-b.example.com, and we will be testing our couch-proxy.exam ple.com (load balancer), couch-master.example.com (CouchDB master node), coucha.example.com (CouchDB read-only node), couch-b.example.com (CouchDB read-only node), couch-c.example.com (CouchDB read-only node) servers.
-Install gnuplot on both test-a.example.com and test-b.example.com: sudo aptitude install gnuplot.
-Install Perl’s Template Toolkit on both test-a.example.com and test-b.example.com: sudo aptitude install libtemplate-perl.
-Install Python’s Matplotlib on both test-a.example.com and test-b.example.com: sudo aptitude install python-matplotlib.
-Download the latest version of Tsung on both test-a.example.com and test-b.exam ple.com.
-Extract the downloaded file on both test-a.example.com and test-b.example.com: tar -xzf tsung-1.3.3.tar.gz.
-On both test-a.example.com and test-b.example.com, change into the tsung-1.3.3 directory:
-We will be launching our tests from test-a.example.com, so you will need to be able to login from this client to test-b.example.com without using a password.
 We will do this using public key authentication, but you could instead use ssh-agent or rsh.
-Install the OpenSSH server on test-a.example.com and test-b.example.com, if it is not already:
 Each of your testing clients should use the same username for running tests.
 Setting up multiple machines will be much easier if the same username is used on each.
 If you use Erlang-based remote monitoring, create this same username on each server to be monitored as well.
 Alternatively, you can configure default usernames in your users’ SSH configuration files.
-Generate an SSH key on test-a.example.com, if you have not already: ssh-keygen.
 Pick the default file in which to save the key, likely ~/.ssh/id_rsa.
-If this is the first time using SSH to connect from test-a.example.com to test-b.exam ple.com, you will need to accept the RSA key fingerprint.
 Enter the user’s password and you should see output indicating that the file has been copied.
-Log into test-b.example.com and add the public key copied from test-a.example.com to test-b.example.com’s list of authorized keys:
-Still on test-b.example.com, remove the public key that was copied over from testa.example.com:
-To test, try logging into test-b from test-a.example.com, accepting the RSA key fingerprint if prompted, and you should not be prompted for a password:
-We are using the local hostname, test-b, rather than the complete hostname, test-b.example.com, since Tsung will require us to use the local hostname in our test configuration.
 Tsung will also allow you to use the IP address of the machine, if you’d prefer.
-If you have additional testing clients, repeat the above steps for each, setting up testa.example.com to be able to log into each testing machine without using a password.
 The more testing servers you have, the more simulated load you can generate.
-Oddly enough, test-a.example.com will also need to be able to log into itself without using a password.
-To add its own public key to its list of authorized keys, from testa.example.com:
-To test, try logging into test-a from test-a.example.com (yes, from itself), accepting the RSA key fingerprint if prompted, and you should not be prompted for a password:
-Configuring Tsung Tsung comes with an example configuration file for doing distributed HTTP testing, which you’ll find in /usr/share/doc/tsung/examples/http_distributed.xml.
-The location of the DTD file, /usr/share/tsung/tsung-1.0.dtd, may be different on your testing client.
 If so, this value will need to be modified to match the location on your client.
 All client hosts must be able to resolve the hostname of the machine running the tests.
 In the above configuration, test-b must be able to resolve the IP address of test-a.
@@ -415,7 +380,6 @@ The If-None-Match HTTP header allows us to use conditional caching and the Accep
 The remaining sessions in the configuration file should be self-explanatory.
 Running Tsung First, we need to create the view that is used in the above configuration file.
 This is simply a view of dates (as an array of year, month, and day) from our documents:
-Start Tsung, telling it to use the above configuration file: tsung -f ~/http_distributed_couch_proxy.xml start.
 Note that Tsung will wait for all sessions to complete before finishing, even if it takes longer than the duration of all phases.
 Tsung will let you know what directory it has logged to, for example:
 Change into the log directory and generate the HTML and graph reports using the tsung_stats.pl script package with Tsung:
@@ -441,9 +405,6 @@ For the final graph, the y-axis represents the number of responses per second of
 Monitoring Tsung can monitor the CPU usage, memory usage, and load on your servers as they are being tested.
 This data can be used to better allocate your available network resources.
 You can use either Erlang, SNMP, or Munin to monitor your servers.
-Next, you need to configure all of your Munin nodes to allow monitoring by testa.example.com.
-Start Tsung, telling it to use the above configuration file, as before: tsung -f ~/http_distributed_couch_proxy.xml start.
-As before, Tsung will let you know what directory it has logged to: "Log directory is: /home/bradley-holt/.tsung/log/20110221-23:39"
 Just like before, change into the log directory and generate the HTML and graph reports using the tsung_stats.pl script:
 This time you will see a few new statistics and graphs.
 On the statistics report page, under server monitoring, you will see several statistics from the monitored servers.
@@ -468,4 +429,3 @@ It appears that the proxy server is effectively queuing requests for the backend
 Based on the above hypothesis, adding more read-only CouchDB nodes might actually lessen the load on the proxy server.
 Of course, we should test this hypothesis before we assume its validity.
 We’re not going to do that here, but the point is that you should always challenge your assumptions with an actual test.
-The configuration being tested matches that described in Chapter 4

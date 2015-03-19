@@ -68,15 +68,11 @@ In addition, we support a significant number of statistical aggregate functions 
 The implementation of aggregate functions on the MapReduce framework have been discussed in numerous papers including the original MapReduce paper [9]; however, Tenzing employs a few additional optimizations.
 One such is pure hash table based aggregation, which is discussed below.
 However, it is impossible to implement efficiently on the basic MapReduce framework, since the reducer always unnecessarily sorts the data by key.
-MapReduce framework to relax this restriction so that all values for the same key end up in the same reducer shard, it possible to completely avoid the sorting step on the reducer and implement a pure hash table based aggregation on MapReduce.
+MapReduce framework to relax this restriction so that all values for the same key end up in the same reducer shard, but not necessarily in the same Reduce() call.
+This made it possible to completely avoid the sorting step on the reducer and implement a pure hash table based aggregation on MapReduce.
 This can have a significant impact on the performance on certain types of queries.
 Due to optimizer limitations, the user must explicitly indicate that they want hash based aggregation.
 A query using hash-based aggregation will fail if there is not enough memory for the hash table.
-In the mapper startup, initialize a hash table with dept id // as key and count as value.
-For each row, increment the count for the corresponding // dept id.
-At the end of the mapping phase, flush the hash table to // the reducer, without sorting.
-Each Reduce call receives a dept id and a count from // the map output.
-At the end of the reduce phase, flush out the // aggregated results.
 Since joins are one of the most important aspects of our system, we have spent considerable time on implementing different types of joins and optimizing them.
 Tenzing supports efficient joins across data sources, such as ColumnIO to Bigtable; inner, left, right, cross, and full outer joins; and equi semi-equi, non-equi and function based joins.
 Cross joins are only supported for tables small enough to fit in memory, and right outer joins are supported only with sort/
@@ -107,25 +103,17 @@ Tenzing has an implementation which is most effective when the two tables being 
 Neither table fits completely in memory, • One table is an order of magnitude larger than the.
 Neither table has an efficient index on the join key.
 These conditions are often satisfied by OLAP queries with star joins to large dimensions, a type of query often used with Tenzing.
-The optimizer creates the MapReduce operations required // for the hash join and aggregation.
-At the start of the mapper, load the corresponding // dimension shard into memory.
-For each row, increment the count for the corresponding // dimension key.
-At the end of the mapping phase, flush the hash table // to the reducer, without sorting.
 Note that no sorting is required in any of the MapReduces, so it is disabled for all of them.
 The reducer code is identical to the hash aggregation pseudo-code in 4.2.1
 The Tenzing scheduler can intelligently parallelize operations to make hash joins run faster.
-We also added several optimizations to the MapReduce framework to improve the efficiency of distributed hash joins, such as sort avoidance, streaming, memory chaining and block shuﬄe.
 These functions have proven to be quite popular with the analyst community.
 Consider the following example with analytic functions which ranks employees in each department by their salary:
-From the mapper, we output the partitioning key of // the analytic function as the key, and the ordering // key and other information as value.
-Reducer receives all values with the same partitioning // key.
-The list is then sorted on the ordering key for // the analytic function.
 Currently, Tenzing does not support the use of multiple analytic functions with different partitioning keys in the same query.
 We plan to remove this restriction by rewriting such queries as merging result sets from multiple queries, each with analytic functions having the same partitioning key.
 Note that it is possible to combine aggregation and analytic functions in the same query - the compiler simply rewrites it into multiple queries.
+We follow the Oracle variant of the syntax for these extensions.
+These are implemented by emitting additional records in the Map() phase based on the aggregation combinations required.
 Consider the following query which outputs the salary of each employee and also department-wise and grand totals:
-For each row, emit multiple key value pairs, one // for each combination of keys being aggregated.
-The reducer will do a standard pre−sorted // aggregation on the data.
 Set operations are implemented mainly in the reduce phase, with the mapper emitting the records using the whole record as the key, in order to ensure that similar keys end up together in the same reduce call.
 This does not apply to UNION ALL, for which we use round robin partitioning and turn off reducer side sorting for greater efficiency.
 Tenzing supports SELECT queries anywhere where a table name is allowed, in accordance with the SQL standard.
@@ -180,14 +168,6 @@ The original implementation of Tenzing serialized all intermediate data to GFS.
 This led to poor performance for multi-MapReduce queries, such as hash joins and nested sub-selects.
 We improved the performance of such queries significantly by implementing streaming between MapReduces, i.e.
 We subsequently improved performance further by using memory chaining, where.
-Certain operators such as hash join and hash aggregation require shuﬄing, but not sorting.
-The MapReduce API was enhanced to automatically turn off sorting for these operations.
-When sorting is turned off, the mapper feeds data to the reducer which directly passes the sorting step.
-Typically, MapReduce uses row based encoding and decoding during shuﬄe.
-This is necessary since in order to sort the data, rows must be processed individually.
-We implemented a block-based shuﬄe mechanism on top of the existing row-based shuﬄer in MapReduce that combines many small rows into compressed blocks of roughly 1MB in size.
-By treating the entire block as one row and avoiding reducer side sorting, we were able to avoid some of the overhead associated with row serialization and deserialization in the underlying MapReduce framework code.
-This lead to 3X faster shuﬄing of data compared to row based shuﬄing with sorting.
 The backend can detect the size of the underlying data to be processed.
 If the size is under a threshold (typically 128 MB), the query is not sent to the pool, but executed directly in the client process.
 Because it is built on the MapReduce framework, Tenzing has excellent scalability characteristics.
@@ -243,10 +223,8 @@ The Sawzall team, specifically Polina Sokolova and Robert Griesemer, for helping
 Various other infrastructure teams at Google, including but not limited to the Bigtable, GFS, Machines and SRE teams.
 Our loyal and long-suffering user base, especially the people in Sales & Finance.
 HadoopDB: an architectural hybrid of MapReduce and DBMS technologies for analytical workloads.
-Nephele/pacts: a programming model and execution framework for web-scale analytical processing.
 A comparison of join algorithms for log processing in MapReduce.
 Scope: easy and efficient parallel processing of massive data sets.
 SQL/MapReduce: A practical approach to self-describing, polymorphic, and parallelizable user-defined functions.
-DryadLINQ: a system for general-purpose distributed data-parallel computing using a high-level language.
 This section contains the queries used for benchmarking performance against DBMS-X.
 The table sizes are indicated using XM or XK suffix.

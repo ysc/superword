@@ -13,6 +13,7 @@ In particular, memory barriers or other techniques may be required to ensure tha
 Final field example where Reference to object is read twice.
 Bytes must not be overwritten by writes to adjacent bytes.
 The only way for a user to create a thread is to create an object of this class; each Java thread is associated with such an object.
+A thread will start when the start() method is invoked on the corresponding Thread object.
 The behavior of threads, particularly when not correctly synchronized, can be confusing and counterintuitive.
 This specification describes the semantics of multithreaded Java programs, including rules for which values may be seen by a read of shared memory that is updated by multiple threads.
 As the specification is similar to the memory models for different hardware architectures, these semantics are referred to as the Java memory model.
@@ -40,7 +41,6 @@ The Java memory model is not fundamentally based in the Object-Oriented nature o
 For concision and simplicity in our examples, we often exhibit code fragments that could as easily be C or Pascal code fragments, without class or method definitions, or explicit dereferencing.
 Most examples consist of two or more threads containing statements with access to local variables, shared global variables or instance fields of an object.
 The semantics of the Java programming language allow compilers and microprocessors to perform optimizations that can interact with incorrectly synchronized code in ways that can produce behaviors that seem paradoxical.
-It may appear that must come first in an execution.
 However, compilers are allowed to reorder the instructions in each thread, when this does not affect the execeution of that thread in isolation.
 To some programmers, this behavior may make it seem as if their code is being “broken” by Java.
 However, it should be noted that this code is improperly synchronized:
@@ -66,7 +66,8 @@ There are a number of ways to induce a happens-before ordering in a Java program
 Each action in a thread happens before every subsequent action in that thread.
 An unlock on a monitor happens before every subsequent lock on that monitor.
 A write to a volatile field happens before every subsequent read of that volatile.
-All actions in a thread happen before any other thread successfully returns from a.
+A call to start() on a thread happens before any actions in the started thread.
+All actions in a thread happen before any other thread successfully returns from a join() on that thread.
 If an action a happens before an action b, and b happens before an action c, then a happens before c.
 When a program contains two conflicting accesses that are not ordered by a happensbefore relationship, it is said to contain a data race.
 A correctly synchronized program is one that has no data races (Section 3.4 contains a subtle but important clarification)
@@ -75,25 +76,32 @@ However, a different execution, shown in Figure 3b, shows why this program is in
 If a program is not correctly synchronized, then three types of problems can appear: visibility, ordering and atomicity.
 If an action in one thread is visible to another thread, then the result of that action can be observed by the second thread.
 In order to guarantee that the results of one action are observable to a second action, then the first must happen before the second.
-Now imagine that two threads are created, and that one no happens-before relationship between the two threads, the thread in the loop may never see the update to done performed by the other thread.
+Now imagine that two threads are created, and that one thread calls work(), and at some point, the other thread calls stopWork()
+Because there is no happens-before relationship between the two threads, the thread in the loop may never see the update to done performed by the other thread.
 In practice, this may happen if the compiler detects that no writes are performed to done in the first thread; the compiler may hoist the read of done out of the loop, transforming it into an infinite loop.
 To ensure that this does not happen, there must be a happens-before relationship between the two threads.
 In LoopMayNeverEnd, this can be achieved by declaring done to be volatile.
 Conceptually, all actions on volatiles happen in a single order, and each write to a volatile field happens before any read of that volatile that occurs later in that order.
 Ordering constraints govern the order in which multiple actions are seen to have happened.
 The ability to perceive ordering constraints among actions is only guaranteed to actions that share a happens-before relationship with them.
+The code in Figure 5 shows an example of where the lack of ordering constraints can produce surprising results.
+Consider what happens if threadOne() gets executed in one thread and threadTwo() gets executed in another.
+Would it be possible for threadTwo() to return the value true?
 The Java memory model allows this result, illustrating a violation of the ordering that a.
 This code fragment is not correctly synchronized (the conflicting accesses are not ordered by a happens-before ordering)
-Compilers have substantial freedom to reorder code in the absence to b, but before the assignment to a.
+If ordering is not guaranteed, then the assignments to a and b in threadOne() can be performed out of order.
+Compilers have substantial freedom to reorder code in the absence of synchronization.
+This might result in threadTwo() being executed after the assignment to b, but before the assignment to a.
 To avoid this behavior, programmers must ensure that their code is correctly synchronized.
 Section 11 discusses some atomicity issues for Java; other than the exceptions mentioned there, all individual read and write actions take place atomically.
 Atomicity can also be enforced on a sequence of actions.
 A program can be free from data races without having this form of atomicity.
 However, enforcing this kind of atomicity is frequently as important to program correctness as enforcing freedom from data races.
 Since all access to the shared variable balance is guarded by synchronization, the code is free of data races.
-Ideally, at the end of these two calls, there would still be a balance of 10
+The deposit() method sees a value of 10 for the balance, then.
+The deposit() method uses the balance it originally saw to calculate the new balance.
 A programmer writing multi-threaded code must use synchronization carefully to avoid this sort of error.
-For this the actions of those methods take place atomically.
+For this example, making the deposit() and withdraw() methods synchronized will ensure that the actions of those methods take place atomically.
 If a program has no data races, then executions of the program are sequentially consistent: very strong guarantees are made about visibility and ordering.
 Within a sequentially consistent execution, there is a total order over all individual actions (such as a read or a write) which is consistent with program order.
 Each individual action is atomic and is immediately visible to every thread.
@@ -119,7 +127,9 @@ If this is followed, then when the object is seen by another thread, that thread
 It will also see versions of any object or array referenced by those final fields that are at least as up-to-date as the final fields are.
 Figure 7 gives an example that demonstrates how final fields compare to normal fields.
 The class FinalFieldExample has a final int field x and a non-final int field y.
-One thread guaranteed to see the properly initialized value for f.x: it will read the value 3
+One thread might execute the method writer(), and another might execute the method reader()
+Because writer() writes f after the object’s constructor finishes, the reader() will be guaranteed to see the properly initialized value for f.x: it will read the value 3
+However, f.y is not final; the reader() method is therefore not guaranteed to see the value 4 for it.
 Final fields are designed to allow for necessary security guarantees.
 String objects are intended to be immutable and string operations do not perform synchronization.
 While the String implementation does not have any data races, other code could have data races involving the use of Strings, and the JLS makes weak.
@@ -130,8 +140,6 @@ This is only an overview of the semantics of final fields.
 For a more detailed discussion, which includes several cases not mentioned here, consult Section 9
 A memory model describes, given a program and an execution trace of that program, whether the execution trace is a legal execution of the program.
 Java’s memory model works by examining each read in an execution trace and checking that the write observed by that read is valid.
-A high level, informal overview of the memory model shows it to be a set of rules for when writes by one thread are visible to another thread.
-Informally, a read r can see the value of any write w such that w does not occur after r and w is not seen to be overwritten by another write w′ (from r’s perspective)
 When we use the term “read” in this memory model, we are only referring to values returned from fields or array elements.
 There are other actions performed by a virtual machine, including reads of array lengths, executions of checked casts, and invocations of virtual methods, that are not affected directly by the memory model or data races.
 Although these may be implemented with reads at the machine level, these actions cannot throw an exception or otherwise cause the VM to misbehave (e.g., crash the VM, allow access outside an array or report the wrong array length)
@@ -160,14 +168,12 @@ Synchronization Actions All inter-thread actions other than reads and writes of 
 These include locks, unlocks, reads of and writes to volatile variables, actions that start a thread, and actions that detect that a thread is done.
 Synchronization Order In any execution, there is a synchronization order which is a total order over all of the synchronization actions of that execution.
 For each thread t, the synchronization order of the synchronization actions in t is consistent with the program order of t.
-Happens-Before Edges If we have two actions x and y, we use x hb→ y to mean that x.
 If x and y are actions of the same thread and x comes before y in program.
 There is a happens-before edge from an unlock action on monitor m to all subsequent lock actions onm (where subsequent is defined according to the synchronization order)
 There is a happens-before edge from a write to a volatile variable v to all subsequent reads of v by any thread (where subsequent is defined according to the synchronization order)
 There is a happens-before edge from an action that starts a thread to the first action in the thread it starts.
 In addition, we have two other rules for generating happens-before edges.
 There is a happens-before edge from the write of the default value (zero, false or null) of each variable to the first action in every thread.
-It should be noted that the presence of a happens-before relationship between two actions.
 However, the fact that they took place out of order should not be detectable.
 For example, the write of a default value to every field of an object constructed by a thread need not occur before the beginning of that thread, as long as no read ever observes that fact.
 The wait methods of class Object have lock and unlock actions associated with them; their happens-before relationships are defined by these associated actions.
@@ -187,7 +193,6 @@ The code fragment should always return a value that is twice that of a value rea
 The transformed fragment return x+x could return an odd value.
 Some operations (e.g., writing a volatile variable, unlocking a monitor, starting a thread) have release semantics: they allow the actions that happen before the release to be visible to and ordered before following actions.
 It is generally legal to reorder a normal memory access and a following acquire action, or a release action and a following normal memory access.
-Although the processors vary in terms of how actions such as volatile accesses and synchronization need to be implemented, the standard processor architectures can all directly implement non-volatile, non-synchronization actions without any additional memory barriers.
 Note, however, that some processor architectures (specifically, Alpha and DSM architectures) may have more implementation issues for correct handling of accesses to final fields.
 A synchronization action is useless in a number of situations, including lock acquisition on thread-local objects or the reacquisition of a lock on an object on which a thread already has a lock.
 A number of papers have been published showing compiler analyses that can detect and remove useless synchronization.
@@ -256,7 +261,6 @@ This issue actually arises because programs are often not actually executed in t
 Compilers, JVMs and architectures often reorder operations or perform them in parallel.
 For purposes of this document, however, we will talk about the problem in terms of reads seeing writes that occur later in the execution order.
 Even when a program is incorrectly synchronized, there are certain behaviors that violate causality in a way that is considered unacceptable.
-An example of this is given in Figure 12; program.
 Examples such as these reveal that the specification must sometimes allow and sometimes prohibit a read to see a write that occurs later (perhaps representing the fact that the write is.
 However, the details are complicated and can be controversial, in part because they rely on judgments about acceptability that are not covered by traditional program semantics.
 There are, however, two uncontroversial properties that are easy to specify:
@@ -265,15 +269,12 @@ In this section, we give a number of examples of behaviors that are either allow
 Most of these are either examples that show violations of our informal notion of causality, and thus are prohibited, or examples that seem to be a violation of causality but can result from standard compiler optimizations, and are in fact allowed.
 The example in Figure 12 provides an example of a result that is clearly unacceptable.
 There are no reasonable compiler transformations that produce this result.
-A compiler would not that performs the writes early, but in a way that they were not visible to local reads that came before them in program order.
 This behavior, while surprising, is a common optimization that is allowed by the Java memory model.
 Without this information, the assignment seems to cause itself to happen.
 Thus, simple compiler optimizations can lead to an apparent causal loop.
-This behavior would seem impossible, because thread 2 should not be able to decide which assignment statement it will execute.
-This behavior can result from a compiler detecting that in every execution some statement in advance which statement would have caused the action to occur.
-This may cause r1 to different place from the one it was originally.
+This behavior would seem impossible, because thread 2 should not be able to decide which assignment statement it will execute until after it has read b.
+Thus, the action may be performed early, even though we don’t know in advance which statement would have caused the action to occur.
 The write to y is therefore not dependent on the value seen for x.
-From that, the compiler could deduce that, at the point read x and seen the value 42
 In either case, it would be legal for a read of x to see the value.
 This sort of behavior is not known to result from any combination of known reasonable and desirable optimizations.
 However, there is also some question as to whether this reflects a real and serious security requirement.
@@ -286,7 +287,6 @@ Objects that have only final fields and are not made visible to other threads du
 Storing a reference to an object X into the heap during construction of X does not necessarily violate this requirement.
 For example, synchronization could ensure that no other thread could load the reference to X during construction.
 Alternatively, during construction of X a reference to X could be stored into another object Y ; if no references to Y are made visible to other threads until after construction of X is complete, then final field guarantees still hold.
-Making a field f final should impose minimal compiler/architectural cost when reading f.
 The use of final fields adds constraints on which writes are considered ordered before which reads, for the purposes of determining if an execution is consistent.
 Assume a freeze action on a final field f of an object X takes place when the constructor for X in which f is written exits.
 When is R guaranteed to see the correctly initialized value of X.f?
@@ -295,7 +295,6 @@ For any object X, thread t2 must have obtained its address via a chain of the fo
 Thread ti wrote a reference to an object Y which was read by another thread tj.
 Thread ti read a reference to an object Y , and then read a field of Y to see a reference to another object Z.
 Thread ti read a reference to an object Y , and later wrote a reference to Y.
-If there is an action a in this chain such that F hb→ a, then R is correctly ordered with.
 If there is no such action, then R does not get that guarantee.
 An execution of this code is shown in Figure 21, with the reference links shown and labeled.
 In order for the read of b.f to be correctly ordered with respect to the construction of the object.
@@ -308,11 +307,9 @@ On the chain that goes through the global variable b, there is no action that is
 Therefore, k is not guaranteed to see the correctly constructed value for the final field.
 The fact that k does not receive this guarantee reflects legal transformations by the compiler.
 A compiler can analyze this code and determine that r.f and t.f are reads of the same final field of the same object.
-Since final fields are not supposed to change, it could.
 The read is therefore correctly ordered with respect to the freeze operation, and guaranteed to see the correct value.
 A final field may only be written by bytecode once.
 A classfile may be rejected in any one of the following situations:
-Notation Description G The set of freezes associated with a write of an address freezeBeforeRead(r) The freezes seen at a read r; if r sees address a, it is used.
 It consists of only the freezes seen at every read in the thread in isolation.
 It consists of only the writes seen at every read in the thread in isolation.
 Figure 23: Sets used in the formalization of final fields.
@@ -326,22 +323,10 @@ A final field may be written to multiple times: once by bytecode in a constructo
 After the constructor for the enclosing object, a final field is explicitly frozen.
 After the other writes, the VM may optionally choose to freeze the final field.
 For the purposes of this discussion, freeze can be considered a noun: a freeze can be copied from thread to thread, and the set of freezes visible to a given thread for a field are the ones that provide the guarantees for that field.
-A set of freezes G are written at every write of an enclosing object, and a set of freezes freezesBeforeDereference(t, a) are observed at every read of an enclosing object at address a in thread t.
 The set G of freezes that are written at every write w of an enclosing object at address a include:
-The set freezesBeforeDereference(t, a) consisting of all the freezes that were observed by that thread’s read of a.
 Each reference a to an object may be stored in fields of several different objects.
-Each read r in thread t of one of these fields has a set freezeBeforeRead(r) associated with it.
-The set freezeBeforeRead(r) that is associated with a single read is, however, not the set that determines what freezes are seen when the field is accessed.
-This set is called freezesBeforeDereference(t, a), and is the intersection of all of the sets freezeBeforeRead(r) whose read saw the address a.
-The set freezesBeforeDereference(t, a) therefore only contains those freezes that are associated with all of the reads of a given field.
-Once we have the set freezesBeforeDereference(t, a) for a given address, we must determine what writes we are guaranteed to see; this is the set writesBeforeDereference(t, a)
-To calculate writesBeforeDereference(t, a), we look at all of the places a thread can read a reference to an object.
-Each of these reads r has a set writesBeforeRead(r) associated with it.
-If the reference to the object was a non-final field, then the writesBeforeRead(r) set is the same as the writesBeforeDereference(t, o) set for the enclosing object.
-If the reference to the object was a final field, then the writesBeforeRead(r) set contains: – The writesBeforeDereference(t, o) set for the enclosing object.
-The set of writes that happen before each freeze of the enclosing object that is present in the set freezesBeforeDereference(t, o) for the object.
-The set writesBeforeDereference(t, a) is the intersection of all of the writesBeforeRead(r) sets whose reads saw a ; this gives us only those writes that are associated with all of the reads of a given field.
-However System.in, System.out, and System.err are final static fields that, for legacy reasons, must be allowed to be changed by fields as being write-protected to distinguish them from ordinary final fields.
+However System.in, System.out, and System.err are final static fields that, for legacy reasons, must be allowed to be changed by the methods System.setIn(), System.setOut() and System.setErr()
+We refer to these fields as being write-protected to distinguish them from ordinary final fields.
 Figure 24: Bytes must not be overwritten by writes to adjacent bytes.
 The compiler needs to treat these fields differently from other final fields.
 For example, a read of an ordinary final field is “immune” to synchronization: the barrier involved in a lock or volatile read does not have to affect what value is read from a final field.
@@ -362,7 +347,8 @@ One example of a such a guarantee would state that if a thread is infinitely oft
 Java has no official fairness guarantee, although, in practice, most JVMs do provide it to some extent.
 An example of how this issue can impact a program can be seen in Figure 25
 Without a fairness guarantee, it is perfectly legal for a compiler to move the synchronized block outside the while loop; Thread 2 will be blocked forever.
-Any potential fairness guarantee would be inextricably linked to the threading model for a is called will, in fact, never allow Thread 2 to execute.
+Any potential fairness guarantee would be inextricably linked to the threading model for a given virtual machine.
+A threading model that only switches threads when Thread.yield() is called will, in fact, never allow Thread 2 to execute.
 A fairness guarantee makes this sort of implementation illegal; it would force Thread 2 to be scheduled.
 Because this kind of implementation is often desirable, this specification does not include a fairness guarantee.
 In particular, for any execution shown to be legal by the semantics for consistency and causality, it would also be legal to execute just the instructions in any prefix of the causal order of that execution.
@@ -372,34 +358,33 @@ Elementary actions that add threads to and remove threads from wait sets are ato
 Wait sets are manipulated in Java solely through the methods Object.wait, Object.notify , and Object.notifyAll.
 Wait set manipulations can also be affected by the interruption status of a thread, and by the Thread class methods dealing with interruption.
 Additionally, Thread class methods for sleeping and joining other threads have properties derived from those of wait and notification actions.
+Wait actions occur upon invocation of wait(), or the timed forms wait(long millisecs) and wait(long millisecs, int nanosecs)
+A call of wait(long millisecs) with a parameter of zero, or a call of wait(long millisecs, int nanosecs) with two zero parameters, is equivalent to an invocation of wait()
 Let thread t be the thread executing the wait method on Object m, and let n be the number of lock actions by t on m that have not been matched by unlock actions.
-If n is zero (i.e., thread t does not already possess the lock for target m) an IllegalMonitorStateException is thrown.
-If this is a timed wait and the nanosecs argument is not in the range of 0-999999 or the millisecs argument is negative, an IllegalArgumentException is thrown.
-If thread t is interrupted, an InterruptedException is thrown and t’s interruption status is set to false.
 Thread T is added to the wait set of object m, and performs n unlock actions on m.
 Thread t does not execute any further Java instructions until it has been removed from m’s wait set.
 The thread may be removed from the wait set due to any one of the following actions, and will resume sometime afterward.
 A notify action being performed on m in which t is selected for removal from the wait set.
 If this is a timed wait, an internal action removing t fromm’s wait set that occurs after at least millisecs milliseconds plus nanosecs nanoseconds elapse since the beginning of this wait action.
-Notice that this provision necessitates the Java some logical condition that the thread is waiting for holds.
+Notice that this provision necessitates the Java coding practice of using wait() only within loops that terminate only when some logical condition that the thread is waiting for holds.
 Each thread must determine an order over the events that could cause it to be removed from a wait set.
 That order does not have to be consistent with other orderings, but the thread must behave as though those events occurred in that order.
 For example, if a thread t is in the wait set for m, and then both an interrupt of t and a notification of m occur, there must be an order over these events.
-If the interrupt is deemed to have occurred first, then t will eventually return from wait by throwing InterruptedException, and some other thread in the wait set for m (if any exist at the time of the notification) must receive the notification.
 If the notification is deemed to have occurred first, then t will eventually return normally from wait with an interrupt still pending.
-If thread t was removed from m’s wait set in step 2 due to an interrupt, t’s interruption status is set to false and the wait method throws InterruptedException.
-If t was not removed due to an interrupt, but t is interrupted before it completes step 3, then the system is allowed either to set t’s interruption status to false and have the wait method throw InterruptedException, or return normally from the method.
+Notification actions occur upon invocation of methods notify and notifyAll()
+Let thread t be the thread executing either of these methods on Object m, and let n be the number of.
 This is the case where thread t does not already possess the lock for target m.
 If n is greater than zero and this is a notify action, then, if m’s wait set is not empty, a thread u that is a member of m’s current wait set is selected and removed from the wait set.
 There is no guarantee about which thread in the wait set is selected.) This removal from the wait set enables u’s resumption in a wait action.
 Notice however, that u’s lock actions upon resumption cannot succeed until some time after t fully unlocks the monitor for m.
 If n is greater than zero and this is a notifyAll action, then all threads are removed from m’s wait set, and thus resume.
 Notice however, that only one of them at a time will lock the monitor required during the resumption of wait.
+Let t be the thread invoking U.interrupt(), for some thread u, where t and u may be the same.
+This action causes u’s interruption status to be set to true.
 Additionally, if there exists some object m whose wait set contains u, u is removed from m’s wait set.
-This enables u to resume in a wait action, in which case this wait will, after re-locking m’s monitor, throw InterruptedException.
-Any thread may observe and clear its own interruption status by invoking (static) method.
 The above specifications allow us to determine several properties having to do with the interaction of waits, notification and interruption.
 If a thread is both notified and interrupted while waiting, it may either:
+The thread may not reset its interrupt status and return normally from the call to wait()
 Causes the currently executing thread to sleep (temporarily cease execution) for the specified duration, subject to the precision and accuracy of system timers and schedulers.
 The thread does not lose ownership of any monitors, and resumption of execution will depend on scheduling and the availability of processors on which to execute the thread.
 A sleep for a period of zero time and yield operations need not have obversable effects.
@@ -408,32 +393,12 @@ In particular, the compiler does not have to flush writes cached in registers ou
 For example, in the following (broken) code fragment, assume that this.done is a non-volatile boolean field:
 The compiler is free to read the field this.done just once, and reuse the cached value in each execution of the loop.
 This would mean that the loop would never terminate, even if another thread changed the value of this.done.
-The formal semantics of final fields are different from those of normal fields.
-For final fields, non-final fields, they may be considered a supplement.
-When an address a is stored in the heap by thread t at write w, it is stored as a pair 〈a,G〉, where G is a set of freeze actions defined as:
-The set freezesBeforeDereference(t, a) is the set of freezes associated with the address a.
-The first, the set freezeBeforeRead(r), is a set of freezes associated with the read.
-The second, the set writesBeforeRead(r), is a set of writes associated with the read.
-These sets are used to compute the values that are legal for final fields.
-Consider a read r in thread t of field x of the object at address c that returns a tuple 〈a,G〉
-The set of freezes freezeBeforeRead(r) associated with a read r of address a is:
-The set freezesBeforeDereference(t, a) is the intersection of the sets of freezes that the.
 Let sawAddress(t, a) be the set of reads in thread t that returned the address a.
-If a thread t allocated a (including all situations where sawAddress(t, a) is empty), then the set freezesBeforeDereference(t, a) is empty.
-The actual freezesBeforeDereference sets are defined by the least fixed point solution to these equations (i.e., the smallest sets that satisfy these equations)
-This is because the definition of freezesBeforeDereference(t, a) uses freezeBeforeRead(t, c),
-For any read instruction r, there is a set of writes, writesBeforeRead(r), that is known to be ordered before r due to the special semantics of final fields.
 These ordering constraints are taken into account in determining which writes are visible to the read r.
 However, these ordering constraints do not otherwise compose with the standard happens-before ordering constraints.
-We define the set writesBeforeRead(r) in terms of the writes that are known to occur before any dereference of an address c by thread t.
 Like the equations for freezes, these equations are recursive; the solution is defined to be the least fixed point solution.
 Result set for non-final fields or array elements Consider a read r in thread t of non-final field or element x of the object at address c.
 Result set for final fields Consider a read r in thread t of final field x of the object at address c.
-Result set for static fields The set writesBeforeRead(r) associated with a read r of a static field is the empty set.
-Visible Write Set The set writesBeforeDereference(t, a) is defined to be the intersection of the writesBeforeRead sets for all reads that see the value a.
-If a thread t allocated a then writesBeforeDereference(t, a) is empty.
-As with freezesBeforeDereference, these equations are recursive and the solution is defined to be the least fixed point solution to the equations (i.e., the smallest sets that satisfy these equations)
-When a read r examines the contents of any field a.x in thread t, all of the writes in writesBeforeRead(r) are considered to be ordered before r.
 If a.x is a final field, these are the only writes considered to be ordered before r.
 In addition, if a.x is a final static field, then r will always return a.x’s correctly constructed value, unless r happens in the thread that performed the class initialization, before the field was written.
 We have discussed in detail what guarantees are made for final fields seen in multiple threads.
@@ -445,10 +410,13 @@ Reads a final field, then • calls a method that rewrites that final field, and
 Because reads of final fields can be reordered around method boundaries, the compiler may reuse the value of the first read for the second read.
 The limitation we place on this is that if the method returns a “new” reference to the final field’s enclosing object, and the final field is read via that reference, then the program will see the rewritten value of the final field.
 If it uses the “old” reference to the final field’s enclosing object, then the program may see either the original value or the new one.
-Conceptually, before a program modifies a frozen final field, the system must call a object through which the final fields can be reassigned.
+Conceptually, before a program modifies a frozen final field, the system must call a realloc() function, passing in a reference to the object, and getting out a reference to the object through which the final fields can be reassigned.
+The only appropriate way to use this realloc() function is to pass the only live reference to the object to the realloc() function, and only to use that value realloc() returns to refer to the object after that call.
+After getting back a “fresh” copy from realloc(), the final fields can be modified and refrozen.
+The realloc() function need not actually be implemented at all; the details are hidden inside the implementation.
 However, it can be thought of as a function that might decide to perform a shallow copy.
 In more detail, each reference within a thread essentially has a version number.
-Passing ordered according to program order with all writes to that field using the same or smaller version number.
+A read of a final field is ordered according to program order with all writes to that field using the same or smaller version number.
 Two references to the same object but with different version numbers should not be compared for equality.
 If one reference is ever compared to a reference with a lower version number, then that read and all reads of final fields from that reference are treated as if they have the lower version number.
 This appendix details changes to Section 12.6 of the Java language specification, which deals with finalization.
@@ -471,17 +439,15 @@ A finalizer may be invoked explicitly, just like any other method.
 The package java.lang.ref describes weak references, which interact with garbage collection and finalization.
 As with any API that has special interactions with the language, implementors must be cognizant of any requirements imposed by the java.lang.ref API.
 This specification does not discuss weak references in any way.
-Every object can be characterized by two attributes: it may be reachable, finalizer-reachable, or unreachable, and it may also be unfinalized, finalizable, or finalized.
 A reachable object is any object that can be accessed in any potential continuing computation from any live thread.
 Any object that may be referenced from a field or array element of a reachable object is reachable.
 Finally, if a reference to an object is passed to a JNI method, then the object must be considered reachable until that method completes.
 A class loader is considered reachable if any instance of a class loaded by that loader is reachable.
 A class object is considered reachable if the class loader that loaded it is reachable.
-Optimizing transformations of a program can be designed that reduce the number of objects that are reachable to be less than those which would na¨ıvely be considered reachable.
-For example, a compiler or code generator may choose to set a variable or parameter that will.
 Another example of this occurs if the values in an object’s fields are stored in registers.
 The program then may access the registers instead of the object, and never access the object again.
 Note that this sort of optimization is only allowed if references are on the stack, not stored in the heap.
+The finalizer guardian forces a super.finalize() to be called if a subclass overrides finalize and does not explicitly call super.finalize()
 If these optimizations are allowed for references that are stored on the heap, then the compiler can detect that the finalizerGuardian field is never read, null it out, collect the object immediately, and call the finalizer early.
 This runs counter to the intent: the programmer probably wanted to call the Foo finalizer when the Foo instance became unreachable.
 This sort of transformation is therefore not legal: the inner class object should be reachable for as long as the outer class object is reachable.
@@ -490,7 +456,6 @@ In order to allow the user to prevent this, we enforce the notion that synchroni
 If an object’s finalizer can result in synchronization on that object, then that object must be alive and considered reachable whenever a lock is held on it.
 Note that this does not prevent synchronization elimination: synchronization only keeps an object alive if a finalizer might synchronize on it.
 Since the finalizer occurs in another thread, in many cases the synchronization could not be removed anyway.
-A finalizer-reachable object can be reached from some finalizable object through some chain of references, but not from any live thread.
 An unfinalized object has never had its finalizer automatically invoked; a finalized object has had its finalizer automatically invoked.
 A finalizable object has never had its finalizer automatically invoked, but the Java virtual machine may eventually automatically invoke its finalizer.
 An object cannot be considered finalizable until its constructor has finished.

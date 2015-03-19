@@ -37,7 +37,7 @@ Section 4 analyzes our distributed scheduling model and characterizes the enviro
 Facebook loads logs from its web services into a 1200node Hadoop cluster, where they are used for applications such as business intelligence, spam detection, and ad optimization.
 To meet the performance requirements of these jobs, Facebook uses a fair scheduler for Hadoop that takes advantage of the fine-grained nature of the workload to make scheduling decisions at the level of map and reduce tasks and to optimize data locality [44]
 Unfortunately, this means that the cluster can only run Hadoop jobs.
-If a user wishes to write a new ad targeting algorithm in MPI instead of MapReduce, perhaps because MPI is more efficient for this job’s communication pattern, then the user must set up a separate MPI cluster and fine-grained sharing between multiple cluster computing frameworks, while giving these frameworks enough control to achieve placement goals such as data locality.
+If a user wishes to write a new ad targeting algorithm in MPI instead of MapReduce, perhaps because MPI is more efficient for this job’s communication pattern, then the user must set up a separate MPI cluster and import terabytes of data into it.2 Mesos aims to enable fine-grained sharing between multiple cluster computing frameworks, while giving these frameworks enough control to achieve placement goals such as data locality.
 Figure 2: Mesos architecture diagram, showing two running frameworks (Hadoop and MPI)
 We begin our description of Mesos by discussing our design philosophy.
 We then describe the components of Mesos, our resource allocation mechanisms, and how Mesos achieves isolation, scalability, and fault tolerance.
@@ -57,10 +57,6 @@ A framework running on top of Mesos consists of two components: a scheduler that
 While the master determines how many resources are offered to each framework, the frameworks’ schedulers select which of the offered resources to use.
 When a frameworks accepts offered resources, it passes to Mesos a description of the tasks it wants to run on them.
 In turn, Mesos launches the tasks on the corresponding slaves.
-Figure 3 shows an example of how a framework gets scheduled to run a task.
-The master then invokes the allocation policy module, which tells it that framework 1 should be offered all available resources.
-Finally, in step (4), the master sends the tasks to the slave, which allocates appropriate resources to the framework’s executor, which in turn launches the two tasks (depicted with dotted-line borders in the figure)
-In addition, this resource offer process repeats when tasks finish and new resources become free.
 While the thin interface provided by Mesos allows it to scale and allows the frameworks to evolve independently, one question remains: how can the constraints of a framework be satisfied without Mesos knowing about these constraints? In particular, how can a.
 A framework will reject the offers that do not satisfy its constraints and accept the ones that do.
 In particular, we have found that a simple policy called delay scheduling [44], in which frameworks wait for a limited time to acquire nodes storing the input data, yields nearly optimal data locality.
@@ -84,7 +80,6 @@ However, if this model is found to be too simple, it is also possible to let fra
 Second, to decide when to trigger revocation, allocation modules must know which frameworks would use more resources if they were offered them.
 Frameworks indicate their interest in offers through an API call.
 Mesos provides performance isolation between framework executors running on the same slave by leveraging existing OS isolation mechanisms.
-Since these mechanisms are platform-dependent, we support multiple isolation mechanisms through pluggable isolation modules.
 These technologies can limit the CPU, memory, network bandwidth, and (in new Linux kernels) I/O usage of a process tree.
 They also support dynamic reconfiguration of a container’s resource limits, which is necessary for Mesos to be able to add and remove resources from an executor as it starts and finishes tasks.
 In the future, we also plan to investigate using virtual machines for isolation.
@@ -108,11 +103,6 @@ Finally, to deal with scheduler failures, Mesos allows a framework to register m
 Frameworks must use their own mechanisms to share state between their schedulers.
 In this section, we study Mesos’s behavior for different workloads.
 Our main goal here is not to develop a detailed and exact model of the system, but to provide a coarse understanding of its behavior.
-In short, we find that Mesos performs very well when frameworks can scale up and down elastically, tasks durations are homogeneous, and frameworks prefer all nodes equally (Section 4.2)
-When different frameworks prefer different nodes, we show that Mesos can emulate a centralized scheduler that uses fair sharing across frameworks (Section 4.2.1)
-In addition, we show that Mesos can handle heterogeneous task durations without impacting the performance of frameworks with short tasks (§4.3)
-We also discuss how frameworks are incentivized to improve their performance under Mesos, and argue.
-We conclude this section with some limitations of Mesos’s distributed scheduling model (§4.5)
 In our discussion, we consider three metrics: • Framework ramp-up time: time it takes a new.
 Job completion time: time it takes a job to complete, assuming one job per framework;
 We characterize workloads along four attributes: • Scale up: Frameworks can elastically increase their.
@@ -130,17 +120,12 @@ An elastic framework (e.g., Hadoop, Dryad) can scale its resources up and down, 
 In contrast, a rigid framework (e.g., MPI) can start running its jobs only after it has allocated all its slots, i.e., the minimum allocation of a rigid framework is equal to its full allocation.
 We consider a cluster with n slots and a framework, f , that is entitled to k slots.
 For the purpose of this analysis, we consider two distributions of the task durations:
-Table 1: Ramp-up time, job completion time and utilization for both elastic and rigid frameworks, and for both constant and exponential task duration distributions.
-The mean task duration is Ts, and assume that framework f runs a job which requires βkTs computation time.
-Thus, assuming the framework has k slots, it takes the job βTs time to finish.
 Table 1 summarizes the job completion times and the utilization for the two types of frameworks and for the two types of task length distributions.
 As expected, elastic frameworks with constant task durations perform the best, while rigid frameworks with exponential task duration perform the worst.
 Due to lack of space we present here only the results and include derivations in [29]
 Framework ramp-up time If task durations are constant, it will take framework f at most Ts time to acquire k slots.
 This is simply because during a Ts interval, every slot will become available, which will enable Mesos to offer the framework all its k preferred slots.
 If the duration distribution is exponential, the expected ramp-up time can be as high as Ts ln k [29]
-Rigid jobs achieve similar completion times for constant job durations, but exhibit much higher completion times for exponential job durations, i.e., (ln k + β)Ts.
-This is simply because it takes a framework Ts ln k time on average to acquire all its slots and launch the job.
 System utilization Elastic jobs fully utilize their allocated slots, since they can use every slot as soon as they get it.
 As a result, assuming infinite demand, a system running elastic jobs is fully utilized.
 Rigid frameworks provide slightly worse utilizations, as their jobs cannot start before they get their full allocations, and thus they waste the slots acquired early.
@@ -152,10 +137,6 @@ When computing job completion time we assume that the last tasks of the job runn
 We consider two cases: (a) there exists a system configuration in which each framework gets all its preferred slots and achieves its full allocation, and (b) there is no such configuration, i.e., the demand for preferred slots exceeds the supply.
 In the first case, it is easy to see that, irrespective of the initial configuration, the system will converge to the state where each framework allocates its preferred slots after at most one Ts interval.
 This is simple because during a Ts interval all slots become available, and as a result each framework will be offered its preferred slots.
-In the second case, there is no configuration in which all frameworks can satisfy their preferences.
-The key question in this case is how should one allocate the preferred slots across the frameworks demanding them.
-In particular, assume there are x slots preferred bym frameworks, where framework i requests ri such slots, and∑m.
-In other words, assuming that each framework has enough demand, framework i will get x×si/(
 The challenge with Mesos is that the scheduler does not know the preferences of each framework.
 Fortunately, it turns out that there is an easy way to achieve the fair allocation of the preferred slots described above: simply offer slots to frameworks proportionally to their intended allocations.
 In particular, when a slot becomes available, Mesos can offer that slot to framework i with probability si/(
@@ -326,5 +307,4 @@ Mpich-v2: a fault tolerant mpi for volatile nodes based on pessimistic sender ba
 Dominant resource fairness: Fair allocation of heterogeneous resources in datacenters.
 Mesos: A platform for fine-grained resource sharing in the cluster.
 A hierarchical fair service curve algorithm for link-sharing, real-time and priority services.
-DryadLINQ: A system for general-purpose distributed data-parallel computing using a high-level language.
 Delay scheduling: A simple technique for achieving locality and fairness in cluster scheduling.

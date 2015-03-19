@@ -56,8 +56,6 @@ To be consistent with the target requirement of 10,000 nodes, each data-node sho
 The total storage capacity of such a cluster is 60PB.
 Note that these estimates are true under the assumption that the block-perfile ratio of 1.5 and the block size remain the same.
 If the ratio or the block size increases, a gigabyte of RAM will support more petabytes of physical storage, and vice versa.
-Sadly, based on practical observations, the block-to-file ratio tends to decrease during the lifetime of a file system, meaning that the object count (and therefore the memory footprint) of a single namespace server grows faster than the physical data storage.
-That makes the object-count problem, which becomes a file-count problem when λ → 1, the real bottleneck for cluster scalability.
 The name-node maintains a list of registered data-nodes and blocks belonging to each data-node.
 A data-node identifies block replicas in its possession to the name-node by sending a block report.
 A block report contains block ID, length, and the generation stamp for each block replica.
@@ -66,7 +64,7 @@ It reveals block locations, which are not maintained in the namespace image or i
 Subsequently, block reports are sent periodically every hour by default and serve as a sanity check, providing that the name-node has an up-to-date view of block replica distribution on the cluster.
 During normal operation, data-nodes periodically send heartbeats to the name-node to indicate that the data-node is alive.
 If the name-node does not receive a heartbeat from a data-node in 10 minutes, it pronounces the data-node dead and schedules its blocks for replication on other nodes.
-Heartbeats also carry information about total and used disk capacity and the number of data transfers currently performed by the node, which plays an.
+Heartbeats also carry information about total and used disk capacity and the number of data transfers currently performed by the node, which plays an important role in the name-node’s space and load-balancing decisions.
 The communication on HDFS clusters is organized in such a way that the name-node does not call data-nodes directly.
 It uses heartbeats to reply to the data-nodes with important instructions.
 These commands are important for maintaining the overall system integrity; it is therefore imperative to keep heartbeats frequent even on big clusters.
@@ -76,13 +74,9 @@ If the internal load is too high, the cluster becomes dysfunctional, able to pro
 This section analyzes what percentage of the total processing power of the name-node is dedicated to the internal load.
 This is what it takes, as we learned in previous sections, to conform to the targeted requirements.
 As usual, our analysis is based on the assumption that the block-to-file ratio is 1.5
-The ratio particularly means that every other block on a data-node is half full.
-This is the size of an average block report sent by a data-node to the name-node.
 The sending of block reports is randomized so that they do not come to the name-node together or in large waves.
 Thus, the average number of block reports the name-node receives is 10,000/hour, which is about three reports per second.
 The heartbeats are not explicitly randomized by the current implementation and, in theory, can hit the name-node together, although the likelihood of this is very low.
-In order to measure the name-node performance, I implemented a benchmark called NNThroughputBenchmark, which now is a standard part of the HDFS code base.
-NNThroughputBenchmark is a single-node benchmark, which starts a name-node and runs a series of client threads on the same node.
 Each client repetitively performs the same name-node operation by directly calling the name-node method implementing this operation.
 Then the benchmark measures the number of operations performed by the name-node per second.
 The reason for running clients locally rather than remotely from different nodes is to avoid any communication overhead caused by RPC connections and serialization, and thus reveal the upper bound of pure name-node performance.

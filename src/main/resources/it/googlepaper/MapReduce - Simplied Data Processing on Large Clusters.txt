@@ -43,12 +43,6 @@ Our C++ implementation passes strings to and from the user-defined functions and
 Here are a few simple examples of interesting programs that can be easily expressed as MapReduce computations.
 Distributed Grep: The map function emits a line if it matches a supplied pattern.
 The reduce function is an identity function that just copies the supplied intermediate data to the output.
-Count of URL Access Frequency: The map function processes logs of web page requests and outputs 〈URL,1〉
-Reverse Web-Link Graph: The map function outputs 〈target,source〉 pairs for each link to a target URL found in a page named source.
-The reduce function is passed all per-document term vectors for a given host.
-The set of all output pairs forms a simple inverted index.
-It is easy to augment this computation to keep track of word positions.
-Distributed Sort: The map function extracts the key from each record, and emits a 〈key,record〉 pair.
 For example, one implementation may be suitable for a small shared-memory machine, another for a large NUMA multi-processor, and yet another for an even larger collection of networked machines.
 This section describes an implementation targeted to the computing environment in wide use at Google:
 A cluster consists of hundreds or thousands of machines, and therefore machine failures are common.
@@ -122,7 +116,6 @@ When running large MapReduce operations on a significant fraction of the workers
 We subdivide the map phase into M pieces and the reduce phase into R pieces, as described above.
 Ideally, M and R should be much larger than the number of worker machines.
 Having each worker perform many different tasks improves dynamic load balancing, and also speeds up recovery when a worker fails: the many map tasks it has completed can be spread out across all the other worker machines.
-The constant factors for memory usage are small however: the O(M ∗R) piece of the state consists of approximately one byte of data per map task/reduce task pair.)
 Furthermore, R is often constrained by users because the output of each reduce task ends up in a separate output file.
 One of the common causes that lengthens the total time taken for a MapReduce operation is a “straggler”: a machine that takes an unusually long time to complete one of the last few map or reduce tasks in the computation.
 The cluster scheduling system may have scheduled other tasks on the machine, causing it to execute the MapReduce code more slowly due to competition for CPU, memory, local disk, or network bandwidth.
@@ -209,7 +202,7 @@ A three-line Map function extracts a 10-byte sorting key from a text line and em
 Figure 3: Data transfer rates over time for different executions of the sort program.
 We used a built-in Identity function as the Reduce operator.
 This functions passes the intermediate key/value pair unchanged as the output key/value pair.
-As before, the input data is split into 64MB pieces.
+The partitioning function uses the initial bytes of the key to segregate it into one of R pieces.
 Our partitioning function for this benchmark has builtin knowledge of the distribution of keys.
 In a general sorting program, we would add a pre-pass MapReduce operation that would collect a sample of the keys and use the distribution of the sampled keys to compute splitpoints for the final sorting pass.
 Figure 3 (a) shows the progress of a normal execution of the sort program.
@@ -289,6 +282,4 @@ Finally, we thank all the users of MapReduce within Google’s engineering organ
 Diamond: A storage architecture for early discard in interactive search.
 Efficient dispersal of information for security, load balancing and fault tolerance.
 This section contains a program that counts the number of occurrences of each unique word in a set of input files specified on the command line.
-Iterate over all entries with the // same key and add the values.
-Optional: do partial sums within map // tasks to save network bandwidth.
 Done: ’result’ structure contains info // about counters, time taken, number of // machines used, etc.

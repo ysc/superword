@@ -47,10 +47,6 @@ We give measurements concerning the usage in practice which show the positive ef
 Related Work For an introduction to OLAP and basic techniques applied in data-warehouse applications, see the Chaudhuri and Dayal [11]
 The excellent PhD thesis by Abadi [1] can serve as a more in-depth introduction and overview of the topic.
 Recent research in this area includes, e.g., work on how.
-As mentioned, its power lies in providing interactive responses to ad hoc SQL queries over thousands of datasets.
-It achieves this by streaming over petabytes of data (stored, e.g., on GFS [15]) in a highly distributed and efficient manner.
-This is also a key difference to the column-store presented in this paper which heavily relies on having as much data in memory as possible and therefore only is used for a few selected data sources.
-Skipping over data in the context of colum-stores has been.
 We give some details on these approaches in comparison to ours in Section 2.1
 We give some details on this at the end of Section 3
 We refer to such an instance as table or just the data which has columns (also referred to as fields) and rows (also referred to as records)
@@ -93,7 +89,6 @@ In other words, when “synchronoulsy” iterating over all columns, the origina
 This property of having the same order is important to correctly compute SQL queries for the original table.
 Let us now focus on a single column, say search string,
 The values of a column are stored in a doubly indirect way using two dictionaries:
-We introduce a global-dictionary which contains all distinct values of the original column, see the leftmost box in Figure 1 for an example.
 Per chunk we store a chunk-dictionary containing n entries, one for each value / global-id occurring in that chunk.
 The chunk-dictionary can be used to map occurring global-ids to and from integer chunk-ids.
 In the production system the data is also pre-split into shards as a first step.
@@ -108,7 +103,6 @@ This is advantageous when further optimizing the memory footprint, see Section 3
 So far we have introduced the general layout of the data.
 The actual underlying representation of the data depends on the data type and some other factors.
 It can be as different as a trie (prefix tree) or bit compressed representations tuned to storing numerical values, see Section 3 for more details on this.
-For the following two sections we consider simple, “canonical” implementations: For strings like search strings we use sorted arrays for the global-dictionaries.
 With this, a lookup by global-id is an array access.
 For determining the rank of a string, one may use binary search.
 Global-ids and chunk-ids can be stored as 32 bit int values.
@@ -117,9 +111,6 @@ To go from a chi.elem value ei to the underlying value of.
 For the other direction, for a given search string qs do a binary search in dc.dict to determine the rank / global-id of qs, followed by a binary search in chi.dict to determine the element’s chunk-id.
 With the help of the following example query we wish to.
 First it is determined which chunks are active, i.e., contain data that matches the where condition.
-For the overall result a hash-table storing global-id to counts is updated.
-In the end, the order of all occurring global-ids is determined, the limit applied, and finally the original values looked up in the global-dictionary.
-As we will see in the next section, using a simple array for incrementing counts in the inner loop has In the discussion of the example above we introduced the.
 For these experiments (and for all others except the results presented for the production system in Section 6) we measure the performance of full scans.
 I.e., we do not measure the effect of skipping / caching data by making use of the partitioning scheme described in Section 2.2
 In effect, for this section we actually do not partition the data at all and instead treat it as one large chunk.
@@ -181,15 +172,11 @@ The following table shows the memory usage compared to Dremel and our basic data
 Here and in all further experiments we do not show the corresponding latencies, since they do not change significantly (the main goal is to reduce the memory footprint)
 The slight increase in size stems mainly from the many more chunk-dictionaries which are now present.
 In contrast Query 2 accesses the latency field which has many distinct values for each of the chunks.
-An obvious optimization is to choose a better encoding which depends on the size of the chunk-dictionary.
-Similarly, in case there are two distinct values a bit-set suffices; resulting in ⌈n/8⌉ bytes.
-Table 2 shows the resulting improvement comparing the memory usage of the elements and chunk-dictionaries only (left side) and the memory usage overall (right side)
 The effect of this simple optimization is quite dramatic for Query 1
 Therefore, most of the resulting chunks contain only 1 or two distinct values giving a very compact encoding.
 I.e., for fields with few distinct values this gives big wins, which is basically obvious by construction.
 For the other two queries the savings are also significant,
 In other words, the global-dictionary dominates the size of the encoding.
-Optimize Global-Dictionaries As pointed out, the basic encoding of dictionaries may.
 We made use of two properties when choosing an improved encoding: the dictionaries are sorted (alphanumerically for strings) and in practice the stored values often have long common prefixes.
 The requirements for the desired small-footprint data-structure were to support lookups in both directions, i.e., from string value to integer global-id and vice versa.
 For the former direction, tries (prefix trees) seemed like an ideal choice.
@@ -199,7 +186,6 @@ On lookup one can afford to iterate over all children of each node along the pat
 Generic Compression Algorithm Let us now look at the easy and obvious optimization of.
 As mentioned, the resulting excellent compression rates of columnwise storage in comparison to row-wise storage constitutes one of the key advantages of the columnar format.
 We use Google’s own high speed compression algorithm Zippy, externally available as Snappy [33]
-In order to put the (so far) successively introduced optimizations into perspective, we apply Zippy to each of the resulting encodings: Basic, Chunks, OptCols, and the optimized global-dictionaries OptDicts.
 The results are shown in Table 3 with the uncompressed memory usage on the left for comparison and the compressed memory usage on the right.
 The first point to notice is that Zippy achieves very good compression ratios out of the box and can additionally profit a lot from the partitioning.
 The reason being that the resulting chunks each contain fewer distinct values.
@@ -221,13 +207,8 @@ For simplicity we now restrict to the case of columns with.
 For this case the RLE can be simplified to only storing the counters and not the values themselves.
 Each time a bit is flipped, a new counter is added, see Figure 3 for an example.
 Figure 3: Three columns of bits compressed with a simplified RLE.
-The distance between two points in Hamming space is the Hamming distance between the two vectors.
-Each ordering of the original rows corresponds to a path with these points.
-Figure 4 depicts three rows and the corresponding path in Hamming space.
-The weights on the edges give the Hamming distance between two points.
 Figure 4: Three rows of bits and the corresponding points in Hamming space and the path given by the ordering.
 The objective of finding the ordering with the smallest encoding can now be rephrased as finding the path of shortest length.
-This corresponds to the well-known travellingsalesperson problem (in Hamming space)
 For our purposes we chose a very easy to implement heuristic which in practice gives good results: we sort lexicographically by the field order chosen for the partitioning.
 This has been investigated in more detail, e.g., by Lemire and Kaser [21] or Abadi et al.
 The latter describes C-Store’s / Vertica’s approach of storing columns in multiple sort orders in order to improve the query performance at the cost of storing complete copies of the data.
@@ -237,6 +218,8 @@ For simplisity of exposition, we have so far only considered a setup on one mach
 To scale up to be able to process billions of rows, the data can be distributed to many machines and processed in parallel.
 We are mostly interested in group-by queries and for these.
 To achieve that, we organize the machines as a computation tree and do the grouping and aggregation on each level of the tree.
+For this to work, we need to execute the aggregations on multiple levels.
+Or, if aggregations can be expressed by such associative ones, e.g.
 Therefore, we use use an approximative technique described in Section 5
 Now the leaf level machines execute the inner select in parallel and send the result to the root of the execution tree.
 This rewrite can be applied recursively, to support deeper trees.
@@ -275,7 +258,6 @@ Other Compression Algorithms Additionally to the algorithm used for our experime
 For ZLIB we tested settings with and without additional Huffman coding.
 The latter gave a perhaps surprising gain of additional 20–30% in experiments, but came with the expected cost of being up to an order of magnitude slower.
 As result of these experiments we chose a variant of LZO for production, since it gave an about 10% better compression ratio and was up to twice as fast when decompressing compared to Zippy.
-Further Optimizing the Global-Dictionaries Even with the trie data-structure described in Section 3,
 When only few chunks are active for a query, there is actually no need to have the entire dictionary in memory.
 To this end, we split a dictionary up into sub-dictionaries.
 One of these representing the most frequent values, each of the others representing values from several chunks combined.
@@ -298,7 +280,6 @@ On average over 70% of the queries do not need to access any data from disk.
 The average latency naturally increases with the amount of data which needs to be read from disk into memory, see Figure 5
 It allows exploration of billions of rows (or, log records) within seconds and its Google-internal usage has almost exploded in the last years.
 Our deployed scheme based on composite range partitioning of three to five fields works very well in practice: Most queries have restrictions on closely correlated fields which results in skipping of 95% of the input data on average.
-Our compaction techniques utilize a dictionary-based data representation together with some more key optimizations (bit-wise element encodings, usage of tries for dictionary-storage, Zippy encoding of values, row-reorderings)
 Combined, these techniques reduce the data size by up to a factor of 50x.
 That is, the amount of data that can be examined interactively increases by a factor of 10–100 compared to traditional column-store technologies.
 Non first normal form relations to represent hierarchically organized data.

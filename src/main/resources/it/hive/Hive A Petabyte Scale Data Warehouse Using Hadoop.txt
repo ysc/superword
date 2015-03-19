@@ -84,7 +84,6 @@ Tables – A table is stored in a directory in hdfs.
 Partitions – A partition of the table is stored in a subdirectory within a table's directory.
 Buckets – A bucket is stored in a file within the.
 A partitioned table can be created by specifying the PARTITIONED BY clause in the CREATE TABLE statement as shown below.
-In the example shown above the table partitions will be stored in /user/hive/warehouse/test_part directory in hdfs.
 A partition exists for every distinct value of ds and hr specified by the user.
 Note that the partitioning columns are not part of the table data and the partition column values are encoded in the directory path of that partition (they are also stored in the table metadata)
 A new partition can be created through an INSERT statement or through an ALTER statement that adds a partition to the table.
@@ -98,13 +97,10 @@ A bucket is a file within the leaf level directory of a table or a partition.
 At the time the table is created, the user can specify the number of buckets needed and the column on which to bucket the data.
 In the current implementation this information is used to prune the data in case the user runs the query on a sample of data e.g.
 Note that the onus of ensuring that the bucket files are properly created and named are a responsibility of the application and HiveQL DDL statements do not currently try to bucket the data in a way that it becomes compatible to the table properties.
-Though the data corresponding to a table always resides in the <warehouse_root_directory>/test_table location in hdfs, Hive also enables users to query data stored in other locations in hdfs.
 This can be achieved through the EXTERNAL TABLE clause as shown in the following example.
-In addition the data files are stored in the location /user/mytables/mydata in hdfs.
 Note that as no custom SerDe has been defined it is assumed that the data is in Hive’s internal format.
 An external table differs from a normal table in only that a drop table command on an external table only drops the table metadata and does not delete any data.
 A drop on a normal table on the other hand drops the data associated with the table as well.
-Serialization/Deserialization (SerDe) As mentioned previously Hive can take an implementation of the SerDe java interface provided by the user and associate it to a table or partition.
 As a result custom data formats can easily be interpreted and queried from.
 The default SerDe implementation in Hive is called the LazySerDe – it deserializes rows into internal objects lazily so that the cost of deserialization of a column is incurred only if the column of the row is needed in some query expression.
 This SerDe can also be used to read data that uses any other delimiter character between columns.
@@ -112,10 +108,8 @@ In addition, delimiters can be specified to delimit the serialized keys and valu
 Apart from LazySerDe, some other interesting SerDes are present in the hive_contrib.jar that is provided with the distribution.
 A particularly useful one is RegexSerDe which enables the user to specify a regular expression to parse various columns out from a row.
 The following statement can be used for example, to interpret apache logs.
-The input.regex property is the regular expression applied on each record and the output.format.string indicates how the column fields can be constructed from the group matches in the regular expression.
 This example also illustrates how arbitrary key value pairs can be passed to a serde using the WITH SERDEPROPERTIES clause, a capability that can be very useful in order to pass arbitrary parameters to a custom SerDe.
 A file format in Hadoop specifies how records are stored in a file.
-Text files for example are stored in the TextInputFormat and binary files can be stored as SequenceFileInputFormat.
 Hive does not impose an restrictions on the type of file input formats, that the data is stored in.
 The format can be specified when the table is created.
 Apart from the two formats mentioned above, Hive also provides an RCFileInputFormat which stores the data in a column oriented manner.
@@ -177,7 +171,6 @@ Partition pruning – Predicates on partitioned columns are used to prune out fi
 Map side joins – In the cases where some of the tables in a join are very small, the small tables are replicated in all the mappers and joined with other tables.
 This behavior is triggered by a hint in the query of the form:
 A number of parameters control the amount of memory that is used on the mapper to hold the contents of the replicated table.
-These are hive.mapjoin.size.key and hive.mapjoin.cache.numrows that control the number of rows of the table that are kept in memory at any time and also provide the system the size of the join key.
 Join reordering – The larger tables are streamed and not materialized in memory in the reducer while the smaller tables are kept in memory.
 This ensures that the join operation does not exceed memory limits on the reducer side.
 In addition to the MAPJOIN hint, the user can also provide hints or set parameters to do the following:
@@ -191,8 +184,6 @@ Hash based partial aggregations in the mappers – Hash based partial aggregatio
 This in turn reduces the amount of time spent in sorting and merging this data.
 As a result a lot of performance gains can be achieved using this strategy.
 Hive enables users to control the amount of memory that can be used on the mapper to hold the rows in a hash table for this optimization.
-The parameter hive.map.aggr.hash.percentmemory specifies the fraction of mapper memory that can be used to hold the hash table, e.g.
-The parameter hive.map.aggr.hash.min.reduction is also used to control the amount of memory used in the mappers.
 As an example a group by on skewed data can generate two map/reduce tasks followed by a final hdfs task which moves the results to the correct location in hdfs.
 At the end of this stage the physical plan looks like a DAG of tasks with each task encapsulating a part of the plan.
 We show a sample multi-table insert query and its corresponding physical plan after all optimizations below.
@@ -202,7 +193,6 @@ The nodes in the plan are physical operators and the edges represent the flow of
 The last line in each node represents the output schema of that operator.
 For lack of space, we do not describe the parameters specified within each operator node.
 Query plan for multi-table insert query with 3 map/reduce jobs.
-Within the same map-reduce job, the portion of the operator tree below the repartition operator (ReduceSinkOperator) is executed by the mapper and the portion above by the reducer.
 Thus, the second and third map-reduce jobs wait for the first map-reduce job to finish.
 Execution Engine Finally the tasks are executed in the order of their.
 Each dependent task is only executed if all of its prerequisites have been executed.

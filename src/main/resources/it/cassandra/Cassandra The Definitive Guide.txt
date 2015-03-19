@@ -1,9 +1,7 @@
-O’Reilly books may be purchased for educational, business, or sales promotional use.
 Cassandra: The Definitive Guide, the image of a Paradise flycatcher, and related trade dress are trademarks of O’Reilly Media, Inc.
 Many of the designations used by manufacturers and sellers to distinguish their products are claimed as trademarks.
 Where those designations appear in this book, and O’Reilly Media, Inc.
 While every precaution has been taken in the preparation of this book, the publisher and author assume no responsibility for errors or omissions, or for damages resulting from the use of the information contained herein.
-This book uses RepKover™, a durable and flexible lay-flat binding.
 This original version of Cassandra was written primarily by an ex-employee from Amazon and one from Microsoft.
 It was strongly influenced by Dynamo, Amazon’s pioneering distributed key/ value database.
 I became involved in December of that year, when Rackspace asked me to build them a scalable database.
@@ -113,7 +111,6 @@ Of course I’m talking about the Information Management System (IMS) hierarchic
 Its architect was Vern Watts, who dedicated his career to it.
 But in the years following the invention of IMS, the new model, the disruptive model, the threatening model, was the relational database.
 Codd, also at IBM, advanced his theory of the relational model for data while working at IBM’s San Jose research laboratory.
-This paper, still available at http://www .seas.upenn.edu/~zives/03f/cis550/codd.pdf, became the foundational work for relational database management systems.
 Codd’s work was antithetical to the hierarchical structure of IMS.
 Understanding and working with a relational database required learning new terms that must have sounded very strange indeed to users of IMS.
 It presented certain advantages over its predecessor, in part because giants are almost always standing on the shoulders of other giants.
@@ -208,23 +205,6 @@ Presumably no one who runs a database would suggest that data updates don’t ha
 However, a more subtle examination might lead us to want to find a way to tune these properties a bit and control them slightly.
 There is, as they say, no free lunch on the Internet, and once we see how we’re paying for our transactions, we may start to wonder whether there’s an alternative.
 When you first attempt to horizontally scale a relational database, making it distributed, you must now account for distributed.
-In order to continue to honor the ACID properties of transactions, you now need a transaction manager to orchestrate across the multiple nodes.
-In order to account for successful completion across multiple hosts, the idea of a twophase commit (sometimes referred to as “2PC”) is introduced.
-But then, because two-phase commit locks all associate resources, it is useful only for operations that can complete very quickly.
-Although it may often be the case that your distributed operations can complete in sub-second time, it is certainly not always the case.
-Some use cases require coordination between multiple hosts that you may not control yourself.
-Operations coordinating several different but related activities can take hours to update.
-The protocol will wait for a node to respond, even if it has died.
-It’s possible to avoid waiting forever in this event, because a timeout can be set that allows the transaction coordinator node to decide that the node isn’t going to respond and that it should abort the transaction.
-However, an infinite loop is still possible with 2PC; that’s because a node can send a message to the transaction coordinator node agreeing that it’s OK for the coordinator to commit the entire transaction.
-The node will then wait for the coordinator to send coordinator is down in this scenario, that node conceivably will wait forever.
-So in order to account for these shortcomings in two-phase commit of distributed transactions, the database world turned to the idea of compensation.
-Compensation, often used in web services, means in simple terms that the operation is immediately committed, and then in the event that some error is reported, a new operation is invoked to restore proper state.
-There are a few basic, well-known patterns for compensatory action that architects frequently have to consider as an alternative to two-phase commit.
-These include writing off the transaction if it fails, deciding to discard erroneous transactions and reconciling later.
-Another alternative is to retry failed operations later on notification.
-In a reservation system or a stock sales ticker, these are not likely to meet your requirements.
-For other kinds of applications, such as billing or ticketing applications, this can be acceptable.
 The problems that 2PC introduces for application developers include loss of availability and higher latency during partial failures.
 So once you’ve had the good fortune of being successful enough to necessitate scaling your database past a single machine, you now have to figure out how to handle transactions across multiple machines and still make the ACID properties apply.
 But it’s now a much, much bigger pill to swallow.
@@ -288,7 +268,6 @@ But it’s not only the structure of the Web we need to consider, but also its p
 It has been said, though it is hard to verify, that the 17th-century English poet John Milton had actually read every published book on the face of the earth.
 Milton knew many languages (he was even learning Navajo at the time of his death), and given that the total number of published books at that time was in the thousands, this would have been possible.
 The size of the world’s data stores have grown somewhat since then.
-An exabyte is one quintillion bytes, or 1.1 million terabytes.
 As you can see, there is great variety to the kinds of data that need to be stored, processed, and queried, and some variety to the businesses that use such data.
 Consider not only customer data at familiar retailers or suppliers, and not only digital video content, but also the required move to digital television and the explosive growth of email, messaging, mobile phones, RFID, Voice Over IP (VoIP) usage, and more.
 We now have Blu-ray players that stream movies and music.
@@ -352,6 +331,7 @@ This is guaranteed to happen when the state of a write is consistent among all n
 But there’s no free lunch, and as we’ll see later, scaling data stores means making certain trade-offs between data consistency, node availability, and partition tolerance.
 Out of the box, Cassandra trades some consistency in order to achieve total availability.
 After all, you’re just posting to mom what little Billy ate for breakfast, and if it gets lost, it doesn’t really matter.
+But the data I have is actually really important, and it’s ridiculous to think that I could allow eventual consistency in my model.
 Set aside the fact that all of the most popular web applications (Amazon, Facebook, Google, Twitter) are using this model, and that perhaps there’s something to it.
 Presumably such data is very important indeed to the companies running these applications, because that data is their primary product, and they are multibilliondollar companies with billions of users to satisfy in a sharply competitive world.
 It may be possible to gain guaranteed, immediate, and perfect consistency throughout a highly trafficked system running in parallel on a variety of networks, but if you want clients to get their results sometime this year, it’s a very tricky proposition.
@@ -400,7 +380,6 @@ Brewer’s theorem is that in any given system, you can strongly support only tw
 The more consistency you demand from your system, for example, the less partition-tolerant you’re likely to be able to make it, unless you make some concessions around availability.
 The CAP theorem was formally proved to be true by Seth Gilbert and Nancy Lynch of MIT in 2002
 In distributed systems, however, it is very likely that you will have network partitioning, and that at some point, machines will fail and cause others to become unreachable.
-This leads us to the conclusion that a distributed system must do its best to continue operating in the face of network partitions (to be Partition-Tolerant), leaving us with only two real options to choose from: Availability and Consistency.
 Figure 1-1 illustrates visually that there is no overlapping segment where all three are obtainable.
 It might prove useful at this point to see a graphical depiction of where each of the nonrelational data stores we’ll look at falls within the CAP spectrum.
 However, I have modified the placement of some systems based on my research.
@@ -440,7 +419,6 @@ The keyspace is essentially just a logical namespace to hold column families and
 The column families are names for associated data and a sort order.
 Beyond that, the data tables are sparse, so you can just start adding data to it, using the columns that you want; there’s no need to define your columns ahead of time.
 Instead of modeling data up front using expensive data modeling tools and then writing queries with complex join statements, Cassandra asks you to model the queries you want, and then provide the data around them.
-High Performance Cassandra was designed specifically from the ground up to take full advantage of multiprocessor/multicore machines, and to run across many dozens of these machines housed in multiple data centers.
 Cassandra has been shown to perform exceptionally well under heavy load.
 It consistently can show very fast throughput for writes per second on a basic commodity workstation.
 As you add more servers, you can maintain all of Cassandra’s desirable properties without sacrificing performance.
@@ -470,7 +448,6 @@ There are no hard and fast rules here, but if you expect that you can reliably s
 If you think you’ll need at least several nodes to support your efforts, however, Cassandra might be a good fit.
 If your application is expected to require dozens of nodes, Cassandra might be a great fit.
 Lots of Writes, Statistics, and Analysis Consider your application from the perspective of the ratio of reads to writes.
-Many of the early production deployments of Cassandra involve storing user activity updates, social network usage, recommendations/reviews, and application statistics.
 These are strong use cases for Cassandra because they involve lots of writing with less predictable read operations, and because updates can occur unevenly with sudden spikes.
 In fact, the ability to handle application workloads that require high performance at significant write volumes with many concurrent client threads is one of the primary features of Cassandra.
 According to the project wiki, Cassandra has been used to create a variety of applications, including a windowed time-series store, an inverted index for document searching, and a distributed job priority queue.
@@ -494,23 +471,22 @@ Many more companies are currently evaluating Cassandra for production use in dif
 As more features are added and better tooling and support options are rolled out, anticipate even broader adoption.
 Summary In this chapter, we’ve taken an introductory look at Cassandra’s defining characteristics, history, and major features.
 We have seen which major companies are using it and what they’re using it for.
-We also examined a bit of history of the evolution of.
+We also examined a bit of history of the evolution of important contributions to the database field in order to gain a historical view of Cassandra’s value proposition.
 For those among us who like instant gratification, we’ll start by installing Cassandra.
 Because Cassandra introduces a lot of new vocabulary, there might be some unfamiliar terms as we walk through this.
 That’s OK; the idea here is to get set up quickly in a simple configuration to make sure everything is running properly.
 Then, we’ll take a step back and understand Cassandra in its larger context.
 Installing the Binary Cassandra is available for download from the Web at http://cassandra.apache.org.
 Just click the link on the home page to download the latest release version as a gzipped tarball.
-The prebuilt binary is named apache-cassandra-x.x.x-bin.tar.gz, where x.x.x represents the version number.
 Extracting the Download The simplest way to get started is to download the prebuilt binary.
 You can unpack the compressed file using any regular ZIP utility.
 On Linux, GZip extraction utilities should be preinstalled; on Windows, you’ll need to get a program such as WinZip, which is commercial, or something like 7-Zip, which is freeware.
 You might have to extract the ZIP file and the TAR file in separate steps.
-Once you have a folder on your filesystem called apache-cassandrax.x.x, you’re ready to run Cassandra.
 What’s In There? Once you decompress the tarball, you’ll see that the Cassandra binary distribution includes several directories.
 Let’s take a moment to look around and see what we have.
 It also has scripts to run the nodetool, which is a utility for inspecting a cluster to determine whether it is properly configured, and to perform a variety of maintenance operations.
 It also has scripts for converting SSTables (the datafiles) to JSON and back.
+There are three basic functions: the storage-conf.xml file allows you to create your data store by configuring your keyspace and column families; there are files related to setting up authentication; and finally, the log4j properties let you change the logging levels to suit your needs.
 We see how to use all of these when we discuss configuration in Chapter 6
 The interface is defined using the Thrift syntax and provides an easy means to generate clients.
 For a quick way to see all of the operations that Cassandra supports, open this file in a regular text editor.
@@ -518,7 +494,6 @@ Note that JavaDoc reflects only the comments that are stored directly in the Jav
 It’s helpful if you want to see how the code is laid out.
 Moreover, Cassandra is a wonderful project, but the code contains precious few comments, so you might find the JavaDoc’s usefulness limited.
 It may be more fruitful to simply read the class files directly if you’re familiar with Java.
-Nonetheless, to read the JavaDoc, open the javadoc/index.html file in a browser.
 For example, it uses two different JSON serialization libraries, the Google collections project, and several Apache Commons libraries.
 This directory includes the Thrift and Avro RPC libraries for interacting with Cassandra.
 Building from Source Cassandra uses Apache Ant for its build scripting language and the Ivy plug-in for dependency management.
@@ -543,10 +518,8 @@ Additional Build Targets To compile the server, you can simply execute ant as sh
 But there are a couple of other targets in the build file that you might be interested in: test.
 Users will probably find this the most helpful, as it executes the battery of unit tests.
 You can also check out the unit test sources themselves for some useful examples of how to interact with Cassandra.
-This will perform a complete build and output a file into the build directory called apache-cassandra-x.x.x.jar.
 Building with Maven The original authors of Cassandra apparently didn’t care much for Maven, so the early releases did not include any Maven POM file.
 But because so many Java developers have begun to favor Maven over Ant, and the tooling support in IDEs for Maven has become so strong, there’s a pom.xml contribution to the project so you can build from Maven if you prefer.
-To build the source from Maven, navigate to <cassandra-home>/contrib/maven and execute this command:
 If you have any difficulties building with Maven, you may have to get some of the required JARs manually.
 As of version 0.6.3, the Maven POM doesn’t work out of the box because some dependencies, such as the libthrift.jar file, are unavailable in a repository.
 Few developers are using Maven with Cassandra, so Maven lacks strong support.
@@ -561,13 +534,10 @@ To do this on Windows 7, click the Start button and then right-click on Computer
 In the Variable Value field, type the path to your JDK installation.
 Remember that if you create a new environment variable, you’ll need to reopen any currently open terminals in order for the system to become aware of the new variable.
 Once you’ve started the server for the first time, Cassandra will add two directories to your system.
-The first is C:\var\lib\cassandra, which is where it will store its data in files called commitlog.
-The other is C:\var\log\cassandra; logs will be written to a file called system.log.
 If you encounter any difficulties, consult the files in these directories to see what might have happened.
 If you’ve been trying different versions of the database and aren’t worried about losing data, you can delete these directories and restart the server as a last resort.
 Then, you need to extract the Cassandra gzipped tarball using gunzip.
 Finally, create a couple of directories for Cassandra to store its data and logs, and give them the proper permissions, as shown here:
-Starting the Server To start the Cassandra server on any OS, open a command prompt or terminal window, navigate to the <cassandra-directory>/bin where you unpacked Cassandra, and run the following command to start your server.
 In a clean installation, you should see some log statements like this:
 Using the -f switch tells Cassandra to stay in the foreground instead of running as a background process, so that all of the server logs will print to standard out and you can see them in your terminal window, which is useful for testing.
 The committers work hard to ensure that data is readable from one minor dot release to the next and from one major version to the next.
@@ -577,7 +547,6 @@ If you’ve messed up your Cassandra installation and want to get started cleanl
 Running the Command-Line Client Interface Now that you have a Cassandra installation up and running, let’s give it a quick try to make sure everything is set up properly.
 On Windows, you might have to do a little additional work.
 On Windows, navigate to the Cassandra home directory and open a new terminal in which to run our client process:
-It’s possible that on Windows you will see an error like this when starting the client: Starting Cassandra Client Exception in thread "main" java.lang.NoClassDefFoundError: org/apache/cassandra/cli/CliMain.
 This probably means that you started Cassandra directly from within the bin directory, and it therefore sets up its Java classpath incorrectly and can’t find the CliMain file to start the client.
 You can define an environment variable called CASSANDRA_HOME that points to the top-level directory where you have placed or built Cassandra, so you don’t have to pay as much attention to where you’re starting Cassandra from.
 To run the command-line interface program on Linux, navigate to the Cassandra home directory and run the cassandra-cli program in the bin directory:
@@ -590,12 +559,9 @@ Basic CLI Commands Before we get too deep into how Cassandra works, let’s get 
 We’ll see how to use the basic environment commands and how to do a round trip of inserting and retrieving some data.
 Help To get help for the command-line interface, type help or ? to see the list of available commands.
 The following list shows only the commands related to metadata and configuration; there are other commands for getting and setting values that we explore later.
-Add a new keyspace with the specified attribute and value(s)
-Create a new column family with the specified attribute and value(s)
 Connecting to a Server Starting the client this way does not automatically connect to a Cassandra server instance.
 So to connect to a particular server after you have started Cassandra this way, use the connect command:
 As a shortcut, you can start the client and connect to a particular server instance by passing the host and port parameters at startup, like this:
-If you see this error while trying to connect to a server: Exception connecting to localhost/9160 - java.net.ConnectException: Connection refused: connect.
 Also make sure that you’re using the new 0.7 syntax as described earlier, as it has changed from previous versions.
 That’s because this cluster of one node at localhost is set up for you by default.
 In a production environment, be sure to remove the Test Cluster from the configuration.
@@ -616,7 +582,6 @@ When you start the CLI client without specifying a keyspace, the output will loo
 This authentication scheme is familiar if you’ve used MySQL before.
 Authentication and authorization are very much works in progress at the time of this writing.
 The recommended deployment is to put a firewall around your cluster.
-Let’s create our own keyspace so we have something to write data to: ab67bad0-ae2c-11df-b642-e700f669bcfc.
 After you have created your own keyspace, you can switch to it in the shell by typing:
 We’re “authorized” to the keyspace because MyKeyspace doesn’t require credentials.
 Now we can create a column family in our keyspace.
@@ -698,7 +663,6 @@ So the outermost structure in Cassandra is the cluster, sometimes called the rin
 A node holds a replica for different ranges of data.
 If the first node goes down, a replica can respond to queries.
 The peer-to-peer protocol allows the data to replicate across nodes in a manner transparent to the user, and the replication factor is the number of.
-Keyspaces A cluster is a container for keyspaces—typically a single keyspace.
 A keyspace is the outermost container for data in Cassandra, corresponding closely to a relational database.
 Like a relational database, a keyspace has a name and a set of attributes that define keyspace-wide behavior.
 Although people frequently advise that it’s a good idea to create a single keyspace per application, this doesn’t appear to have much practical basis.
@@ -714,7 +678,6 @@ The replication factor essentially allows you to decide how much you want to pay
 That is, your consistency level for reading and writing data is based on the replication factor.
 Replica placement strategy The replica placement refers to how the replicas will be placed in the ring.
 There are different strategies that ship with Cassandra for determining which nodes will get copies of which keys.
-These are SimpleStrategy (formerly known as RackUnawareStrategy), OldNetworkTopologyStrategy (formerly known as RackAwareStrategy), and NetworkTopologyStrategy (formerly known as DatacenterShardStrategy)
 Column families In the same way that a database is a container for tables, a keyspace is a container for a list of one or more column families.
 A column family is roughly analagous to a table in the relational model, and is a container for a collection of rows.
 Each keyspace has at least one and often many column families.
@@ -751,7 +714,6 @@ Keep these things in mind as you design your data model.
 This indicates that we have one hotel in New York, New York, but we see six results because the results are column-oriented, and there are six columns for that row in the column family.
 Note that while there are six columns for that row, other rows might have more or fewer columns.
 Column Family Options There are a few additional parameters that you can define for each column family.
-This doesn’t refer to column name/values at all, but to the number of keys, as locations of rows per column family, to keep in memory in least-recently-used order.
 You may want to lower this value if you are performing a much larger number of reads than writes.
 I have simplified these definitions somewhat, as they are really more about configuration and server behavior than they are about the data model.
 Columns A column is the most basic unit of data structure in the Cassandra data model.
@@ -768,14 +730,12 @@ That’s why you’ll hear the third aspect of the column referred to both as a 
 Vector Clocks may or may not ultimately become how timestamps are represented in Cassandra 0.7, which is in beta at the time of this writing.
 The data types for the name and value are Java byte arrays, frequently supplied as strings.
 Because the name and value are binary types, they can be of any length.
-The data type for the clock is an org.apache.cassandra.db.IClock, but for the 0.7 release, a timestamp still works to keep backward compatibility.
 Cassandra 0.7 introduced an optional time to live (TTL) value, which allows columns to expire a certain amount of time after creation.
 Here’s an example of a column you might define, represented with JSON notation just for clarity of structure:
 But recall that a single column family will have multiple keys (or row keys) representing different rows that might also contain this column.
 This is why moving from the relational model is hard: we think of a relational table as holding the same set of columns for every row.
 But in Cassandra, a column family holds many rows, each of which may hold the same, or different, sets of columns.
 On the server side, columns are immutable in order to prevent multithreading issues.
-The column is defined in Cassandra by the org.apache.cassandra.db.IColumn interface, which allows a variety of operations, including getting the value of the column as a byte array or, in the case of a super column, getting its subcolumns as a Collection<IColumn> and finding the time of the most recent change.
 This wasn’t the case for early versions of Cassandra, but as of version 0.6, rows for the same column family are stored together on disk.
 If you have designed a data model and find that you need something like a join, you’ll have to either do the work on the client side, or create a denormalized second column family that represents the join results for you.
 Performing joins on the client should be a very rare case; you really want to duplicate (denormalize) the data instead.
@@ -800,7 +760,6 @@ The scheme Cassandra uses is a version one UUID, which means that it is generate
 Although this may seem like a good default type, that’s probably because it’s comfortable to programmers who are used to using XML or other data exchange mechanism that requires common encoding.
 In Cassandra, however, you should use UTF8Type only if you want your data validated.
 Custom You can create your own column sorting mechanism if you like.
-All you have to do is extend the org.apache .cassandra.db.marshal.AbstractType and specify your class name.
 Column names are stored in sorted order according to the value of compare_with.
 Rows, on the other hand, are stored in an order defined by the partitioner (for example, with RandomPartitioner, they are in random order, etc.)
 It is not possible in Cassandra to sort by value, as we’re used to doing in relational databases.
@@ -815,9 +774,7 @@ The basic structure of a super column is its name, which is a byte array (just a
 Its columns are held as a map whose keys are the column names and whose values are the columns.
 Each column family is stored on disk in its own separate file.
 So to optimize performance, it’s important to keep columns that you are likely to query together in the same column family, and a super column can be helpful for this.
-The SuperColumn class implements both the IColumn and the IColumnContainer classes, both from the org.apache.cassandra.db package.
 The Thrift API is the underlying RPC serialization mechanism for performing remote operations on Cassandra.
-Because the Thrift API has no notion of inheritance, you will sometimes see the API refer to a ColumnOrSupercolumn type; when data structures use this type, you are expected to know whether your underlying column family is of type Super or Standard.
 Fun fact: super columns were one of the updates that Facebook added to Google’s Bigtable data model.
 Here we see some more of the richness of the data model.
 When using regular columns, as we saw earlier, Cassandra looks like a four-dimensional hashtable.
@@ -825,8 +782,6 @@ But for super columns, it becomes more like a five-dimensional hash:
 To use a super column, you define your column family as type Super.
 Then, you still have row keys as you do in a regular column family, but you also reference the super column, which is simply a name that points to a list or map of regular columns (sometimes called the subcolumns)
 Here is an example of a super column family definition called PointOfInterest.
-Unlike relational tables, which group rows of identical structure, column families and super column families group merely similar records.
-Using the CLI, we could query a super column family like this:
 Composite Keys There is an important consideration when modeling with super columns: Cassandra does not index subcolumns, so when you load a super column into memory, all of its columns are loaded as well.
 It might be fixed in a future release, but the change is pending an update to the underlying storage file (the SSTable)
 You can use a composite key of your own design to help you with queries.
@@ -947,7 +902,6 @@ We have transferred some of the tables, such as Hotel and Guest, to column famil
 Other tables, such as PointOfInterest, have been denormalized into a super column family.
 In the relational model, you can look up hotels by the city they’re in using a SQL statement.
 But because we don’t have SQL in Cassandra, we’ve created an index in the form of the HotelByCity column family.
-I’m using a stereotype notation here, so <<CF>> refers to a column family,
 We have combined room and amenities into a single column family, Room.
 The columns such as type and rate will have corresponding values; other columns, such as hot tub, will just use the presence of the column name itself as the value, and be otherwise empty.
 Hotel Application Code In this section we walk through the code and show how to implement the given design.
@@ -966,7 +920,6 @@ The YAML file shown in Example 4-1 defines the necessary keyspace and column fam
 This definition provides all of the column families to run the example, and a couple more that we don’t directly reference in the application code, because it rounds out the design as transferred from RDBMS.
 Once you have the schema defined in YAML, you need to load it.
 To do this, open a console, start the jconsole application, and connect to Cassandra via JMX.
-Then, execute the operation loadSchemaFromYAML, which is part of the org.apache .cassandra.service.StorageService MBean.
 Now Cassandra knows about your schema and you can start using it.
 You can also use the API itself to create keyspaces and column families.
 Data Structures The application requires some standard data structures that will just act as transfer objects for us.
@@ -1025,10 +978,9 @@ Gossip and Failure Detection To support decentralization and partition tolerance
 Hinted handoff is triggered by gossip, when a node notices that a node it has hints for has just come back online.
 Anti-entropy, on the other hand, is a manual process; it is not triggered by gossip.
 They take their name from the concept of human gossip, a form of communication in which peers can choose with whom they want to exchange information.
-The gossip protocol in Cassandra is primarily implemented by the org.apache .cassandra.gms.Gossiper class, which is responsible for managing gossip for the local node.
 When a server node is started, it registers itself with the gossiper to receive endpoint state information.
 Because Cassandra gossip is used for failure detection, the Gossiper class maintains a list of nodes that are alive and dead.
-When the friend receives this message, it returns a GossipDigestAckMessage.
+Periodically (according to the settings in its TimerTask), the G=gossiper will choose a random node in the ring and initialize a gossip session with it.
 When the gossiper determines that another endpoint is dead, it “convicts” that endpoint by marking it as dead in its local list and logging that fact.
 Cassandra has robust support for failure detection, as specified by a popular algorithm for distributed computing called Phi Accrual Failure Detection.
 This manner of failure detection originated at the Advanced Institute of Science and Technology in Japan in 2004
@@ -1038,7 +990,6 @@ But accrual failure detection decides that this approach is naive, and finds a p
 Therefore, the failure monitoring system outputs a continuous level of “suspicion” regarding how confident it is that a node has failed.
 For example, just because one connection gets caught up doesn’t necessarily mean that the whole node is dead.
 So suspicion offers a more fluid and proactive indication of the weaker or stronger possibility of failure based on interpretation (the sampling of heartbeats), as opposed to a simple binary assessment.
-Failure detection is implemented in Cassandra by the org.apache.cassandra.gms .FailureDetector class, which implements the org.apache.cassandra.gms.IFailure Detector interface.
 What the detector will report about a given node’s alive-ness.
 Used by the gossiper to help it decide whether a node is alive or not based on suspicion level reached by calculating Phi (as described in the Hayashibara paper)
 Anti-Entropy and Read Repair Where you find gossip protocols, you will often find their counterpart, anti-entropy, which is also based on an epidemic theory of computing.
@@ -1046,7 +997,6 @@ Anti-entropy is the replica synchronization mechanism in Cassandra for ensuring 
 During a major compaction, the server initiates a TreeRequest/ TreeReponse conversation to exchange Merkle trees with neighboring nodes.
 The Merkle tree is a hash representing the data in that column family.
 If the trees from the different nodes don’t match, they have to be reconciled (or “repaired”) in order to determine the latest data values they should all be set to.
-This tree comparison validation is the responsibility of the org.apache.cassandra.service.AntiEntropyService class.
 AntiEntropyService implements the Singleton pattern and defines the static Dif ferencer class as well, which is used to compare two trees; if it finds any differences, it launches a repair for the ranges that don’t agree.
 Anti-entropy is used in Amazon’s Dynamo, and Cassandra’s implementation is modeled on that (see Section 4.7 of the Dynamo paper)
 Dynamo uses a Merkle tree for anti-entropy (see the definition of Merkle tree in the Glossary)
@@ -1099,11 +1049,9 @@ We discussed consistency levels previously, and you may recall that consistency 
 That is, even if only a hint was able to be recorded, the write still counts as successful.
 Some concern about hinted handoffs has been voiced by members of the Cassandra community.
 At first, it seems like a thoughtful and elegant design to ensure overall durability of the database, and appears unproblematic because it is familiar from many distributed computing paradigms, such as Java Message Service (JMS)
-In a durable guaranteed-delivery JMS queue, if a message cannot be delivered to a receiver, JMS will wait for a given interval and then resend the request until the message is received.
 But there is a practical problem with both guaranteed delivery in JMS and Cassandra’s hinted handoffs: if a node is offline for some time, the hints can build up considerably on other nodes.
 Then, when the other nodes notice that the failed node has come back online, they tend to flood that node with requests, just at the moment it is most vulnerable (when it is struggling to come back into play after a failure)
 In response to these concerns, it is now possible to disable hinted handoff entirely, or, as a less extreme measure, reduce the priority of hinted handoff messages against new write requests.
-In Cassandra 0.6 and earlier, HintedHandoffManager.sendMessage would read an entire row into memory, and then send the row back to the client in a single message.
 As of version 0.7, Cassandra will now page within a single hinted row instead.
 Compaction A compaction operation in Cassandra is performed in order to merge SSTables.
 During compaction, the data in SSTables is merged: the keys are merged, columns are combined, tombstones are discarded, and a new index is created.
@@ -1119,7 +1067,6 @@ Compacting them prevents the database from having to perform a seek to pull the 
 A major compaction is triggered one of two ways: via a node probe or automatically.
 A node probe sends a TreeRequest message to the nodes that neighbor the target.
 When a node receives a TreeRequest, it immediately performs a read-only compaction in order to validate the column family.
-This uses the org.apache.cassandra.concurrent.JMXEnabled ThreadPoolExecutor class, which executes the compaction within a single thread and makes the operation available as an MBean for inspection.
 You can increase overall performance by reducing the priority of compaction threads.
 Bloom Filters Bloom filters are used as a performance booster.
 Bloom filters are very fast, nondeterministic algorithms for testing whether an element is a member of a set.
@@ -1130,7 +1077,6 @@ The filters are stored in memory and are used to improve performance by reducing
 So, in a way, a Bloom filter is a special kind of cache.
 When a query is performed, the Bloom filter is checked first before accessing disk.
 Because false-negatives are not possible, if the filter indicates that the element does not exist in the set, it certainly doesn’t; but if the filter thinks that the element is in the set, the disk is accessed to make sure.
-A new JMX MBean feature will be added to Nodetool that allows you to check the number of false-positives that your Bloom filters are returning; this operation is called getBloomFilterFalsePositives.
 Programmers sometimes do this to support audit trails, for example.
 This is how all deletes work and is therefore automatically handled for you.
 When you execute a delete operation, the data is not immediately deleted.
@@ -1140,39 +1086,26 @@ This is the amount of time that the server will wait to garbage-collect a tombst
 Cassandra keeps track of tombstone age, and once a tombstone is older than GCGraceSeconds, it will be garbage-collected.
 The purpose of this delay is to give a node that is unavailable time to recover; if a node is down longer than this value, then it is treated as failed and replaced.
 As of 0.7, this setting is configurable per column family (it used to be for the whole keyspace)
-You can read the original SEDA paper at http://www.eecs.harvard.edu/ ~mdw/proj/seda.
 In a typical application, a single unit of work is often performed within the confines of a single thread.
 A write operation, for example, will start and end within the same thread.
 Cassandra, however, is different: its concurrency model is based on SEDA, so a single operation may start with one thread, which then hands off the work to another thread, which may hand it off to other threads.
 But it’s not up to the current thread to hand off the work to another thread.
-Instead, work is subdivided into what are called stages, and the thread pool (really, a java.util.concurrent.ExecutorService) associated with the stage determines execution.
 A stage is a basic unit of work, and a single operation may internally state-transition from one stage to the next.
 Because each stage can be handled by a different thread pool, Cassandra experiences a massive performance improvement.
 This SEDA design also means that Cassandra is better able to manage its own resources internally because different operations might require disk IO, or they might be CPU-bound, or they might be network operations, and so on, so the pools can manage their work according to the availability of these resources.
 A stage consists of an incoming event queue, an event handler, and an associated thread pool.
-Stages are managed by a controller that determines scheduling and thread allocation; Cassandra implements this kind of concurrency model using the thread pool java.util.concurrent.ExecutorService.
-To see specifically how this works, check out the org.apache.cassandra.concurrent.StageManager class.
 There are stages for units of work performed on memtables (in the ColumnFamilyStore class), and the Consistency Manager is a stage in the StorageService.
 The stages implement the IVerbHandler interface to support the functionality for a given verb.
 Because the idea of mutation is represented as a stage, it can play a role in both insert and delete operations.
 Because it is event-driven, as its name states, work can be performed with exceptional concurrency and minimal coupling.
 Managers and Services There is a set of classes that form Cassandra’s basic internal control mechanisms.
 I’ll present a brief overview of these here so that you can become familiar with some of the more important ones.
-The first one to consider is probably the org.apache.cassandra .thrift.CassandraServer class.
-This class implements the calls to the Thrift interface, and delegates most of the efforts of performing queries to org.apache.cassandra .service.StorageProxy.
-Cassandra Daemon The org.apache.cassandra.service.CassandraDaemon interface represents the life cycle of the Cassandra service running on a single node.
 It includes the typical life cycle operations that you might expect: start, stop, activate, deactivate, and destroy.
-Storage Service The Cassandra database service is represented by org.apache.cassandra.service .StorageService.
 The storage service contains the node’s token, which is a marker indicating the range of data that the node is responsible for.
 The server starts up with a call to the initServer method of this class, upon which the server registers the SEDA verb handlers, makes some determinations about its state (such as whether it was bootstrapped or not, and what its partitioner is), and registers itself as an MBean with the JMX server.
-Messaging Service The purpose of org.apache.cassandra.net.MessagingService is to create socket listeners for message exchange; inbound and outbound messages from this node come.
-Each incoming connection then dips into the ExecutorService thread pool using org.apache.cassandra.net.IncomingTcpConnection (a class that extends Thread) to deserialize the message.
 The message is validated, and then it’s determined whether this is a streaming message or not.
 Message streaming is Cassandra’s optimized way of sending sections of SSTable files from one node to another; all other communication between nodes occurs via serialized messages.
-If it’s streaming, the message is passed to an IncomingStreamReader; if it’s not streaming, the message is handled by Messaging Service’s deserialization executor, which is handed the message in the form of a task that implements Runnable.
 Because this service also makes heavy use of stages and the pool it maintains is wrapped with an MBean, you can find out a lot about how this service is working (whether reads are getting backed up and so forth) through JMX.
-Hinted Handoff Manager As its name suggests, org.apache.cassandra.db.HintedHandoffManager is the class that manages hinted handoffs internally.
-To do so it maintains a thread pool, which is available for JMX monitoring as HINTED-HANDOFF-POOL.
 Summary In this chapter, we examined the main pillars of Cassandra’s construction, including gossip, anti-entropy, accrual failure detection, and how the use of a Staged EventDriven Architecture maximizes performance.
 We also looked at how Cassandra internally executes various operations, such as tombstones and read repair.
 Finally, we surveyed some of the major classes and interfaces, pointing out key points of interest in case you want to dive deeper into the code base.
@@ -1198,15 +1131,12 @@ So we can switch to a different keyspace using the use keyspace command:
 Now that we’ve switched to our new keyspace on the CLI, we can add a column family to it:
 You can specify additional settings as you like when creating the keyspace or column family using the with flag, and more settings using the and flag:
 It’s also possible to use the API to do this, as shown in Example 6-1
-Using the API to dynamically create a keyspace and column family.
 Now you are ready to start inserting values into your new MyCF column family.
 Cassandra will provide the default replication strategy if you don’t name one; I’m just trying to be explicit in this example to show the syntax.
 Creating a Column Family To create a column family, you also use the CLI or the API.
 Here are the options available when creating a column family: column_type.
 But this YAML file is intended only for users upgrading their config files from XML to YAML.
 Instead, use the Thrift API calls prefixed with system_ to configure your keyspaces and column families, as shown previously.
-If you do have an existing storage-conf.xml file from using version 0.6, you will first need to convert it to YAML using the bin/config-converter tool, which can generate a cassandra.yaml file from a storage-conf.xml.
-There is an operation exposed through JMX in the org.apache.cassandra.service.StorageServiceMBean called loadSchema FromYAML, which you can invoke to force Cassandra to load your schema changes from the cassandra.yaml file in your seed node.
 New nodes in your cluster will get schema updates as they are started.
 You can run this method against any one node (though running it against more than one node is not recommended), and all nodes will receive the schema changes and gossip about changes to the schema.
 This is a one-time operation that stores the definition in Cassandra’s system keyspace, and you don’t want to modify the YAML file after running this.
@@ -1226,7 +1156,6 @@ Each node in the ring is assigned a single, unique token.
 Each node claims ownership of the range of values from its token to the token of the previous node.
 Exactly how a token is represented is dependent on the partitioner you’re using.
 All remaining replicas are distributed according to a configurable replication strategy, which we’ll look at now.
-Replica Placement Strategies In its simplest terms, to satisfy the replica placement strategy for the configuration file, you just need to provide the name of a Java class that extends the org.apache .cassandra.locator.AbstractReplicationStrategy class.
 The purpose of this setting is to configure the way that the node picker works.
 The strategy is outlined in the common abstract class, allowing different implementations of an algorithm (different strategies for accomplishing the same work)
 Each algorithm implementation is encapsulated inside a single class that adheres to the interface.
@@ -1242,17 +1171,13 @@ If you set up your cluster such that all writes.
 The variety of pluggable strategies allows you greater flexibility, so that you can tune Cassandra according to your network topology and needs.
 The first replica will always be the node that claims the range in which the token falls, but the remainder of the replicas are placed according to the replica placement strategy you use.
 As I write this chapter, the names of the strategies are changing.
-The new names in 0.7 will be SimpleStrategy (formerly known as RackUnaware Strategy), OldNetworkTopologyStrategy (formerly known as RackAwareS trategy), and NetworkTopologyStrategy (formerly known as Datacen terShardStrategy)
-The strategy used by default in the configuration file is org.apache.cassandra .locator.RackUnawareStrategy.
 This strategy only overrides the calculateNatural Endpoints method from the abstract parent implementation.
 This strategy places replicas in a single data center, in a manner that is not aware of their placement on a data center rack.
 This means that the implementation is theoretically fast, but not if the next node that has the given key is in a different rack than others.
 The Simple Strategy places replicas in a single data center, without respect to topology.
 What’s happening here is that the next N nodes on the ring are chosen to hold replicas, and the strategy has no notion of data centers.
 A second data center is shown in the diagram to highlight the fact that the strategy is unaware of it.
-Old Network Topology Strategy The second strategy for replica placement that Cassandra provides out of the box is org.apache.cassandra.locator.RackAwareStrategy, now called Old Network Topology Strategy.
 It’s mainly used to distribute data across different racks in the same data center.
-Like RackUnawareStrategy, this strategy only overrides the calculateNaturalEnd points method from the abstract parent implementation.
 This class, as the original name suggests, is indeed aware of the placement in data center racks.
 This strategy will place some replicas in DC1, putting each in a different available rack.
 It will also ensure that another replica is placed in DC2
@@ -1265,7 +1190,6 @@ The Old Network Topology Strategy places the second replica in a different data 
 If you use the Rack-Aware Strategy, you must also use the Rack-Aware Snitch.
 Network Topology Strategy This strategy, included with the 0.7 release of Cassandra, allows you to specify more evenly than the RackAwareStrategy how replicas should be placed across data centers.
 To use it, you supply parameters in which you indicate the desired replication strategy for each data center.
-This file is read and executed by the org.apache.cassandra .locator.DataCenterShardStrategy class, so the implementation is somewhat flexible.
 The data center shard strategy is depicted in Figure 6-3
 But as of 0.7, this metadata is attached directly to the keyspace and strategy as a map of configuration options.
 The Network Topology Strategy places some replicas in another data center and the remainder in other racks in the first data center, as specified.
@@ -1310,16 +1234,12 @@ It also has an effect on the options available for querying ranges of rows.
 There are a few different partitioners you can use, which we look at now.
 The choice of partitioner does not apply to column sorting, only row key sorting.
 You set the partitioner by updating the value of the Partitioner element in the config file or in the API.
-It takes as a value the name of a class that implements the org.apache.cassandra.dht.IPartitioner interface.
 Out of the box, Cassandra provides three of these: the random partitioner, which is the default; the order-preserving partitioner; and collating order-preserving partitioner.
-Because of Cassandra’s generally pluggable design, you can also create your own partitioner by implementing the org.apache.cassandra.dht.IPartitioner class and placing it on Cassandra’s classpath.
 Keep in mind that the partitioner can modify the on-disk SSTable representations.
 So if you change the partitioner type, you will have to delete your data directories.
-Random Partitioner The random partitioner is implemented by org.apache.cassandra.dht.Random Partitioner and is Cassandra’s default.
 It uses a BigIntegerToken with an MD5 hash applied to it to determine where to place the keys on the node ring.
 This has the advantage of spreading your keys evenly across your cluster, because the distribution is random.
 It has the disadvantage of causing inefficient range queries, because keys within a specified range might be placed in a variety of disparate locations in the ring, and key range queries will return data in an essentially random order.
-Order-Preserving Partitioner The order-preserving partitioner is implemented by org.apache.cassandra.dht.Order PreservingPartitioner, which implements IPartitioner<StringToken>
 Using this type of partitioner, the token is a UTF-8 string, based on a key.
 Rows are therefore stored by key order, aligning the physical structure of the data with your sort order.
 Configuring your column family to use order-preserving partitioning (OPP) allows you to perform range slices.
@@ -1332,7 +1252,6 @@ If you want to perform range queries from your clients, you must use an orderpre
 Like OPP, it requires that the keys are UTF-8 strings.
 Although its name might imply that it extends the OPP, it doesn’t.
 This partitioner is rarely employed, as its usefulness is limited.
-Byte-Ordered Partitioner New for 0.7, the team added ByteOrderedPartitioner, which is an order-preserving partitioner that treats the data as raw bytes, instead of converting them to strings the way the order-preserving partitioner and collating order-preserving partitioner do.
 If you need an order-preserving partitioner that doesn’t validate your keys as being strings, BOP is recommended for the performance improvement.
 Snitches The job of a snitch is simply to determine relative host proximity.
 Snitches gather some information about your network topology so that Cassandra can efficiently route requests.
@@ -1344,15 +1263,12 @@ If two hosts have the same value in the third octet of their IP addresses, then 
 Determined to be” really means that Cassandra has to guess based on an assumption of how your servers are located in different VLANs or subnets.
 Simple Snitch was renamed in 0.7; prior to that it was called endpoint snitch.
 You configure which endpoint snitch implementation to use by updating the value for the <EndPointSnitch> element in the configuration file.
-PropertyFileSnitch The org.apache.cassandra.locator.PropertyFileSnitch used to be in contrib, but was moved into the main code base in 0.7
-This snitch allows you more control when using a Rack-Aware Strategy by specifying node locations in a standard key/value properties file called cassandra-rack.properties.
 This snitch was contributed by Digg, which uses Cassandra and regularly contributes to its development.
 This snitch helps Cassandra know for certain if two IPs are in the same data center or on the same rack—because you tell it that they are.
 This is perhaps most useful if you move servers a lot, as operations often need to, or if you have inherited an unwieldy IP scheme.
 Here we see that there are two data centers, each with two racks.
 Update the values in this file to record each node in your cluster to specify which rack contains the node with that IP and which data center it’s in.
 Although this may seem difficult to maintain if you expect to add or remove nodes with some frequency, remember that it’s one alternative, and it trades away a little flexibility and ease of maintenance in order to give you more control and better runtime performance, as.
-The PropertyFileSnitch used to be called PropertyFileEndPoint Snitch and was in the contrib directory before being promoted to part of the standard distribution, in case you see references to that online.
 Creating a Cluster You can run Cassandra on a single machine, which is fine for getting started as you learn how to read and write data.
 But Cassandra is specifically engineered to be used in a cluster of many machines that can share the load in very high-volume situations.
 In this section, we see what you have to do to get multiple Cassandra instances to talk to each other in a ring.
@@ -1416,18 +1332,12 @@ Sure enough, Cassandra has automatically detected that the other participant has
 Security By default, Cassandra allows any client on your network to connect to your cluster.
 This does not mean that no security is set up out of the box, but rather that Cassandra is configured to use an authentication mechanism that allows all clients, without requiring that they provide credentials.
 The security mechanism is pluggable, which means that you can easily swap out one authentication method for another, or write your own.
-The authenticator that’s plugged in by default is the org.apache.cassandra.auth.Allow AllAuthenticator.
-If you want to force clients to provide credentials, another alternative ships with Cassandra, the org.apache.cassandra.auth.SimpleAuthenticator.
 In this section, we see how to use this second authenticator.
-Using SimpleAuthenticator There are two files included in the config directory: access.properties and passwd .properties.
 The access file uses a key/value pair to specify which users are allowed access.
 This indicates that there are three users allowed to access Keyspace1, and spaces are allowed in the usernames.
-The file passwd.properties must contain a list of these users and specify the password for each of them.
 Note that because the user Elvis Presley has a space in his username, a backslash must be used to escape the space.
 To use the Simple Authenticator, replace the value for the authenticator element in cassandra.yaml.
-Change it from org.apache.cassandra.auth.AllowAllAuthenticator to the name of the implementing class that requires a login: org.apache.cassan dra.auth.SimpleAuthenticator.
 If you haven’t configured the authentication files properly, you’ll see an error like this:
-That’s because there is one more step: we have to tell Cassandra the location of the access and passwords files, using the bin/cassandra.in.sh include script.
 We pass the file locations to the JVM by pasting the following code at the bottom of this file.
 My include file now looks like the snippet here, indicating the full path to the files:
 If you have specified an incorrect location or name for either of these files, the server log will let you know:
@@ -1441,7 +1351,6 @@ We can also specify the username and password combination when we connect on the
 Connected to: "Test Cluster" on localhost/9160 Welcome to cassandra CLI.
 In 0.6, there was no login operation provided by the Thrift API, so if you’ve gotten used to starting the CLI and then connecting in a separate operation, that won’t work if you are requiring authentication.
 In 0.7, authenticators have been split into an IAuthenticator (which handles authentication) and IAuthority (which handles authorization)
-The SimpleAuthenticator class has had authorization split out into SimpleAuthority.
 Programmatic Authentication If you have set up authentication on your keyspace, your client application code will need to log in.
 In this case, the program just prints out FULL because that’s this user’s access level.
 First, the credentials map uses username and password as keys; it’s not username as the key and password as the value.
@@ -1449,16 +1358,12 @@ Second, you need to call set_keyspace separately, to indicate what keyspace you�
 Let’s look at how to improve security a bit by using MD5
 It’s a widely used one-way hash function that generates a 128-bit hash value from an input.
 It’s also worth noting that MD5 is not going to be radically secure for you; it's just a little harder to break in.
-You enable MD5 in the cassandra.in.sh file by passing the passwd.mode switch to the JVM:
 Now if you try to authenticate using an unencrypted password, you’ll see an error like this:
 Exception during authentication to the cassandra node, verify you are using correct credentials.
 You can use a variety of tools to generate an MD5-encrypted version of the plain-text username and password as a one-way hash.
 Here’s a short Python program to create an MD5 hash from a plain string:
-Now you can replace the password for jsmith in the passwd.properties file with the encrypted value.
 Providing Your Own Authentication You can provide your own method of authenticating to Cassandra if you want to make special requirements, such as a Kerberos ticket or encryption, or if you want to store passwords in a different location, such as an LDAP directory.
 The login method must return a Thrift AccessLevel instance, indicating what degree of access the authenticating user is allowed.
-The validateConfiguration method simply allows a check to ensure that the authentication mechanism is properly set up.
-For example, with the SimpleAuthenticator, it just checks that the required access and passwd files have been specified.
 Miscellaneous Settings There are a few settings related to general configuration that don’t quite seem to belong in any other category, so I’ve grouped them together here.
 This indicates the size in kilobytes that a row is allowed to grow to before its columns will be indexed.
 If you have very large column values, you’ll want to increase this value.
@@ -1484,6 +1389,7 @@ You can read the original Phi Accrual Failure Detection paper on which Cassandra
 Additional Tools This section discusses miscellaneous tools that ship with Cassandra to help you configure it.
 Viewing Keys You can see which keys are in your SSTables using a script called sstablekeys.
 To run it, just use the location of the SSTable for which you want to see keys, as shown here:
+Note that this method has two important caveats: first, it is intended to be used only once; second, it will probably be removed by version 0.8
 Starting with version 0.7, the user keyspaces defined in cassandra.yaml are not loaded by default when the server starts.
 So you might see a message like this as your Cassandra server starts up for the first time:
 In order to load them, you need to invoke the loadSchemaFromYaml JMX operation.
@@ -1494,11 +1400,9 @@ We’ll see more about using JMX with Cassandra later, but for now we just want 
 Next, open a new terminal and issue the command jconsole.
 A GUI will start and load the JConsole tool that ships with Java.
 This tool can introspect the Java Virtual Machine and allow you to view runtime data and invoke operations that are exposed via JMX.
-To load the keyspaces defined in cassandra.yaml, click the MBeans tab in the JConsole GUI.
 This will execute the command on the Cassandra service and load your schemas in the cassandra.yaml file.
 Now you should see output similar to the following in your logs:
 The database descriptor logs are a good thing, as this indicates that the operation loaded your schemas.
-You can also use the org.apache.cassandra.config.Converter class to assist you in converting from storage-conf.xml to a cassandra.yaml file.
 To run the converter, use the configconverter script in the bin directory.
 It will read in the old file, convert it, and dump the contents.
 If you need to import and export data, Cassandra comes with two scripts for working with JSON: one that imports JSON into Cassandra SSTables, and another that exports existing SSTables into JSON.
@@ -1554,7 +1458,7 @@ That means that writes at CL.ONE are durable, so this level is the minimum level
 If this node goes down immediately after the write operation, the value will have been written to the commit log, which can be replayed when the server is brought back up to ensure that it still has the value.
 For both reads and writes, the consistency levels of ZERO, ANY, and ONE are considered weak, whereas QUORUM and ALL are considered strong.
 Consistency is tuneable in Cassandra because clients can specify the desired consistency level on both reads and writes.
-There is an equation that is popularly used to represent the way to achieve W, and N are the read replica count, the write replica count, and the replication factor, respectively; all client reads will see the most recent write in this scenario, and you will have strong consistency.
+In this equation, R, W, and N are the read replica count, the write replica count, and the replication factor, respectively; all client reads will see the most recent write in this scenario, and you will have strong consistency.
 Basic Read Properties There are a few basic properties of reading data from Cassandra that are worth noting.
 First, it’s easy to read data because clients can connect to any node in the cluster to perform reads, without having to know whether a particular node acts as a replica for that data.
 If a client connects to a node that doesn’t have the data it’s trying to read, the node it’s connected to will act as coordinator node to read the data from a node that does have it, identified by token ranges.
@@ -1565,11 +1469,6 @@ So reads are clearly slower than writes, for these various reasons.
 In the case of range queries, using OPP is significantly faster because it allows you to easily determine which nodes don’t have your data.
 The partitioner’s responsibility is to perform the consistent hash operation that maps keys to nodes.
 In addition, you can choose row caching and key caching strategies to give you a performance boost (see Chapter 11)
-The API This section presents an overview of the basic Cassandra API so that once we start reading and writing data, some of these exotic terms won’t seem quite so difficult.
-We already know what a column, super column, and column family are: a column family contains columns or super columns; a super column contains only columns (you can’t timestamp.
-In a relational database, the terms SELECT, INSERT, UPDATE, and DELETE mean just what they mean colloquially, in regular life.
-There are two basic concepts that you’ll want to learn quickly: ranges and slices.
-Many queries are defined using these terms, and they can be a bit confusing at first.
 Columns are sorted by their type (as specified by CompareWith), and rows are sorted by their partitioner.
 Ranges and Slices A range basically refers to a mathematical range, where you have a set of ordered elements and you want to specify some subset of those elements by defining a start element and a finish element.
 The range is the representation of all the elements between start and finish, inclusive.
@@ -1579,7 +1478,6 @@ So, if you have 1,000 columns with names that are long integers, you can see how
 By using ranges, you can retrieve all of the columns in a range that you define (called a range slice), or you can perform the same update to the items in the range using a batch.
 You may have many hundreds of columns defined on a row, but you might not want to retrieve all of them in a given query.
 Columns are stored in sorted order, so the range query is provided so that you can fetch columns within a range of column names.
-Range queries require using an OrderPreservingPartitioner, so that keys are returned in the order defined by the collation used by the partitioner.
 When specifying a range query and using Random Partitioner, there’s really no way to specify a range more narrow than “all”
 This is obviously an expensive proposition, because you might incur additional network operations.
 That’s because it’s possible that an update happening at the same time as your row scan will miss the updates made earlier in the index than what you are currently processing.
@@ -1594,18 +1492,14 @@ Setup and Inserting Data We’ll look at inserts first, because you need to have
 In this section we set up a Java project and walk through a complete example that does an insert and then reads the data back.
 Now let’s create a new project to test some of our work.
 First, create a new project, and then add a few JARs to your classpath: a Log4J JAR to output log statements (don’t forget to set the properties file for your.
-We also need to add the SLF4J logger (both the API and the implementation JAR), which Cassandra requires.
-Finally, add an argument to your JVM to add the log4j.properties file to your classpath:
 In Eclipse, you can add the log4j.properties file by creating a new Run Configuration.
 Click the Arguments tab, and then in the VM Arguments text field, enter the parameter specified in the previous code sample— of course using the actual path to your properties file.
 To keep this simple, we’ll use the default keyspace and configuration.
 Now start the server, and create a class that looks like the one shown in Example 7-1
 This example will open a connection to Cassandra and write a new row with two columns: name and age.
 We then read back a single column value for that row, and then read the entire row.
-This isn’t Cassandra-specific, but in Java you can easily get a more userfriendly representation of a date by wrapping the long timestamp output.
 Here we’re using the framed transport, which is the new default in Cassandra 0.7
 Then, we create representations for the column family we’ll use, and convenience values for the row key and clock that indicate when this insert was performed:
-Next, we use the client object with the column path to insert a new value:
 The insert operation requires a row key, as well as the column object that includes the column name and the value we want to assign to it for this row key.
 We also specify the clock representing when this insert was performed, and the consistency level to apply.
 We then basically repeat this operation to write to the same row, but now to the age column, giving it a value of 69:
@@ -1621,8 +1515,6 @@ But now we want to get a “range” of columns for a single row (called a slice
 The slice predicate is a container object that allows us to specify the range of columns that we want to read between a start and a finish.
 By specifying new byte[0] as the start and finish positions of the range, we’re saying that we want all of the columns.
 Now that our predicate is set up, we can execute the range slice query that will get all of the columns for our row, so we can loop over them one by one:
-This get_slice query uses the predicate we created as well as two new things: the ColumnOrSuperColumn class and a column parent.
-The ColumnOrSuperColumn class is just what it says: it represents either a column or a super column returned by Thrift.
 Thrift does not have support for inheritance, so this class is used to pack up both columns and super columns in this one object (depending on what you’re querying)
 The client just reads the values if a column is returned; if a super column is returned, the client gets a column out of the super column and reads that.
 The column parent is the path to the parent of a set of columns.
@@ -1649,7 +1541,6 @@ To use the slice predicate, you create a predicate object populated with the col
 You can get a set of columns contained in a column parent using a get_slice operation.
 It will retrieve values by column name or a range of names, and will return either columns or super columns.
 In this example, only the specified columns will be retrieved, and the other columns will be ignored.
-Because we know that we’re querying a regular column family, we get the column out of the ColumnOrSuperColumn data structure returned by the underlying RPC mechanism (Thrift), and finally retrieve the names and values from it in a loop.
 Getting a Set of Columns with Slice Range Sometimes you don’t want to specify each and every column you want to retrieve, perhaps because you have a lot of columns to retrieve or because you don’t know all of their names.
 To read a range of the columns in a row, you can specify the start and finish columns, and Cassandra will give you the start and finish columns as well as any columns in between, according to the sorting order based on the comparator for that column family.
 Create your slice predicate, then create your range, and then set the range into the predicate before passing the predicate to your read operation.
@@ -1657,12 +1548,12 @@ When executed with a get_slice operation, this query will return the two columns
 For example, if this row also had an “email” column, it would be returned in the results as well.
 You must consider the column names according to their comparator, and specify start and finish in the proper order.
 For example, trying to set a start of name and a finish of age will throw an exception like this:
-InvalidRequestException(why:range finish must come after start in the order of traversal)
 You can limit the number of columns returned by your slice range by using the count attribute of the Slice Range structure.
 Let’s say we have a row with hundreds of columns.
 We could specify a range that might include many of these columns, but limit our result set to only the first 10 columns like this:
 Again, the “first” columns are those according to the order dictated by the column family’s comparator.
-You can also reverse the order in which the columns are fetched by setting the reversed reversed to true returns them in the order name, email, age.
+You can also reverse the order in which the columns are fetched by setting the reversed = true attribute on the slice range.
+If you have columns age, email, and name, then setting reversed to true returns them in the order name, email, age.
 Getting All Columns in a Row To read all of the columns in a row, you still need the predicate using a slice range, but you pass it empty byte arrays for the start and finish parameters, like this:
 Then, you can pass this populated predicate object to your get_slice operation along with the other necessary parameters (such as consistency level and so on)
 Get Range Slices In the same way that you access a set of columns by using a range, you can also access a range of keys or tokens.
@@ -1681,10 +1572,8 @@ You specify the parent and the predicate as usual, and also provide the operatio
 The row keys are just specified as a list of byte arrays, which are the key names.
 This may seem like a complicated data structure, but it’s actually simple.
 A map is a key/value pair, and in this case the byte array key is the row key, so in this example there will be two keys: one for each row key we get.
-Each byte[] key in the results map points to a list containing one or more ColumnOrSuperColumn objects.
 This structure is used because Thrift does not support inheritance.
 You have to know whether your column family is of type Standard or Super, and then you just get the right one from the data structure.
-From the ColumnOrSuperColumn, you extract the column (in this case, the super_ column will be empty), and then use the column object to get the name and value.
 You could also get the timestamp from it if you wanted to.
 An example of using multiget slice is shown in Example 7-5
 So we have a couple of row keys in the database, with identifiers I’ve kept purposefully short and clear in order to help you visualize the structure.
@@ -1733,7 +1622,6 @@ This means that even if you have deleted all of the columns for a given row, you
 This is valid, and is just something to keep in mind as you iterate result sets on the client.
 Programmatically Defining Keyspaces and Column Families You can create keyspaces and column families through the API as well.
 Summary In this chapter we saw how to read and write data using a variety of operations offered by Cassandra’s rich API.
-For example, in Java, JDBC is an API that abstracts the vendor implementation of the relational database to present a consistent way of storing and retrieving data using Statements, PreparedStatements, ResultSets, and so forth.
 To interact with the database you get a driver that works with the particular database you’re using, such as Oracle, SQL Server, or MySQL; the implementation details of this interaction are hidden from the developer.
 Given the right driver, you can use a wide variety of programming languages to connect to a wide variety of databases.
 Cassandra is somewhat different in that there are no drivers for it.
@@ -1758,7 +1646,6 @@ To use it, you create a language-neutral service definition file that describes 
 This file is then used as input into the engine that generates RPC client code libraries for each of the supported languages.
 The effect of the static generation design choice is that it is very easy for the developer to use, and the code can perform efficiently because validation happens at compile time instead of runtime.
 You can read the full paper that describes the Thrift implementation, written by its creators, at http://incubator.apache.org/thrift/static/thrift -20070401.pdf.
-The design of Thrift offers the following features: Language-independent types.
 Because types are defined in a language-neutral manner using the definition file, they can be shared between different languages.
 For example, a C++ struct can be exchanged with a Python dictionary.
 Common transport interface The same application code can be used whether you are using disk files, in-memory data, or a streaming socket.
@@ -1776,11 +1663,9 @@ These Ant targets call the Thrift program directly, passing arguments to it for 
 Note that the distribution ships with generated Java API; these targets are not called during a regular build.
 So if you want to get a Perl or Python interface, you need to execute these targets directly (or modify the build file to include these targets)
 To generate Thrift bindings for other languages, pass it to the --gen switch (for example, thrift --gen php)
-The Ant targets use the libthrift-r917130.jar located in Cassandra’s lib directory.
 Note that the Thrift JAR version number changes as Cassandra is updated.
 Execute the build.xml script by typing >ant in a terminal.
 Exceptions There are several exceptions that can be thrown from the client interface that you might see on occasion.
-The following is a list of basic exceptions and explanations of why you might see them, though a couple of them are not in the Thrift definition: AuthenticationException.
 The user exists but has not been granted access to this keyspace.
 This is thrown when the class that loads the database descriptor can’t find the configuration file, or if the configuration is invalid.
 This can happen if you forgot to specify a partitioner or endpoint snitch for your keyspace, used a negative integer for a value that only accepts a positive integer, and so forth.
@@ -1793,7 +1678,6 @@ TExceptions are uncaught, unexpected exceptions that bubble up from the server a
 They are not used as application exceptions, which you must define yourself.
 TimedOutException The response is taking longer than the configured limit, which by default is 10 seconds.
 This typically happens because the server is overloaded with requests, the node has failed but this failure has not yet been detected, or a very large amount of data has been requested.
-UnavailableException Not all of the Cassandra replicas that are required to meet the quorum for a read or write are available.
 Thrift Summary If you want to use Thrift directly for your project, there are numerous prerequisites for working on Windows (see http://wiki.apache.org/thrift/ThriftInstallationWin32) and many things that can go wrong.
 Partly because the Thrift project is still nascent, has limitations with transport implementations, and has not received a lot of direct attention since its open source inception, Cassandra is probably switching to Avro.
 Avro The Apache Avro project is a data serialization and RPC system targeted as the replacement for Thrift in Cassandra, starting with version 0.7
@@ -1806,10 +1690,7 @@ These files are in the same interface directory where Thrift-generated files are
 To find the complete definition of the Avro interface for Cassandra, look in the cassandra.avpr file, which contains the JSON defining all the messages and operations that Cassandra clients can use.
 You can see, for example, that there are at least two kinds of messages, one representing a get request and the other representing an insert request.
 The exceptions possible for each type are packaged with their messages.
-Avro Ant Targets The Cassandra build.xml file defines two Ant targets that are executed when Cassandra is compiled from source, which is made possible by avro-1.2.0-dev.jar in the Cassandra lib directory.
 The Ant tasks for Thrift generation directly ran the Thrift executable (as you would on the command line)
-The avro-generate target does not run if it is determined by the check-avro-generate task that all of the files are up to date already.
-If the generated client API files are not up to date with the current schema, then the cassandra.avpr file will be reread and will generate the sources again under .java file represents the runtime Java Avro interface.
 The Ant <taskdef> tag defines custom extension tasks that subsequent targets can execute.
 The Schema Task is part of Avro itself, and is used to generate a Java interface and classes for the described protocol.
 It reads the source directory of Avro-generated Java classes and outputs to the build directory Java classes that maintain the names defined in the source.
@@ -1854,7 +1735,6 @@ Load Balancer The third option is to have operations deploy a load balancer in f
 Cassandra Web Console There’s a web console available from Suguru Namura, who contributed the code as a GitHub project.
 The console makes it easy to interact with Cassandra to perform a.
 I’m starting with this console before getting into the real clients you will use to interact with the database because it gives you a very user-friendly view into the configuration of your Cassandra instance.
-You can download the console, which runs as a WAR, at http://github.com/suguru/ cassandra-webconsole.
 If you want to modify the source code, either fork it with Git or just grab one of the binaries from the Downloads page of the project.
 If you want to compile the project, you’ll need Maven 2
 The console allows you to view keyspace properties and add, rename, and drop a keyspace.
@@ -1892,8 +1772,6 @@ Connection pooling Cassandra is specifically built for very high scalability, an
 It’s expensive to open and close connections, just as it is in JDBC.
 Hector directly supports JMX by exposing metrics such as bad connections, available connections, idle connections, and more.
 The Hector API The following is an example from Ran Tavory’s blog (http://prettyprint.me) illustrating how Hector simplifies working with Cassandra:
-Create a cluster // Choose a keyspace // create an string extractor.
-Now read a value // Create a query // set key, name, cf and execute setName("column1")
 Let’s walk through creating an application using HectorSharp as our interface to Cassandra.
 This is probably the best way to see how to incorporate it into your projects.
 We’ll create a simple C# console project that reads and writes some data to Cassandra so you can see how it’s used.
@@ -1909,18 +1787,13 @@ Now let’s reference the HectorSharp DLL so we can use its classes.
 When the dialog window comes up, pick the Browse tab, then navigate to the location where you unpacked HectorSharp.
 Go to the bin\ Release directory and pick the HectorSharp.dll file.
 You should see HectorSharp added as a reference in your Solution Explorer.
-I have changed the name of my application to CassandraProgram.cs.
 If you do this too, you’ll need to change the executable in the project by choosing Project > ExecuteHector Properties.
 Choose the Application tab, and then enter your program name in the Startup Object field.
 Let’s take a quick look at some of the high-level constructs that HectorSharp makes available: ICassandraClient.
-This is the interface used by HectorSharp client objects, whose implementation type is typically a KeyedCassandraClientFactory object.
-Pool HectorSharp pools its connections to Cassandra, so you use a factory method Then, using the pool, you can create a client.
 Client From the connection pool, you can get a Client that is used to connect with Cassandra.
 You pass the pool into your client factory, then you can specify additional configuration details (such as timeout in seconds), and finally build an endpoint using the host and port you want to connect to.
 Keyspace This represents a Cassandra keyspace, which you obtain from the Client object.
 It allows you to specify the name of the keyspace to connect to and a consistency level to use:
-The FailoverPolicy class allows you to indicate what HectorSharp should do if thinks that a node it’s trying to connect to is down.
-You can retry, retry on increments, or just decide to quit, which is what I’ve specified here.
 ColumnPath A ColumnPath is a simple wrapper that allows you to easily reference an entire column family, a super column within a particular column family, or a single column within a column family.
 It consists of nothing but C# properties for each of those three items, plus constructors.
 So you could create a DAO with a get method as shown here:
@@ -1928,12 +1801,12 @@ The get command is using the parameterized execute method, as are other sibling 
 For our sample application, we’ll just keep it simple, but this is a reasonable pattern to follow for such a use case.
 Your application should look like the listing in Example 8-1
 Compile this code into a console application by choosing Debug > Build Solution.
-This directory has our executable in it; to run our program, just enter ExecuteHector.exe at the prompt.
 As you can see, if you’re creating a C# application and want to use Cassandra as the backing database, it is very easy to get started with HectorSharp, and its object model is very high-level, intuitive, and easy to use.
 Just be aware that as of this writing, HectorSharp is still in the nascent stages, so make sure that your requirements are supported before going too far.
 Chirper If you’re a .NET developer, you might be interested in Chirper.
 Chirper is a port of Twissandra to .NET, written by Chaker Nakhli.
 It’s available under the Apache 2.0 license, and the source code is on GitHub at http://github.com/nakhli/Chirper.
+You can read a blog post introducing Chirper at http://www.javageneration.com/?p=318
 It has several prerequisites, so a little setup is required.
 Before you can use it, make sure you have the following setup:
 Twisted Python (an event-driven networking interface for Python), available at.
@@ -1947,7 +1820,6 @@ And the API is much simpler than using the low-level stuff exposed by Thrift and
 To write data, you just need a Mutator class; to read data, just use a Selector.
 Here’s a brief sample from Williams’ website that creates a connection pool to a list of Cassandra servers, then writes multiple subcolumn values to a super column:
 Consider how much easier that is than using the API provided out of the box.
-You can get the source code from http://code.google.com/p/pelops, and you can read some samples and explanations of how to use Pelops at Dominic Williams’ site, http: //ria101.wordpress.com.
 If you’re using Cassandra from a Java application, I encourage you to give Pelops a try.
 Kundera (Java ORM) Kundera is an object-relational mapping (ORM) implementation for Cassandra written using Java annotations.
 According to its author, Impetus Labs, the aim of Kundera is:
@@ -1955,9 +1827,7 @@ This library is quite new at the time of this writing, so it has yet to be seen 
 Still, it does appear promising, and it speaks to burgeoning interest in Cassandra among general application developers.
 If you envision using Cassandra from Ruby, this might fit the bill.
 Summary You should now have an understanding of the variety of client interfaces available for Cassandra and how to install and use them.
-There are many Cassandra clients, each with its own strengths and limitations, in different languages and varying degrees of production-readiness.
 It’s not possible to cover all of them here, so I’ve taken a representative sample from a few different languages.
-To see a variety of other options that might fit your needs better, see the Cassandra project wiki Client Options page at http: //wiki.apache.org/cassandra/ClientOptions.
 This chapter is about using a variety of tools to monitor and understand important events in the life cycle of your Cassandra cluster.
 We’ll look at some simple ways to see what’s going on, such as changing the logging levels and understanding the output.
 But Cassandra also features built-in support for Java Management Extensions (JMX), which offers a rich way to monitor your Cassandra nodes and their underlying Java environment.
@@ -1969,12 +1839,10 @@ It just outputs basic status updates, such as the following:
 When you start Cassandra in a terminal, you keep this output running in the terminal window by passing the program the -f flag (to keep output visible in the foreground of the terminal window)
 But Cassandra is also writing these logs to physical files for you to examine later.
 By changing the logging level to DEBUG, we can see much more clearly what activity the server is working on, instead of seeing only these stage updates.
-To change the logging level, open the file <cassandra-home>/conf/log4j-server .properties and find the line that looks like this:
 Of course, in production you’ll want to tune the logging level back up to WARN or ERROR, as the verbose output will slow things down considerably.
 This allows you to see exactly what Cassandra is doing and when, which is very helpful in troubleshooting.
 But it’s also helpful in simply understanding what Cassandra does to maintain itself.
 If you want to change the location of the logs directory, just find the following entry in the same log4j.properties file and chose a different filename:
-There’s not a different entry for Windows; on Windows systems this will automatically resolve to C:\\var\log\cassandra\system.log.
 If you don’t see any logfiles in this location, make sure that you are the owner of the directories, or at least that proper read and write permissions are set.
 Cassandra won’t tell you if it can’t write the log; it just won’t.
 Note that this is the location for the log of the activity of the database, and not for Cassandra’s internal datafiles.
@@ -1990,7 +1858,6 @@ Then you can start Cassandra regularly and tail the logfile using this command:
 This will show the output in the console in the same way as if it were foregrounded.
 Once you’re running the server with debug logging enabled, you can see a lot more happening that can help during debugging.
 For example, here we can see the output when writing and then reading a simple value to the database:
-That’s the server output generated by executing this command in the CLI: Value inserted.
 We’ve inserted a value in the column family named Standard1
 When we perform a get request, the column key key999 is translated to CompareWith value.
 So again we’ll do a set and then a get request for the same value.
@@ -2002,7 +1869,6 @@ It’s possible for this to happen when you mix Windows and Linux boxes in a Cas
 If your Linux and Windows boxes can see each other, share resources such as printers, read and write files between them, view web pages the other is serving, and so forth, this might give you the impression that this should work.
 Don’t be tempted to mix and match in a production environment.
 Overview of JMX and MBeans In this section, we explore how Cassandra makes use of Java Management Extensions (JMX) to enable remote management of your servers.
-You can read more about the JMX implementation in Java by examining the java.lang.management package.
 First, JMX allows you to understand your application’s health and overall performance in terms of memory, threads, and CPU usage—things that are generally applicable to any Java application.
 Second, JMX allows you to work with specific aspects of your application that you have instrumented.
 Instrumentation refers to putting a wrapper around application code that provides hooks from the application to the JVM in order to allow the JVM to gather data that external tools can use.
@@ -2044,11 +1910,8 @@ Because such a value is maintained internally in the JVM, it doesn’t make sens
 They make operations available to the JMX agent that let you get and set values.
 You can tell whether the MBean will let you set a value by looking at the value for writable.
 If it’s false, you will see a label indicating the readonly value; if it’s true, you will see a set of one or more fields to add your new value and a button to update it.
-An example of this is the java.util.logging.Logger bean, as shown in Figure 9-3
 That’s because the Java compiler “forgot” the parameter names during compilation.
 So in order to know what parameters to set, you’ll need to look at the JavaDoc for the particular MBean you’re working with.
-In the case of java.util .logging.Logger, this class implements an interface called java.util.logging .LoggingMXBean, which wraps it for instrumentation.
-If it’s not obvious, setting the logging level for java.util.logging won’t help you much if that’s not what your application is using for logging.
 It’s just used here as a general example because it’s easy to understand and serves as a gentle introduction.
 That means that these are not simple values that can be displayed in a single.
 One example is Memory > HeapMemoryUsage, which offers several data points and therefore has its own view.
@@ -2057,14 +1920,12 @@ Now we’ll quickly get set up to start monitoring and managing Cassandra specif
 Integrating JMX Enabling Cassandra to use JMX is easy, but there are a couple of dependencies.
 You can probably use a newer version if one’s available, but this version is known to work.
 After you’ve downloaded the library, unzip it and navigate to the lib directory.
-The java.util.logging.Logger MBean allows you to set a logger’s log level.
 If you’ve downloaded Cassandra’s source code, just drop the two necessary JARs into the lib directory and rebuild the source.
 The next time you start Cassandra, you should see output similar to the following:
 Here, MX4J will act as our JMX server agent, and now we’re ready to start getting some benefit from JMX.
 Interacting with Cassandra via JMX Now that JMX is enabled, let’s connect to Cassandra on its JMX port.
 To do so, open a new terminal and type the following:
 When you run jconsole, you’ll see a login screen similar to that in Figure 9-4
-From here, you can simply double-click on the value org.apache.cassandra.thrift .CassandraDaemon under the Local Process section if you’re monitoring a node on the same machine.
 If you want to monitor a node on a different machine, check the Remote Process radio button, then enter the host and port you want to connect to.
 Cassandra JMX by default broadcasts on port 8080, so you can enter a value like the one shown here and then hit Connect:
 If you have trouble with this, make sure that you don’t have something else running on port 8080, as that’s a popular port for tools such as Apache Tomcat.
@@ -2079,26 +1940,19 @@ By changing the chart value in the dropdown, you can see in detail the graduatio
 You can also (try to) force a garbage collection if you think it’s necessary.
 You can connect to more than one JMX agent at once.
 Cassandra’s MBeans Once you’ve connected with a JMX agent such as JConsole, you can manage Cassandra using the MBeans it exposes.
-Other than the standard Java items available to every agent, there are several Cassandra packages that contain manageable beans, organized by their package names, which start with org.apache.cassandra.
 We won’t go into detail on all of them here, but there are several of interest that we’ll take a look at.
 Many classes in Cassandra are exposed as MBeans, which means in practical terms that they implement a custom interface that describes the operations that need to be implemented and for which the JMX agent will provide hooks.
 The steps are basically the same for getting any MBean to work; I’ll use a single key class as an example.
 If you’d like to JMX-enable something that isn’t already enabled, modify the source code following this general outline and you’ll be in business.
 For this example, we look at Cassandra’s StorageService and how it uses MBeans.
-Here’s the partial definition of the StorageServiceMBean class, with some operations omitted for brevity:
 As you can see by this MBean interface definition, there’s no magic going on.
 This is just a regular interface defining the set of operations that will be exposed to JMX that the StorageService implementation must support.
 This typically means maintaining additional metadata as the regular operations do their work.
 The StorageService class implements this interface and must do the work of directly supporting JMX.
-The consistency manager field has a reference type of java.util .concurrent.ExecutorService, but the actual implementation is of type org.apache .cassandra.concurrent.JMXEnabledThreadPoolExecutor.
-The JMXEnabledThreadPoolExecutor implements the JMXEnabledThreadPoolExecutorM Bean and, by association, org.apache.cassandra.concurrent.IExecutorMBean, so that all the Cassandra classes that use thread pools can expose the same operations to JMX.
-It’s in the JMXEnabledThreadPoolExecutor that we see how Cassandra becomes JMXenabled.
 The executor pool registers with the platform MBean server in its constructor, as shown here:
 The platform server here is simply the default one embedded in the JDK.
 The MBean is named and registered so that the MBean server knows to monitor it and make it manageable via the agent.
-In order to do proper cleanup, when the JMXEnabledThreadPoolExecutor is shut down, the class will also unregister itself from the MBean server:
 Likewise, the StorageService class itself registers and unregisters with the MBean server for the JMX properties that it maintains locally.
-For example, here is the Storage Service implementation of the of the getUnreachableNodes operation:
 The Gossiper class is a Singleton that maintains lists of IP addresses of the nodes it has sent and received heartbeat messages from, so when you call the getUnreachable Nodes operation in the JMX agent, it calls the MBean method in StorageService, which delegates the call to the Gossiper, which returns the set of unreachable IP addresses, wrapped in a new set so it can’t be modified directly by the caller:
 So when we open it up in the JMX agent JConsole, we see, happily, that we have no unreachable nodes because the set is empty.
 If there were unreachable nodes, their IP addresses would appear in the Value field, as shown in Figure 9-5
@@ -2114,10 +1968,7 @@ All of the stage objects expose only attributes and don’t allow you to perform
 The cache information contains attributes for the cache’s current size, capacity, number of cache requests, cache hits, and recent cache activity.
 Column Family Stores is another set of MBeans, but these give you a richer variety of attribute values, and also allow you to perform some operations.
 These give you a view into your memtables, SSTables, and Bloom filter usage.
-You can use the operations provided to force a flush of the memtables, initiate a major compaction by calling the forceMajorCompaction method of the CompactionManager class, or invalidate a row cache.
 This is the number of reads Cassandra has performed, available from the Read Count attribute.
-Recent Read Latency You get this number (in microseconds) from the RecentReadLatencyMicros attribute.
-You can also see the TotalReadLatencyMicros; the total reads multiplied by the read latency gives you that number.
 These statistics come in very handy if you are concerned that performance is degrading.
 But they also are great for showing how fast Cassandra can be.
 For example, on my eight-core machine, I’ve recorded write latency at 92 microseconds for simple values in a small database.
@@ -2129,23 +1980,22 @@ This allows you to inspect your OperationMode, which reports normal if everythin
 You can also view the current set of live nodes, as well as the set of unreachable nodes in the cluster.
 If any nodes are unreachable, Cassandra will tell you their IP addresses in the UnreachableNodes attribute.
 But there are many other standard maintenance operations that this bean affords you, and understanding the operations available here is important to keeping your cluster in good health.
-If you want to change Cassandra’s log level at runtime without interrupting service (as we saw earlier in the general example), you can invoke the setLog4jLevel(String class Qualifier, String level) method.
 For example, say that you have set Cassandra’s log level to debug because you’re troubleshooting an issue.
 You can use some of the methods described here to try to help fix your problem, then you might want to change the log level to something less trying on the system.
 To do this, navigate to the StorageSer vice MBean in JConsole.
 We’ll change the value for a particularly chatty class: the LoadDisseminator.
 The first parameter to this operation is the name of the class you want to set the log level for, and the second parameter is the level you want to set it to.
-Enter org.apache.cassandra.service.LoadDisseminator and INFO, and click the button labeled setLog4jLevel.
 You should see the following output in your logs (assuming your level was already debug):
 As you can see from this output, Cassandra was logging a load info statement because the logger was set to debug.
 After invoking the setLog4jLevel operation, we get the INFO output and no more debug level statements.
-If you’re looking for a certain key, you can use the getNaturalEndpoints(String table, byte[] key) operation.
+To get an understanding of each node’s load, you can use the getLoadMap() method, which will return to you a Java Map with keys of IP addresses with values of their corresponding loads.
 Pass it the table name and the key for which you want to find the endpoint value, and it will return a list of IP addresses that are responsible for storing this key.
-You can also use the getRangeToEndpointMap operation to get a map of range to end points describing your ring topology.
 If you wish to decommission a server, you can also do that with this MBean.
-Invoke to another machine and take this node out of service.
+Invoke the decommission() operation, and the current node’s data will automatically transfer to another machine and take this node out of service.
 If you’re feeling brave, you can invoke the truncate operation for a given column family in a given keyspace.
 If all of the nodes are available, this operation will delete all data from the column family but leave its definition intact.
+A good idea for general maintenance is to use the loadBalance() operation if you discover through other MBeans that your nodes have become very unbalanced.
+This can happen from time to time, where some nodes have an inordinate share of the data.
 This operation will cause the current node to unload its data onto one of its neighboring.
 There are two basic ideas here: a stream source and a stream destination.
 Each node can stream its data to another node in order to perform load balancing, and this class supports these operations.
@@ -2155,10 +2005,8 @@ So in conjunction with the Storage-Service MBean, if you’re concerned that a n
 Custom Cassandra MBeans Let’s quickly write a very simple MBean so that you can do this kind of work yourself if there’s a new feature you’d like to JMX-enable.
 First, we get the source code and create our MBean interface next to the Cassandra source file it wraps.
 Our MBean will return the current version of the Cassandra API, which is not currently available in Cassandra.
-Now we need to open up the source of CassandraServer.java and make it implement our MBean interface and hook into the JMX server.
 Thrift generates a version number that is accessible from the CLI, so we’ll just reuse that.
 So we have implemented the interface and connected the Cassandra server with the management platform.
-Now all we need to do is open a terminal, navigate to our jconsole and connect to your server instance.
 You should see your attribute available, as shown in Figure 9-6
 Here, version 8.1.0 is the API version information generated as a Thrift constant; it doesn’t necessarily correspond to the release version.
 If you are modifying the source and are unsure about what you’ve changed, you can always use Subversion to check the changes in your local repository against what you checked out.
@@ -2166,18 +2014,15 @@ Use the svn diff command to see the changes between the two files and dump the r
 Runtime Analysis Tools We don’t need to go into too much more detail about JMX in general here, but to understand Cassandra and manage it, it’s good to know what features are exposed with JMX.
 It’s also useful to know what tools Java makes available out of the box to detect and spot the source of a memory leak, analyze a hung process, and so on.
 Because Cassandra is a Java application, and because it is relatively young, there are no thirdparty tools specific to Cassandra at this point.
-If you are debugging and you’re not sure what commands have been executed against Cassandra with the CLI, look in your home directory for a hidden file called .cassandra.history.
 This acts like your Bash shell history, listing the commands in a plain-text file in the order Cassandra executed them.
 Heap Analysis with JMX and JHAT As you’re debugging your Cassandra application, it’s often useful to understand what’s happening in your heap.
 If you’re working off of the trunk or are otherwise unsure of your Cassandra build, there are some native Java tools available to you.
 Cassandra can use a lot of memory, and garbage collection and major compactions can have a big impact on performance.
 You can combine this tool, which ships with the JDK, with some data made available through JMX.
-To gain a better understanding of our heap, we’ll use the com.sun.management.HotSpot Diagnostic bean.
 Because that’s the name of the operation in the MBean, that’s the label on the button in the JMX agent.
 This bean allows you to specify a filename where you want to dump the heap to; then you click the button and it writes the heap information into the file you specified.
 But the dump Heap operation writes the heap’s current state to a file that’s encoded in the HPROF binary format for heap and CPU profiling.
 So we can’t read it in a text file and will need to use JHAT to view the data.
-To get a heap dump, run JConsole and navigate to the com.sun.management.HotSpot Diagnostic bean, expand the Operations tree, and click the dumpHeap operation.
 Enter a relative or absolute path naming the file you want to write the heap dump to, as shown in Figure 9-7
 You should see a pop-up box indicating that the method was successfully invoked.
 You can also get a heap dump file on a running process without the graphical interface using the jmap tool that ships with the JDK.
@@ -2188,16 +2033,13 @@ Once you have the Cassandra process ID, we can use it to specify the heap we wan
 This is useful for finding out what’s going on in a hung process, locating the source of a memory leak, and so on.
 Now that we have captured our heap data, let’s use JHAT to check it out.
 To run JHAT, open a terminal and type something like the following, replacing my heap dump file location with yours:
-This command will run for a moment and then output something like the following: Chasing references, expect 63 dots..............................................
 Now that the server is started, you can open a browser to http://localhost:7000 to view the file.
 The heap dump file is also portable, so you can move it to another box after you generate it and view it there in JHAT.
-For more information on how to use JHAT, consult http://java.sun.com/ javase/6/docs/technotes/tools/share/jhat.html or just type jhat -h for help options.
 If there’s a problem with Cassandra, an hprof file will be created, as we can see in the following output:
 The file will be created in <cassandra-home>, and you can open it like this:
 The file will be analyzed, the server will be created, and you can open a browser to see what the state of your objects were at the time of the crash.
 Alternatively, you can create your own custom view by executing a query of the heap data in an HTML form.
 Object Query Language (OQL) is a simple SQL-like syntax for querying the heap dump file to find only objects that meet certain specified properties.
-The query in Figure 9-8 allows us to filter on only objects that are in Cassandra’s org.apache.cassandra.db package.
 Using Object Query Language in JHAT to filter only Cassandra’s classes in the db package.
 Once the query result returns, you can click on the class name to see additional detail about it.
 You can execute queries about more specific properties of objects as well.
@@ -2238,7 +2080,6 @@ There’s an article on Mahalo about how to integrate Nagios with JMX.
 You should now be ready to perform routine maintenance, understand your Cassandra cluster better, and know how to perform some general and fine-grained tuning tasks to keep Cassandra healthy.
 In this chapter, we look at some things you can do to keep Cassandra healthy.
 So put your operations hat on, and let’s get started.
-The Nodetool ships with Cassandra and can be found in <cassandra-home>/bin.
 This is a command-line program that offers a rich array of ways to look at your cluster, understand its activity, and modify it.
 Nodetool lets you get limited statistics about the cluster, see the ranges each node maintains, move data from one node to another, decommission a node, and even repair a node that’s having trouble.
 Many of the tasks in Nodetool overlap with functions available in the JMX interface.
@@ -2284,10 +2125,8 @@ So in this section we look at some of these basic maintenance tasks: repair, sna
 Repair Running nodetool repair causes Cassandra to execute a major compaction.
 A Merkle tree of the data on the target node is computed, and the Merkle tree is compared with those of other replicas.
 This step makes sure that any data that might be out of sync with other nodes isn’t forgotten.
-During a major compaction (see “Compaction” in the Glossary), the server initiates a TreeRequest/TreeReponse conversation to exchange Merkle trees with neighboring nodes.
 The Merkle tree is a hash representing the data in that column family.
 If the trees from the different nodes don’t match, they have to be reconciled (or “repaired”) in order to determine the latest data values they should all be set to.
-This tree comparison validation is the responsibility of the org.apache.cassandra.service.AntiEntropy Service class.
 If it finds any differences, it launches a repair for the ranges that don’t agree.
 So although Cassandra takes care of such matters automatically on occasion, you can run it yourself as well.
 Anti-entropy is used in Amazon’s Dynamo, and Cassandra’s implementation is modeled on that (see Section 4.7 of the Dynamo paper if you have an academic interest)
@@ -2295,7 +2134,6 @@ The repair command, unlike other Nodetool commands, requires passing the name of
 After running the tool, you’ll see some moderate output in your server logs, similar to this:
 In a hash tree, the leaves are the data blocks (typically files on a filesystem) to be summarized.
 Every parent node in the tree is a hash of its direct child node, which tightly compacts the summary.
-In Cassandra, the Merkle tree is implemented in the org.apache.cassandra.utils .MerkleTree class.
 Merkle trees are used in Cassandra to ensure that the peer-to-peer network of nodes receives data blocks unaltered and unharmed.
 They are also used in cryptography to verify the contents of files and transmissions, and are used in the Google Wave product as well.
 Because major compaction is a complex and sensitive operation, it’s a good idea to run it only infrequently (not every day) and during lowtraffic periods.
@@ -2359,7 +2197,6 @@ You can connect to node 1 and use it to remove a given token, wherever it is on 
 Compaction Threshold The compaction threshold refers to the number of SSTables that are in the queue to be compacted before a minor compaction is actually kicked off.
 You don’t want this number to be too small, or Cassandra will spend time fighting with clients for resources to perform many frequent, unnecessary compactions.
 You also don’t want this number to be too large, or Cassandra could spend a lot of resources performing many compactions at once, and therefore will have fewer resources available for clients.
-To find out the compaction threshold on a given node, invoke Nodetool with the getcompactionthreshold command:
 Changing Column Families in a Working Cluster If you need to, you can add, remove, or rename column families in a live Cassandra cluster.
 Summary In this chapter we looked at some of the ways you can interact with Cassandra to perform routine operational maintenance tasks.
 We saw how to get statistics, how to rebalance lopsided nodes, how to take a snapshot of your database for backup purposes, how to decommission nodes, and more.
@@ -2409,18 +2246,14 @@ In order to guarantee durability for your Cassandra cluster, you may want to exa
 If your commit log is set to batch, it will block until the write is synced to disk (Cassandra will not acknowledge write operations until the commit log has been completely synced to disk)
 You can change the value of the configuration attribute from periodic to batch to specify that Cassandra must flush to disk before it acknowledges a write.
 Changing this value will require taking some performance metrics, as there is a necessary trade-off here: forcing Cassandra to write more immediately constrains its freedom to manage its own resources.
-If you do set commitlog_sync to batch, you need to provide a suitable value for CommitLogSyncBatchWindowInMS, where MS is the number of milliseconds between each sync effort.
 Moreover, this is not generally needed in a multinode cluster when using write replication, because replication by definition means that the write isn’t acknowledged until another node has it.
 If you decide to use batch mode, you will probably want to split the commit log onto a separate device to mitigate the performance impact.
 It’s a good idea to split it out onto a separate disk from the SSTables (data) anyway, even if you don’t do this.
 Memtables Each column family has a single memtable associated with it.
 There are a few settings around the treatment of memtables.
-The size that the memtable can grow to before it is flushed to disk as an SSTable is specified with the MemtableSizeInMB element (binary_memtable_throughput_in_mb in YAML)
 Note that this value is based on the size of the memtable itself in memory, and not heap usage, which will be larger because of the overhead associated with column indexing.
-You’ll want to balance this setting with MemtableObjectCountInMillions, which sets a threshold for the number of column values that will be stored in a memtable before it is flushed.
 This refers to the maximum number of columns that will be stored in a single memtable before the memtable is flushed to disk as an SSTable.
 You can also configure how long to keep memtables in memory after they’ve been flushed to disk.
-When the flush is performed, it will write to a flush buffer, and you can configure the size of that buffer with flush_data_buffer_size_in_mb.
 This setting, which is 1 by default, indicates the number of threads used to write out the memtables when it becomes necessary.
 If you have a very large heap, it can improve performance to set this count higher, as these threads are blocked during disk I/O.
 Concurrency Cassandra differs from many data stores in that it offers much faster write performance than read performance.
@@ -2458,7 +2291,6 @@ If your column family gets far more reads than writes, then setting this number 
 If your column family has a lower ratio of reads to writes, but has rows with lots of data in them (hundreds of columns), then you’ll need to do some math before setting this number very high.
 And unless you have certain rows that get hit a lot and others that get hit very little, you’re not going to see much of a boost here.
 Buffer Sizes The buffer sizes represent the memory allocation when performing certain operations.
-The following is a quick overview of these settings: flush_data_buffer_size_in_mb.
 By default, this is set to 32 megabytes and indicates the size of the buffer to use when memtables get flushed to disk.
 If each key defines only a few columns, then it’s a good idea to increase the index buffer size.
 Alternatively, if your rows have many columns, then you’ll want to decrease the size of the buffer.
@@ -2474,7 +2306,6 @@ You’ll know that you haven’t done this step yet, or have done it incorrectly
 Make sure that you have Python installed on your system.
 To do this, open a terminal and type $python; you should see output similar to this:
 Make sure that you have Python 2.6 or better installed so that you can take advantage of the newest multithreading capabilities it offers, which come in handy with the stress test.
-This will give you a file like thrift-0.2.0-incubating.tar.gz, which you can decompress.
 Then, in the directory where you decompressed it, execute the following command on Linux to establish some dependencies:
 Thrift might not run on your system if you don’t have the C++ Boost libraries properly installed.
 Now, to build Thrift, run a series of commands as root from the Thrift home directory:
@@ -2482,7 +2313,6 @@ In order to get autoscan, which the Thrift bootstrap needs, you’ll have to run
 You can tell whether you have autoscan installed by executing the command $which autoscan.
 If Thrift is installed properly, you should be able to run the Thrift program and see help output:
 Run the following command to generate the Thrift interfaces for Python:
-Now you’ll have the Cassandra Thrift interfaces for Python generated in the directory <cassandra-home>/interfaces/thrift/ gen-py.
 Now just make sure that your Cassandra server is started, and you’re ready to run the Python stress test.
 Running the Python Stress Test Now that we’re all set up, we can run the stress test.
 In a terminal, type stress.py to run the test against local host.
@@ -2506,10 +2336,7 @@ In this section we look at how to tune the startup.
 If you’re using Windows, the startup script is called cassandra.bat, and on Linux it’s cassandra.sh.
 You can start the server by simply executing this file, which sets several defaults.
 But there’s another file in the bin directory that allows you to configure a variety of settings related to how Cassandra starts.
-This file is called cassandra.in.sh and it separates certain options, such as the JVM settings, into a different file to make it easier to update.
 Tuning the JVM Try tuning the options passed to the JVM at startup for better performance.
-The key JVM options included in cassandra.in.sh and guidelines for how you might tweak them are illustrated in Table 11-1
-If you want to change any of these values, simply open the cassandra.in.sh file in a text editor, change the values, and restart.
 To tune these, set them higher (see following note) and to the same value.
 Assertions By default, the JVM is passed the -ea option to enable assertions.
 Changing this option from -ea to -da (disable assertions) can have a positive effect on performance.
@@ -2521,10 +2348,8 @@ Every Java object has an age field in its header, indicating how many times it h
 They’re copied (into a new space) when they survive a young generation garbage collection, and this copying has a cost.
 Because long-living objects may be copied many times, tuning this value can improve performance.
 Set it to 0 to immediately move an object that survives a young generation collection to the tenured generation.
-This instructs the JVM on what garbage collection (GC) strategy to use; specifically, it enables the ConcurrentMarkSweep algorithm.
 This setting uses more RAM, and uses more CPU power to do frequent garbage collections while the application is running in order to keep the GC pause time to a minimum.
 When using this strategy, it’s important to set the heap min and max values to the same value, in order to prevent the JVM from having to spend a lot of time growing the heap initially.
-It is possible to tune this to -XX:+UseParallelGC, which also takes advantage of multiprocessor machines; this will give you peak application performance, but with occasional pauses.
 The majority of options in the include configuration file surround the Java settings.
 For example, the default setting for the maximum size of the Java heap memory usage is 1GB.
 If you’re on a machine capable of using more, you may want to tune this setting.
@@ -2559,14 +2384,11 @@ Once we have an understanding of these tools, we cover how a Cassandra cluster c
 Finally, we share a couple of use cases where Cassandra is being used alongside Hadoop to solve real-world problems.
 What Is Hadoop? If you’re already familiar with Hadoop, you can safely skip this section.
 If you haven’t had the pleasure, Hadoop (http://hadoop.apache.org) is a set of open source projects that deal with large amounts of data in a distributed way.
-Its Hadoop distributed filesystem (HDFS) and MapReduce subprojects are open source implementations of Google’s GFS and MapReduce.
 Google found that several internal groups had been implementing similar functionality in order to solve problems in a distributed way.
 They saw that it was common to have two phases of operations over distributed data: a map phase and a reduce phase.
 A map function operates over raw data and produces intermediate values.
 By standardizing on a common framework, they could build more solutions to problems rather than new models of the same wheel.
-Doug Cutting decided to write open source implementations of the Google File System (http://labs.google.com/papers/gfs.html) and MapReduce (http://labs.google .com/papers/mapreduce.html), and thus, Hadoop was born.
 Since then, it has blossomed into myriad tools, all dealing with solutions for big data problems.
-Cassandra has built-in support for the Hadoop implementation of MapReduce (http: //hadoop.apache.org/mapreduce)
 Working with MapReduce This section covers details on how to write a simple MapReduce job over data stored in Cassandra using the Java language.
 We also briefly cover how to output data into Cassandra and discuss ongoing progress with using Cassandra with Hadoop Streaming for languages beyond Java.
 The word count example given in this section is also found in the Cassandra source download in its contrib module.
@@ -2577,24 +2399,14 @@ The main class we’ll use to interact with data stored in Cassandra from Hadoop
 ConfigHelper A helper class to configure Cassandra-specific information such as the server node to point to, the port, and information specific to your MapReduce job.
 ColumnFamilySplit The extension of Hadoop’s InputSplit abstract class that creates splits over our Cassandra data.
 It also provides Hadoop with the location of the data, so that it may prefer running tasks on nodes where the data is stored.
-ColumnFamilyRecordReader The layer at which individual records from Cassandra are read.
 There are similar classes for outputting data to Cassandra in the Hadoop package, but at the time of this writing, those classes are still being finalized.
-Running the Word Count Example Word count is one of the examples given in the MapReduce paper and is the starting point for many who are new to the framework.
-It takes a body of text and counts the occurrences of each distinct word.
-Here we provide some code to perform a word count over data contained in Cassandra.
-A working example of word count is also included in the Cassandra source download.
-First we need a Mapper class, shown in Example 12-1
 Readers familiar with MapReduce programs will notice how familiar this mapper looks.
 In this case, the inputs to the mapper are row keys and associated row values from Cassandra.
 Row values in the world of Cassandra are simply maps containing the column information.
 In addition to the word count code itself, we override the setup method to set the column name we are looking for.
 The rest of the mapper code is generic to any word count implementation.
 When iterating over super columns in your mapper, each IColumn would need to be cast to a SuperColumn, and it would contain nested column information.
-Next, let’s look at a Reducer implementation for our word count, shown in Example 12-2
-There should be nothing surprising in this reducer; nothing is Cassandra-specific.
-Finally, we get to the class that runs our MapReduce program, shown in Example 12-3
 There are a few things to note about the WordCount class that go beyond a boilerplate word count.
-We need to set the InputFormat to Cassandra’s ColumnFamilyInputFormat, along with the column name that our mapper is looking for.
 Cassandra includes something called a ConfigHelper that provides a way to set properties we’ll need, such as the Thrift contact information (server and port), the keyspace, and the column family.
 Outputting Data to Cassandra Our example reducer used a FileOutputFormat to output its results.
 As its name suggests, FileOutputFormat writes the results out to a filesystem.
@@ -2650,7 +2462,6 @@ When a job is initiated from a client machine, it goes to the jobtracker.
 The jobtracker receives information about the data source from when the job is submitted, via the configuration options mentioned earlier.
 At that point, it can use Cassandra’s Column FamilyRecordReader and ColumnFamilySplit to get the physical locations of different segments of data in the cluster.
 Then, it can use that location to split up the tasks among the nodes in the cluster, preferring to run tasks on nodes where the associated data resides.
-Finally, when creating jobs for MapReduce to execute (either directly or via Pig), the Hadoop configuration needs to point to the namenode/jobtracker (in the Hadoop configuration files) and the Cassandra configuration options.
 The cluster will be able to handle the integration from there.
 Use Cases To help you understand why Cassandra/Hadoop integration is interesting and useful, here we include a couple of use cases from out in the Cassandra community.
 Raptr.com: Keith Thornhill Raptr is a service that allows gamers to communicate and share their gaming statistics and achievements.
@@ -2663,7 +2474,6 @@ However, after becoming familiar with Pig, he didn’t see a need.
 He noted that the turnaround time from idea to execution with Pig was very quick.
 He could traverse all of the data in 10–15, minutes rather than hours.
 As a result, Raptr is able to explore new possibilities in analyzing their data.
-As far as configuration, Keith has a separate namenode/jobtracker and installed the datanode/tasktracker on each of his Cassandra nodes.
 He notes that a nice side effect of this is that the analytics engine scales with the data.
 Behind the scenes, this involves processing large amounts of behavioral data and then making the results available for real-time access.
 After looking at several alternatives, Imagini went with Cassandra because of its fault tolerance, decentralized architecture (no single point of failure), and large write capacity.
@@ -2703,13 +2513,6 @@ Because many of these databases are becoming more popular and widely understood,
 Object Databases The purpose of an object database is to avoid the object-relational impedance mismatch that occurs when trying to use a relational database under an application written in an object-oriented programming language.
 Object databases store data not in terms of relations and columns and rows, but in terms of the objects themselves, making it straightforward to use the database from an object-oriented application.
 This allows you to avoid writing extensive SQL code or stored procedures to map from application.
-Because you don’t have to translate data from application objects into the relational model, applications with object databases can be very fast.
-You also don’t need relational keys to help you join data to fulfill queries, because data is findable in the database as it is in your application: by following pointers.
-They never really caught on for widespread business application use, but have found some success in niche areas such as computer-aided design (CAD) applications, spatial applications, telecommunications, and embedded systems.
-InterSystems’ object database Caché is probably the best known commercial product, though Persistent Objects and Extended database Technology (POET), which is now the Versant Object Database, is also used for Java, .NET, and C++ applications.
-Although there is often a performance boost to be realized from using an OO database, typically it also tightly couples your data store to your application, but the trade-off may be worth it, depending on your needs.
-Also, object databases typically will only deserialize objects into the same programming language used to serialize them, which can severely limit your architecture’s flexibility by introducing even tighter coupling.
-In recent years, there has been less interest and movement in object databases than the other types of data stores discussed here, so I won’t go into more detail.
 They are now employed in a variety of use cases, such as content management and supply chain systems, document management, publishing, and support of SOA initiatives.
 On the client side, XRX uses XForms, which is a W3C-recommendation XML format distinct from HTML forms; XForms is capable of expressing the kinds of controls required in forms, but it does not dictate the final presentation form.
 That is, XForms can be rendered in web pages, but also in other applications, such as Open Office and Lotus documents.
@@ -2754,12 +2557,8 @@ A document can store any number of fields of any length, and each field can stor
 This differs from a relational database, which requires all fields to be present for every record.
 In a document-oriented database, you don’t need to store “empty” fields for which you have no data, as is required in RDBMS.
 They are very free-form in that they do not require a schema.
-So what is meant by a “document”? It could be text, written and stored as JSON (see specialized form of document database; it could be a YAML document (most JSON as there are a variety of alternatives.
-The technical implementations from one document database to another are not the same.
-For instance, CouchDB stores data as JSON, and Lotus Notes, which has been around much longer, uses its own internal format.
 What’s JSON? JSON, which stands for JavaScript Object Notation, is a data exchange format that serves as an alternative to XML.
 A basic JSON document for a contact in an address book might look like this:
-That JSON data would likely be expressed in XML like this:
 These are number, Unicode string, boolean, array, object, and null.
 In the preceding JSON document, you can see we have a contact object with a few attributes.
 The address attribute has an object value, as the address defines its own set of attributes.
@@ -2835,7 +2634,6 @@ Gremlin is an open source programming language designed specifically for perform
 We look at only a couple of graph databases here, but if you’re a regular Hadoop user you might also check out the Hama project, which is in Incubator status as of this writing.
 Hama is a package on top of Hadoop that adds support for massive matrix and graph data.
 There is also a Google project called Pregel, which they’ve been using internally for a couple of years and which they might open source.
-You can read Google’s announcement on Pregel at http://googleresearch .blogspot.com/2009/06/large-scale-graph-computing-at-google.html.
 FlockDB In April 2010, Twitter announced that they were open-sourcing to GitHub their new graph database called FlockDB.
 They created FlockDB to store the adjacency lists for followers on Twitter, so they could readily understand who follows whom and who blocks whom.
 It scales horizontally and is designed for online, low-latency, highthroughput environments.
@@ -2957,7 +2755,6 @@ Although this does add an external dependency, it makes maintaining the cluster 
 HBase allows you to use Google’s Protobuf (Protocol Buffer) API as an alternative to XML.
 It has the advantage of compacting the same data two to three times smaller than XML, and of being 20–100 times faster to parse than XML because of the way the protocol buffer encodes bytes on the wire.
 Protobuf is used extensively within Google; they incorporate nearly 50,000 different message types into Protobuf across a wide variety of systems.
-Check out the Protobuf Google code project at http://code .google.com/p/protobuf.
 The database comes with a web console user interface to monitor and manage region servers and master servers.
 It is used at Zvents, where the project originated, to write more than one billion cells per day.
 It can run on a distributed filesystem such as HFS or the Kosmos File System.
@@ -2967,7 +2764,7 @@ Unlike many of the other nonrelational solutions, it is not used frequently to b
 Schema: Hypertable stores data as a multidimensional table represented as a flat, sorted list of key-value pairs.
 The key is essentially the concatenation of four dimension keys (row, column family, column qualifier, and timestamp)
 Additional features: Hypertable has its own query language called Hypertable Query Language (HQL)
-The query here looks a lot like SQL, but includes a modified.
+The query here looks a lot like SQL, but includes a modified syntax.
 Polyglot Persistence The different styles of persistence that we’ve toured in this chapter highlight one fact: each of them is good at solving a particular problem, or has particular strengths where the others don’t.
 The idea with polyglot programming is that different programming languages are good at different things, and that you can combine programming languages in a single solution in order to realize the maximum benefit.
 Dean Wampler of http://polyglotprogramming.com offers the overwhelming success of Emacs as an example of how polyglot programming can be helpful: Emacs uses C for its kernel, which made it fast, and a scripting dialect of Lisp called Emacs Lisp (ELisp), which made it easy to extend.
@@ -2982,18 +2779,16 @@ In this vision, relational databases will live side by side with nonrelational d
 Summary In the previous sections, we took a whirlwind tour of a variety of nonrelational databases in order to properly contextualize Cassandra in light of the overall NoSQL movement.
 The purpose was to shed some light on how the industry has been thinking about data over the last few years and to compare and contrast some of these systems in order to understand their broader theoretical underpinnings.
 We also took a tour of the many so-called NoSQL offerings in order to understand the alternatives to relational databases that have sprung up in recent years.
-And, though it’s true that they have (very So my purpose in this book has not been to convince you to throw away all your relational databases and replace them with the new flavor of the month.
+And, though it’s true that they have (very public) problems at times, that’s also the case with relational databases.
+So my purpose in this book has not been to convince you to throw away all your relational databases and replace them with the new flavor of the month.
 It’s been to help you understand the advantages and disadvantages of alternatives to relational databases, and to understand Cassandra in-depth, so that when you’re presented with your next data problem, you’re ready to take a step back and select not just the default tool, but the best tool for the job.
 I can’t believe what a bunch of nerds we are.
 This glossary provides definitions of some of the terms that are important to understand when working with Apache Cassandra.
-There’s some really good material at http://wiki .apache.org/cassandra, but reading it for the first time can be tricky, as each new term seems to be explained only with other new terms.
 Many of these concepts are daunting to beginning or even intermediate web developers or database administrators, so they’re presented here in an easy reference.
 Much of the information in this glossary is repeated and expanded upon in relevant sections throughout this book.
 Anti-Entropy Anti-entropy, or replica synchronization, is the mechanism in Cassandra for ensuring that data on different nodes is updated to the newest version.
-During a major compaction (see Compaction), the server initiates a TreeRequest/TreeResponse conversation to exchange Merkle trees with neighboring nodes.
 The Merkle tree is a hash representing the data in that column family.
 If the trees from the different nodes don’t match, then they have to be reconciled (or “repaired”) in order to determine the latest data values they should all be set to.
-This tree comparison validation is the responsibility of the org.apache.cassandra.service.AntiEntropy Service class.
 AntiEntropyService implements the Singleton pattern and defines the static Differencer class as well.
 Anti-entropy is used in Amazon’s Dynamo, and Cassandra’s implementation is modeled on that (see Section 4.7 of the Dynamo paper)
 Cassandra does too, but the implementation is a little different.
@@ -3004,7 +2799,6 @@ Avro Avro is (probably) replacing Thrift as the RPC client for interacting with 
 Avro is a subproject of the Apache Hadoop project, created by Doug Cutting (creator of Hadoop and Lucene)
 It provides functionality similar to Thrift, but is a dynamic data serialization library that has an advantage over Thrift in that it does not require static code generation.
 Another reason that the project is migrating to Avro is that Thrift was originally created by Facebook and then donated to Apache, but since that time has received little active development attention.
-This means that the Cassandra server will be ported from org.apache.cassandra.thrift.
 As of this writing, this is underway but not yet complete.
 You can find out more about Avro at its project page, http://avro.apache.org.
 Bigtable Bigtable is a distributed database created at Google in 2006 as a high-performance columnar database on top of Google File System (GFS)
@@ -3028,7 +2822,7 @@ The data store itself is an Apache project available at http://cassandra.apache.
 It has the following key properties: it is decentralized, elastic, fault-tolerant, tuneably consistent, highly available, and designed to massively scale on commodity servers spread across different data centers.
 Cassandra was originally written at Facebook to solve their Inbox Search problem.
 The code was released as an open source Google Code project in July of 2008
-A blog post from 2008 by Avinash Lakshman describes how they were using Cassandra at Facebook: http://www.facebook.com/ It is easy to see why the Cassandra database is aptly named: its community asserts that Cassandra and other related NoSQL databases are the future.
+It is easy to see why the Cassandra database is aptly named: its community asserts that Cassandra and other related NoSQL databases are the future.
 Despite widespread use of eventually consistent databases at companies such as Amazon, Google, Facebook, and Twitter, there remain many skeptics (“nonbelievers”) of such a model.
 It is further speculated that by naming the database Cassandra, after the Greek seer of the future, its creators are making a kind of joking reference to the Oracle database.
 Chiton In ancient Greece, a chiton was a cloth garment, typically sleeveless, worn by both men and women.
@@ -3043,8 +2837,6 @@ A column is a triplet of a name (sometimes referred to as a “key”), a value,
 A column’s values, including the timestamp, are all supplied by the client.
 The data type for the name and value are Java byte arrays.
 The data type for the timestamp is a long primitive.
-The column is defined in Cassandra by the org.apache.cassandra.db.IColumn interface, which allows a variety of operations, including getting the value of the column as a byte[] or getting its subcolumns as a.
-Collection<IColumn>, and finding the time of the most recent change.
 Column Family A column family is roughly analogous to a table in a relational model.
 It is a container for an ordered collection of columns.
 Because each column family is stored in a separate file, be sure to define columns that you are likely to access together in the same column family.
@@ -3068,11 +2860,9 @@ Once the rows have been added to the validator, if the column family needs to be
 The Merkle trees are brought together in a “rendezvous” as a list of Differenc ers (trees that need validating or comparison)
 StageManager class, which is responsible for handling concurrency issues in.
 In this case, the Stage Manager uses an anti-entropy stage.
-This uses the org.apache.cassandra.co ncurrent.JMXEnabledThreadPoolExecu tor class, which executes the compaction within a single thread and makes the operation available as an MBean for inspection.
 Compression Data compression on return is on the road map for future versions, but as of 0.6 it is not yet supported.
 Consistency Consistency means that a transaction does not leave the database in an illegal state, and that no integrity constraints are violated.
 This is considered a crucial aspect of transactions in relational databases and is one of the ACID properties (Atomic, Consistent, Isolated, Durable)
-In Cassandra, the relative degree of consistency can be calculated by the following: of the data said to be successful operation.
 Consistency Level This configurable setting allows you to decide how many replicas in the cluster must acknowledge a write operation or respond to a read operation in order to be considered successful.
 The consistency level is set according to your stated Replication Factor, not the raw number of nodes in the cluster.
 There are multiple levels of consistency that you can tune for performance.
@@ -3114,18 +2904,15 @@ Cassandra’s implementation is based on the idea of Accrual Failure Detection, 
 Accrual failure detection is based on two primary ideas: that failure detection should be flexible by being decoupled from the application being monitored, and outputting a continuous level of “suspicion” regarding how confident the monitor is that a node has failed.
 This is desirable because it can take into account fluctuations in the network environment.
 Suspicion offers a more fluid and proactive indication of the weaker or stronger possibility of failure based on interpretation (the sampling of heartbeats), as opposed to a simple binary assessment.
-Failure detection is implemented in Cassandra by the org.apache.cassandra.gms.Fail ureDetector class.
 Fault Tolerance Fault tolerance is the system’s ability to continue operating in the event of a failure of one or more of its components.
 Fault tolerance is also referred to as graceful degradation, meaning that if the system operation degrades following a failure, the degraded performance is relative only to the failed component(s)
-Gossip The gossiper is responsible for ensuring that all of the nodes in a cluster are aware of the nodes.
+Gossip The gossiper is responsible for ensuring that all of the nodes in a cluster are aware of the important state information in the other nodes.
 The gossiper runs every second to ensure that even nodes that have failed or are not yet online are able to receive node states.
 It is designed to perform predictably, even at sharply increased loads.
 The gossip protocol supports rebalancing of keys across the nodes and supports Failure Detection.
 The state information that the gossiper shares is structured as key/value pairs.
 In Cassandra, the gossip protocol continues to gossip state information to other nodes until it is made obsolete by newer data.
 When a server node is started, it registers itself with the gossiper.
-For more informa tion, check out the org.apache.cassandra.s ervice.StorageService class.
-Also see the Amazon paper on gossip at http: //www.cs.cornell.edu/home/rvr/papers/flow gossip.pdf.
 Hector An open source project created by Ran Tavory of Outbrain and hosted at GitHub, Hector is a Cassandra client written in Java.
 It wraps Thrift and offers JMX, connection pooling, and failover.
 Hinted Handoff This is a mechanism to ensure availability, fault tolerance, and graceful degradation.
@@ -3144,7 +2931,6 @@ Memtable An in-memory representation of data that has been recently written.
 Once the memtable is full, it is flushed to disk as an SSTable.
 In a hash tree, the leaves are the data blocks (typically files on a filesystem) to be summarized.
 Every parent node in the tree is a hash of its direct child node, which tightly compacts the summary.
-In Cassandra, the Merkle tree is implemented in the org.apache.cassandra.utils.Mer kleTree class.
 Merkle trees are used in Cassandra to ensure that the peer-to-peer network of nodes receives data blocks unaltered and unharmed.
 They are used in cryptography as well to verify the contents of files and transmissions, and are used in the Google Wave product.
 Multiget Query by column name for a set of keys.
@@ -3157,14 +2943,8 @@ This term, in my view, has reached the end of its useful life, because it’s co
 It has proven too tempting to discuss a set of databases together that really have few goals, design decisions, or features in common.
 Order-Preserving Partitioner This is a kind of Partitioner that stores rows by key order, aligning the physical structure of the data with your sort order.
 This partitioner is somewhat the opposite of the Random Partitioner; it has the advantage of allowing for efficient range queries, but the disadvantage of unevenly distributing keys.
-The order-preserving partitioner (OPP) is implemented by the org.apache.cassandra .dht.OrderPreservingPartitionerclass.
 There is a special kind of OPP called the collating order-preserving partitioner (COPP)
 This acts like a regular OPP, but sorts the data in a collated manner according to English/US lexicography instead of byte ordering.
-The COPP is implemented by the org.apache.cassandra .dht.CollatingOrderPreservingParti tioner class.
-Partition In general terms, a partition refers to a network partition, which is a break in the network that prevents one machine from interacting directly with another.
-A partition can be caused by failed switches, routers, or network interfaces.
-Cassandra is a fault-tolerant database, and network partitions are one such fault.
-As such, it is able to continue operating in the face of a network partition and merge data in replication once the partition is healed again.
 Partitioner The partitioner controls how your data is distributed over your nodes.
 In order to find a set of keys, Cassandra must know what nodes have the range of values you’re looking for.
 There are three types of partitioner: random partitioner, which is the default; order-preserving partitioner; and collating order-preserving partitioner.
@@ -3181,7 +2961,6 @@ The read repair means that Cassandra will send a write request to the nodes with
 It does this by pulling all the data from the node, performing a merge, and writing the merged data back to the nodes that were out of sync.
 The detection of inconsistent data is made by comparing timestamps and checksums.
 Replication In general distributed systems terms, replication refers to storing multiple copies of data on multiple machines so that if one machine fails or becomes unavailable due to a Partition, the cluster can still make data available.
-In Cassandra, replication is a means of providing high performance and availability/fault-tolerance.
 Replication Factor Cassandra offers a configurable replication factor, which allows you essentially to decide how much you want to pay in performance to gain more consistency.
 That is, your consistency level for reading and writing data is based on the replication factor, as it refers to the number of nodes across which you have replicated data.
 The replication factor is set in the configuration file or the API.
@@ -3191,13 +2970,11 @@ All remaining replicas are distributed according to a configurable replication s
 The Gang of Four Strategy pattern is employed to allow a pluggable means of replication, but Cassandra comes with three out of the box.
 Choosing the right replication strategy is important because in determining which nodes are responsible for which key ranges, you’re also determining which nodes should receive write operations; this has a big impact on efficiency in different scenarios.
 The variety of pluggable strategies allows you greater flexibility, so that you can tune Cassandra according to your network topology and needs.
-Replication strategies are an extension of the org.apache.cassandra.locator.AbstractRe plicationStrategy class.
 You can write your own replication strategy if you like by extending that class.
 Row In a column family, a row is a sorted map that matches column names to column values.
 In a super column, a row is a sorted map that matches super column names to maps matching column names to column values.
 The Row Key defines the individual row, and the row defines the name/value pairs of the columns.
 The size of a single row cannot exceed the amount of space on disk.
-Rows are sorted by their Partitioner, which is one of these types: RandomPartitioner, Order PreservingPartitioner, or CollatingOrder PreservingPartitioner.
 Row Key Sometimes called simply “key,” a row key is analogous to a primary key for an object in the relational model.
 It represents a way to identify a single row of columns and is an arbitrary length string.
 This overhead is due to scheduling, lock contention, and cache misses.
@@ -3205,28 +2982,20 @@ The effect of SEDA is that work is not started and completed by the same thread;
 As events enter the incoming queue, the event handler supplied by the application is invoked.
 The controller is capable of dynamically tuning the number of threads allocated to each stage as demand dictates.
 The advantages of SEDA are higher concurrency and better management of CPU, disk, and network resources.
-You can read more about SEDA as it was originally proposed by Matt Welsh, David Culler, and Eric Brewer at http://www.eecs .harvard.edu/~mdw/proj/seda.
 Seed Node A seed is a node that already exists in a Cassandra cluster and is used by newly added nodes to get up and running.
 The newly added node can start gossiping with the seed node to get state information and learn the topology of the node ring.
+Use get_ slice() to query by a single column name.
+Use get_range_slice() to return a subset of columns for a range of keys.
 Snitch A snitch is Cassandra’s way of mapping a node to a physical location in the network.
 It helps determine the location of a node relative to another node in order to assist with discovery and ensure efficient request routing.
 The EndpointSnitch (or RackInferringSnitc h), for instance, determines whether two nodes are in the same data center or the same rack.
 Its strategy for doing so is essentially to guess at the relative distance of two nodes in a data center and rack based on reading the second and third octets of their IP addresses.
-The DataCenterEndpointSnitch allows you to specify IP subnets for racks, grouped by which data center the racks are in.
-The PropertyFileSnitch allows you to map IP addresses to rack and data centers in a properties file called cassandra-rack.properties.
-The snitch strategy classes can be found in the org.apache.cassandra.locator package.
-Sparse In the relational model, every data type (table) must have a value for every column, even if that value is sometimes null.
-Cassandra, on the other hand, represents a sparse or “schema-free” data model, which means that rows may have values for as many or as few of the defined columns as you like.
-If many of the cells have empty values, the storage model is inefficient.
 Inherited from Google’s Bigtable, an SSTable is how data is stored on disk in Cassandra.
 SSTables allow for high performance on writes and can be compacted.
 Once a memtable is flushed to disk as an SSTable, it cannot be changed by the application; Compaction changes only their on-disk representation.
-To import or export data from JavaScript Object Notation (JSON), check out the classes org.apache.cassandra.tools.SSTable Importer and SSTableExporter.
 Stage Part of Cassandra’s Staged Event-Driven Architecture (SEDA), a stage wraps a basic unit of work.
 A single operation can flow between various stages to complete, rather than getting completed in the same thread that started the work.
 A stage consists of an incoming event queue, an event handler, and an associated thread pool.
-Stages are managed by a controller that determines scheduling and thread allocation; Cassandra implements this kind of concurrency model using the thread pool java.util.concurrent.ExecutorService.
-To see specifically how this works, check out the org.apache.cassandra.concurrent.Stage Manager class.
 A few additional operations are implemented as stages too, including working with memtables in the ColumnFamilyStore class, and the consistency manager is a stage in the StorageService.
 An operation may start with one thread, which then hands off the work to another thread, which may hand it off to other threads.
 This handing-off is not directly between threads, however; it occurs between stages.
@@ -3236,7 +3005,6 @@ The subcolumns are ordered, and the number of columns you can define is unbounde
 Super columns also differ from regular columns in that they do not have an associated timestamp.
 Super columns are not recursive; that is, they go only one level deep.
 A super column can hold a map only of other columns, and not a map of more super columns.
-They are defined in SuperColumn.java, which implements both the IColumn and IColumnContainer interfaces.
 The interface allows you to perform a variety of operations, including the following: get all of the subcolumns in a super column, get a single subcolumn by name, add a subcolumn, remove a subcolumn, check the number of subcolumns in the super column, and check when a subcolumn was last modified.
 Thrift Thrift is the name of the RPC client used to communicate with the Cassandra server.
 It is this mechanism that allows you to interact with Cassandra from any of these client languages.
@@ -3278,4 +3046,3 @@ Female flycatchers are believed to select their mate based on tail length.
 Paradise flycatchers are monogamous, which makes their distinctive coloring and plumage unusual, as this form of sexual display is usually reserved for nonmonogamous species.
 Because they’re so widely distributed, Paradise flycatchers can be found in a variety of habitats, including savannas, bamboo groves, rain forests, deciduous forests, and even cultivated gardens.
 Most species catch their food on the wing, thanks in part to their quick reflexes and sharp eyesight.
-The text font is Linotype Birka; the heading font is Adobe Myriad Condensed; and the code font is LucasFont’s TheSansMonoCondensed.

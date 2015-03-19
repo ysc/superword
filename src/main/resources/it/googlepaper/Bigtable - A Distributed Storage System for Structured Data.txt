@@ -4,7 +4,6 @@ In this paper we describe the simple data model provided by Bigtable, which give
 Over the last two and a half years we have designed, implemented, and deployed a distributed storage system for managing structured data at Google called Bigtable.
 Bigtable is designed to reliably scale to petabytes of data and thousands of machines.
 Bigtable has achieved several goals: wide applicability, scalability, high performance, and high availability.
-These products use Bigtable for a variety of demanding workloads, which range from throughput-oriented batch-processing jobs to latency-sensitive serving of data to end users.
 The Bigtable clusters used by these products span a wide range of configurations, from a handful to thousands of servers, and store up to several hundred terabytes of data.
 In many ways, Bigtable resembles a database: it shares many implementation strategies with databases.
 Bigtable does not support a full relational data model; instead, it provides clients with a simple data model that supports dynamic control over data layout and format, and allows clients to reason about the locality properties of the data represented in the underlying storage.
@@ -17,7 +16,6 @@ A Bigtable is a sparse, distributed, persistent multidimensional sorted map.
 The map is indexed by a row key, column key, and a timestamp; each value in the map is an uninterpreted array of bytes.
 Figure 1: A slice of an example table that stores Web pages.
 The contents column family contains the page contents, and the anchor column family contains the text of any anchors that reference the page.
-CNN’s home page is referenced by both the Sports Illustrated and the MY-look home pages, so the row contains columns named anchor:cnnsi.com and anchor:my.look.ca.
 We settled on this data model after examining a variety of potential uses of a Bigtable-like system.
 As one concrete example that drove some of our design decisions, suppose we want to keep a copy of a large collection of web pages and related information that could be used by many different projects; let us call this particular table the Webtable.
 In Webtable, we would use URLs as row keys, various aspects of web pages as column names, and store the contents of the web pages in the contents: column under the timestamps when they were fetched, as illustrated in Figure 1
@@ -26,7 +24,6 @@ Each row range is called a tablet, which is the unit of distribution and load ba
 As a result, reads of short row ranges are efficient and typically require communication with only a small number of machines.
 Clients can exploit this property by selecting their row keys so that they get good locality for their data accesses.
 For example, in Webtable, pages in the same domain are grouped together into contiguous rows by reversing the hostname components of the URLs.
-For example, we store data for maps.google.com/index.html under the key com.google.maps/index.html.
 Storing pages from the same domain near each other makes some host and domain analyses more efficient.
 Column keys are grouped into sets called column families, which form the basic unit of access control.
 All data stored in a column family is usually of the same type (we compress data in the same column family together)
@@ -42,7 +39,6 @@ The qualifier is the name of the referring site; the cell contents is the link t
 Access control and both disk and memory accounting are performed at the column-family level.
 In our Webtable example, these controls allow us to manage several different types of applications: some that add new base data, some that read the base data and create derived column families, and some that are only allowed to view existing data (and possibly not even to view all of the existing families for privacy reasons)
 Each cell in a Bigtable can contain multiple versions of the same data; these versions are indexed by timestamp.
-Write a new anchor and delete an old anchor Operation op;
 Applications that need to avoid collisions must generate unique timestamps themselves.
 Different versions of a cell are stored in decreasing timestamp order, so that the most recent versions can be read first.
 To make the management of versioned data less onerous, we support two per-column-family settings that tell Bigtable to garbage-collect cell versions automatically.
@@ -54,7 +50,6 @@ It also provides functions for changing cluster, table, and column family metada
 Client applications can write or delete values in Bigtable, look up values from individual rows, or iterate over a subset of the data in a table.
 Irrelevant details were elided to keep the example short.) The call to Apply performs an atomic mutation to the Webtable: it adds one anchor to www.cnn.com and deletes a different anchor.
 Clients can iterate over multiple column families, and there are several mechanisms for limiting the rows, columns, and timestamps produced by a scan.
-For example, we could restrict the scan above to only produce anchors whose columns match the regular expression anchor:*.cnn.com, or to only produce anchors whose timestamps fall within ten days of the current time.
 Bigtable supports several other features that allow the user to manipulate data in more complex ways.
 First, Bigtable supports single-row transactions, which can be used to perform atomic read-modify-write sequences on data stored under a single row key.
 Bigtable does not currently support general transactions across row keys, although it provides an interface for batching writes across row keys at the clients.
@@ -85,9 +80,6 @@ Each Chubby client maintains a session with a Chubby service.
 A client’s session expires if it is unable to renew its session lease within the lease expiration time.
 When a client’s session expires, it loses any locks and open handles.
 Chubby clients can also register callbacks on Chubby files and directories for notification of changes or session expiration.
-Bigtable uses Chubby for a variety of tasks: to ensure that there is at most one active master at any time; to unavailable for an extended period of time, Bigtable becomes unavailable.
-The average percentage of Bigtable server hours during which some data stored in Bigtable was not available due to Chubby unavailability (caused by either Chubby outages or network issues) was 0.0047%
-The percentage for the single cluster that was most affected by Chubby unavailability was 0.0326%
 The Bigtable implementation has three major components: a library that is linked into every client, one master server, and many tablet servers.
 The master is responsible for assigning tablets to tablet servers, detecting the addition and expiration of tablet servers, balancing tablet-server load, and garbage collection of files in GFS.
 In addition, it handles schema changes such as table and column family creations.
@@ -201,9 +193,6 @@ Using one log provides significant performance benefits during normal operation,
 When a tablet server dies, the tablets that it served will be moved to a large number of other tablet servers: each server typically loads a small number of the original server’s tablets.
 To recover the state for a tablet, the new tablet server needs to reapply the mutations for that tablet from the commit log written by the original tablet server.
 One approach would be for each new tablet server to read this full commit log file and apply just the entries needed for the tablets it needs to recover.
-In the sorted output, all mutations for a particular tablet are contiguous and can therefore be read efficiently with one disk seek followed by a sequential read.
-To parallelize the sorting, we partition the log file into 64 MB segments, and sort each segment in parallel on different tablet servers.
-This sorting process is coordinated by the master and is initiated when a tablet server indicates that it needs to recover mutations from some commit log file.
 Writing commit logs to GFS sometimes causes performance hiccups for a variety of reasons (e.g., a GFS server machine involved in the write crashes, or the network paths traversed to reach the particular set of three GFS servers is suffering network congestion, or is heavily loaded)
 To protect mutations from GFS latency spikes, each tablet server actually has two log writing threads, each writing to its own log file; only one of these two threads is actively in use at a time.
 If writes to the active log file are performing poorly, the log file writing is switched to the other thread, and mutations that are in the commit log queue are written by the newly active log writing thread.
@@ -228,7 +217,6 @@ The machines were arranged in a two-level tree-shaped switched network with appr
 All of the machines were in the same hosting facility and therefore the round-trip time between any pair of machines was less than a millisecond.
 The tablet servers and master, test clients, and GFS servers all ran on the same set of machines.
 Some of the machines also ran either a tablet server, or a client process, or processes from other jobs that were using the pool at the same time as these experiments.
-This space of row keys was partitioned into 10N equal-sized ranges.
 The table shows the rate per tablet server; the graph shows the aggregate rate.
 This dynamic assignment helped mitigate the effects of performance variations caused by other processes running on the client machines.
 In addition, strings under different row key were distinct, so no cross-row compression was possible.
@@ -256,20 +244,10 @@ Many of these clusters are used for development purposes and therefore are idle 
 Table 2 provides some data about a few of the tables currently in use.
 Some tables store data that is served to users, whereas others store data for batch processing; the tables range widely in total size, average cell size,
 In the rest of this section, we briefly describe how three product teams use Bigtable.
-Google Analytics (analytics.google.com) is a service that helps webmasters analyze traffic patterns at their web sites.
 It provides aggregate statistics, such as the number of unique visitors per day and the page views per URL per day, as well as site-tracking reports, such as the percentage of users that made a purchase, given that they earlier viewed a specific page.
 To enable the service, webmasters embed a small JavaScript program in their web pages.
 It records various information about the request in Google Analytics, such as a user identifier and information about the page being fetched.
 Google Analytics summarizes this data and makes it available to webmasters.
-We briefly describe two of the tables used by Google Analytics.
-The raw click table (˜200 TB) maintains a row for each end-user session.
-The row name is a tuple containing the website’s name and the time at which the session was created.
-This schema ensures that sessions that visit the same web site are contiguous, and that they are sorted chronologically.
-The summary table (˜20 TB) contains various predefined summaries for each website.
-This table is generated from the raw click table by periodically scheduled MapReduce jobs.
-Each MapReduce job extracts recent session data from the raw click table.
-The overall system’s throughput is limited by the throughput of GFS.
-Google operates a collection of services that provide users with access to high-resolution satellite imagery of the world’s surface, both through the web-based Google Maps interface (maps.google.com) and through the Google Earth (earth.google.com) custom client software.
 These products allow users to navigate across the world’s surface: they can pan, view, and annotate satellite imagery at many different levels of resolution.
 This system uses one table to preprocess data, and a different set of tables for serving client data.
 The preprocessing pipeline uses one table to store raw imagery.
@@ -286,10 +264,6 @@ This column family has a large number of columns: essentially one for each raw d
 Since each segment is only built from a few images, this column family is very sparse.
 The preprocessing pipeline relies heavily on MapReduce over Bigtable to transform data.
 The overall system processes over 1 MB/sec of data per tablet server during some of these MapReduce jobs.
-The serving system uses one table to index data stored in GFS.
-This table is relatively small (˜500 GB), but it must serve tens of thousands of queries per second per datacenter with low latency.
-As a result, this table is hosted across hundreds of tablet servers and contains inmemory column families.
-Personalized Search (www.google.com/psearch) is an opt-in service that records user queries and clicks across a variety of Google properties such as web search, images, and news.
 Users can browse their search histories to revisit their old queries and clicks, and they can ask for personalized search results based on their historical Google usage patterns.
 Each user has a unique userid and is assigned a row named by that userid.
 A separate column family is reserved for each type of action (for example, there is a column family that stores all web queries)

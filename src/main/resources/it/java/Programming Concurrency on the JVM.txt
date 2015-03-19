@@ -8,7 +8,7 @@ This book is the natural successor to Java Concurrency in Practice.
 I found Programming Concurrency akin to sitting under a master craftsman imparting wisdom to his apprentice.
 The reader is guided on a journey that starts with the “why” of concurrency and the big-picture design issues that he’ll face.
 He’s then taught the modern concurrency tools provided directly within the Java SDK before embarking upon an adventure through the exciting realms of STM and actors.
-I sincerely believe that this book is destined to be one of the most.
+I sincerely believe that this book is destined to be one of the most important concurrency books yet written.
 Concurrency is a hot topic these days, and Venkat takes you through a wide range of current techniques and technologies to program concurrency effectively on the JVM.
 More importantly, by comparing and contrasting concurrency approaches in five different JVM languages, you get a better picture of the capabilities of various tools you can use.
 This book will definitely expand your knowledge and toolbox for dealing with concurrency.
@@ -62,7 +62,6 @@ Today there are quite a few interesting and powerful languages on the JVM—Cloj
 Some of these modern JVM languages such as Clojure, JRuby, and Groovy are dynamically typed.
 Some, such as Clojure and Scala, are greatly influenced by a functional style of programming.
 Although it may take a bit of effort to get used to their syntax, the paradigm, or the differences, we’ll mostly need less code in all these languages compared with coding in Java.
-In this book we’ll learn how to use the java.util.concurrent API, the STM, and the actor-based model using Akka and GPars.
 If you program in or are planning to pick up any of these languages, this book will introduce you to the concurrent programming options in them.
 Most of the examples in this book are in Java; however, you will also see quite a few examples in Clojure, Groovy, JRuby, and Scala.
 I’ve taken extra effort to keep the syntactical nuances and the language-specific idioms to a minimum.
@@ -124,8 +123,6 @@ A naively written1 bit of code for this is shown next (only the action handler f
 In the examples, we’ll simply let exceptions propagate instead of logging or handling them—but be sure to handle exceptions properly in your production code.
 When we run the little stopwatch application, a window with a Start button and a “0” label will appear.
 What’s worse, the application will not even respond to a quit request.
-The main event dispatch thread is responsible for noticing UI-related events and delegating actions to be performed.
-When the Start button is clicked, Now, as we click buttons or try to quit, those events are dropped into the event queue, but the main thread is too busy and will not respond to those events—ever.
 We need an additional thread, or a timer that in turn would use an additional thread, to make the application responsive.
 We need to delegate the task of counting and relieve the main event dispatch thread of that responsibility.
 Not only can threads help make applications responsive, but they can help enhance the user experience.
@@ -198,10 +195,9 @@ What’s This Memory Barrier? Simply put, it is the copying from local or workin
 A change made by one thread is guaranteed to be visible to another thread only if the writing thread crosses the memory barriera and then the reading thread crosses the memory barrier.
 The changes are first made locally in the registers and caches and then cross the memory barrier as they are copied to the main memory.
 The write has to happens-before the read, meaning the writing thread has to cross the memory barrier before the reading thread does, for the change to be visible.
-Quite a few operations in the concurrency API implicitly cross the memory barrier:
+Quite a few operations in the concurrency API implicitly cross the memory barrier: volatile, synchronized, methods on Thread such as start() and interrupt(), methods on ExecutorService, and some synchronization facilitators like CountDownLatch.
 The real worry is not that we’d forget to synchronize.
 The core problem is that we’re dealing with shared mutability.
-We’re quite used to programming Java applications with mutability—creating and modifying state of an object by changing its fields.
 However, great books such as Joshua Bloch’s Effective Java [Blo08] have advised us to promote immutability.
 Immutability can help us avoid the problem at its root.
 Mutability in itself is not entirely bad, though it’s often used in ways that can lead to trouble.
@@ -263,7 +259,6 @@ So, we can compute the total number of threads we’d need as follows:
 To determine the number of threads, we need to know two things:
 The first one is easy to determine; we can look up that information, even at runtime, as we saw earlier.
 It takes a bit of effort to determine the blocking coefficient.
-We can try to guess it, or we can use profiling tools or the java.lang.management API to determine the amount of time a thread spends on system/IO operations vs.
 We know how to compute the number of threads for concurrent applications.
 Now we have to decide how to divide the problem.
 Each part will be run concurrently, so, on first thought, we could have as many parts as the number of threads.
@@ -293,6 +288,8 @@ Here is the code to communicate with Yahoo’s financial web service to get the 
 We send a request to http://ichart.finance.yahoo.com and parse the result to obtain the price.
 Next, we get the price for each of the stocks our user owns and display the total net asset value.
 In addition, we display the time it took for completing this operation.
+The readTickers() method of AbstractNAV reads the ticker symbol and the number of shares owned for each symbol from a file called stocks.txt, part of which is shown next:
+Then, it prints the total net asset value and the time it took to compute that.
 Finally, we need to contact Yahoo Finance and compute the total net asset value.
 The good news is we managed to help our user with the total asset value.
 The displeasure may be partly because of the market conditions, but really it’s mostly because of the wait incurred; it took close to twenty seconds2 on my computer, with the network delay at the time of run, to get the results for only forty stocks.
@@ -320,13 +317,13 @@ You may notice this with Yahoo Finance when you exceed fifty concurrent requests
 We’d use and throw away the instances of the Thread class since they don’t allow restart.
 To handle multiple tasks, we typically create multiple threads instead of reusing them.
 If we decide to schedule multiple tasks on a thread, we had to write quite a bit of extra code to manage that.
+Methods like wait() and notify() require synchronization and are quite hard to get right when used to communicate between threads.
+The join() method leads us to be concerned about the death of a thread rather than a task being accomplished.
 It doesn’t give us a way to time out if we do not gain the lock.
 Furthermore, it is very difficult to unit test for thread safety if we use synchronized.
-The newer generation of concurrency APIs in the java.util.concurrent package, spearheaded by Doug Lea, among others, has nicely replaced the old threading API.
 Wherever we use the Thread class and its methods, we can now rely upon the ExecutorService class and related classes.
 If we need better control over acquiring locks, we can rely upon the Lock interface and its methods.
 Wherever we use wait/notify, we can now use synchronizers such as CyclicBarrier and CountdownLatch.
-The new-generation Java concurrency API in java.util.concurrent is far superior.
 In the modern concurrency API, the Executors class serves as a factory to create different types of thread pools that we can manage using the ExecutorService interface.
 Some of the flavors include a single-threaded pool that runs all scheduled tasks in a single thread, one after another.
 A fixed threaded pool allows us to configure the pool size and concurrently runs, in one of the available threads, the tasks we throw at it.
@@ -339,9 +336,12 @@ The threads in this pool will execute the tasks that belong to each part.
 In the sample run, we had forty stocks; if we create twenty threads (for a two-core processor), then half the parts get scheduled right away.
 The other half are enqueued and run as soon as threads become available.
 This will take little effort on our part; let’s write the code to get this stock price concurrently.
-We then executor takes the responsibility of concurrently running as many of the parts as possible.
+This interface provides a call() method that returns a value of the parameterized type of this interface (Double in the example)
+We then schedule these parts on the fixed-size pool using the invokeAll() method.
+The executor takes the responsibility of concurrently running as many of the parts as possible.
 If there are more divisions than the pool size, they get queued for their execution turn.
-Since the parts run concurrently and asynchronously, the dispatching main thread can’t get the results right scheduled tasks complete.4 We request for the partial results from these objects and add them to the net asset value.
+Since the parts run concurrently and asynchronously, the dispatching main thread can’t get the results right away.
+The invokeAll() method returns a collection of Future objects once all the scheduled tasks complete.4 We request for the partial results from these objects and add them to the net asset value.
 In contrast to the sequential run, the concurrent run took less than a second.
 We can vary the number of threads in the pool by varying the presumed blocking coefficient and see whether the speed varies.
 We can also try different numbers of stocks as well and see the result and speed change between the sequential and concurrent versions.
@@ -367,10 +367,9 @@ This tells us that our estimate was decent and that having more threads beyond o
 This application is a perfect candidate for concurrency—the workload across the parts is about the same, and the large blocking, because of data request latency from the Web, lends really well to exploiting the threads.
 We were able to gain a greater speedup by increasing the number of threads.
 Not all problems, however, will lend themselves to speedup that way, as we’ll see next.
-The number of cores has a greater influence on the speedup of computationintensive applications than on IO-bound applications, as we’ll see in this section.
 The example we’ll use is very simple; however, it has a hidden surprise—the uneven workload will affect the speedup.
 Let’s first solve this sequentially, and then we’ll solve it concurrently.
-Let’s start with the abstract class AbstractPrimeFinder, which will help group uses it to count the number of primes in a range of numbers.
+Finally, the timeAndCompute() method will keep a tab of the time it took to count the primes.
 On my dual-core processor, it took this sequential code, run in server mode, a little more than six seconds to count the number of primes under 10 million.
 It would take a lot longer if we run it in client mode.
 Let’s see what speedup we can achieve by turning this to run in concurrent mode.
@@ -388,7 +387,6 @@ In the final step, line 33, we total the results received from the parts.
 I have two cores, so if I create two threads and two parts, I expect to get about twice the speedup (it should take about half the time as the sequential run)
 The number of primes in our sequential and concurrent runs are the same, so that’s good, and the same amount of work was done in the two versions.
 It’s time to go back to the drawing board to figure out what we missed.
-You probably have a hunch that this has to do with the number of divisions—certainly, increasing the number of threads without increasing the number of divisions will not help.
 However, since this is computationally intensive, we already know that increasing the threads to more than the number of cores will not help.
 Let’s try to justify that and arrive at a solution.
 Let’s bring up the activity monitor (on Windows, bring up your Task Manager, and on Linux bring up your system/resource monitor) to see the activities of the cores.
@@ -530,7 +528,8 @@ The total I receive from the last person in the chain is the total work years of
 We were able to compute the total without changing a thing.
 Each person took a partial total and created a new total.
 The old total value they received is something they could retain or discard (garbage collect) as they wanted.
-This last approach is common in functional programming and is achieved in languages such as Scala, Clojure, Groovy, and JRuby to implement such operations.
+This last approach is common in functional programming and is achieved using function composition.
+We’d use methods like foldLeft(), reduce(), or inject() in languages such as Scala, Clojure, Groovy, and JRuby to implement such operations.
 This approach also does not have any concerns of concurrency.
 It took a bit of effort to organize or compose this sequence of operations, but we were able to achieve the result with total immutability.
 In the pure immutable design for the net work-years example, we asked each person to create a new total.
@@ -610,7 +609,6 @@ To find the directory size, we could split the operation into parts, with each t
 Since each task has to run in a separate thread, we could start an instance of Thread.
 But threads are not reusable—we can’t restart them, and scheduling multiple tasks on them is not easy.
 We certainly don’t want to create as many threads as the number of subdirectories we find—it’s not scalable and is the quickest way to fail.
-The java.util.concurrent API was introduced exactly for this purpose—to manage a pool of threads.
 We met the ExecutorService and the different types of executors in Concurrent Computation of Net Asset Value, on page 21
 The ExecutorService, the Executors factory, and the related API ease the pain of working with pools of threads.
 They conveniently separate the types of pools from the operations we perform on them.
@@ -618,16 +616,22 @@ Rather than tying the lifetime of a thread to the task it runs, ExecutorService 
 We can easily schedule any number of tasks to run.
 If we simply want to send off a task to run, we can wrap the task in a Runnable.
 For tasks that will return a result, we can wrap them in Callable.
+To schedule arbitrary tasks, we use the execute() or submit() methods of ExecutorService.
+To schedule a collection of tasks, we use the invokeAll() method.
+If we care for only one of the tasks to complete, as in optimization problems where one of many possible results is adequate, we can use the invokeAny() method.
 These methods are overloaded with a timeout parameter, which is the amount of time we’re willing to wait for the results.
 As soon as we create an executor service, the pool of threads is ready and active to serve.
 If we have no tasks for them, then the threads in the pool idle away—except in the case of cached pool, where they die after a delay.
-It completes all tasks currently scheduled before it shuts down the pool, but we can’t schedule any new There’s no guarantee, however, because it relies on the tasks to respond.
+If we no longer need the pool of threads, invoke the shutdown() method.
+It completes all tasks currently scheduled before it shuts down the pool, but we can’t schedule any new tasks.
+A call to shutdownNow() tries to force-cancel currently executing tasks.
+There’s no guarantee, however, because it relies on the tasks to respond well to the interrupt() call.
 ExecutorService also provides methods that allow us to check whether the service has terminated or shut down.
 We should design for task completion rather than thread/service death—focus on completion of work (application logic) instead of termination of threads (infrastructure activity)
 Once we divide a problem into parts, we can schedule several concurrent tasks in a pool of threads and wait for their results to arrive.
 We don’t want to wait for the threads to die, because these threads may be reused to run several tasks.
 The result of the scheduled tasks is what we really care about.
-We can easily achieve this Let’s look at an example.
+We can easily achieve this using the Callable interface and the submit() or invokeAll() methods of ExecutorService.
 To find the total size of all files in a directory hierarchy with potentially thousands of files, we can run several parts concurrently.
 When parts finish, we need to total up the partial results.
 Let’s first take a look at the sequential code for totaling the file size:
@@ -638,19 +642,21 @@ I have discarded the time from the first run so that all the runs used in compar
 We’ll use the output to compare the performance of the concurrent version we’ll create soon.
 We certainly can hope to gain an increase in speed by making this code concurrent.
 We can divide the problem into tasks where each task accepts a directory and returns its total size.
-The Callable interface is a good fit for method of ExecutorService.
-We can then gather up all the partial results by logic we just discussed in a NaivelyConcurrentTotalFileSize class:
+The Callable interface is a good fit for this because its call() method can return a result when done.
+As we loop through each file in the directory, we can schedule the task using the submit() method of ExecutorService.
+We can then gather up all the partial results by simply calling the get() method of the Future object; this object acts as a delegate that will provide us with the result when available.
 For each file or subdirectory, we create a task for finding its size and schedule it on the pool on line 14
 Once we’ve scheduled tasks for all files and subdirectories under a directory, we wait for their size to be returned through the Future objects.
 To compute the total size for a directory, we then iterate over futures on line 22
-We don’t want to block endlessly for a result to arrive, so there’s a time limit pool, as long as there are more directories and files to visit.
-Once we create the pool, we set the exploration of the given directory in motion.
+We don’t want to block endlessly for a result to arrive, so there’s a time limit for the get() method to respond.
+In other words, we bail out with an error if a task doesn’t finish within that time.
 Let’s take the code for a drive and see how it performs:
 The file size reported here is the same as in the sequential version, but the speed wasn’t encouraging.
 A lot of time was spent in scheduling, instead of doing real work for the rather flat directory hierarchy under /etc.
 Perhaps we’ll see an improvement for the /usr directory, which took more than eighteen seconds in the sequential run.
 Hum…it’s not quite what we wanted to see, a timeout problem.
 Don’t panic; there’s a reason I called this version naive.
+As this method discovers subdirectories, it schedules the task of exploring them.
 Once it schedules all these tasks, this method awaits response from each one of them (line 23)
 If we had only a few directories, then it’s no big deal.
 But if we have a deep hierarchy, this method will get stuck.
@@ -662,17 +668,13 @@ One way to tackle this is for each task to return a list of subdirectories it fi
 Then from the main task we can dispatch other tasks to navigate the subdirectories.
 This will prevent holding threads for any period longer than simply fetching the immediate subdirectories.
 While the tasks fetch subdirectories, they can also total the size of files in their directories.
-Let’s put that design to work in a ConcurrentTotalFileSize and see whether it gives us better results.
 As we discover subdirectories and files, we need to pass the list of subdirectories and the total size of files to the main thread.
-We’d need an immutable object to hold these values, so let’s create an inner class called SubDirectoriesAndSize to hold that.
-Next we’ll write the method that, given a directory, will return an instance of SubDirectoriesAndSize that holds the subdirectories of the given directory along with the size of files it contains.
 Later we’ll see how the actor-based model fits really well to solve this problem.
 As we discover subdirectories, we want to delegate the task of exploring them to other threads.
-Most of the efforts for concurrency will go into the.
 We create a thread pool of size 100 and add the given top-level directory to a list of directories to explore.
-Then, while there are files left to explore, we the response from these threads arrive, we then add the partial file size they return to a total and add the subdirectories to the list of directories to explore.
-Once all the subdirectories have been explored, we return the total.
-This version of concurrent implementation took quite some effort, but when compared to the old NaivelyConcurrentTotalFileSize, the new ConcurrentTotalFileSize is a better design—it does not hold a thread for a long time.
+As the response from these threads arrive, we then add the partial file size they return to a total and add the subdirectories to the list of directories to explore.
+Once all the subdirectories have been explored, we return the total file size.
+For the last step, to get this code moving, we need the main() method.
 It quickly gets a list of subdirectories, so we can separately schedule the visits to them.
 It looks like this should give us the desired result; let’s see if that’s true.
 To find the total size of the /usr directory, it took only about eight seconds compared to more than eighteen seconds the sequential run took.
@@ -687,8 +689,6 @@ It allowed us to wait for those results to arrive before the thread proceeded wi
 Future, however, is not helpful as a coordination tool if tasks have no results to return.
 We don’t want to have an artificial return result simply for the sake of coordination.
 CountDownLatch can serve as a coordination tool in situations like this.
-The NaivelyConcurrentTotalFileSize code was a lot simpler and shorter than the ConcurrentTotalFileSize code.
-The problem with NaivelyConcurrentTotalFileSize is that each thread waited for the tasks it’s scheduled to complete.
 The nice thing about both the versions of code was they had no mutable shared state.
 If we compromise a little on the shared mutability,2 we can keep the code simple and make it work as well.
 Instead of returning the subdirectories and the file size, we can let each thread update a shared variable.
@@ -696,42 +696,36 @@ With nothing to return, the code will be a lot simpler.
 We still have to ensure that the main thread waits for all the subdirectories to be visited.
 We can use the CountDownLatch for this, to signal the end of wait.
 The latch works as a synchronization point for one or more threads to wait for other threads to reach a point of completion.
-Let’s create a class called ConcurrentTotalFileSizeWLatch that will use CountDownLatch.
 We’ll recursively delegate the task of exploring subdirectories to different threads.
 When a thread discovers a file, instead of returning the results, it updates a shared variable totalSize of type AtomicLong.
 AtomicLong provides threadsafe methods to modify and retrieve the values of a simple long variable.
 In addition, we’ll use another AtomicLong variable called pendingFileVisits to keep a tab on the number of files still to be visited.
+When this count goes to zero, we release the latch by calling countDown()
 See how easy it is to fall into this trap of using shared mutability?
-The mechanics of exploring directories is done, so we now need code to create the pool of threads, set the exploration of directories running, and.
-The time taken is slightly more than the ConcurrentTotalFileSize version.
+The mechanics of exploring directories is done, so we now need code to create the pool of threads, set the exploration of directories running, and wait on the latch.
 This is because of the extra synchronization in all the threads—shared mutability requires protection for thread safety, and that lowers concurrency.
 In the previous example we used CountDownLatch as a simple switch by setting the latch value to 1
 We could also use higher value and let multiple threads wait on it.
 That would be useful if we want multiple threads to reach a coordination point before continuing to perform some task.
 Once it’s used for a synchronization, it must be discarded.
 If we want a reusable synchronization point, we should use a CyclicBarrier instead.
-The performance of the code was better than the sequential version TotalFileSizeSequential.
-It was a bit worse than the ConcurrentTotalFileSize version but a lot simpler.
 However, there’s an added risk of accessing a shared mutable variable—something I have cautioned against quite a bit.
 It would be so much better if we can keep the code simple and still avoid the shared mutability.
 We will often want to exchange data between multiple cooperating threads.
 Future is quite useful when we want to get a response from a task on completion.
-AtomicLong and the other atomic classes in the java.util.concurrent.atomic package are useful for dealing with single shared data values.
 Although these are useful for exchanging data, they can get unwieldy as we saw in the previous example.
 To work with multiple data values or to exchange data quite frequently, we’ll want a better mechanism than either of these provided.
-The java.util.concurrent API has a number of classes that provide thread-safe ways to communicate arbitrary data between threads.
 If we simply want to exchange data between two threads, we can use the Exchanger class.
 This serves as a synchronization point where two threads can swap data in a thread-safe manner.
 The faster thread is blocked until the slower thread catches up to the synchronization point to exchange data.
 If we want to send a bunch of data between threads, instances of the BlockingQueue interface can come in handy.
 As the name indicates, inserts are blocked until space is available, and removals are blocked until data is available.
 For example, to match inserts with removals, use a SynchronousQueue that coordinates each insert operation with the corresponding remove operation by another thread.
-If we want data to bubble up based on some priority, we can use PriorityBlockingQueue.
-For a simple blocking queue, we can select a linked-list flavor from LinkedBlockingQueue or an array flavor from ArrayBlockingQueue.
 We can use a blocking queue to solve the total file size problem concurrently.
 Rather than using the AtomicLong mutable variable, we can have each thread place the partial file size it computes into a queue.
 The main thread can then take these partial results from the queue and compute the total locally.
-Each task keeps a tab of the total size of files directly under a given directory and in the end.
+Each task keeps a tab of the total size of files directly under a given directory and in the end puts the total size into the queue using the blocking call put()
+Any subdirectories discovered by the tasks are explored in separate tasks/threads.
 The main thread set the previous code in motion and simply loops through the queue to total the file sizes it receives from the tasks until all subdirectories have been explored.
 This version is comparable in performance to the previous one, but the code is a notch simpler—the blocking queue helped with exchanging and synchronizing the data between the threads.
 Next we’ll see how we can improve on these solutions even further with the new API introduced in Java 7
@@ -758,24 +752,24 @@ When a task waits for a subtask to finish, the thread that’s executing the tas
 Let’s take a look at the code for the file size problem using the fork-join API.
 In the FileSize class, we hold a reference to an instance of ForkJoinPool.
 This instance is defined static so that it can be shared across the entire program.
-In this method, we total the size of files in a given directory and delegate the task of finding the size of subdirectories to other tasks, that is, other finish before moving forward.
+We define a static inner class called FileSizeFinder that provides the task execution engine by extending RecursiveTask and implementing its compute() method.
+In this method, we total the size of files in a given directory and delegate the task of finding the size of subdirectories to other tasks, that is, other instances of FileSizeFinder.
+The invokeAll() method waits for all the subtasks to finish before moving forward.
 However, while the task is blocked, the thread steals more work rather than idling (like the highly responsible members of a successful team)
-The task returns the total size of the given directory.
+The task returns the total size of the given directory upon completing the compute() method.
 From the output we see that this version of the program did quite well compared to the other concurrent versions we saw in this chapter.
 We also see that, for large directory hierarchies, the program did not suffer the problem that the naive version had.
 In the example, we recursively divided until we got a directory or a file.
 In general, we don’t want to break down the problem too small because that may result in scheduling overhead.
-The collections that are part of the java.util.concurrent package give us thread safety and act as a synchronization point.
 Thread safety is important, but we don’t want to compromise performance.
 Collections like Vector that originally came with Java gave us thread safety at the cost of performance.
 All of our accesses, irrespective of the need, were thread safe but slow.
 Later collections like ArrayList provided speed but lacked thread safety.
+Again, we traded performance for thread safety when we used one of the synchronized wrappers of the collections, like using the synchronizedList() of Collections.
 The bottom line is that we had to pick between thread safety and performance.
-Java 5’s java.util.concurrent changed all that with concurrent data structures like ConcurrentHashMap and ConcurrentLinkedQueue.
 These collections provide better performance, at the expense of space, but we have to be willing to accept a little change in semantics.
 Synchronized collections provide thread safety, while concurrent collections provide both thread safety and better concurrent access performance.
 Using synchronized collections is like driving through a traffic light–controlled intersection; concurrent collection is like an uncongested freeway.
-If we change a synchronized map while iterating over it, we’re greeted with a ConcurrentModificationException.
 In essence, we’re required to hold an exclusive lock, a rather pessimistic lock, on the map when we iterate over it.
 Concurrent collections, on the other hand, were designed to provide throughput.
 We’re welcome to modify a map, for example, while we’re iterating over it.
@@ -786,7 +780,7 @@ In the following code, we iterate over a map of scores in a separate thread.
 Right in the middle of the iteration we put a new key into the map.
 If the map is either a plain-vanilla HashMap or its synchronized wrapper, this code will freak out—it will result in the violation we discussed.
 In reality, before we iterate over a synchronized collection, we’d have to lock it to prevent such violation.
-If the map is a ConcurrentHashMap, however, it will not then with a synchronized wrapper, and finally with an instance of ConcurrentHashMap.
+To see this difference in behavior, let’s exercise the useMap() first with an instance of the good old HashMap(), then with a synchronized wrapper, and finally with an instance of ConcurrentHashMap.
 When we run this example, we’ll see that the traditional maps could not handle this modification in the middle of the iteration (even from within a single thread), but the ConcurrentHashMap took it really well.
 In addition to allowing interleaved reads and writes, the concurrent collections provide better throughput than the synchronized versions.
 This is because rather than holding an exclusive lock, the concurrent collections.
@@ -817,8 +811,14 @@ This does not favor situations with multiple readers and infrequent writers.
 Even though the readers could run concurrently, they’re serialized, and this results in poor concurrent performance.
 As we can see, even though synchronized is baked into the language as a keyword, it provides a rather highly conservative thread safety with little ability for us to control.
 Much like synchronized, the implementors of the Lock interface guarantee that calls to their methods cross the memory barrier.
+We acquire and release locks using the Lock interface’s lock() and unlock() methods, like so:
+We perform the unlock() in the finally block to ensure a proper unlock even in the case of exceptions.
+Although lock() is a blocking call, we can call the nonblocking variation tryLock() to instantly acquire the lock if available.
+To wait for a finite time, provide a timeout parameter to the tryLock() method.
 There’s even a variation that allows us to interrupt a thread while it’s waiting for a lock.
 Let’s see how the Lock interface fixes each of the concerns we raised with synchronized.
+With the tryLock() method, our lock requests are not forced to block.
+Instead, we can check instantly whether we’ve acquired the lock.
 Also, if we decide to wait for a lock, we can place a limit on the wait time.
 We can simply mock out the implementation of the Lock interface and check whether the code being tested requests the lock and unlock at the appropriate time.
 We can acquire concurrent read locks and exclusive write locks using ReadWriteLock.
@@ -833,12 +833,19 @@ We can prevent this by making the two threads request locks on accounts in the s
 Then, one of them can proceed to acquire both the locks.
 The other thread can then follow after a temporary block, instead of being held by a deadlock.
 The Account class implements the Comparable interface to facilitate this natural order for locking (see the deadlock avoidance discussion in Brian Goetz’s Java Concurrency in Practice [Goe06])
+We have ensured that the deposit() and withdraw() operations are mutually exclusive by acquiring and releasing locks using a ReentrantLock.
+In addition, operations such as transfer may have to compose multiple deposits and withdraws into one mutually exclusive operation.
+So, we’re all set to write the transfer() method in an AccountService class.
+We first try to gain locks on the two given accounts in their natural order, which is the reason for the sort.
 If we can’t acquire the lock on either of them within one second, or whatever duration we’re comfortable with, we simply throw a LockException.
 If we gain the locks, we complete the transfer if sufficient funds are available.
+The transfer() method avoided deadlock by ordering the accounts and avoided indefinite wait (starvation) by limiting the time it waits to acquire the locks.
+Since the monitors used are reentrant, subsequent calls to lock() within the deposit() and withdraw() methods caused no harm.
+While the transfer() method avoided deadlock and starvation, the deposit() and withdraw() methods’ use of lock() may potentially cause problems in another context.
+As an exercise, I suggest that you modify these methods to use tryLock() instead of lock()
 This may be a departure from what you’re used to doing.
 However, it’s better to use the Lock interface and the supporting classes instead of the old synchronized construct to better manage locking.
 Even though the Lock interface has eased concerns, it’s still a lot of work and easy to err.
-The modern concurrency API java.util.concurrent has improved a number of things over the older API.
 Exchange data between concurrently running threads in a thread-safe manner.
 Although the newer API helps in a number of ways, it still requires us to be vigilant to avoid race conditions and shared mutable data.
 We’ll discuss some of the ways to deal with shared mutability in the next chapter.
@@ -868,14 +875,17 @@ Let’s first glance at the code that’s crying for our help:
 There are a few easy-to-spot problems but some hidden treasures as well, so take your time.
 So, the nonfinal private variable level is a shared mutable variable, but it’s not thread safe.
 We have unprotected access to it, from a threadsafety viewpoint, in most of the methods.
+The replenish() method spends most of the time sleeping, but it’s wasting an entire thread.
 If we try to create a large number of EnergySources, we’ll get an OutOfMemoryError because of the creation of too many threads—typically the JVM will allow us to create only a few thousand threads.
 The EnergySource breaks the class invariant.1 A well-constructed object ensures that none of its methods is called before the object itself is in a valid state.
-However, the EnergySource’s constructor violated invariant when it invoked it escapes the object before its initiation is complete.
+However, the EnergySource’s constructor violated invariant when it invoked the replenish() method from another thread before the constructor completed.
+Also, Thread’s start() method automatically inserts a memory barrier, and so it escapes the object before its initiation is complete.
 Starting threads from within constructors is a really bad idea, as we’ll discuss in the next section.
 That’s quite a few issues for such a small piece of code, eh? Let’s fix them one by one.
 I prefer not to fix problems concurrently so I can focus on solving each in turn.
 We may be tempted to start threads from constructors to get background tasks running as soon as an object is instantiated.
-That’s a good intention started may invoke methods on the instance before its construction is complete.
+The call to start() forces a memory barrier, exposing the partially created object to other threads.
+Also, the thread we started may invoke methods on the instance before its construction is complete.
 An object should preserve its invariant, and therefore starting threads from within constructors is forbidden.
 In other words, we should never be able to access an object in an invalid state.
 We could move the threadstarting code from the constructor to a separate instance method.
@@ -885,20 +895,30 @@ We also have to prevent the thread-starting method from being called more than o
 On the one hand, we shouldn’t start threads from constructors, and on the other hand, we don’t want to open up the instance for any use without fully creating it to satisfaction.
 There’s gotta be a way to get out of this pickle.
 We could perform simple calculations in the constructor but avoid any method calls here.
-The the invariant violation and, at the same time, ensured that our instance is in a valid state with its background task started upon creation.
+The private method init() does the bulk of the work we did earlier in the constructor.
+Invoke this method from within the static factory method create()
+We avoided the invariant violation and, at the same time, ensured that our instance is in a valid state with its background task started upon creation.
 Look around your own project; do you see threads being started in constructors? If you do, you have another cleanup task to add to your refactoring tasks list.
 Threads are limited resources, and we shouldn’t create them arbitrarily.
+EnergySource’s replenish() method is wasting a thread and limits the number of.
 If more instances created their own threads like that, we’d run into resource availability problems.
 The replenish operation is short and quick, so it’s an ideal candidate to run in a timer.
 For a better throughput, especially if we expect to have a number of instances of EnergySource, it’s better to reuse threads from a thread pool.
 We must ensure that the tasks handle their exceptions; otherwise, it would result in suppression of their future execution.
+Let’s refactor EnergySource to run the replenish() method as a periodic task.
 In addition to being kind on resource usage, the code got simpler.
-Instead of starting a thread for each instance of EnergySource, the in turn, got even simpler—we’re not concerned about the sleep or the timing, so instead we focus on the logic to increase the energy level.
-Making the replenishTimer field static helped us share the pool of threads in the ScheduledThreadPoolExecutor.
+We got rid of the keepRunning field and simply canceled the task in the stopEnergySource() method.
+Instead of starting a thread for each instance of EnergySource, the init() method scheduled the timer to run the replenish() method.
+This method, in turn, got even simpler—we’re not concerned about the sleep or the timing, so instead we focus on the logic to increase the energy level.
+This allows us to share a pool of threads to run the replenish() operation on multiple instances of EnergySource.
+We can vary the number of threads in this thread pool, currently set to 10, based on the duration of the timed task and the number of instances.
+Since the replenish() task is very small, a small pool size is adequate.
 However, this leads to one complication: we have to figure out a way to shut it down.
 By default the executor threads run as nondaemon threads and will prevent the shutdown of the JVM if we don’t explicitly shut them down.
 Provide a static method in the EnergySource class, like so:
 The users of the EnergySource have to remember to call this method.
+We also have to add logic to deal with instances of EnergySource being created after the call to shutdown()
+This factory can ensure all the threads created are daemon threads, like so:
 The main disadvantage of this approach is more code for us to write and maintain.
 The Google Guava API (http://code.google.com/p/guava-libraries/), which provides quite a few convenience wrappers on top of the JDK concurrency API, also provides a method to create pools that exits automatically.
 Our EnergySource just lost a few pounds and is more scalable than when we created the thread internally.
@@ -910,9 +930,9 @@ However, we must ensure that other methods that access the shared mutable variab
 If we consider race conditions only, we may argue against synchronizing getter methods; we may get convinced that the slightly old copy of a variable’s value is adequate.
 The motivation to synchronize or lock getters is as much about visibility as race conditions—if we fail to cross the memory barrier, our thread is not guaranteed to see the change for an unpredictable duration of time in the future.
 Let’s ensure that the methods of EnergySource cross the memory barrier; using the synchronized keyword is the easiest way to achieve that.
-Each method that touches the mutable variable level to read or write needs it looped indefinitely.
+Each method that touches the mutable variable level to read or write needs to cross the memory barrier, so we’ll mark them all as synchronized.
+The original version will not allow the replenish() method to be marked synchronized since it looped indefinitely.
 The latest version here has no such problem, since it’s a short, quick method invoked from the timer.
-Even though we’d expect only in case it is invoked from more than one thread.
 After all, that’s the whole point of providing thread safety.
 Examine your own project and see whether all access to mutable variables, both getters and setters, cross the memory barrier using synchronized or one of the other relevant constructs.
 Access to final immutable variables don’t need to cross memory barriers, since they don’t change and cached values are as good as the one in memory.
@@ -922,7 +942,7 @@ We want to ensure that the synchronization happens at the right level for each c
 For one, its scope is the entire object, and that becomes the level of granularity for concurrency.
 This limits us to at most one synchronized operation on the entire object at any time.
 If all the operations on the object are mutually exclusive, such as add and remove on a collection, then this is not entirely bad, though it can certainly be better.
-However, if the object can support which should be mutually exclusive, then synchronizing on the instance will not help with speed.
+However, if the object can support multiple operations, such as drive() and sing(), that can run concurrently but need to be synchronized with other operations, such as drive() and tweet(), which should be mutually exclusive, then synchronizing on the instance will not help with speed.
 In this case, we should have multiple synchronization points within the objects for these methods.
 There’s little reason to be synchronizing on the instance in this case.
 Since the level was the only mutable field in the class, we can move synchronization to that directly.
@@ -933,15 +953,19 @@ However, there’s a slight problem in that Java does not allow us to lock on pr
 We can get around that constraint by changing the variable to AtomicLong from long.
 This will provide fine-grained thread safety around the access to this variable.
 Let’s take a look at the modified code first before we discuss it further:
+However, the improved concurrency comes with a slight change in semantics.
 Earlier we locked out any access while we examined the availability of energy.
 If we found enough energy, we were guaranteed to have it.
 However, that lowered concurrency; while one thread took the time, all others interacting with the EnergySource were blocked.
 In this improved version, multiple threads can compete for the energy at the same time without holding exclusive locks.
 If two or more threads compete at the same time, one of them would succeed, and the others would simply have to retry.
 We have much better speed for reads and safety for writes as well.
+The replenish() is also not asking for an exclusive lock.
+It grabs the level in a thread-safe manner and then, without holding any lock, increments the value.
 This is OK since there is only one thread increasing the energy level.
 If the method found the value to be lower than MAXLEVEL, it remains lower, even though the value may decrease.
 The increment itself is thread safe, and there is no issue of consistency.
+We’ve left the stopEnergySource() method marked synchronized because the call to this method will be so infrequent there’s no need to make this locking any more granular at this point.
 Later in Creating Transactions in Java, on page 105, we’ll look at an alternative way to implement this method.
 Revisit your own project and look for places where you can improve concurrency without compromising thread safety.
 Check to see whether there are places where you can introduce lock objects instead of synchronizing on the entire instance.
@@ -957,21 +981,22 @@ We should never be able to see change to one of the fields and not the other.
 This brings back the need for explicit synchronization in code.
 Using synchronized is the simplest option, but that would limit concurrency among multiple readers.
 If we don’t mind a reader blocking another reader, then we should certainly favor this simplicity.
-However, if we like a greater degree of concurrency and don’t mind trading some complexity for that, then we may use a ReentrantReadWriteLock.
 This provides a pair of locks, a read lock and a write lock, that readers and writers can use, respectively.
 Using this lock will allow us to have multiple concurrent readers or one exclusive writer at any given instance.
 Since we’re using explicit locks, we can scale back to a simple long instead of the AtomicLong for the level field.
-We introduced two new fields: usage, to count how many times the energy source is drained, and monitor, an instance of ReentrantReadWriteLock, to ensure we first acquire a write lock.
+In the useEnergy() method, we first acquire a write lock.
 We can use a timeout on the lock if we desire.
 Once the write lock is acquired, we change the level and the usage variables.
 Within the safe haven of the finally block, we release the acquired lock.
-We need to use a lock in the get methods to ensure the visibility of the fields lock, we allow multiple gets to run concurrently and block only when a write is in progress.
+Similarly, we acquire the write lock in the replenish() method as well.
+This ensures that changes made by useEnergy() and replenish() are mutually exclusive.
+We need to use a lock in the get methods to ensure the visibility of the fields and also that partial changes within useEnergy() are not seen.
+By using a read lock, we allow multiple gets to run concurrently and block only when a write is in progress.
 This code provides fairly decent concurrency and thread safety at the same time.
 We do have to be vigilant to ensure that we haven’t compromised safety at any point.
 The code is more complex than the previous version, which, unfortunately, makes it easier to make mistakes.
 In the next chapter, we’ll see how we can avoid explicit synchronization.
 Working with shared mutable state is a huge burden that requires us to endure added complexity and the accompanied greater chances of error.
-When refactoring code, look out for some common concurrency-related mistakes:
 In this chapter, we saw how hard explicit synchronization can be.
 In the next chapter, we’ll discuss how to avoid explicit synchronization altogether, an approach that’s relatively new to the JVM.
 Recall the last time you finished a project where you had to synchronize shared mutable variables? Instead of relaxing and enjoying that feeling of a job well done, you probably had a nagging feeling of doubt, wondering whether you managed to synchronize in all the right places.
@@ -1036,7 +1061,6 @@ Clojure keenly watches over and coordinates the activities of threads.
 When two threads try to access the same data, the transaction manager steps in to resolve the conflict, and again, no explicit locking is involved in our code.
 By design, values are immutable, and identities are mutable only within transactions in Clojure.
 There’s simply no way to change the state, and no programming facility for that, in Clojure.
-If any attempt is made to change the identity of an object outside any transactions, it will fail with a stern IllegalStateException.
 On the other hand, when bound by transactions, changes are instantaneous when there are no conflicts.
 If conflicts arise, Clojure will automatically roll back transactions and retry.
 It’s our responsibility to ensure that the code within the transactions is idempotent—in functional programming we try to avoid side effects, so this goes well with the programming model in Clojure.
@@ -1048,7 +1072,6 @@ If this succeeded, we should see the new balance printed by the last statement.
 Vars that we will not cover here; please refer to Clojure documentation or books for more details.
 Refer to Clojure documentation on how to install and run it on your system.
 The first two statements worked well: we were able to print the initial balance of 0
-Our effort to change the value, however, failed with an IllegalStateException.
 We made the Clojure gods angry by mutating the variable outside of transactions.
 Contrast this clear failure to the nefarious behavior of Java when we modify a shared mutable variable without synchronization.
 This is quite an improvement since we’d much rather have our code behave right or fail loudly than quietly produce unpredictable results.
@@ -1060,7 +1083,6 @@ Rather than create an exclusive lock, dosync lets code compete fairly with other
 Since we don’t perform any explicit locks, we don’t have to worry about lock order and can enjoy a deadlock-free concurrency.
 Having no explicit locks means no programmer placed conservative mutually exclusive blocks of code.
 The result is maximum concurrency dictated directly and dynamically by the application behavior and data access.
-When a transaction is in progress, if there was no conflict with other threads/transactions, the transaction can complete, and its changes can be written to the memory.
 However, as soon as Clojure finds that some other transaction has progressed far ahead in a way to jeopardize this transaction, it quietly rolls back the changes and repeats the transaction.
 Let’s fix the code so we can successfully change the balance variable.
 The only change in the code was to wrap the call to ref-set into a call to dosync.
@@ -1070,7 +1092,6 @@ Once we created the new value, we ask Clojure to quickly modify the pointer in b
 If there are no other references to the old value, the garbage collector will take care of it appropriately.
 Clojure provides three options to modify a mutable identity, all only from within a transaction:
 This is the most preferred form to modify a mutable identity.
-It sets the in-transaction-value of the identity to a value resulting from applying a specified function and returns the value.
 Then, during the commit point, the value of the identity is set to the result from applying the specified function using the most recent committed value of the identity.
 However, in most situations, alter is more suitable than commute.
 These provide synchronous change to data; however, unlike refs, the changes are uncoordinated and can’t be grouped with other changes in a transaction.
@@ -1101,9 +1122,13 @@ In general, it’s better to gather up these side-effect actions and perform the
 Contrary to my advice, we’ll see print statements within transactions in the examples.
 We already know how to change the balance within a transaction.
 Thread sleep 2000) (alter balance - amount) (println "done with withdraw of" amount))))
-We created two transactions in this example, one for deposit and the other balance.
-We then simulate a delay to set the transactions on a collision except that we decrease the balance.
+We created two transactions in this example, one for deposit and the other for withdrawal.
+In the function deposit() we first get a local copy of the given balance.
+We then simulate a delay to set the transactions on a collision course.
+The withdraw() is very similar, except that we decrease the balance.
+Go ahead and run the code and observe the output:
 Both the functions obtained their own local copy of the balance.
+Right after the simulated delay, the deposit() transaction completed, but the withdraw() transaction was not that lucky.
 The balance was changed behind its back, and so the change it attempts to make is no longer valid.
 If we did not have these print statements, we’d be oblivious of these activities.
 All that should matter is that the net effect of balance is consistent and reflects both the deposit and the withdrawal.
@@ -1114,6 +1139,10 @@ The list has not changed; we simply changed the view of the list.
 My family’s wish list originally contains only one item, an iPad.
 I’d like to add a new MacBook Pro (MBP), and one of my kids wants to add a new bike.
 So, we set out in two different threads to add these items to the list.
+In the add-item() function, we add the given item to the list.
+The alter function alters the in-transaction ref by applying the provided function, in this case the conj() function.
+The function conj() returns a new collection with the given element conjoined or added to the collection.
+We then call the add-item() method from two different threads.
 Run the code to see the net effect of the two transactions:
 Original wish list is (iPad) Original wish list is (iPad) Updated wish list is (Bike MBP iPad)
 The original list is immutable, so it remains the same at the end of the code.
@@ -1128,11 +1157,15 @@ We can withdraw up to $100 from either one of these accounts but not both.
 If a withdraw of $100 is attempted on each of these accounts sequentially, the first attempt will succeed but not the second.
 The net result, a balance of $900, is less than the permitted limit.
 Let’s create this anomaly in code, then figure out how to fix it.
+We start with the given balances for the two accounts.
+In the withdraw-account() function, we first read the balance of the two accounts and compute the total balance.
 Then after the induced delay, which puts the transactions on a collision course, we update the balance of one of the accounts represented by from-balance only if the total balance is not less than the required minimum.
 Since the two transactions run in isolation and aren’t modifying anything in common, they’re quite oblivious of the violation and fall into the write skew, as we can see from the output:
+With Clojure, we can easily avoid write skew with the ensure() method.
+We can tell a transaction to keep an eye on a variable that is only read and not modified.
 At this point, STM places a read lock on that value, preventing other transactions from gaining a write lock.
 When the transaction nears completion, STM releases all read locks before it performs the commit.
-Even though the two transactions run concurrently as before, with this is preserved, as we see in the output:
+Even though the two transactions run concurrently as before, with this modified withdraw-account() method calling ensure(), the constraint of total balance is preserved, as we see in the output:
 The explicit lock-free execution model of STM is quite powerful.
 When there are no conflicts, there’s no blocking at all.
 When there are conflicts, one winner proceeds without a hitch, while the contenders are repeated.
@@ -1148,11 +1181,7 @@ It’s fairly simple—wrap the transactional code within an implementation of t
 Those among us who’re fans of annotations may prefer Multiverse’s STM API.
 In addition to using STM, if we plan to use actors, then we’d want to reach for the Akka library.
 From pure Java code, we can use annotations to indicate transaction boundaries.
-Or mark a class with @TransactionalObject to make all its methods transactional.
 For integration with other JVM languages, Multiverse provides a rich set of APIs to control when transactions start and end.
-Akka, created by Jonas Bonér, is a Scala-based solution that can be used from many different JVM languages including Java.
-Akka provides both actor-based concurrency and STM, as well as an option to mix them both.
-Akka uses Multiverse for the STM implementation and providing the ACI (subset of ACID) properties.
 The main difference from Clojure, other than Java-introduced verbosity, is that Akka doesn’t force us to create a transaction before we can modify a mutable identity.
 If we don’t provide a transaction, Akka/Multiverse wraps the access automatically in a transaction.
 So, when we’re in a transaction, Akka refs behave like Clojure refs, and when we’re not in a transaction, they behave like Clojure atoms.
@@ -1168,7 +1197,10 @@ Instead, Akka provides, as part of the akka.stm package, a managed transactional
 The Ref<T> (and the specialized references) represents the managed mutable identity to an immutable value of type T.
 Types like Integer, Long, Double, String, and other immutable types fit the bill well to serve as value objects.
 If we use one of our own classes, we must make sure it’s immutable, that is, that it contains only final fields.
-We can create a managed transactional reference, which is an instance of Ref<T>, by providing an initial value or by omitting the value, defaulting to These calls are performed within the transaction we provide or in their own individual transactions if none is provided.
+We can create a managed transactional reference, which is an instance of Ref<T>, by providing an initial value or by omitting the value, defaulting to null.
+To obtain the current value from the reference, use the get() method.
+To change the mutable identity to point to a new value, use the swap() method.
+These calls are performed within the transaction we provide or in their own individual transactions if none is provided.
 When multiple threads try to change the same managed reference, Akka ensures that changes by one are written to memory and the others are retried.
 The transactional facility takes care of crossing the memory barriers.
 That is, Akka, through Multiverse, guarantees that the changes to a managed ref committed by a transaction happen before, and are visible to, any reads of the same ref later in other transactions.
@@ -1178,15 +1210,28 @@ We also create transactions to coordinate a read followed by a write to a single
 Akka was built on Scala, and we can enjoy its concise API if we’re using Scala.
 For programmers who can’t make that switch, Akka also provides a.
 We’ll see how to create transactions using Akka in Java and Scala in this section.
-For transactional support, extend the Atomic class and place code into the.
+For transactional support, extend the Atomic class and place code into the atomically() method of this class to wrap it into a transaction.
+To run transactional code, call the execute() method of the Atomic instance, like this:
+The thread that calls the execute() method runs the code within the atomically() method.
 However, the call is wrapped in a transaction if the caller is not already in a transaction.
 As the first step, let’s wrap the immutable state in mutable Akka managed references.
 We can’t change the value of a Long in Java, but we can change the managed reference (the identity) safely to point to a new value.
-In the previous version of EnergySource, the ScheduledExecutorService was used to In this version, rather than running the method periodically, we schedule.
+Recollect that this required the stopEnergySource() method to be synchronized.
+In this version, rather than running the method periodically, we schedule.
 Upon each call, we decide, based on the value of the flag keepRunning, if the method should be scheduled again for future execution a second later.
-This change eliminates the coupling between the depends on the flag, which can be easily managed using the STM transaction.
-We carry over the code that creates an instance of EnergySource from the previous version and modify it to use the managed reference for the keepRunning runs in its own transaction, so we don’t have to create an explicit transaction.
-The methods that return the current energy level and the usage count will.
+This change eliminates the coupling between the stopEnergySource() method and the scheduler/timer.
+Instead, this method now depends on the flag, which can be easily managed using the STM transaction.
+We carry over the code that creates an instance of EnergySource from the previous version and modify it to use the managed reference for the keepRunning flag.
+In this version, there’s no need to synchronize the stopEnergySource() method because it relies on transactions.
+It’s adequate that the swap() method runs in its own transaction, so we don’t have to create an explicit transaction.
+The methods that return the current energy level and the usage count will use the managed references, but that requires merely calling the get() method.
+The useEnergy() method will need an explicit transaction, since we will change both the energy level and the usage count here; we need to ensure that the changes are consistent with the values being read and that the changes to these two fields are atomic.
+We’ll use the Atomic interface and its atomically() method to wrap our code in a transaction.
+In the useEnergy() method we decrement from the current level.
+We want to ensure that both the get and the set are within the same transaction.
+We finally call execute() to run the sequence of operations in one transaction.
+We have one more method to take care of, replenish(), which takes care of refilling the source.
+We have the same transactional need in this method as well, so we’ll use Atomic in it too.
 This code concurrently uses energy, in units of one, from different threads.
 To compile and run the code, we need to include the Akka-related JARs, as shown next.
 Define the classpath based on your operating system and location where Akka is installed on your system.
@@ -1201,8 +1246,12 @@ Spend some time playing with that code and experiment with the transactions and 
 We saw how to create transactions in Java (and I assume you’ve read that part so we don’t have to repeat the details here)
 We’ll need less code to write the same thing in Scala, partly because of the concise nature of Scala but also because of the elegant Akka API that makes use of closures/function values.
 It takes a lot less effort to create transactions in Scala compared to Java.
-Scala, being a fully object-oriented language, considers static methods in companion object.
+All we need is a call to the atomic() method of Stm, like so:
+The closure/function value we pass to atomic() is run in the current thread but within a transaction.
+Scala, being a fully object-oriented language, considers static methods in classes as an aberration.
+So, the factory method create() is moved to the companion object.
 The rest of the code is very similar to the Java version, but it’s concise when compared.
+We avoided the ceremony of the Atomic class and the execute() method call with the elegant atomic() method call.
 The code to exercise the Scala version of EnergySource is shown next.
 We could have used the JDK ExecutorService to manage threads like in the Java version.
 Or, we could use Scala actors2 to spawn threads for each concurrent task.
@@ -1216,18 +1265,28 @@ With nested transactions, all the transactions created by methods we call get ro
 Using Akka/Multiverse provides ways to configure other options like new isolated transactions, among others.
 As a result, with nested transactions, all the changes get committed only when the outermost transaction commits.
 It’s our responsibility to ensure that methods complete within the configurable timeout period for the overall nested transactions to succeed.
+The AccountService and its transfer() method from The Lock Interface, on page 67 will benefit from nested transactions.
 Let’s first use nested transactions in that example in Java and then see how that would look like in Scala.
 Let’s first get the Account class into the realm of transactions.
 The account balance should be a managed reference, so let’s start with defining that field and a getter for it.
-In the constructor, we set the initial balance to the given amount by calling since we didn’t provide one (and let’s assume the caller didn’t provide one.
+In the constructor, we set the initial balance to the given amount by calling the swap() method on the ref.
+This operation will run in its own transaction, since we didn’t provide one (and let’s assume the caller didn’t provide one either)
+Similarly, the getBalance() will access the balance in its own transaction.
+The entire deposit() method has to run in one transaction, because it involves both reading and changing the balance.
 So, let’s wrap these two operations into a separate transaction.
+Likewise, the operations in withdraw() should be wrapped into a separate transaction.
 Transactions are forced to fail upon exception, so we use this to indicate the failure when a sufficient balance is not available or when the deposit/withdraw amount is invalid.
 Pretty simple, eh? There’s no need to worry about synchronization, locking, deadlocking, and so on.
 It’s time to visit the AccountService class that’ll perform the transfer.
 In this example, we’ll set the transactions on a collision course to illustrate their behavior while we study nested transactions.
-The operations in the first deposit money into the target account.
+The operations in the transfer() method are bound within a transaction.
+As part of the transfer, we first deposit money into the target account.
 Then, after the delay induced to cause transaction collision, we withdraw money from the source account.
 We want the deposit into the target account to succeed if and only if the withdraw from the source succeeds—that’s the job for our transaction.
+We can see whether the transfer succeeded by printing the balance.
+A convenience method to invoke the transfer(), handle the exception, and finally print the balances will be nice, so let’s write one:
+The last method we need is the main() to get the transfer rolling:
+In the main() method, we created two accounts and started the deposit of $20 in a separate thread.
 In the meantime, we ask money to be transferred between the accounts.
 This should set the two transactions on a collision course, because they both affect a common instance.
 One of them will succeed, and the other will be retried.
@@ -1247,7 +1306,8 @@ The withdraw, however, failed with an exception because of insufficient balance.
 This caused the pending deposit transaction to roll back, leaving the balance unaffected by the final transfer attempt.
 The print message and delays are certainly not good practices, but I used them here so we can see the transaction sequences and retries—avoid these kinds of printing or logging in real code.
 Delegate any code with side effects to post-commit handlers, which we will discuss later.
-I promised that the transactions would lift some of the burden from our from The Lock Interface, on page 67, shown here for convenience:
+I promised that the transactions would lift some of the burden from our shoulders, so let’s find out just how much.
+Take a look at the transfer() method from The Lock Interface, on page 67, shown here for convenience:
 Contrast that code with the latest version, but first get rid of the delay and print statements:
 There was so much dancing around with ordering and locking in the old version that it’s easy to mess up.
 The code we don’t write has the fewest bugs, hands down.
@@ -1273,42 +1333,64 @@ We can provide an optional constructor parameter of type TransactionFactory to c
 For example, we can set a transaction as readonly to gain performance and prevent changes to any references by configuring a transaction.
 Let’s create a class called CoffeePot that holds a number of cups of coffee and try to manipulate it from within a readonly transaction:
 To programmatically set the transaction configuration, we need a TransactionFactory.
-We created an instance of TransactionFactoryBuilder to configure the TransactionFactoryBuilder implements the Cascade3 design pattern, so we can chain more methods for other properties we want to set before calling the.
+Send this factory instance as a parameter to the constructor.
 Beck are being rediscovered, especially with the rise of new languages on the JVM.
-Our transaction is readonly, but let’s see what happens if we try to modify a then a second time to change it.
-The transaction won’t be happy about the change request; on the attempt to change, it will throw the org.multiverse.api.exceptions.ReadonlyException exception, and the transaction will roll back.
-Read only Attempt to write Failed org.multiverse.api.exceptions.ReadonlyException: Can't open for write transactional object 'akka.stm.Ref@1272670619' because transaction 'DefaultTransaction' is readonly'
+Our transaction is readonly, but let’s see what happens if we try to modify a reference.
+So, we’ll call the readWriteCups() once to only read the reference and then a second time to change it.
+The runtime exception was raised from the call to swap()
+This method modifies the value held by its ref only if the new value is different from the current value; otherwise, it ignores the change request.
+In Scala, we use the atomic() method instead of the Atomic class for creating transactions.
 Creating the instance of the factory is much easier in Scala as well, because we can use the factory method on the companion object.
 Other than Scala and Akka conciseness, there’s not much difference between the Scala and the Java version here, and the code should behave just like the Java version:
-Read only Attempt to write Failed org.multiverse.api.exceptions.ReadonlyException: Can't open for write transactional object 'akka.stm.Ref@1761506447' because transaction 'DefaultTransaction' is readonly'
 A transaction may depend on a variable that’s expected to change, and the failure of the transaction may be temporary.
 As a response to that failure, we may return an error code and ask the transaction to retry after a delay.
-However, there’s no point repeating the request until another task has will roll back and block the transaction until one of the reference objects the transaction depends on changes or the configurable block timeout is exceeded.
+However, there’s no point repeating the request until another task has changed the dependent data.
+Akka gives us a simple facility, retry(), which will roll back and block the transaction until one of the reference objects the transaction depends on changes or the configurable block timeout is exceeded.
 Programmers in general are addicted to caffeine, so anyone volunteering to get some coffee knows not to return with empty cups.
+Let’s write a fillCup() method with sensible wait using retry():
+In the fillCup() method, we configured the transaction with blockingAllowed = true and set a timeout of six seconds for the transaction to complete.
+When the fillCup() method finds there’s not enough coffee, rather than returning an error code, it invokes StmUtils’s retry() method.
+This blocks the current transaction until the participating reference cups is changed.
 Once any participating reference changes, the atomically code that contained the retry is retried, starting another transaction.
+Let’s call the fillCup() method to see the effect of retry():
+In main(), we start a timer that will refill the coffeepot in about five seconds.
 The guy who jumped in first got twenty cups of coffee right away.
 When our volunteer goes for the ten cups, he’s blocked for the refill to happen.
 This wait is more efficient than a busy programmatic reattempt operation.
 Once the refill transaction completes, his request is automatically tried again and this time succeeds.
 If the refill does not happen in the timeout we configured, the transaction will fail as in the last request in the try block.
+We can observe this behavior and the benefit of retry() in the output:
 The fill-up request for ten cups was made in 0.40 seconds from the start of the run.
-Since the refill is not going to happen until after five seconds from refill transaction completed, the fill-up transaction was restarted and this time ran to completion a little after five seconds from the start.
+Since the refill is not going to happen until after five seconds from the start, this request is blocked because of the call to retry()
+Right after the refill transaction completed, the fill-up transaction was restarted and this time ran to completion a little after five seconds from the start.
 The later request to fill up timed out since no refill happened after this request.
+If the application logic demands performing some operation when the dependent data changes, we can benefit from this feature that monitors change to the data.
 In the Java version, we used the convenience object StmUtils that provided a fluent Java interface.
-We can also use the factory method to create the TransactionFactory:
-When creating TransactionFactory, to configure the timeout rather than directly.
+This allowed us to simply invoke 6 seconds, a little syntactic.
 The rest of the code is a simple translation from Java to Scala, and the output is shown next:
 Java’s try-catch-finally facility allows us to handle exceptions and selectively run some code only when there’s an exception.
-Similarly, we can decide to run a piece of code only if a transaction committed and another piece of place to perform all the side effects that we were holding off to ensure the transaction completes.
-We place the code that we want to run when a transaction succeeds in the we’ll place the code we want to run when the transaction fails in the code in the context of a transaction, we’ll have to invoke them within the body.
+Similarly, we can decide to run a piece of code only if a transaction committed and another piece of code only if a transaction rolled back.
+These are provided as deferred() and compensating() methods, respectively, on StmUtils.
+The deferred() method is a great place to perform all the side effects that we were holding off to ensure the transaction completes.
+We place the code that we want to run when a transaction succeeds in the code block (Runnable) that’s passed to the deferred() method of StmUtils.
+Likewise, we’ll place the code we want to run when the transaction fails in the code block passed to the compensating() method.
+Since these methods have to run in the context of a transaction, we’ll have to invoke them within the body of the atomically() method.
+In this method, we extend from the class Atomic and implement the required atomically() method.
 In previous examples, we simply wrote the code to be run in a transaction here.
 In addition to that, we also provide code to run in case of transaction success and transaction rollback.
 Exercise the UseCounter to see the code blocks associated with transaction success and failure run as appropriate:
+When the transaction completed on the first call to decrement(), the code block provided to the deferred() method is invoked.
+In the second call to decrement(), as soon as we hit the exception, the transaction was rolled back, and the code block provided to the compensating() method was called.
+We also see the rollback because of an unexpected retry at the top that’s due to the speculative configuration we discussed earlier in Nested Transactions in Java, on page 112
+The deferred() handler is a great place to complete work activity in order to make actions permanent.
 So, feel free to print, display messages, send notifications, commit the database transactions, and so on, from here.
-If we handler is a good place for logging failures.
+If we want anything to stick around, this is the place for that.
+The compensating() handler is a good place for logging failures.
 If we had messed with any unmanaged objects (those objects not controlled using the Akka Ref), this is the place to revert the actions—however, it’s better to avoid the desire for such design because it’s messy and error prone.
-We can handle commit and rollback events in Scala just like we did in Java,
-The code to run when a transaction succeeds is placed in the closure that’s.
+We can handle commit and rollback events in Scala just like we did in Java, except we can directly pass closures/function values to the deferred() and compensating() methods.
+The code to run when a transaction succeeds is placed in the closure that’s passed to the deferred() method.
+Likewise, the code to run when a transaction rolls back is presented to the compensating() method as a closure.
+These two are placed within the closure presented to the atomic() method, along with.
 The output from the Scala version should be the same as the Java version:
 As we work through the examples, it’s easy to forget that the values we’re dealing with are, and should be, immutable.
 Although STM makes life easy, it can be a challenge to ensure good performance while maintaining immutability.
@@ -1323,17 +1405,15 @@ These work like Java lists and dictionaries but derive from efficient Scala data
 Let’s take a look at how to use TransactionalMap in Java and Scala.
 As an example, let’s keep scores for different players, where the updates to these scores will arrive concurrently.
 Rather than deal with synchronization and locks, we decide to handle the updates within transactions.
+In the updateScore() method, we set the score value for a player and increment the update count in a transaction.
 Both the fields scoreValue of type TransactionalMap and updates of type Ref are managed.
 The TransactionalMap supports methods we’d expect on a Map, but these methods are transactional—any changes we make to them are discarded if the transaction is rolled back.
 To see this effect in action, we roll back the transaction after making the change if the score value is 13
-In Java we can use the for-each statement, like for(String name : collectionOfNames), if the collection implements the Iterable interface.
-The TransactionalMap is a Scala collection and does not directly support that interface.
-No worries—Scala provides a façade called JavaConversions that provides convenience methods.
 The Scores class is ready; we now need a class to exercise its methods:
 Then we add another score value that will result in the transaction rollback.
 Finally, we iterate over the scores in the transactional map.
-We can use the transactional collections from within Scala much like we did in Java.
-Since in Scala we’d use Scala’s internal iterators, we don’t have to use the JavaConversions façade.
+The updateScore() method is pretty much equivalent to the Java version.
+We eliminated the getNames() and getScore methods and instead provided a foreach() internal-iterator to step through the score values.
 The Scala version of the UseScores should be a direct translation from the Java version:
 The output of this version should be the same as the Java version, as we’d expect:
 In Handling Write Skew Anomaly, on page 100, we discussed write skew and how Clojure STM handles it.
@@ -1342,12 +1422,13 @@ OK, that word may sound scary, but it’s really simple.
 Let’s revisit the example of multiple accounts with a restricted combined balance that we looked at earlier.
 Create a Portfolio class that holds a checking account balance and a savings account balance.
 These two accounts have a constraint of the total balance not running less than $1,000
-This class the two balances first, compute their total, and after a intentional delay (introduced to set transactions on collision course) we subtract the given amount from either the checking balance or the savings balance if the total transaction configured using default settings.
+This class along with the withdraw() method is shown next.
+In this method, we obtain the two balances first, compute their total, and after a intentional delay (introduced to set transactions on collision course) we subtract the given amount from either the checking balance or the savings balance if the total is not less than $1,000
+The withdraw() method does its operations within a transaction configured using default settings.
 Let’s set two transactions in concurrent motion to change the balances:
 By default, Akka does not avoid write skew, and the two transactions will proceed running the balances into constraint violation, as we see in the output:
 Let’s reach out to TransactionFactory that will help us configure transactions programmatically.
 Modify line 9 in the Portfolio class to accept an instance of the factory.
-We created a TransactionFactoryBuilder and set the writeSkew and trackReads properties to false and true, respectively.
 This tells the transaction to keep track of reads within a transaction and also to set a read lock on the reads until the commit begins, just as Clojure STM handles ensure.
 The rest of the code in Portfolio and the code in UsePortfolio remains unchanged.
 Because of the nondeterministic nature of concurrent execution, we can’t predict which of the two transactions will win.
@@ -1370,6 +1451,8 @@ In Coordination Using CountDownLatch, on page 56, we used AtomicLong to synchron
 It looks like a nice candidate for STM, but the high contentions don’t favor it.
 Let’s see whether that’s true by modifying the file size program to use STM.
 Instead of using AtomicLong, we’ll use Akka managed references for the fields in our file size finder.
+In the case of AtomicLong, we used a simple incrementAndGet() or decrementAndGet()
+However, since the managed reference is generic and does not specifically deal with numbers, we have to put in some more effort.
 It’s easier if we isolate that into a separate method.
 The method to explore directories and find file sizes should now be pretty easy to implement.
 It’s a simple conversion from using AtomicLong to using the managed references:
@@ -1407,6 +1490,8 @@ We can use STM from any language on the JVM.
 We could use Clojure STM right from that favorite language.
 Alternately, we could use the Multiverse library directly or through the Akka library.
 If we want to use Clojure STM, it couldn’t be easier.
+So, when we define a ref, we’re creating an instance of the Ref class, and when we invoke dosync(), we’re calling the runInTransaction() method.
+Now we have direct access to the Clojure STM from Groovy, Java, JRuby, and any other JVM language.
 A language that doesn’t have everything is actually easier to program in than some that do.
 In this chapter, we’ll see how to use STM in different JVM languages.
 Focus on the sections related to the languages you’re interested in, and feel free to skip the others.
@@ -1421,14 +1506,18 @@ Groovy is a good choice among languages if we’re looking for easy metaprogramm
 Let’s give it a shot using the account transfer example.
 Create a class called Account to hold a managed reference to its immutable state, represented by the variable currentBalance:
 In the constructor, we initialize the reference with the starting balance.
-In dereferencing we saw in Clojure using the @ prefix.
+This is equivalent to the dereferencing we saw in Clojure using the @ prefix.
 Now let’s see how to update it in a transaction.
+For us to run a piece of code in a transaction, we have to send it to the runInTransaction() method.
 Groovy provides a rich syntax to implement interfaces, especially interfaces with only one method.
-Under the covers Groovy will implement the required method of that interface with of the Account class, which needs to run its operations in a transaction.
+Under the covers Groovy will implement the required method of that interface with the provided code block as the implementation.
+Let’s write the deposit() method of the Account class, which needs to run its operations in a transaction.
 The deposit modifies the current balance in a transaction if the amount is greater than 0
-Otherwise, it causes the transaction to fail by throwing an extra check to perform.
+Otherwise, it causes the transaction to fail by throwing an exception.
+Implementing withdraw() is not much different; we merely have an extra check to perform.
 Let’s write a separate function that will perform the transfer so we can see nested transactions in action.
-In the can see the effect of a deposit being discarded if the withdrawal fails.
+In the transfer() method, first make a deposit and then a withdrawal.
+This way we can see the effect of a deposit being discarded if the withdrawal fails.
 It’s time to exercise all that code, so let’s write a simple call sequence to transfer some money between the accounts.
 We’ll let the first transfer be for an amount that will succeed.
 Then we’ll make a large transfer that will fail because of insufficient funds.
@@ -1437,23 +1526,33 @@ The first transfer succeeded, and the balances displayed reflects that.
 The second transfer completed the deposit first, but the withdrawal failed.
 The total effect of the failed transaction was to leave the balance of the two accounts unaffected.
 Using the Akka API in Groovy requires just a little bit more effort and some patience.
+In Akka the transactional method atomic() is exposed through what’s called a package object.
 Groovy is not thrilled to see these lowercase names and names with $ for classes.
 So, we’ll run into trouble if we try to use them directly.
-Get a class reference to the on the package reference and pass it a closure that implements Scala’s closure represented by scala.Function0
-We will also send a reference to the transaction factory, as an implicit optional parameter.
+Get a class reference to the package object using Class.forName()
+The dynamic nature of Groovy will take us through the rest of the way quite easily.
+Simply invoke the atomic() method on the package reference and pass it a closure that implements Scala’s closure represented by scala.Function0
+We will also send a reference to the transaction factory.
+The atomic() method defines the second parameter, the transaction factory, as an implicit optional parameter.
 However, that’s not recognized from Groovy, and so we’re required to send it.
 We can obtain the default factory, to use default configuration settings, from the package object, or we can create our own instance of the factory with the configuration parameters we desire.
 Let’s write the Account class to put all that to use:
-We then call within our closure will run in a transaction managed by Akka/Multiverse.
+We pass the Java class name of the Scala package object to the forName() method and get a reference stmPackage to its Class meta-object.
+The code within our closure will run in a transaction managed by Akka/Multiverse.
+The rest of the code for the transfer() method comes next; we again perform the deposit and then the withdraw from within a transaction.
 Run the Groovy code and see the transactions in action:
 Although Java is showing its age, it’s still one of the most widely used language.
 In this section, we’ll see that selecting a concurrency model does not.
 We’ll reach out to the STM models right from within Java.
 We’ll have to endure some Java-induced verbosity and have to ensure immutability; however, it’s a breeze to use the STM API itself, as we’ll see.
+We can use Clojure STM for Java quite easily because Ref and LockingTransaction are exposed as simple classes.
+The runInTransaction() method takes as a parameter an instance that implements the Callable interface.
+So, wrapping code in a transaction is as simple as wrapping it in the Callable interface’s call() method.
 We’ll implement the account transfer example using Clojure STM in Java.
 First let’s create a class Account that will hold a managed reference to its immutable state represented by the variable balance:
-To obtain the the @ prefix we used in Clojure to dereference.
+To obtain the current balance, we use the deref() method, which is the Java-side API for the @ prefix we used in Clojure to dereference.
 The deposit modifies the current balance in a transaction if the amount is greater than 0
+Implementing withdraw() is not much different; it’s just an extra check to perform:
 Let’s focus on the transfer now; we’ll write that in a separate class.
 To see the effect of a deposit being discarded by the failed withdraw, let’s perform the deposit first followed by the withdraw:
 We’ll need a convenience method that will handle the failed transfer and report the status of the accounts after the transfer:
@@ -1468,8 +1567,10 @@ JRuby brings the power of Ruby along with its elegance, expressiveness, and conc
 If you’d like to use Multiverse directly, refer to the Multiverse documentation for the JRuby integration API.
 Let’s give that a try using the account transfer example.
 Create a class called Account that will hold a managed reference to its immutable state represented by the JRuby field @balance:
-Just like in method, which takes a Callable class as the parameter.
-JRuby is quite fluent in implementing interfaces; simply send a code block, and it takes care of method of the Account class, which needs to run its operations in a transaction:
+Just like in the Java integration, we use the deref() method to get the balance.
+To run a piece of code within a transaction, we’ll have to send it to the runInTransaction() method, which takes a Callable class as the parameter.
+JRuby is quite fluent in implementing interfaces; simply send a code block, and it takes care of wrapping that into an interface implementation.
+Let’s write the deposit() method of the Account class, which needs to run its operations in a transaction:
 The deposit modifies the balance within the transaction if the amount is appropriate; otherwise, it fails the transaction by throwing an exception.
 Now we need a method to nest the transactions and transfer money between accounts; let’s write that as a separate function.
 To see that the effects of the deposit are negated by a failing withdraw, we’ll perform the two operations in that order.
@@ -1480,45 +1581,48 @@ The deposit that occurred as part of this transaction was discarded upon the tra
 Using the Multiverse STM in JRuby requires just a little bit more effort and some patience.
 The main reason is that Multiverse relies on exceptions to retry transactions, but JRuby wraps exceptions into NativeException—so if we’re not careful, Multiverse will not see the exceptions it expects, and the transaction will fail to commit.
 We will first face this problem in the example, but we will figure out a way to work around the problem.
-Now when we refer to Jpackage, we’re referring to the Akka akka.stm.package package object.
 We’ll create the account transfer example using JRuby and Akka STM.
 Let’s isolate the method that will use the Akka transaction into a separate module so it’s easier to reuse that code:
-We import Akka’s Ref class and the package object akka.stm.package.
-In our the default transaction factory from the package object itself.
+Since the API exposed outside of Scala for this method requires the factory as well, we obtain the default transaction factory from the package object itself.
 Let’s use this method to place Account methods in the transaction:
-We create a managed reference for the @balance field and place the operations.
+We create a managed reference for the @balance field and place the operations in the deposit() and withdraw() methods in transactions by using our AkkaStm module’s atomic() method.
+We bring that method into our Account class using incude—JRuby’s mixin facility.
+We can write the transfer() method as a standalone method, and we can mix the AkkaStm module into it as well to reuse the atomic() method.
 As the final step, let’s exercise all this code by invoking a couple of transfers:
 We can expect the first transfer to succeed since the amount is less than the available funds.
 We’d want the second transfer to fail because of insufficient funds and leave the balance of the two accounts unaffected.
 Let’s see what’s in store when we run the code:
 This error did more than fail the first transfer’s transaction—it also cost us significant time and hair loss.
 This is the error we alluded in the beginning of this section.
-The failure reported a SpeculativeConfigurationFailure exception, which is part of the org.multiverse.api.exceptions package.
 Let’s understand where this came from and why things are failing suddenly in the JRuby version when the other language versions worked flawlessly.
 By default Multiverse (and so Akka STM) uses speculative transactions, which we discussed in Nested Transactions in Java, on page 112
-At first Multiverse assumes the transaction is read-only, and upon seeing the first set operation on a managed ref, it throws the SpeculativeConfigurationFailure exception.
 In the Multiverse layer, it handles this exception and retries the transaction, this time allowing for change to a managed ref.
 OK, that’s Multiverse’s business, and it seems to work fine so far in other languages, so let’s figure out why things went wrong with JRuby.
 This is JRuby placing the exception in its own wrapper exception.
 So, from the JRuby code, we called into Akka, which in turn called into our JRuby closure.
 This closure tried to update the managed reference, and that caused the Multiverse exception like it’s designed to do.
-Our JRuby closure code—unfortunately—internally wrapped that exception into a NativeException.
-So, instead of seeing the familiar SpeculativeConfigurationFailure, Multiverse sees this strange unexpected NativeException and simply fails the transaction and propagates the exception up the chain without retrying the transaction.
 So, what’s the fix? Not a pleasant one: we have to handle it explicitly.
 We need to check whether the exception belongs to Multiverse and, if so, unwrap it up the chain.
 It’s an ugly workaround, but it’s not too much code.
-We wrap the call to akka.stm.package.atomic around a begin-rescue block, and if the exception thrown at us is a NativeException and if the embedded real cause is a Multiverse exception, then we throw the unwrapped exception so Multiverse can handle it and take the appropriate action.
+Let’s modify AkkaStm’s atomic() method to compensate for the JRuby behavior:
 Now that we have fixed it, let’s see whether the two transactions behave as expected, the first one succeeding and the second one failing, leaving the balance unaffected:
 After the fix, the JRuby version behaves like the versions in other languages.
 Scala is a statically typed language on the JVM, which bridges object-oriented style and functional style of programming.
 We have quite a few options to make use of STM from this highly expressive language.
 It’s likely that we’d lean toward the Akka solution because the Scala API it provides will be the most fluent.
 However, if we’re on a multilanguage project that’s already using Clojure STM, nothing stops us from using that from Scala.
-Using Clojure STM in Scala is going to follow along pretty much the lines the method that should run in a transaction.
+Using Clojure STM in Scala is going to follow along pretty much the lines of Java.
+We can use the Ref class and the runInTransaction() method of the LockingTransaction class.
+We create an instance that implements Callable to wrap the method that should run in a transaction.
 Let’s implement the account transfer example using Scala and Clojure STM.
 It’s pretty much a direct translation of the code from Java to Scala.
-In the primary constructor, which is part of the class definition in Scala, the managed reference in a transaction, we simply need to wrap it into a method whose operations need to run in a transaction:
-If we plan to compile the code, then we have to wrap it into a.
+In the primary constructor, which is part of the class definition in Scala, we initialized the reference with the initial balance value.
+In the getBalance() method, we obtain the balance using a call to the deref() method.
+To update the managed reference in a transaction, we simply need to wrap it into a Callable and pass it to the runInTransaction() method.
+Let’s write the deposit method whose operations need to run in a transaction:
+We can write the transfer() method as a stand-alone method, since we don’t need a class for that in Scala if we run it as a script.
+If we plan to compile the code, then we have to wrap it into a object and write the main() method:
+In the transfer() method, we first make the deposit and then the withdrawal.
 As in the previous examples, we want to study the effect of transactions:
 That’s exactly what we’d expect—a successful first transaction that changes the balance appropriately, followed by a failed transaction that leaves the balance unaffected.
 Akka is certainly a good choice, because it was written in Scala and the APIs it exposes will feel natural to Scala programmers.
@@ -1593,18 +1697,25 @@ In the next chapter, we’ll take a look at using Akka actors with other languag
 Akka was written in Scala, so it’s quite simple and more natural to create and use actors from Scala.
 At the same time, they’ve done quite a wonderful job of exposing a traditional Java API so we can easily create and use actors in Java code.
 We’ll first take a look at using it in Java and then see how that experience simplifies and changes when we use it in Scala.
+Simply extend this and implement the required onReceive() method—this method is called whenever a message arrives for the actor.
 We’ll create an actor...how about a HollywoodActor that’ll respond to requests to play different roles?
+In this example, we’re simply printing it out along with the details of the thread that’s processing the message.
 We’ll learn how to deal with different types of messages later.
 Our actor is all set and waiting for us to say “action.” We need to create an instance of the actor and send messages with their role, so let’s get to that:
 In Java we’d generally create objects using new, but Akka actors are not simple objects—they’re active objects.
-So, we create them using a special we start an actor, Akka puts it into a registry; the actor is accessible through the registry until the actor is stopped.
+Alternately, we could create an instance using new and wrap it around a call to actorOf() to get an actor reference, but let’s get to that later.
+As soon as we create the actor, we start it by calling the start() method.
+When we start an actor, Akka puts it into a registry; the actor is accessible through the registry until the actor is stopped.
 In the example, now johnnyDepp, of type ActorRef, is a reference to our actor instance.
-Next we send a few messages to the actor with roles to play using the However, in this case, the delay will help us learn one more detail, which is how actors switch threads, as we’ll see soon.
+Next we send a few messages to the actor with roles to play using the sendOneWay() method.
+Once a message is sent, we really don’t have to wait.
+However, in this case, the delay will help us learn one more detail, which is how actors switch threads, as we’ll see soon.
+In the end, we ask to close down all running actors.
+Instead of calling the shutdownAll() method, we may call the stop() method on individual actors or send them a kill message as well.
 All right, to run the example, let’s compile the code using javac and remember to specify the classpath to Akka library files.
 We can simply run the program as we would run regular Java programs.
 Again, we must remember to provide the necessary JARs in the classpath.
 We need to define the AKKA_JARS environment variable appropriately for our operating system to match the location where we have Scala and Akka installed.
-We may use the scala-library.jar file that comes with Akka, or we may use it from the local Scala installation.
 By default Akka prints extra log messages on the standard output; we saw how to configure that in Creating Transactions in Java, on page 105
 Let’s compile and run the code to watch our actor responding to messages:
 The actor responds to the messages one at a time.
@@ -1624,13 +1735,21 @@ We communicate with actors by sending messages and not by invoking methods direc
 Akka wants to make it hard to get a direct reference to actors and wants us to get only a reference to ActorRef.
 This allows Akka to ensure that we don’t add methods to actors and interact with them directly, because that would take us back to the evil land of shared mutability that we’re trying so hard to avoid.
 This controlled creation of actors also allows Akka to garbage collect the actors appropriately.
-So, let’s implement this method in an anonymous class that implements the UntypedActorFactory interface and within this method create our actor into an Akka actor.
+Akka allows us to create an instance in a controlled fashion, within a create() method.
+The subsequent call to actorOf() turns the regular object that extends from UntypedActor into an Akka actor.
 We can then pass messages to this actor like before.
 Our HollywoodActor only accepts messages of type String, but in the example, we’re sending an instance of StringBuilder with the value Politics.
+The runtime type checking we performed in the onReceive() takes care of this.
+The delay introduced gives time for the actor to respond to messages before we shut it down.
 Let’s take it for a ride to see the output:
-To create an Akka actor in Scala, instead of the UntypedActor we extended in the Java version, we’ll extend from the Actor trait and implement the required we wrote earlier in Java:
+To create an Akka actor in Scala, instead of the UntypedActor we extended in the Java version, we’ll extend from the Actor trait and implement the required receive() method.
+Let’s implement in Scala the HollywoodActor actor class that we wrote earlier in Java:
+The receive() method implements a PartialFunction and takes the form of Scala pattern matching, but let’s not let those details distract us now.
+This method is called when a message arrives; if it helps, think of the receive() as a glorified switch statement for now.
 The implementation is much the same as in the Java version.
 Now that we’ve seen how to define an actor, let’s turn our attention to using this actor:
+There are a few flavors of the actorOf() method, and here we are using the version that takes as a parameter an actor class manifest, presented as [HollywoodActor]
+As soon as we create the actor, we start it by calling the start() method.
 In the example, now johnnyDepp, of type ActorRef, is a reference to our actor instance; however, since Scala has type inference, we didn’t have to specify the type.
 Next we send a few messages to the actor with the roles to play.
 Oh wait, there’s one other detail; we use a special method ! to send the message.
@@ -1649,6 +1768,8 @@ The new version of the class HollywoodActor takes a value name of type String as
 While we’re at it, let’s take care of handling the unrecognized incoming message format.
 Rather than using instanceof, the case statements take care of matching the message with various patterns—the type of the message, in this example.
 Creating an actor that accepts a constructor parameter took some effort in Java, but it fizzles down to something quite simple in Scala:
+We instantiated the actor using the new keyword and then passed the instance to the actorOf() method (here again Akka prevents us from creating instances of actors arbitrarily outside of calls to the actorOf() method)
+This turns the regular object that extends from Actor into an Akka actor.
 The rest of the code is similar to the Java version.
 Let’s run the code and ensure the output is similar to the Java version’s output:
 I have a special liking for tuples, not because it’s amusing when we mispronounce them as “two-ples” but because they’re lightweight, immutable, and one of the easiest instances to create.
@@ -1657,26 +1778,42 @@ In Java we could pass an unmodifiable Collection as messages to send more than o
 When we pass a message to an actor, by default we’re passing the message’s reference if both the sender and the receiver are within the same JVM.5 It’s our responsibility to ensure that the messages we pass are immutable, especially if we decide to send instances of our own classes.
 We may also ask Akka to serialize a message so a copy of the message is delivered instead of a reference.
 This is also the preferred way from the performance point of view.
-The send is nonblocking, and the calling actor/thread Scala, to send a one-way message.
+The send is nonblocking, and the calling actor/thread proceeds with its work.
+We use the sendOneWay() method, or the ! method in Scala, to send a one-way message.
 Akka also provides two-way communication where we can send a message and expect a response from the actor.
 The calling thread, in this case, will block until it receives a response or exceeds a timeout.
 Let’s take a look at how to send and receive messages first in Java and then in Scala.
+We use the sendRequestReply() method to send a message and wait for a response.
 Let’s take a look at an example of two-way messaging:
 Akka also supports remote actors, allowing us to send messages between discrete processes running on different machines.
 We have a FortuneTeller actor that wants to respond to the message it receives.
+It responds to the message sender by calling the replyUnsafe() method on the call context obtained through getContext()
+The replyUnsafe() method sends off, without blocking, a response to the caller, but there’s no calling actor in the code.
+This method internally creates a Future class and waits on that until it gets a result, an exception, or a timeout.
 There’s one thing that is a bit unfortunate with this FortuneTeller: it relies on the sender waiting for a response to be available.
-To avoid this from happening, we need to check whether do this by obtaining the sender reference from the context.
-Alternately, we was present and a false if no sender reference is available.
+We called the sendRequestReply() method, so there was an internal Future that was used to wait for a response.
+If we had called sendOneWay() instead, the replyUnsafe() method would fail.
+To avoid this from happening, we need to check whether a blocking sender is available before we call the replyUnsafe() method.
+We can do this by obtaining the sender reference from the context.
+Alternately, we can use the replySafe() method, which will return a true if the sender reference was present and a false if no sender reference is available.
 So, here’s the modified FortuneTeller that’ll handle the case when no sender is waiting for a response:
 The new version of FortuneTeller will not fail if a sender is not known; it gracefully handles the misfortune.
+The call to sendRequestReply() blocks while waiting for a response, but the call to sendOneWay() is nonblocking and yields no response.
+We can go about doing work until we want the response, at which time we can either block or query the future object to see whether a response is available.
 Similarly, on the side of the actor, we can get the senderFuture from the context reference and communicate through that right away or later when we have a response ready.
 We’ll take a look at using these later in an example.
 We have to be ready for some differences from the Java API if we want to send/receive messages to actors from Scala:
 We can directly use the self property to get access to the actor.
+Using this property, we can call the reply() method, which is the unsafe equivalent on the Scala side, or we can use the replySafe() method.
+Instead of returning an Object, the sendRequestReply() method returns a Scala Option.
 If the response arrived, this would be an instance of Some[T], which holds the result, and None in the case of a timeout.
 So, unlike the Java version, there’s no exception in the case of a timeout.
-In the actor code we can see the two differences; one is related to self instead we apply pattern matching on the response we received from the call to !!, response arrived, and the second case with None is used in case of a timeout.
+Let’s implement the FortuneTeller in Scala using the unsafe reply() method first:
+In the actor code we can see the two differences; one is related to self instead of getContext(), and the other is reply() instead of replyUnsafe()
+On the caller side, we apply pattern matching on the response we received from the call to !!, which is the sendRequestReply() method.
+The first case is exercised if an actual response arrived, and the second case with None is used in case of a timeout.
 The output of this code is the same as the Java version, as we’d expect:
+Other than the changes we discussed, using the safe version of reply() is not much different from the Java version.
 The new version of FortuneTeller will not fail if a sender is not known:
 It is quite convenient that Akka passes the sender references under the covers when it sends a message.
 This eliminates the need to pass the sender explicitly as part of the message and removes so much noise and effort in the code.
@@ -1686,20 +1823,23 @@ In the example in Concurrent Computation of Prime Numbers, on page 27, we used E
 Let’s see how that example shapes up with Akka actors first in Java and then in Scala.
 Given a number like 10 million, we divided the computation of primes into different ranges and distributed these ranges over several threads.
 To compute the number of primes in a range, we need the lower and upper bounds of the range.
-Our actor receives this bundled as a List in the message.
+Our actor receives this bundled as a List in the message parameter to onReceive()
 Given a number, we need to divide it into the given number of parts and delegate the finding of primes in each of these parts to different actors.
-Once we determined the bounds for each part, we wrapped that into an unmodifiable collection—remember, messages have to be immutable.
-We save away Future (here it’s akka.dispatch.Future and not the JDK’s java.util.concurrent.Future) returned by this method so we can query This gives us an instance of Scala Option—think of this as a fancy union that holds the value if available.
+We call await() on Future and invoke the result() method on the Future instance returned by await()
+This gives us an instance of Scala Option—think of this as a fancy union that holds the value if available.
+We get the Integer value from that object finally by calling the get() method.
 OK, let’s drive the code using the command-line parameters for the number and parts:
+Our last step is to write the PrimeFinder that will do the actual work of computing the primes in a range:
 Let’s compare the code and output in this section with the code and output in Concurrent Computation of Prime Numbers, on page 27
 In both versions we set the number of partitions to 100
 There is no pool size to set in the Akka version of primes counting.
-This is a computation-intensive problem, and setting the pool size for the ExecutorService version above the number of cores made little difference.
 So, they’re fairly close in performance, and there is slightly less ceremony in the Akka version than in ExecutorService.
 This difference becomes more prominent when we need more coordination between the threads/actors, as we progress further in this chapter.
 If we use Scala to implement the primes example, we get to enjoy the Scala conciseness for implementing the actor and interacting with it.
 There are a few differences between the Java version and this one.
 The message format is a simple tuple instead of an unmodifiable list.
+The case within the receive() was able to easily match for this.
+The for loop in Java has turned into a while loop here.
 Scala does have quite an elegant for loop; however, it will incur object to primitive conversion overhead.
 To get a decent performance comparison, I’ve avoided that elegance here.
 Similarly, in the PrimeFinder, we’ll use a while loop instead of a Scala for loop:
@@ -1723,21 +1863,24 @@ Figure 13—Design of the total file size problem using actors.
 Finally, FileToProcess is a message that carries the name of the file that needs to be explored.
 FileProcessors are the workers with the job to explore a given directory and send back the total size of files and names of subdirectories they find.
 Once they finish that task, they send the RequestAFile class to let SizeCollector know they’re ready to take on the task of exploring another directory.
-They also need to register with SizeCollector in the first place to receive the first directory an actor is started.
+They also need to register with SizeCollector in the first place to receive the first directory to explore.
+A great place for this is the preStart() method, which is called when an actor is started.
 Let’s implement FileProcessor; we must remember to receive a reference to the SizeCollector as the constructor parameter:
-We send along a self-reference to the FileProcessor actor instance, which is a list of available idle FileProcessors that will explore directories.
-The SizeCollector class will ask a FileProcessor to explore a directory, the code for method.
+We send along a self-reference to the FileProcessor actor instance, which is obtained using the getContext() method.
+SizeCollector will add this reference to a list of available idle FileProcessors that will explore directories.
+The SizeCollector class will ask a FileProcessor to explore a directory, the code for which we’ll see soon, by sending a message.
+In the onReceive() method, we discover subdirectories of the given directory and send them to SizeCollector using the sendOneWay() method.
 For the files in the given directory, we total their sizes and in the end of the task send that to SizeCollector.
 As the task’s final step, we register the FileProcessor class with SizeCollector to get another directory to explore.
 SizeCollector is the mastermind that manages the isolated mutable state and keeps FileProcessors busy with directories to explore until the final result is computed.
 Let’s first look at the code and then discuss the actions for each of these messages:
 SizeCollector keeps two lists, one for the directories to visit and the other of idling FileProcessors.
 The three long variables are used to keep track of how.
+SizeCollector expects to receive three types of messages in the onReceive() message handler.
 As FileProcessors become idle, they send the RequestAFile message, and the SizeCollector saves the actors’ references in the idling processors list.
 FileToProcess is a message that SizeCollector both sends and receives.
-It will send As the FileProcessors discover subdirectories, they use messages of this type to send the directories to the SizeCollector so it can further schedule other FileProcessors to explore.
+As the FileProcessors discover subdirectories, they use messages of this type to send the directories to the SizeCollector so it can further schedule other FileProcessors to explore.
 The final message handled by the SizeCollector is FileSize, which is sent by the FileProcessors, and it carries the size of files in a directory explored.
-Each time a directory name is received, SizeCollector increments an isolated mutable counter called pendingNumberOfFilesToVisit.
 It decrements this counter each time a FileSize message is received with the size for a directory.
 If it finds this count to be zero, it prints the total size and the time taken and shuts down all the actors, essentially shutting down the program.
 Let’s implement the last piece of the design, the main code:
@@ -1750,7 +1893,6 @@ We got the file size program working in Java using Akka actors.
 We can implement that design in Scala and benefit from its conciseness.
 The first difference from the Java version is in the messages.
 Scala has case classes that provide highly expressive syntax to create immutable classes.
-Download favoringIsolatedMutability/scala/filesize/ConcurrentFileSizeWAkka.scala case object RequestAFile case class FileSize(size : Long) case class FileToProcess(fileName : String)
 The FileProcessor class is a direct translation from the Java version to Scala; there is nothing new other than things we’ve discussed so far:
 Since we’re using case classes for message types, the Scala pattern matching served here nicely.
 It helped to easily extract values such as filename and file size from the appropriate messages:
@@ -1763,7 +1905,8 @@ Think of a typed actor as an active object, which runs in its own single lightwe
 Since typed actors convert regular method calls into messages under the covers, we can enjoy the benefits of static typing to the fullest extent.
 We don’t have to second-guess the types of messages an actor receives, and we can rely on the IDE support such as code completion.
 To implement an actor, we simply wrote a class that extended UntypedActor or Actor trait/abstract classes.
-To implement a typed actor, we’ll create an interface-implementation pair (in Scala we don’t write interfaces; instead, we use traits with no implementation)
+To instantiate an actor, we used the actorOf() method of the Actor class.
+To instantiate a typed actor, we’ll use TypedActor’s newInstance() method.
 The reference we receive from the TypedActor is the intercepting proxy that converts methods to asynchronous messages.
 It has mutable state that we can isolate using an actor.
 Each instance of EnergySource will run only in a single thread, so there’s no issue of race conditions.
@@ -1778,14 +1921,19 @@ TypedActor ensures these methods are all mutually exclusive; that is, only one o
 So, there is no need to synchronize or lock access to any of the fields in our class.
 To get a feel for the threads that execute the actor, let’s sprinkle a few print statements in this sample code.
 Finally, we’re ready to use the typed actor, so let’s write the code for UseEnergySource.
+We create an instance of the typed actor using the TypedActor’s newInstance() method.
+Calls to useEnergy() are nonblocking since that’s a void method returning no response.
 We make two consecutive calls to this method by placing them one after the other.
+After a slight delay, we’ll make one more call to useEnergy() to study the behavior of actors and threads.
 Finally, we ask for the usage count and energy level again, after a delay, to allow the asynchronous messages to finish.
 In the end, we ask the actor to be shut down.
 Let’s take a look at the output from this code:
 The typed actor EnergySourceImpl executed only one method at a time.
-The first these two tasks were run on the actor’s thread, in sequence.
-The code gracefully switched execution threads between the calls in main and the of the actor ran sequentially but in different threads managed by Akka.
-We also notice that the actor did not hold its thread hostage; the last request.
+The first two useEnergy() requests we fired did not block the main thread.
+However, these two tasks were run on the actor’s thread, in sequence.
+The code gracefully switched execution threads between the calls in main and the methods on the actor.
+While the main() ran in the main thread, the methods of the actor ran sequentially but in different threads managed by Akka.
+We also notice that the actor did not hold its thread hostage; the last request to useEnergy() ran in a different Akka managed thread.
 The mutable state of the energy source is isolated within the EnergySourceImpl actor—I say it’s isolated not because it’s encapsulated within this class but because typed actors control access to the mutable state to only one actor with at most one thread running at any time.
 We saw how typed actors need a pair of interface and implementation.
 In Scala we don’t create interface; instead, we create traits with no implementation.
@@ -1798,41 +1946,65 @@ In the versions we implemented in the previous chapters, the replenish action di
 As soon as we started the energy source, a timer took care of appropriately increasing the energy level one unit per second.
 Implementing that feature in the typed actor version is going to take some effort—we need to ensure the single-threaded nature of our typed actor is not violated by the replenish operation.
 Let’s explore some options before we jump into the code.
+We could add the replenish() method to the EnergySource interface.
+The user of the energy source could call this method every second.
 Unfortunately, this places an unnecessary burden on the user of the energy source; they could forget, and also it would no longer match in functionality with the other versions of EnergySource.
 We could create a timer within the typed actor, and this timer could periodically replenish the energy level.
+TypedActors provide a special method called preStart() that’s called as soon as the actor is created and a method called postStop() that’s called right after an actor is stopped or shut down.
+These two methods will serve well; we can start the timer in the preStart() method.
+It seems like a good plan, but that opens up another problem.
 The glitch is that the timers run in their own threads, and we don’t want to touch the mutable state of our actor from those threads.
 Remember, we want the state to be isolated mutable, not shared mutable.
 These murmurs will not be visible to the outside user of our typed actor but run as asynchronous messages, like those externally invoked messages that are sequenced and interleaved with other messages.
-They do receives the messages from the proxies and dispatches the appropriate method on our class.
+The base class TypedActor’s receive() method receives the messages from the proxies and dispatches the appropriate method on our class.
 We can override this method to implement a special message for the murmurs, the internal operations.
 That way, users of the actor invoke methods published through the interface, and our class internally can use this (unpublished) message.
 We could even take an extra step to ensure the sender of this message is our own actor, if we desire.
 It’s going to take some effort to get this done in Java, but it’s a lot easier in Scala.
 Let’s first take a look at the Java implementation, and then we’ll look at the Scala version.
-While the external users of our EnergySourceImpl communicate through the EnergySource interface, internally we’ll set the actor to send itself a Replenish is private and can’t be called directly from outside the class, but we’ll refrain from calling it directly from the timer also.
+While the external users of our EnergySourceImpl communicate through the EnergySource interface, internally we’ll set the actor to send itself a Replenish request message every second using a timer.
+The replenish() method we’ll write is private and can’t be called directly from outside the class, but we’ll refrain from calling it directly from the timer also.
 The timer will only send a message to the actor.
 Let’s take a look at that part of the code:
-We’re using the Akka-provided Scheduler, which methods to fire off tasks once or repeatedly.
+In the preStart() method, which is automatically called right after the actor is started, we kick off a timer.
+We’re using the Akka-provided Scheduler, which is an actor-based timer.
+This timer provides a few overloaded schedule() methods to fire off tasks once or repeatedly.
 We can use this to execute arbitrary functions or, as in this example, fire a message on an actor.
 We’ve set up the timer to fire a Replenish message every second on the actor after an initial delay of one second.
-We obtain a handle to the actor’s ActorRef yet, we increment the level value.
+We obtain a handle to the actor’s ActorRef reference by calling the optionSelf() method on the instance.
+When the actor is stopped, we should stop the timer; therefore, we have the postStop() method.
+In the private replenish() method, which we haven’t tied to the Replenish message yet, we increment the level value.
+The proxy used by the users of typed actors converts method calls to messages.
+The TypedActor base class’s receive() method converts those messages to method calls on the implementation.
 It dispatches different pieces of code based on the type of the message received.
 So, the base class maps the messages to our methods, and we want to take up an added responsibility of mapping an additional, but private, message.
+In other words, we want to combine our message handling with the efforts of the base class’s receive() method.
+The orElse() method of PartialFunction allows us to easily do that, so we’ll use that:
+We override the receive() method and, in it, combine the partial function returned by a, yet to be implemented, processMessage() method with the partial function returned by the base’s receive()
+Now can we turn our attention to implementing the processMessage() method.
 Unfortunately, Java’s type erasure will result in some warnings in this code.
+Since this is part of the message-handling sequence, we’ve taken care of thread synchronization using the actor-based communication.
 Load up your cup if it’s low on coffee; you’re gonna need that extra shot of caffeine to implement this method.
 PartialFunction is a trait in Scala, and traits with implementations manifest in Java as a pair of interface and an abstract class.
 So, to implement a trait in Java, we’ll implement that interface and delegate calls, as appropriate, to the corresponding abstract class.
+The key method we’ll implement is the apply() method where we handle the Replenish message.
+We’ll also provide the implementation for the isDefinedAt() method, which tells whether our PartialFunction supports a particular message format or type.
 The rest of the methods of this interface can be delegated.
+In the apply() method we checked whether the message is of type Replenish and invoked the private replenish()
+OK, the last step is not to forget the methods that have not changed from the previous typed actor version, so let’s get them over:
 There’s no change to the EnergySource interface, and UseEnergySource continues to use the actor as before.
 So, let’s compile the new version of the EnergySourceImpl and run it with the UseEnergySource we wrote in the previous section.
 In the previous section, at the end of the run, we were left with seventy units of energy.
 Since we have the automatic replenish now working, the units should be higher by one or two points.
 The print statements we sprinkled to print the thread information shows that the use energy requests and the replenish request ran in Akka’s actor’s thread, thus once again relieving us of the synchronization concerns.
 If we add sleep calls to delay any of these tasks, we’ll see the execution of subsequent calls to the actor are delayed since the actor is single-threaded.
+The essence of the approach was to combine our own partial function implementation with the partial function returned by the base class’s receive() method.
 It was quite an effort in Java to do that but is a lot easier in Scala.
 Let’s look at the part that deals with handling the murmur, the internal message.
-The biggest change the Replenish message—no messing with inheritance and delegation like on the Java side.
-Since this is so simple, we might as well implement the logic we did in the example, Receive, which is an alias for that.
+The preStart() and postStop() methods are a simple translation from the Java version.
+The receive() is pretty much the same except for Scala conciseness.
+It fizzled into simple pattern matching for the Replenish message—no messing with inheritance and delegation like on the Java side.
+Since this is so simple, we might as well implement the logic for Replenish() right here instead of creating a private function.
 Let’s bring in the rest of the code for EnergySourceImpl from the previous Scala version:
 We can use EnergySource and UseEnergySource from the previous Scala version.
 So, let’s compile the new version of EnergySourceImpl and run it to compare the output:
@@ -1856,10 +2028,13 @@ Akka transactors or transactional actors bring execution of multiple actors into
 Transactors make atomic the changes to managed STM Ref objects from multiple coordinating actors.
 The changes to these objects are retained only if the encompassing transaction commits; otherwise, the changes are discarded.
 The default option is to process a message in its own transaction.
+We can implement a normally() method that can process select messages stand-alone, that is, not as part of any transaction.
 We can ask for messages to be processed Coordinated, that is, as part of an overarching transaction.
 Transactors provide us with the flexibility to link in other actors into our coordinated transactions.
 We can use these methods to prepare for a transaction and perform any post-commit processing.
 Let’s create a transactor first in Java and then in Scala.
+To use transactors in Java, we’ll extend the UntypedTransactor class and implement the required atomically() method.
+In addition, if we want to include other actors in the transaction, we implement the coordinate() method.
 We’ll use a Deposit message to perform the deposit operations on accounts.
 This message is represented by an immutable class, which will carry the deposit amount as part of the message.
 Next, we have the Withdraw message that is similar in structure to the Deposit message:
@@ -1867,19 +2042,21 @@ No data needs to be carried for the message to get the balance, so an empty clas
 The response to such a message would be the actual balance embedded in the Balance message:
 The final message definition we need is for Transfer, which will contain details of the accounts and the amount of transfer:
 The AccountService transactor will use the Transfer message, and the Account transactor will use the other messages we’ve defined.
+The Account class extends UntypedTransactor and implements the atomically() method.
 This method will run under the context of a transaction provided to it—this may be the transaction of the caller or a separate transaction if none is provided.
 If the message received is the Deposit message, we increase the balance that’s stored in the STM-managed Ref object.
 If the message is Withdraw, then we decrease the balance only if sufficient money is available.
 The exception, if thrown, will trigger a rollback of the encompassing transaction.
 Finally, if the message is FetchBalance, we respond to the sender with the current value of balance.
 Since this entire method is running within one transaction, we don’t have to worry about multiple accesses to the Ref object(s) within the transactor.
-The changes we make to the Ref objects will be retained only if the encompassing transaction is committed—remember, we’re responsible for maintaining immutable state.
 The job of coordinating the operation of deposit on one transactor (account) and the withdraw on another transactor (account) belongs to the AccountService transactor, which we will write next:
-We do that by grouping actors and messages the AccountService transactor’s base implementation will send the appropriate message to each transactor in the set.
-Once the messages are sent, it will here, we leave this method blank.
+Coordinating the deposit and withdraw is the only responsibility of the AccountService, so in the coordinate() method we direct the appropriate messages to be sent to the two accounts.
+We do that by grouping actors and messages for each actor into a set.
+When we return this set from the coordinate() method, the AccountService transactor’s base implementation will send the appropriate message to each transactor in the set.
+Once the messages are sent, it will call its own atomically() implementation.
+Since we have nothing more to do here, we leave this method blank.
 There’s no difference between how we interact with an actor and a transactor.
 If we send a regular message (like newDeposit(1000)), it is automatically wrapped into a transaction.
-We can also create our own coordinated transaction by creating an instance of akka.transactor.Coordinated and wrapping a message into it (like, for example, new Coordinated(new Deposit(1000)))
 Since we’re dealing with only one-way messages in this example, we give sufficient time for the message to be handled before making the next query.
 This will give time for the coordinating transaction to succeed or fail, and we can see the effect of the transaction in the subsequent call.
 Since the coordinating transaction can commit only if all the messages to the participating transactors complete without exception, the coordinating request waits at most for the timeout period (configurable) for the transaction to complete.
@@ -1888,10 +2065,11 @@ The last transfer, however, was for an amount larger than the balance available 
 The deposit part of the transfer was carried out, as we can see from the printed message in the output (the deposits and withdraws run concurrently, so the order of the print may vary each time we run the code)
 However, the withdraw did not complete, and so the entire transfer was rolled back.
 The change made in the deposit was discarded, and the second attempted transfer did not affect the balance of the two accounts.
-To use transactors in Scala, we’ll extend the Transactor class and implement example from Java to Scala.
+To use transactors in Scala, we’ll extend the Transactor class and implement the required atomically() method.
+In addition, if we want to include other actors in our transaction, we implement the coordinate() method.
 We will start with the message classes—these can be written concisely in Scala as case classes.
 We can use pattern matching to handle the three messages.
-Again, here we will leave the objects coordinate to participate in the transaction.
+Again, here we will leave the atomically() method blank, and in the coordinate() method we’ll mention which objects coordinate to participate in the transaction.
 The syntax for that is a lot more concise here on the Scala side than in the Java code:
 That was a direct translation from Java; again, we see the areas where Scala conciseness plays a nice role.
 This version behaves just like the Java version when we observe the output.
@@ -1903,7 +2081,8 @@ They bring together the all-too-familiar, convenient method calls and the benefi
 So, in an OO-application, instead of using actors, we may be tempted to use typed actors.
 However, just like actors, typed actors run in isolation and don’t provide transactional coordination—we’ll have to use coordinating typed actors for that.
 Akka makes it really simple to make a typed actor a coordinating typed actor; we simply have to mark the corresponding interface methods with a special Coordinated annotation.
-To indicate that a sequence of calls should run under This method by default waits for all the methods we invoked within to commit or roll back before proceeding further.
+To indicate that a sequence of calls should run under a coordinated transaction, simply wrap the calls into a coordinate() method.
+This method by default waits for all the methods we invoked within to commit or roll back before proceeding further.
 There is one limitation; only void methods can be marked with the special Coordinated annotation.
 Void methods translate to one-way calls, and these can participate in transactions.
 Methods that return values translate to twoway blocking calls and so can’t participate in free-running concurrent transactions.
@@ -1914,18 +2093,21 @@ The method in AccountService is not marked with the annotation since the.
 Let’s take a look at the implementation of the Account interface now:
 By extending TypedActor, we indicated that this is an actor.
 Instead of using simple local fields, we’re using the managed STM Refs.
-We don’t write any code specific to transactions here; however, all the methods in this class will run within a transaction since the relevant interface methods are marked Otherwise, it throws an exception indicating the failure of the operation and the encompassing transaction.
+We don’t write any code specific to transactions here; however, all the methods in this class will run within a transaction since the relevant interface methods are marked with @Coordinated.
+The deposit() increases the balance if amount is greater than 0
+The withdraw() method decreases the balance if sufficient money is available.
+Otherwise, it throws an exception indicating the failure of the operation and the encompassing transaction.
 The methods will participate in their own transaction if one is not provided.
 In the case of transfer, however, we want both the operations of deposit and withdraw to run in one transaction.
-This is managed by the AccountServiceImpl, which we write next:
-The code to run within a transaction is wrapped into the which is statically imported from the akka.transactor.Coordination class, runs the back) before returning.
-The methods invoked within the transaction are their results but only for their transactions to complete.
+The transfer() method runs the two operations, deposit and withdraw, within a transaction.
+The code to run within a transaction is wrapped into the atomically() method, which is a method of the Atomically interface.
+The first parameter, true, tells the method coordinate() to wait for its transaction to complete (succeed or roll back) before returning.
+The methods invoked within the transaction are one-way messages, however, and the coordinate() method does not block for their results but only for their transactions to complete.
 The code to use these typed actors should not look any different from code that uses regular objects, except for the creation of these objects.
 Rather than using new, we use a factory to create them, as shown next:
 As we’d expect, the output produced by the coordinating typed actor version is similar to the output produced by the transactor version—any changes made within a failing transaction are discarded.
 Scala uses traits instead of interfaces, so that’s the first difference we’ll see:
 The implementation of the Account trait is a direct translation from the Java version:
-The methods invoked within the transaction are one-way for their transactions to complete.
 Finally, let’s write the sample code to use the previous code:
 The Scala version behaves just like the Java version, as we see from the output:
 In the actor examples we have written so far, the actors and their clients were all within a single JVM process.
@@ -1948,7 +2130,9 @@ We’ll let a Monitor actor receive system information from remote clients.
 Clients on various machines can decide when to send this information to the monitor.
 In this example, they’ll send a few pieces of data each time they’re run.
 Let’s start with the Monitor, which is the remote actor that the clients will interact with:
-The way we create a remote actor is no different from the way we create an We could generate a sophisticated report with tables and graphs if we desire, but let’s keep the focus on actors here.
+The way we create a remote actor is no different from the way we create an in-process actor—we extend UntypedActor and implement the onReceive() method.
+We could generate a sophisticated report with tables and graphs if we desire, but let’s keep the focus on actors here.
+In the main() method, we first start the remote service by indicating the hostname and the port number.
 Then we register the actor for remote access using an ID system-monitor.
 When it’s time to shut down the monitor service, we invoke the methods that’ll help us terminate the remote service.
 That’s all the code we needed in the monitor service.
@@ -1992,49 +2176,66 @@ Sending messages to actors does not seem like a big deal; the real concern is ab
 There are some minor issues we’ll run into, but nothing someone who has survived this far into this book can’t handle.
 Focus on the sections related to languages you’re interested in and feel free to skip the others.
 To create actors, we have at least as many options in Groovy as in Java.
-Groovy allows us to extend from classes written in other JVM languages, method, we can check for the message type and perform appropriate actions.
+Groovy allows us to extend from classes written in other JVM languages, so it’s a direct override of the onReceive() method of UntypedActor.
+Within this method, we can check for the message type and perform appropriate actions.
 In business, as in war, surprise is worth as much as force.
 We may also use one of the other actor frameworks available for Java.
 However, in this chapter we’ll use a concurrency library geared more toward Groovy—GPars.
 GPars is a library written in Java that brings the love of programming concurrency to Groovy and Java.
 The Java’s performance and the sheer elegance of Groovy shine in GPars.
-It provides a number of capabilities—asynchrony, parallel array manipulations, fork/join, agents, data flow, and actors.
 I’ll show how we can implement some of the examples we saw earlier using GPars actors.
 For a comprehensive discussion on GPars, refer to the GPars documentation.
 First, the actors in GPars take care of the fundamentals: they cross the memory barrier at appropriate times, allow for only one thread to run their receiver methods at any given time, and are backed by message queues.
 GPars has different flavors of actors and allows us to configure various parameters such as fairness of thread affinity.
 The API for creating and using actors is fluent, as we’ll see next.
-To create an actor in GPars, we extend from DefaultActor or simply pass a message loop.
+To create an actor in GPars, we extend from DefaultActor or simply pass a closure to the actor() method of Actors.
+We use the latter if we have a simple message loop.
 If we have more complex logic or want to call into other methods of our actor class, then we should take the route of extending DefaultActor.
 We must start an actor before it can accept messages; any attempt to send a message before that will result in an exception.
-Let’s create an actor that will receive a String message and respond by simply as shown in the next code.
-This method runs the message loop, so we invoke again on the message wait queue.
+Let’s create an actor first using the DefaultActor class and then by using the actor() method.
+Let’s create an actor that will receive a String message and respond by simply printing the message.
+We extend DefaultActor and implement its act() method, as shown in the next code.
+This method runs the message loop, so we invoke a never-ending loop() method and call react() to receive a message.
+When our actor runs into react(), it blocks without holding a thread hostage.
+When a message arrives, a thread from the thread pool is scheduled to run the closure we provide to the react() method.
+Once the thread completes the block of code provided to the react(), it reruns the containing loop(), placing the actor again on the message wait queue.
 In the example, we simply print the message received plus the information on the thread that’s processing the message:
-We create an instance of an actor much like how we create an instance of.
-The actors are now ready to receive messages, so let’s send a message to.
+We create an instance of an actor much like how we create an instance of any class, but remember to call the start() method.
+The actors are now ready to receive messages, so let’s send a message to each actor using the send() method:
 Instead of using the traditional Java-style method call, we can also use the overloaded operator << to send a message.
 If that’s too much noise, we can simply place the message next to the actor, as in the next example:
 The actors, by default, run in daemon threads, so the code will terminate as soon as the main method completes.
-We want it to live long enough for us to see the messages being processed, so we can add a delay to the end or the timeout will get the main thread out of the blocking call.
+We want it to live long enough for us to see the messages being processed, so we can add a delay to the end or use the join() method with a timeout.
+The join() method will wait for the actors to terminate; since we did not use the terminate() call, they will not die, but the timeout will get the main thread out of the blocking call.
 Let’s take this example for a ride, run groovy, and provide the GPars JAR in the classpath, like so:
 The actors respond to the messages by printing the role we asked them to play.
 The two actors run concurrently, but each of them processes only one message at a time.
 At different instances, different threads from the thread pool may run the actors’ method in response to the messages sent.
 Each time we run the code, we may see a slightly different sequence of calls in the output because of the nondeterministic nature of concurrent executions.
 Coincidentally, in one of the outputs I managed to capture, we see two actors share the same thread at different instances and also an actor switching threads between messages.
-If we want to process messages indefinitely or until an actor is terminated, only a finite number of times or until some condition is met, we can use number of times, use loop(count) {}
-We can also provide an optional closure to run when the actor terminates, as we’ll see in the next example.
+Let’s create an actor this time using the Actors’ act() method.
+We’ll call the act() method and send the message loop to it as a closure.
+In the previous example, we used loop() with only the closure—the message-processing body with a call to react()
+In this example, we pass two additional parameters to the loop()
+The first parameter can be a condition or a count.
+Here we pass 3 to tell the actor to respond to three messages and then terminate.
 The second parameter, which is optional, is a piece of code (given as a closure) that’s executed when the actor terminates.
 Let’s send one additional message than it’s expecting in order to see what happens:
 When we run the previous example, we’ll see the actor received three messages and then terminated.
 The last message to the actor is ignored because the actor has already terminated by this point.
 We saw the flexibility that GPars offers to create actors and control the message loop.
-In addition to one-way messages, GPars allows us to send messages and closure that is to be called when the reply arrives.
+In addition to one-way messages, GPars allows us to send messages and receive responses.
+We can make a blocking sendAndWait() with an optional timeout, or we can use the nonblocking sendAndContinue(), which accepts a closure that is to be called when the reply arrives.
 This nonblocking version will make it easier for us to message multiple actors and then wait for their responses.
-To facilitate sending a reply to the message sender, the Actor provides a a reply, as in the next example:
+To facilitate sending a reply to the message sender, the Actor provides a convenient sender property.
+We’ll call the send() method on the sender to send a reply, as in the next example:
+The fortuneTeller actor receives a name and replies with a lame fortune message.
+From the user of the actor’s point of view, we’d call the sendAndWait() to send a name and block for a response:
+Although it’s simple, the sendAndWait() method won’t help if we want to send multiple messages at once.
+We can send multiple messages using the nonblocking sendAndContinue(), but once we send the messages, we need a way to block for all the responses to arrive.
 When replies arrive, we can count down on that latch.
 The main thread that blocks on the latch can continue when all responses arrive.
-If the timeout happens before that, we can handle that case from the return value of the.
+If the timeout happens before that, we can handle that case from the return value of the await() method:
 The output from a run of the example is shown next:
 Joe, you have a bright future Bob, you have a bright future Bob and Fred are keeping their fingers crossed Fred, you have a bright future Bob and Fred are happy campers.
 We can see the Groovy expressiveness along with the closure convenience play nicely in GPars for two-way messaging.
@@ -2053,10 +2254,8 @@ In this example, if the message is a Buy, we simply print a message, and if it i
 There’s nothing special in using an actor that takes different types of messages, as we can see here:
 It was simple, but the way our actor handled the message can be improved.
 Rather than using conditional statements to check the type, we can leverage Groovy’s typing system to do the branching.
-For this we’d use DynamicDispatchActor as the base actor class, as shown here:
-The base class DynamicDispatchActor will check the message type and then dispatch the appropriate.
+Since we defined a separate class, we must remember to call start() to initialize the actor message loop, as we see next:
 To provide discrete message handlers, we’re not forced to create a separate class.
-Instead, we can pass a closure that handles a chain of methods to the constructor of DynamicDispatchActor, as we see next:
 The closure that we send as the constructor parameter has a nice fluent syntax where each type of message is presented in a when clause.
 Second, each of these when clauses transforms into a specific message handler under the covers.
 Invalid or unhandled messages result in exceptions, whereas in the case of explicit conditional statements, we had to write code to handle that.
@@ -2068,12 +2267,12 @@ Each FileProcessor will receive as a message a directory and send as a message t
 We need to define the message types, so let’s start with that first:
 We defined the messages types RequestAFile, FileSize, and FileToProcess as immutable classes.
 We’ll extend DefaultActor to give that class the actor capabilities.
-This actor needs to register with the SizeCollector actor is started but before the first message is processed.
+This actor needs to register with the SizeCollector actor for receiving the directories.
+GPars provides event methods such as afterStart() and afterStop() just like Akka’s preStart() and postStop() methods.
+The afterStart() is called right after the actor is started but before the first message is processed.
 The SizeCollector will receive three different types of messages as it communicates with the FileProcessors.
-Since we have three distinct type of messages, we can avoid the switch statement and write three separate methods if we extend from the DynamicDispatchActor to implement this actor.
 Just like the previous implementations of this design, we maintain a list of files to process, a list of idling file processors, a count of files pending to be visited, and the most important total file size being computed.
 As files are received and file requests arrive, we dispatch them to idling FileProcessors.
-When the pendingNumberOfFilesToVisit falls to zero, the actor prints the total files size and the time taken.
 It’s time to put these actors to use, and that’s the job of the main code:
 The main code sets one SizeCollector and 100 FileProcessors in motion and waits, with a timeout, for the SizeCollector to terminate.
 The output from running the code for the /usr directory is shown next:
@@ -2096,7 +2295,11 @@ A DataFlowVariable class in GPars is a write-once variable that can be read any 
 The first read will block, if necessary, until the data is.
 The variable is bound to a value on first write, and any attempt to write to a bound variable will result in an exception.
 Since the read blocks until data is bound, there is no need for synchronization to get the data from a DataFlowVariable.
-After defining the method, we create two data-flow variables to hold the class to create two data-flow tasks.
+In the example, the fetchContent() method receives a URL and a DataFlowVariable content as parameters.
+It fetches the content of the website by using the elegant combination of toURL() and text calls.
+It then writes the content to the DataFlowVariable class using the << operator.
+After defining the method, we create two data-flow variables to hold the content of two sites we’ll visit.
+We then use the task() method of the DataFlow class to create two data-flow tasks.
 While the websites are being accessed from these two tasks, we invoke the val property of the first DataFlowVariable content1
 This will block the execution until the data becomes available.
 Once data is available, we print the size of the contents, as we can see from the output next:
@@ -2106,11 +2309,14 @@ DataFlowVariable eliminates the need for synchronization; however, its writeonce
 It allows us to connect multiple readers or a single reader for each data value in the stream—refer to the GPars documentation for various options.
 This is convenient for a small number of tasks, but if we need to create a large number of tasks, we’d want to manage the threads for these tasks using a pool of threads.
 GPars provides DefaultPGroup, a thread group class, just for that.
+Instead of calling the DataFlow’s static method task(), we’ll use the group’s instance method with the same name.
 Let’s rewrite the file size program using the data-flow API, as shown next:
 We create two instance of DataFlowQueue, one to keep a tab of file visits that are active and the other to receive the size of files and subdirectories.
 We’d like to run our tasks in a pool of threads, so we create a DefaultPGroup.
+In the findSize() method, we total the size of all files in the given directory and set that value into the sizes DataFlowQueue using the << operator.
 For each subdirectory we find under the given directory, we create a new task to explore that directory using the call to group.task.
 This will allow us to keep track of when all tasks to explore directories are complete.
+We then receive the file sizes from the task and from all the subtasks that are created as each subdirectory is explored.
 The loop terminates when we determine there are no more pending directories to explore.
 We finally return the total file size from this method.
 The last bit of code is to execute and time these functions.
@@ -2123,15 +2329,19 @@ For one of the other libraries, refer to their respective documentation.
 To use Akka in JRuby, we’ll follow along the same lines as we did in Java.
 The main difference is we’ll be able to benefit from JRuby conciseness.
 Remember, we need a bunch of message types, two actor types, and some main code to exercise these.
-These message-representing classes are a direct translation of the respective classes from the Java version we saw earlier.
 Writing the FileProcessor actor involves a little bit more effort.
 When we extend a Java class, JRuby does not allow us to change the constructor signature.
-The Akka actor-based class UntypedActor has a no-argument constructor, but our FileProcessor needs a parenthesis to get around this problem.
+The Akka actor-based class UntypedActor has a no-argument constructor, but our FileProcessor needs to accept a parameter for SizeCollector.
+If we proceed to write an initialize() method in this class, we’ll run into runtime errors.
+The trick is to invoke super()() with a parenthesis to get around this problem.
 Except for that, the rest of this class is a simple translation of the Java code to JRuby:
+When we create an instance of this actor using one of the versions of UntypedActor’s actor_of() method, we’ll get an error that this class lacks the create() method.
 Except for this addition, the rest of the code is a direct translation of the Java version to JRuby:
 As the last step, let’s write the code that will exercise these two actors:
-We use the version of this method that expects a factory with a method we provided in SizeCollector gets used here.
-Since we need to set a parameter at construction time into the instances of FileProcessor, we use the.
+The Actors class provides a few flavors of the actor_of() or actorOf() method in Java lingo.
+We use the version of this method that expects a factory with a create() method to create an instance of the actor SizeCollector.
+The static create() method we provided in SizeCollector gets used here.
+Since we need to set a parameter at construction time into the instances of FileProcessor, we use the version of actor_of() that accepts a closure that internally creates an instance.
 JRuby allows us to fluently pass lambdas where closures are expected, so we took advantage of that here.
 The rest of the code is a simple translation from the Java version to JRuby.
 Let’s take this JRuby version of the file size program for a ride across the /usr directory:
@@ -2145,7 +2355,6 @@ When mixing APIs, we’ll run into a few language-level integration issues but n
 While we program concurrency, we can continue to enjoy the expressive and conciseness syntax of these modern JVM languages.
 We’ve come a long way! In the next chapter, we’ll wrap up with recommendations for programming concurrency.
 Zen of Programming Concurrency I wish you well for the exciting journey across the sea of concurrency.
-Doing it right can help you safely reach the destination—delivering high-performing, responsive applications that make good use of multicore processors.
 Programming concurrency is not about the methods we call or the parameters we pass.
 It’s more about the approaches we take, the effort we put in, and the set of libraries we opt to use.
 We have to make the right choices to arrive at a clear concurrency solution.
@@ -2160,7 +2369,6 @@ Get on board the boats of isolated mutability and pure immutability (where possi
 Rather than spending valuable time and effort preventing race conditions, these approaches completely eliminate them so we can focus on the application logic.
 Upgrade to the modern JDK concurrency API as the first step to programming concurrency.
 Reduce the use of the old multithreading API that shipped with the first versions of Java.
-The java.util.concurrent API is such a breath of fresh air.
 Several libraries now make use of this modern API, and concurrency libraries (such as Akka and GPars) provide a layer of abstraction on top of this modern API.
 Make use of the ExecutorService class to graciously manage a pool of threads and the concurrent data structures to coordinate between threads/tasks.
 Utilize the Lock interface and related facilities for fine-grained synchronization, improved concurrency, and better control on lock timeouts.
@@ -2239,21 +2447,28 @@ Upon successful completion of an action, an agent is changed to the new state re
 This new state is used for subsequent reads or subsequent actions on the agent.
 The calls to run actions on an agent return immediately.
 The action is then applied on the agent using a thread from a Clojure managed thread pool.
+If we expect an action to be mostly CPU bound, then we use the send() method to run it.
+If IO blocking is possible within the function, we use send-off() instead of send() to prevent agents from starving for threads while some agents are blocked.
 Let’s see agents in action with an example—create a Hollywood actor and ask him to play different roles.
 We’ll execute multiple roles to play concurrently on different actors.
 While the actions run concurrently, we’ll see that multiple actions sent to a single agent are run sequentially.
-Let’s first create a function that will ask an actor to play a role and add the the name of the actor and a list of roles played.
+Let’s first create a function that will ask an actor to play a role and add the role to the list of roles played.
+In the code shown next, the act() method receives two parameters: actor and role.
+The actor is a tuple with two elements: the name of the actor and a list of roles played.
 Then, after a simulated delay to show the sequencing of concurrent calls to the same agent, we return the new state for the actor,
 The agent will take as its new state the value we return from the action.
 The let statement binds name and roles to the first and second elements in the actor tuple, respectively.
 The last line of code returns a tuple with name as the first element and the new list as the second element.
-The new list contains the roles in the given list plus the new role that was sent as the.
+The new list contains the roles in the given list plus the new role that was sent as the parameter to the act() method.
 We saw the method that acts on an agent, but we haven’t seen any agent yet, so let’s get to that now.
 In the code shown next, we define two agents, each representing a famous Hollywood actor.
 All that these agents contain is a tuple with the name of the actor and an empty list.
 Our agents are geared up to receive messages, so let’s send a few messages to them, asking the two actors to act on some roles, as shown next.
+The send() method takes the agent as the first parameter followed by the function to invoke.
 The first parameter this function takes is the agent that preceded it in this call list.
 If the function takes additional parameters, like role in this example, we place it after the function name.
+If we want to wait for the agent to respond to all messages sent from the current thread, we can use the await() or the civilized version of it, await-for(), which accepts a timeout, as shown next.
+The await-for() takes the timeout in milliseconds as the first parameter followed by any number of agents we’d like to wait for.
 We break off from this blocking call when the agents complete the calls or the timeout occurs, whichever comes first.
 To dereference the agents, we simply prefix the agent with an @ symbol, as shown next:
 One last details to remember is that we must terminate the agents since they run in nondaemon threads.
@@ -2261,14 +2476,21 @@ Remember to perform this operation within the finally block to ensure release ev
 Let’s put all that together so we can see the complete sequence of code:
 The output sequence may slightly vary each time we run since the agents are running concurrently and the exact ordering is nondeterministic.
 Johnny Depp playing role of Wonka Tom Hanks playing role of Lovell Let's wait for them to play.
+It’s clear from the output that the calls to send() are nonblocking.
+Each of the agents executed the first message sent to them.
 The second messages to the agents are delayed because of the induced delay in the first messages.
 The main thread, in the meantime, awaits for the agents to handle these messages.
 When done, the roles played by the actors represented by these agents are printed.
 Agents don’t have any specific methods or messages that they respond to.
+In contrast, Akka actors have designated onReceive() or receive() methods and have predefined messages that they respond to.
+The sender of the messages has to know which messages are supported.
 In comparison, both actors and agents serialize calls to them, allowing only one thread to run on them at any time.
 Recall that transactional code should have no side effects since they can be rolled back and retried several times.
 What if we do want to perform some actions or send messages to agents from within these transactions? Clojure tactfully handles this by grouping all the message sends to agents within a transaction and dispatching them only if the transaction commits.
-This message is sent from forced to fail if the shouldFail parameter is true.
+Let’s send messages to an agent from within transactions to see this behavior.
+In the code shown next, the sendMessageInTXN() method will send an act message to the given actor to play a given role.
+This message is sent from within a transaction delineated by the dosync() method.
+The transaction is forced to fail if the shouldFail parameter is true.
 If the transaction fails, the message send will be discarded; it will be dispatched otherwise.
 We create an agent depp and send a transactional message to play the role “Wonka” first.
 Then, within a failed transaction, we send a message to play the role “Sparrow” next.
@@ -2277,7 +2499,6 @@ We expect to see the first message being delivered to the agent, but the second 
 The sequence in the output may vary slightly each time we run; we have to remember that actions sent to agents run asynchronously in a separate thread and the sends are nonblocking.
 When bound by a transaction, messages sent to agents are grouped and dispatched only when the transaction succeeds.
 We can contrast this with the Akka transactors where we mixed actors with transactions.
-Jonas Bonér’s Akka is a Scala-based scalable concurrency library that can be used from multiple languages on the JVM.
 This page discusses various data structures in Clojure, including the persistent data structures.
 Rich Hickey discuses the Clojure model of separating the identify and state and his approach to balance the imperative and functional styles of programming.
 This is the online version of the book by Ian Foster with the same title.
@@ -2324,10 +2545,6 @@ Rails Test Prescriptions is a comprehensive guide to testing Rails applications,
 Pragmatic Practices Pragmatic Programmers think about their practices and improve them.
 In this book by Andy Hunt, you’ll learn how our brains are wired, and how to take advantage of your brain’s architecture.
 You’ll learn new tricks and tips to learn more, faster, and retain more of what you learn.
-Do you ever look at the clock and wonder where the day went? You spent all this time at work and didn’t come close to getting everything done.
-Use the Pomodoro Technique, originally developed by Francesco Cirillo, to work in focused sprints throughout the day.
-In Pomodoro Technique Illustrated, Staffan Nöteberg shows you how to organize your work to accomplish more in less time.
-You can get started with nothing more than a piece of paper, a pencil, and a kitchen timer.
 The titles continue the well-known Pragmatic Programmer style and continue to garner awards and rave reviews.
 As development gets more and more difficult, the Pragmatic Programmers will be there with more titles and products to help you stay on top of your game.
 Register for Updates http://pragprog.com/updates Be notified when updates and new books become available.

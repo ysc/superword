@@ -10,8 +10,6 @@ FlumeJava is in active use by hundreds of pipeline developers within Google.
 Building programs to process massive amounts of data in parallel can be very hard.
 It presented a simple abstraction to users for how to think about their computation, and it managed many of the difficult low-level tasks, such as distributing and coordinating the parallel work across many machines, and coping robustly with failures of machines, networks, and data.
 It has been used very successfully in practice by many developers.
-Permission to make digital or hard copies of all or part of this work for personal or classroom use is granted without fee provided that copies are not made or distributed for profit or commercial advantage and that copies bear this notice and the full citation on the first page.
-To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.
 MapReduce works well for computations that can be broken down into a map step, a shuffle step, and a reduce step, but for many real-world computations, a chain of MapReduce stages is required.
 Such data-parallel pipelines require additional coordination code to chain together the separate MapReduce stages, and require additional work to manage the creation and later deletion of the intermediate results between pipeline stages.
 The logical computation can become obscured by all these low-level coordination details, making it difficult for new developers to understand the computation.
@@ -76,49 +74,60 @@ A PCollection can either have a well-defined order (called a sequence), or the e
 Because they are less constrained, collections are more efficient to generate and process than sequences.
 A PCollection<T> can also be created by reading a file in one of several possible formats.
 Data sets represented by multiple file shards can be read in as a single logical PCollection.
-In this code, recordsOf(...) specifies a particular way in which pairsOf(e1,e2 ) for an encoding of pairs derived from the encodings of the components.
 A second core class is PTable<K,V>, which represents a (possibly huge) immutable multi-map with keys of type K and values of type V.
 The main way to manipulate a PCollection is to invoke a data-parallel operation on it.
 The FlumeJava library defines only a few primitive data-parallel operations; other operations are implemented in terms of these primitives.
 It also takes an indication of the kind of PCollection or PTable to produce as a result.
 Some of these examples have been simplified in minor ways from the real versions, for clarity and compactness.
 FlumeJava includes subclasses of DoFn, e.g., MapFn and FilterFn, that provide simpler interfaces in special cases.
-There is also a version of be produced simultaneously from a single traversal of the input PCollection.
+There is also a version of parallelDo() that allows multiple output PCollections to be produced simultaneously from a single traversal of the input PCollection.
 Since they will potentially be distributed remotely and run in parallel, DoFn functions should not access any global mutable state of the enclosing Java program.
 It is also legal for DoFn objects to maintain local instance variable state, but users should be aware that there may be multiple DoFn replicas operating concurrently with no shared state.
 For example, the following computes a table mapping URLs to the collection of documents that link to them:
+There is also a variant that allows specifying a sorting order for the collection of values for each key.
 A pipeline typically concludes with operations that write the final result PCollections to external storage.
 Because PCollections are regular Java objects, they can be manipulated like other Java objects.
 In particular, they can be passed into and returned from regular Java methods, and they can be stored in other Java data structures (although they cannot be stored in other PCollections)
 Also, regular Java control flow constructs can be used to define computations involving PCollections, including functions, conditionals, and loops.
-This function is implemented in terms the same pattern as was used to compute wordCounts above.
-This resulting table can be processed further to compute a traditional inner- or outer-join, but oftentimes it is more efficient to be able to manipulate the value collections.
-The operations mentioned above to read multiple file shards as a single PCollection are derived operations too, implemented.
+The FlumeJava library includes a number of other operations on PCollections, but these others are derived operations, implemented in terms of these primitives, and no different than helper functions the user could write.
+This function is implemented in terms of parallelDo(), groupByKey(), and combineValues(), using the same pattern as was used to compute wordCounts above.
+Another library function, join(), implements a kind of join over two or more PTables sharing a common key type.
+This resulting table can be processed further to compute a traditional inner- or outer-join, but oftentimes it is more efficient to be able to manipulate the value collections directly without computing their cross-product.
+Another useful derived operation is top(), which takes a comparison function and a count N and returns the greatest N elements of its receiver PCollection according to the comparison.
+This operation is implemented on top of parallelDo(), groupByKey(), and combineValues()
+The operations mentioned above to read multiple file shards as a single PCollection are derived operations too, implemented using flatten() and the single-file read primitives.
 In order to enable optimization as described in the next section, FlumeJava’s parallel operations are executed lazily using deferred evaluation.
 Each PCollection object is represented internally either in deferred (not yet computed) or materialized (computed) state.
 A deferred PCollection holds a pointer to the deferred operation that computes it.
 A deferred operation, in turn, holds references to the PCollections that are its arguments (which may themselves be deferred or materialized) and the deferred PCollections that are its results.
+When a FlumeJava operation like parallelDo() is called, it just creates a ParallelDo deferred operation object and returns a new deferred PCollection that points to it.
 The result of executing a series of FlumeJava operations is thus a directed acyclic graph of deferred PCollections and operations; we call this graph the execution plan.
 This pipeline takes four different input sources and writes two outputs.
 For simplicity, we usually elide PCollections from execution plan diagrams.)
-To actually trigger evaluation of a series of parallel operations, optimizes the execution plan and then visits each of the deferred operations in the optimized plan, in forward topological order, and evaluates them.
+The results of these two operations are flatten()ed together and fed into parallelDo() D.
+The results of parallelDo()s A, D, and E are joined together.
+Finally, the results of parallelDo()s A and F are written to output files.
+To actually trigger evaluation of a series of parallel operations, the user follows them with a call to FlumeJava.run()
+This first optimizes the execution plan and then visits each of the deferred operations in the optimized plan, in forward topological order, and evaluates them.
 When a deferred operation is evaluated, it converts its result PCollection into a materialized state, e.g., as an inmemory data structure or as a reference to a temporary intermediate file.
 FlumeJava automatically deletes any temporary intermediate files it creates when they are no longer needed by later operations in the execution plan.
 To support inspection of the contents of PCollections during and after the execution of a pipeline, FlumeJava includes a class PObject<T>, which is a container for a single Java object of type T.
 Like PCollections, PObjects can be either deferred or materialized, allowing them to be computed as results of deferred operations in pipelines.
-After a pipeline has run, the contents of PObject thus acts much like a future [10]
+After a pipeline has run, the contents of a now-materialized PObject can be extracted using getValue()
 These features can be used to express a computation that needs to iterate until the computed data converges:
+The contents of PObjects also can be examined within the execution of a pipeline.
+One way is using the operate() FlumeJava primitive, which takes a list of argument PObjects and an OperateFn, and returns a list of result PObjects.
+When evaluated, operate() will extract the contents of its now-materialized argument PObjects, and pass them in to the argument OperateFn.
+FlumeJava includes additional operations such as asIterable() that can be used to inspect parts of larger PCollections.
+OperateFn should return a list of Java objects, which operate() wraps inside of PObjects and returns as its results.
 Using this primitive, arbitrary computations can be embedded within a FlumeJava pipeline and executed in deferred fashion.
 For example, consider embedding a call to an external service that reads and writes files:
-Compute the URLs to crawl: // Crawl them, via an external service:
 This example uses operations for converting between PCollections and PObjects containing file names.
-The file format choice yields a PObject<String> containing the name of a temporary sharded file of the chosen format where the PCollection’s contents may be found during execution of the pipeline.
-File-reading operations such as files whose names are contained in PObjects.
-In much the same way, the contents of PObjects can also be examined inside a DoFn by passing them in as side inputs to operation is eventually evaluated, the contents of any nowmaterialized PObject side inputs are extracted and provided to the user’s DoFn, and then the DoFn is invoked on each element of the input PCollection.
+The viewAsFile() operation applied to a PCollection and a file format choice yields a PObject<String> containing the name of a temporary sharded file of the chosen format where the PCollection’s contents may be found during execution of the pipeline.
+In much the same way, the contents of PObjects can also be examined inside a DoFn by passing them in as side inputs to parallelDo()
+When the pipeline is run and the parallelDo() operation is eventually evaluated, the contents of any nowmaterialized PObject side inputs are extracted and provided to the user’s DoFn, and then the DoFn is invoked on each element of the input PCollection.
 The FlumeJava optimizer transforms a user-constructed, modular FlumeJava execution plan into one that can be executed efficiently.
 The optimizer is written as a series of independent graph transformations.
-One of the simplest and most intuitive optimizations is ParallelDo producer-consumer fusion, which is essentially function composition or loop fusion.
-If one ParallelDo operation performs function f , and its result is consumed by another ParallelDo operation that performs function g, the two ParallelDo operations are replaced by a single multi-output ParallelDo that computes both f and g ◦ f.
 ParallelDo is not needed by other operations in the graph, fusion has rendered it unnecessary, and the code to produce it is removed as dead.
 ParallelDo sibling fusion applies when two or more ParallelDo operations read the same input PCollection.
 They are fused into a single multi-output ParallelDo operation that computes the results of all the fused operations in a single pass over the input.
@@ -127,7 +136,6 @@ The new ParallelDo creates all the leaf outputs from the original graph, plus ou
 Intermediate output A.0 is no longer needed and is fused away.
 As mentioned earlier, CombineValues operations are special cases of ParallelDo operations that can be repeatedly applied to partially computed results.
 The core of the FlumeJava optimizer transforms combinations of ParallelDo, GroupByKey, CombineValues, and Flatten operations into single MapReduces.
-To help bridge the gap between these two abstraction levels, the FlumeJava optimizer includes an intermediate-level operation, the MapShuffleCombineReduce (MSCR) operation.
 An MSCR operation has M input channels (each performing a map operation) and R output channels (each optionally performing a shuffle, an optional combine, and a reduce)
 Despite its apparent greater expressiveness, each MSCR operation is implemented using a single MapReduce.
 An MSCR operation is produced from a set of related GroupByKey operations.
@@ -147,12 +155,12 @@ Each of the GroupByKey operations becomes a grouping output channel.
 After all GroupByKey operations have been transformed into MSCR operations, any remaining ParallelDo operations are also transformed into trivial MSCR operations with a single input channel containing the ParallelDo and a single pass-through output channel.
 The final optimized execution plan contains only MSCR, Flatten, and Operate operations.
 The optimizer performs a series of passes over the execution plan, with the overall goal to produce the fewest, most efficient MSCR operations in the final optimized plan:
-A Flatten operation can be pushed down through consuming ParallelDo operations by duplicating the ParallelDo before each input to the Flatten.
 The original CombineValues is left in place, and is henceforth treated as a normal ParallelDo operation and subject to ParallelDo fusion.
 The optimizer estimates the size of the intermediate PCollections along the chain of ParallelDos, identifies one with minimal expected size, and marks it as boundary blocking ParallelDo fusion.
 In this section, we show how the optimizer works on the SiteData pipeline introduced in Section 3.3
 Figure 5 shows the execution plan initially and after each major optimization phase.
-The initial execution plan is constructed from calls to input collections, Flatten J:Fltn, GroupByKey J:GBK, and ParallelDo J:Untag to process the results.
+The initial execution plan is constructed from calls to primitives like parallelDo() and flatten() and derived operations like count() and join() which are themselves implemented by calls to lower-level operations.
+In this example, the count() call expands into ParallelDo C:Map, GroupByKey C:GBK, and CombineValues C:CV, and the join() call expands into ParallelDo operations J:TagN to tag each of the N input collections, Flatten J:Fltn, GroupByKey J:GBK, and ParallelDo J:Untag to process the results.
 Flatten operation Fltn is pushed down through consuming ParallelDo operations D and JTag:2
 A copy of CombineValues operation C:CV is associated with C:GBK.
 Both producer-consumer and sibling fusion are applied to adjacent ParallelDo operations.
@@ -160,13 +168,15 @@ Due to fusion blocks, CombineValues operation C:CV is not fused with ParallelDo 
 GroupByKey operation C:GBK and surrounding ParallelDo operations are fused into a first MSCR operation.
 GroupByKey operations iGBK and J:GBK become the core operations of a second MSCR operation, which includes the remaining ParallelDo operations.
 The original execution plan had 16 data-parallel operations (ParallelDos, GroupByKeys, and CombineValues)
-The optimizer does no analysis of the code within user-written It bases its optimization decisions on the structure of the execution plan, plus a few optional hints that users can provide giving some information about the behavior of certain operations, such as an estimate of the size of a DoFn’s output data relative to the size of its input data.
+The optimizer does no analysis of the code within user-written functions (e.g., the DoFn arguments to parallelDo() operations)
+It bases its optimization decisions on the structure of the execution plan, plus a few optional hints that users can provide giving some information about the behavior of certain operations, such as an estimate of the size of a DoFn’s output data relative to the size of its input data.
 Static analysis of user code might enable better optimization and/or less manual user guidance.
 Similarly, the optimizer does not modify any user code as part of its optimizations.
 For example, it represents the result of fused DoFns via a simple AST-like data structure that explains how to run the user’s code.
 Better performance could be achieved by generating new code to represent the appropriate composition of the user’s functions, and then applying traditional optimizations such as inlining to the resulting code.
 Users find it so easy to write FlumeJava pipelines that they often write large and sometimes inefficient programs, containing duplicate and/or unnecessary operations.
-The optimizer could be augmented with additional common-subexpression elimination to avoid duplications.
+Additionally, users tend to include groupByKey() operations more often than necessary, simply because it makes logical sense to them to keep their data grouped by key.
+The optimizer should be extended to identify and remove unnecessary groupByKey() operations, such as when the result of one groupByKey() is fed into another (perhaps in the guise of a join() operation)
 Once the execution plan is optimized, the FlumeJava library runs it.
 Currently, FlumeJava supports batch execution: FlumeJava traverses the operations in the plan in forward topological order, and executes each one in turn.
 Independent operations are executed simultaneously, supporting a kind of task parallelism that complements the data parallelism within operations.
@@ -188,7 +198,6 @@ To aid in this cyclic process, the FlumeJava library supports a cached execution
 In this mode, rather than recompute an operation, FlumeJava first attempts to reuse the result of that operation from the previous run, if it was saved in a (internal or user-visible) file and if FlumeJava determines that the operation’s result has not changed.
 An operation’s result is considered to be unchanged if (a) the operation’s inputs have not changed, and (b) the operation’s code and captured state have not changed.
 FlumeJava performs an automatic, conservative analysis to identify when reuse of previous results is guaranteed to be safe; the user can direct additional previous results to be reused.
-Caching can lead to quick editcompile-run-debug cycles, even for pipelines that would normally take hours to run.
 FlumeJava currently implements a batch evaluation strategy, for a single pipeline at a time.
 In the future, it would be interesting to experiment with a more incremental, streaming, or continuous execution of pipelines, where incrementally added input leads to quick, incremental update of outputs.
 It also would be interesting to investigate optimization across pipelines run by multiple users over common data sources.
@@ -206,7 +215,6 @@ Individual FlumeJava programs have been run successfully on thousands of machine
 In general, users seem to be very happy with the FlumeJava abstractions.
 They are not always as happy with some aspects of Java or FlumeJava’s use of Java.
 In particular, Java provides poor support for simple anonymous functions and heterogeneous tuples, which leads to verbosity and some loss of static type safety.
-Also, FlumeJava’s PCollection-based data-parallel model hides many of the details of the individual parallel worker machines and the subtle differences between Mappers and Reducers, which makes it difficult to express certain low-level parallel-programming techniques used by some advanced MapReduce users.
 FlumeJava is now slated to become the primary Java-based API for data-parallel computation at Google.
 In order to study the effectiveness of the FlumeJava optimizer at reducing the number of parallel MapReduce stages, we instrumented the FlumeJava system so that it logs the structure of the user’s pipeline, before and after optimization.
 The scatterplot below shows the results extracted from these logs.
@@ -275,12 +283,12 @@ As with Pig Latin, SQL queries are broken down into a series of distinct steps, 
 The SQL framework provides named data fields, but there appears to be little support for those names in the extension code.
 The optimizer transforms SQL expressions using traditional rules for query optimization, together with new rules that take into account data and communication locality.
 Map-Reduce-Merge [19] extends the MapReduce model by adding an additional Merge step, making it possible to express additional types of computations, such as relational algebra, in a single execution.
-FlumeJava’s optimizer shares many concepts with traditional compiler optimizations, such as loop fusion and commonsubexpression elimination.
 FlumeJava’s optimizer also bears some resemblance to a database query optimizer: they both produce an optimized execution plan from a higher-level decription of a logical computation, and both can optimize programs that perform joins.
 However, a database query optimizer typically uses run-time information about input tables in a relational database, such as their sizes and available indices, to choose an efficient execution plan, such as which of several possible algorithms to use to compute joins.
-Instead, file-based data sets lacking indices and which can be implemented using MapReduce.
+Instead, join() is a derived library operation that implements a particular join algorithm, hash-merge-join, which works even for simple, file-based data sets lacking indices and which can be implemented using MapReduce.
 Other join algorithms could be implemented by other derived library operations.
-FlumeJava’s optimizer works at a lower level than a typical database query optimizer, applying fusion and other simple transformations to the primitives underlying reference to the sizes or other representational properties of its inputs.
+FlumeJava’s optimizer works at a lower level than a typical database query optimizer, applying fusion and other simple transformations to the primitives underlying the join() library operation.
+It chooses how to optimize without reference to the sizes or other representational properties of its inputs.
 Indeed, in the context of a join embedded in a large pipeline, such information may not become available until after the optimized pipeline has been partly run.
 FlumeJava’s approach allows the operations implementing the join to be optimized in the context of the surrounding pipeline; in many cases the joining operations are completely fused into the rest of the computation (and vice versa)
 This was illustrated by the SiteData example in section 4.5
@@ -291,7 +299,6 @@ Lumberjack’s parallel run-time system shared many of the characteristics of Fl
 While the Lumberjack-based version of Flume offered a number of benefits for programmers, it suffered from several important disadvantages relative to the FlumeJava version:
 Since Lumberjack was specially designed for the task, Lumberjack programs were significantly more concise than the equivalent FlumeJava programs.
 However, the implicitly parallel, mostly functional programming model was not natural for many of its intended users.
-FlumeJava’s explicitly parallel model, which distinguishes Collection from PCollection and imperative” model that disallows mutable shared state only across DoFn boundaries, is much more natural for most of these programmers.
 Since FlumeJava is a pure library, it cannot use a traditional static optimization approach.
 Instead, we adopted a more dynamic approach to optimization, where the running user program first constructs an execution plan (via deferred evaluation), and then optimizes the plan before executing it.
 FlumeJava does no static analysis of the source program nor dynamic code generation, which imposes some costs in run-time performance; those costs have turned out to be relatively modest.
@@ -311,7 +318,5 @@ These abstractions are higher-level than those provided by MapReduce, and provid
 FlumeJava’s internal use of a form of deferred evaluation enables the pipeline to be optimized prior to execution, achieving performance close to that of hand-optimized MapReduces.
 FlumeJava’s run-time executor can select among alternative implementation strategies, allowing the same program to execute completely locally when run on small test inputs and using many parallel machines when run on large inputs.
 Its adoption has been facilitated by being a “mere” library in the context of an existing, well-known, expressive language.
-SCOPE: Easy and efficient parallel processing of massive data sets.
 New ideas in parallel Lisp: Language design, implementation, and programming tools.
 LINQ: reconciling objects, relations and XML in the .NET framework.
-DryadLINQ: A system for general-purpose distributed dataparallel computing using a high-level language.

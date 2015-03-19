@@ -58,7 +58,6 @@ Please address comments and questions concerning this book to the publisher:
 O'Reilly maintains a web page for this book, where we list errata, examples, and any.
 To comment or ask technical questions about this book, send email to:
 For more information about O'Reilly books, conferences, Resource Centers, and the.
-When you see the Safari® Enabled icon on the back cover of your favorite technology.
 As readers of prefaces are well aware, writing a book is never an effort undertaken.
 Deb Cameron, for editing sometimes rambling text into coherency; Hong Zhang, for.
 Steve Wilson, and Tim Cramer for supporting us in our work over the past six years.
@@ -115,7 +114,9 @@ One reason that threading is important in Java is that, until JDK 1.4, Java had 
 This is not to say there aren't other times when threads are a handy programming.
 Many of these circumstances are due to the need for asynchronous behavior or the.
 In Java, as in most programming languages, when you try to get input from the user,
+When the program executes the read() method, the program typically waits until the.
 This type of I/O is called blocking I/O : the program blocks until some data is available.
+Developers often take all input sources and use a system call like select() to.
 Polling allows a developer to test if data is available from a particular source.
 If data is available, the data can be read and processed: if it is not, the.
 Polling is also supported by the NIO library of JDK 1.4
@@ -148,6 +149,7 @@ Behind the scenes, what happens is somewhat more complicated since the.
 Don't get hung up on the strict sequential ordering of the list.
 As a concept, thinking of a thread as an ordered.
 Consequently, every computer program has at least one thread: the thread that.
+For Java applications, execution begins with the main() method of the class.
 In applets, servlets, and other J2EE programs, execution still begins with the.
 In any case, the procedure is the same: execution of your code begins with.
 In a Java program, it turns out that every program has more than one thread.
@@ -200,9 +202,11 @@ Every thread has a stack where it stores temporary variables as it executes.
 Everything related to the stack size of a thread is.
 We can use these methods of the Thread class to create our first thread:
 The first thing to note about this example is that it extends the Thread class.
+In a sense, the run() method is similar to the main() method of a standalone Java.
+Subsequent threads start executing with the run() method of the thread.
+So when the run() method of this class is eventually called, it fires off a new.
 The second task of our application is responsible for displaying the characters typed.
 It is also responsible for creating and starting our second thread.
-RandomCharacterGenerator class) like any other Java object, and then we call the.
 Other threads are involved in this example, even though you don't see references to.
 The second thread of the application is the instance of the.
 It is created the first time the Start button is.
@@ -218,63 +222,79 @@ A thread exists once it has been constructed, but at that point it is not execut
 In this waiting state, other threads can interact with the existing thread object.
 Various attributes of the waiting thread can be set: its priority, its name, its daemon.
 We'll see examples of these throughout the book, but each of these.
+When you're ready for the thread to begin executing code, you call its start()
 This method performs some internal housekeeping and calls the thread's.
+When the start() method returns, two threads are now executing in.
+After its start() method has been called, the new thread is said to be alive.
+If the isAlive( ) method returns false, however, the thread may not.
+Once started, a thread executes only one method: the run() method.
+As a result, the only way to terminate a thread is to arrange for its run() method to.
 If you look at the documentation of the Thread class, you notice that the.
+It turns out that the stop() method has an inherent problem (an internal race.
 There are many threads that you don't need to stop.
+System.exit() method in response to the user pressing the Quit button)
 Often, however, you want a thread to continue to execute until some other condition.
-In our typing game, we might want one RandomCharacterGenerator thread.
 We explore some basic ways to arrange for a thread to stop.
+The run() method cannot throw a checked exception, but like all Java methods, it can.
+Once a thread begins executing its run() method, it continues execution until the.
+If you're familiar with other thread models, you may know.
 Later, the thread is resumed, which is to say that it is told to continue its execution.
+The Thread class contains suspend() and resume() methods, but they suffer from.
 It is possible for a thread to suspend its own execution for a specific period of time by.
+When a thread executes the sleep() method, it pauses for a given number of.
 When the pause time has elapsed, the thread wakes up and continues execution with.
+The Thread class provides a version of the sleep() method that allows the.
 Ongoing projects within the Java Community Process are working on a.
 Strictly speaking, sleeping is not the same thing as thread suspension.
+A thread that has completed its run() method has terminated.
 As long as some other active object holds a reference.
 In general, then, you should not hold onto thread references so that they may be.
 One reason to hold onto a thread reference is to determine when it has completed its.
 You'll see that technique in use in the examples in.
+The join() method blocks until the thread has completed its run() method.
+This means that you may call the join() method any number of times.
 When you want a thread to terminate based on some condition (e.g., the user has.
 The most common way of stopping a thread is to set some internal flag to signal that.
 The thread can then periodically query that flag to determine.
-We can rewrite our RandomCharacterGenerator thread to follow this approach:
 Here we've created the boolean flag done to signal the thread that it should quit.
 We've also introduced the use of the Java keyword volatile for that variable.
 We must now modify our application to set this flag:
 Now we have two buttons: a Start and a Stop button.
-RandomCharacterGenerator thread executes the top of its loop, that thread exits.
 This process also reenables the Start button: we can start a new thread at any time.
 This raises an interesting design question: is it better to create a new thread like this,
 It would be more natural simply to suspend and resume the thread, as we do in.
 However, in a case like this, it actually does not matter.
 If you're writing a program and it is easier to abandon a thread and.
 We revisit this topic in more depth when we discuss thread pools in.
+Calling the setDone() method is a simple way for threads to communicate with each.
 Threads must use special rules for communication like this (see Chapter 3(See.
-In our example, the delay occurs because the RandomCharacterGenerator thread.
+The last example has a delay between when the actionPerformed() method called.
 The delay in this case is minimal, but it's likely to be close to the amount of time that.
 If we originally specify a 15-second delay, we probably won't want to wait.
+In other cases, the delay can be worse: if the thread is executing a read() method to.
 Methods like these are called blocking methods because they block execution.
 When you arrange for a thread to terminate, you often want it to complete its blocking.
 The second effect is to set a flag inside the thread object that indicates the thread has.
 Here's how a thread uses this information to determine whether or not it should.
 Note: the done instance variable and setDone( ) method are removed.
 This example is almost exactly the same as the one in which we use a done flag to.
-If the main thread executes this statement while the RandomCharacterGenerator.
 Note that this technique does not completely eliminate the possibility that we sleep.
 Since the race condition in this case is benign (it.
 When we talked about creating a thread, we mentioned the Runnable interface.
 The Runnable interface allows you to separate the implementation of a task from the.
-This changes the way in which the thread that runs the RandomCharacterGenerator.
 Now we must construct the thread directly and pass the runnable object (producer)
 Then we start the thread (instead of starting the runnable.
 This leads to the question of whether you should use the Runnable interface or the.
 The truth is that sometimes it makes sense to use the Runnable interface and.
 If you extend the Thread class as we do in our first examples, then you inherit the.
 In fact, we should point out that the full source code for example 5 is based on.
+We have to use the setDone() method to signal that the.
 A similar example can be used to show why it is sometimes preferable to use the.
 Let's suppose that we want the character in our display canvas to.
 We could develop a brand new class to do this, but it shares most of the logic of the.
 This class demonstrates the canonical technique to handle animation in Java: a.
 The thread that controls the animation in this canvas is created just as before: the.
+The stop() method, on the other hand, calls the setDone() method.
 We began this section by wondering whether it was preferable to program a task.
 With Runnable, Java provides a number of classes that handle threading.
 These classes handle thread pooling, task scheduling, or timing issues.
@@ -282,14 +302,15 @@ If you're going to use such a class, your task must be a Runnable object (or, in
 If you do a thorough program design and Unified Modeling Language (UML) model of.
 But if your object hierarchy is silent on the parent class for your task, or if you.
 SwingTypeTester class) kept a reference to that thread and how it continued to call.
-Although those methods are defined in the RandomCharacterGenerator class, they.
 This point is often confusing to developers who are new to threads; it can be.
 In Java, an instance of the Thread class is just an.
 Thread object is not the thread itself; it is instead a set of methods and data that.
-For a more complex example, examine the AnimatedCharacterCanvas class and.
 The upshot of this is that you cannot look at any object source code and know which.
 Sometimes, you need to find out what the current thread is.
 In other circumstances, code within a thread object may want to see if.
+You can retrieve a reference to the current thread by calling the currentThread()
+Similarly, within an arbitrary object, you can use the currentThread() method to.
+In fact, the Thread class includes a static method interrupted() that simply returns.
 In this chapter, we've had our first taste of threads.
 How can these tasks be separated to make the program logic easier, or benefit your.
 At a programming level, we've learned how to construct, start, pause, and stop.
@@ -310,6 +331,8 @@ The most obvious is the one that we created and.
 This constant adjustment and redrawing is what is seen as animation by the.
 There is no race condition between these threads since no data in this object is shared.
 However, as we mentioned at the end of the last chapter, other.
+It is possible for the newCharacter() method to change the.
+Or for the newCharacter() and paintComponent() methods to leave the.
 We examine race conditions in more detail later; for now,
 The term atomic is related to the atom, once considered the smallest.
 This can either be accomplished in hardware or simulated in.
@@ -326,14 +349,20 @@ Once the method has acquired (or checked out or grabbed)
 There is still one more threading issue in this example, and it has to do with the.
 So, can't we just synchronize the two methods, just as we did previously? Yes and no.
 Yes, Java's synchronized keyword allows this problem to be fixed.
+If we synchronized both the run() and setDone() methods, how.
 The scope of a lock is defined as the period of time between when the lock is.
 Later in this chapter, we'll examine locks that apply to any block of code.
+The problem at this point relates to the scope of the lock: the scope of the run()
+By synchronizing the run() method, the lock is grabbed and.
 There is a way to shrink the scope of a lock by synchronizing only the.
 However, there is a more elegant solution in this case.
+The setDone() method performs only one operation with the done flag: it stores a.
+The run() method also performs one operation with the done flag:
 The issue here is that we potentially have a race condition because one piece of data.
 When only a single piece of data is involved, there is a different solution.
 Java specifies that basic loading and storing of variables (except for long and double.
 That means the value of the variable can't be found in an interim.
+The setDone() method has only one store operation; therefore, it is.
 This is particularly true in loops that are controlled by a variable.
 One way to solve this problem is to provide setter and getter methods for the variable.
 We can then simply synchronize access by using the synchronized keyword on these.
@@ -353,6 +382,7 @@ Consequently, if multiple threads are going to access array elements, they must 
 Let's examine a more complex example; so far, we have looked at simple data.
 Our application has a display component that presents random numbers and letters.
 To accomplish this, we will introduce a new component, one that displays the user's.
+The heart of this class is the newCharacter() method, which is called from multiple.
 It is called, at random times, by the source (and thread) that.
 It is also called by a character source every time the.
 Interestingly, we don't actually need to know which threads call this method (or the.
@@ -360,12 +390,14 @@ For this class, the actual score, the character that needs to be typed,
 Solving the race conditions means synchronizing this data at the.
 In this case, synchronizing at the method level solves the problem, and making the.
 The user types a character, which happens to be correct.
+The random character source calls the newCharacter() method, which routes.
 The random character thread stores the new character in the char2type.
 This case is dependent on a scheduling change occurring at an unfortunate time.
 Since the score is both incremented and decremented, the user is not given.
 The new character from the random character generator is lost.
 The character is lost only to the scoring component, not to the animation.
 The user is correctly informed of the new character to be typed.
+The resetScore() method also accesses the same common data and therefore also.
 You may think this is not necessary since the method is.
 In this case, they are being synchronized to make the class.
 This is an important point in designing classes for use in a multithreaded environment.
@@ -390,11 +422,16 @@ As we mentioned, a class lock does not actually exist.
 We have introduced the concept of "lock scope" but only touched on avoiding a scope.
 The purpose of the synchronized keyword is to provide the ability to allow serialized.
 For now, the two methods of this interface that are important to us are.
+Using the Lock interface is similar to using the synchronized.
+The difference is that the lock can now be more.
 This new version of the ScoreLabel class is very similar to the previous version.
+Instead of declaring methods as synchronized, those methods now call the lock()
+Using locks, we need to call the unlock() method: by placing the unlock() method.
 In terms of functionality, this example is exactly the same as the previous example.
 Using a lock class, we can now grab and release a lock whenever desired.
 It is also possible for one object to have multiple locks.
 Since we now have t he lock-related classes available in our arsenal, many of our.
+Since the lock() and unlock() method calls are explicit, we can move them.
 And we can now lock at a scope that is specific to the program design instead.
 In this example, we moved the source check outside of the lock,
 It is possible for the synchronized keyword to lock a block of code within a method.
@@ -422,10 +459,14 @@ In the end, which technique to use is often a matter of personal preference.
 We tend to favor using explicit locks in the later.
 What if we want to do other tasks if we can't obtain the lock? The Lock interface.
 If the lock is obtained, the return value is a boolean value of true.
+What if we want to wait only for a specific period of time for a lock? The tryLock()
 This method takes two parameters: one that specifies the number of time units and a.
 TimeUnit object that specifies how the first parameter should be interpreted.
+This method is similar to the lock() method in that it waits for the lock, but only for.
+It is similar to the tryLock() method in that it may return.
 What are the other methods of the Lock interface used for? We address them later in.
 By using explicit locks, the developer is free to address.
+Our implementation of the newCharacter() method could be refactored into multiple.
 This isolates the generator and typist logic into separate methods, making.
 So, there is no reason for these methods to acquire the lock.
 The reason this works is that Java does not blindly grab the lock when it enters.
@@ -441,6 +482,7 @@ This lock can't be freed until the original method unlocks.
 Cross-calling methods are common and can be so complex that it may not be possible.
 Cross-calling methods and callbacks are very prevalent in Java's core.
 Is it possible to detect how many times a lock has been recursively acquired? It is not.
+The getHoldCount() method returns the number of acquisitions that the current.
 A return value of zero means that the current thread.
 Two other methods of the ReentrantLock class are also important to this discussion.
 We have mentioned deadlock a few times in this chapter, and we'll examine the.
@@ -449,8 +491,14 @@ Interestingly, it is possible to deadlock even if no synchronization locks.
 On the other hand, it is not possible to deadlock if only one thread is involved,
 To do this, we revisit and break one of our.
 Two threads are involved here: the thread created by this class and the.
+It is a data variable that the run() method uses to determine.
+In essence, the run() method is waiting for the done flag to be.
+When the animation thread is started, the object lock is grabbed by the run() method.
 The method does not release the object lock until it has completed—which is.
+The object lock can't be acquired until the run() methods exits.
 Since that lock is already held by the animation thread itself, the.
+To fix this problem, we reduce the scope of the lock used by the run() method.
+Now that the run() method is synchronized only while it is executing the getDone()
 This is a simple example, but, as you can see, a deadlock can occur even with simple.
 The reason that a deadlock is a problem is obvious — it prevents the.
 Upon examining our ScoreLabel class, we got a very good idea.
@@ -494,6 +542,7 @@ Fortunately, the mechanisms we explore in this chapter can solve all.
 When another thread creates the condition, it notifies the first thread that has been.
 With Solaris or POSIX threads, these are often referred to as condition variables; with Windows, they are.
 Notifies a thread that is waiting that the condition has occurred.
+The wait() and notify() mechanism works because these are methods of.
 Since all objects in the Java system inherit directly or.
 What is the purpose of the wait-and-notify mechanism, and how does it work? The.
 Can the wait-and-notify mechanism be used to replace the synchronized mechanism?
@@ -503,50 +552,78 @@ In this fixed version, the animation thread does not exit when the done flag is 
 Instead, it simply waits for the done flag to be reset.
 In this new version, the done flag is no longer volatile.
 Therefore, access to the done flag is now protected by a synchronized.
+The run() method now no longer exits when the done flag is set to false.
+Also notice that instead of calling the sleep() method, the animation is achieved by.
+When the wait() method executes, the synchronization lock is released.
 This technique is needed due to a race condition that would otherwise exist between.
 In the online examples, the random character generator's restarting issue has also.
 We'll leave it up to you to examine the code at your leisure.
 As we just mentioned, the wait-and-notify mechanism has a race condition that needs.
+The wait() method releases the lock prior to waiting and reacquires the lock prior to.
 This integration of the wait-and-notify mechanism and the synchronization lock is.
 In other systems, such as Solaris or POSIX threads, condition variables also.
+In our example, both the run() and the setDone() methods are synchronized.
+The wait() method releases the lock, which allows other threads to.
+What happens when notify() is called and no thread is waiting? This cannot happen.
+Since the run() method does not exit, it is not possible.
+A thread that later executes the wait() method has to.
 What are the details of the race condition that exists in the wait-and-notify.
 When another thread establishes the condition (typically by setting the same.
 The first thread tests the condition and confirms that it must wait.
 How does this potential race condition get resolved? This race condition is resolved by.
 This is mandatory; the methods do not work properly and generate an.
+The developer must use this lock to ensure that checking the.
+Is there a race condition during the period that the wait() method releases and.
 The object lock is not actually freed until the waiting thread is already in a state in.
 The system prevents any race conditions from occurring in this.
 If a thread receives a notification, is it guaranteed that the condition is set correctly?
+Prior to calling the wait() method, a thread should always test the.
 This is because another thread can also test the condition and determine that.
 A race condition exists when multiple threads are waiting for.
 The race condition that is solved internally to the wait-and-notify.
 Thread 1 calls a method that acquires the synchronization lock.
+Thread 1 calls the wait() method, which frees the lock.
 Thread 2 calls a method that acquires the same synchronization lock.
 Thread 3 calls a method that blocks waiting for the lock.
+Thread 2 sets the state flag and calls the notify() method.
 This is a common case when multiple threads are involved in the notifications.
 As such, when a consumer wakes up, it cannot assume that the state it.
 It may have been valid in the past, but the state may have.
 Waiting threads must provide the option to check the state and to return.
+Remember too that the wait() method can return early if its thread is interrupted.
 What happens when more than one thread is waiting for notification? Which threads.
 There is no way to determine, even on a single.
 Another method of the Object class assists us when multiple threads are waiting for.
 Notifies all the threads waiting on the object that the condition has occurred.
 This method must be called from within a synchronized method or block.
+The notifyAll() method is similar to the notify() method except that all of the.
+Just like the notify() method, the notifyAll() method does not allow us to decide.
+Does the notifyAll() method really wake up all the threads? Yes and no.
 Thus, only one thread can run at a time, and only after the thread that called the.
 Why would you want to wake up all of the threads? There are a few reasons.
 Later in this chapter, we discuss options to allow multiple condition variables to coexist.
 Another option could be when producers generate data that can satisfy more than one.
 Since it may be difficult to determine how many consumers can be.
+In our example, we showed how the wait() and notify() methods are called within.
+In that case, the lock that interacts with the wait() and.
+It is possible to use the wait() and notify() methods with a synchronized block.
+Therefore, you must invoke the wait() or notify() method on that same object, like.
 In this example, we've separated the synchronization that protects the animation.
+Now when the wait() and notify() methods are called, we're holding the object lock.
 It may help to remind yourself how Java objects work in this regard.
+So the wait() and notify() methods are consistent: they are always called with an.
 Condition variables are a type of synchronization provided by many other threading.
 A condition variable is very similar to Java's wait-and-notify mechanism—in.
+The signal() function wakes up one thread whereas the broadcast() function.
 The race conditions of a condition variable are solved in the same way.
 To create a Condition object from the Lock object, you call a method available on the.
 Using the Condition object is similar to using the wait-and-notify mechanism, with.
+We'll modify our typing program to use the condition variable.
+As we mentioned, a new Condition object is created by calling the newCondition()
 Therefore, our new random character generator now uses a Lock object as its.
 We instantiate a Condition object, cv, which is set to the value.
 In this example, it doesn't look like we accomplished anything: all we do is use.
+First, condition variables are needed when you use Lock objects.
 In other words, the lock represented by the Lock object and the.
 This condition variable mechanism is provided by the Condition object.
 The second reason is the creation of the Condition object.
@@ -585,6 +662,8 @@ Consequently, register use is pervasive when the computer executes your code.
 From a logical perspective, every thread has its own set of registers.
 So, threads never share data that is held in registers.
 This associates a particular memory location (e.g., 0xff12345) with the variable done.
+The run() method is then compiled into a set of instructions:
+You can see the problem: the run() method never reloads register r1 with the.
 Using the volatile keyword ensures that the variable is never kept in a register.
 The virtual machine can use registers for volatile variables as long as it obeys the semantics we've outlined.
 Remember that we might have implemented this code by synchronizing around.
@@ -595,6 +674,7 @@ However, you cannot depend on the ordered execution of statements like this.
 This decision is made at runtime based on the particular.
 Now the race condition has caused a problem: we've returned the wrong final score.
 Note that it doesn't make any difference whether the variables are defined as.
+The only thing that can help us here is synchronization.
 Note, however, that the converse is not true: a statement before a.
 This design pattern gained a fair amount of attention when it was first proposed, but.
 One case where developers are tempted to avoid synchronization deals with lazy.
@@ -613,17 +693,18 @@ A volatile integer, for example, cannot be used with the ++
 The second, and more complex, use of the atomic classes is to build complex code.
 However, using the same sort of coding techniques as the atomic classes.
 The other constructor creates the variable with an initial value that is.
+The get() and set() methods also ensure that the data is read from or written.
 Both of these methods take two arguments—the value the data is expected.
 A boolean value of true is returned if the current value is equal to the.
 The AtomicInteger and AtomicLong classes provide additional methods to support.
 Using an atomic class allows you to treat the operations atomically.
+The addAndGet() and getAndAdd() methods provide the pre- and post-operators for.
 Does the atomic package support more complex variable types? Yes and no.
 Some classes support arrays and variables that are already part of other objects.
 However, no extra functionality is provided by these classes, so support of complex.
 For arrays, only one indexed variable can be modified at a time;
 Volatile variables (of certain types) that are already defined in other classes can be.
 You can then perform the same atomic operations on the volatile field (e.g.,
-AtomicMarkableReference class provides a data structure that includes an object.
 The basic methods of these classes are essentially the same, with slight modifications.
 As we mentioned, it is possible (in theory) to implement every program or class that.
 The atomic classes are not a direct replacement of the synchronization tools — using.
@@ -636,13 +717,16 @@ This may sound like a problem, but it actually isn't because we've preserved the
 Remember that the purpose of synchronization is not to prevent all race conditions; it.
 The second type of change is embodied within our new implementation of the.
 In fact, they don't even change variables that are shared with.
+These problems arise because the state encapsulated by the resetGenerator()
 In this case, the state includes the registration of the ScoreLabel object (the this.
 Consider what would happen when two threads simultaneously call the.
 In this code, the two threads simultaneously ask generatorA to remove the this.
 Because our previous example was synchronized, these errors were prevented.
 There is one side effect here that affects another method.
+The newCharacter() method contains the most extensive changes in this example.
 As we mentioned, the first change is to separate events based on the different.
 This method can no longer assume that the source is the typist if.
+The handling of the generator event has only minor changes.
 We need to update the score to credit or penalize the.
 It is not a problem if the user sees a very short delay before the score.
 The score is updated only if char2type has been updated correctly.
@@ -663,8 +747,14 @@ Second, the waiting process occurs only when the game is stopped.
 Here is an implementation of our animation component using only atomic variables;
 As with our previous example, using atomic variables is not simply a matter of.
 In our animation component, this is especially true for the code that.
+We could have left the code in that method and used.
 However, it's much easier to implement this functionality by creating and.
+The paintComponent() method is also not completely atomic, but as with the.
+The paintComponent() method loads into temporary variables data that it.
+The run() method is similar to our previous versions in that it calls the repaint()
 On the other hand, resuming the animation is no longer.
+This could be solved by calling the repaint() method from the setDone()
+The implementation of the setDone() method is now much simpler.
 And it no longer needs to inform the animation thread that the done flag.
 The major benefit of this implementation is that there is no longer any.
 As we mentioned, developers do not just face a choice of.
@@ -674,21 +764,28 @@ What's happening in our examples with atomic variables is that there is no.
 The atomic classes use this technique internally in their implementation, and.
 Data exchange is the ability to set a value atomically while obtaining the previous.
 What if the data exchange is more complex? What if the value to be set is dependent.
+The get() method is used to get the previous value, which is used.
 The variable is set to the new value using the.
+If the compareAndSet() method fails, the entire operation can be.
+Although the get() method call, the calculation of the new value, and the.
 Comparing and setting is the ability to set a value atomically only if the current value.
 What if the comparison is more complex? What if the comparison is dependent on the.
 The complex comparison is used to see if the operation should proceed.
+The compareAndSet() method is then used to set the value if the current value has.
 Although the list of data types for which atomic classes are available is pretty.
 While it does support generic object types, it doesn't support the.
 As a result, it may not be possible to change a floating-point value atomically, but it.
 As long as the floating-point values are read-only, this technique is threadsafe.
 In our new AtomicDouble class, we use an atomic reference object to encapsulate a.
+The get() method now has to use two method calls to get the double value—it must.
 Getting the Double object type is obviously atomic because we are using an atomic.
 As for the atomic reference itself, it is atomic because we are using an atomic.
 In our previous examples, we have set only individual variables atomically; we.
 Once again, this works only if the values are not directly changed in any way.
 Here is an atomic class that protects two variables: a score and a character variable.
 Using this class, we are able to develop a typing game that modifies both the score.
+As in our AtomicDouble class, the getScore() and getCharacter() methods work.
+The setScore() and setCharacter() methods are implemented using the advance.
 The first method sets the new character to be typed while.
 Performing bulk data modification, as well as using an advanced atomic data type,
 Once again, using atomic variables has to be balanced with using.
@@ -701,10 +798,10 @@ Any thread can, at any time, define a thread local variable that is private to t
 Other threads that define the same variable create their own copy.
 This means that thread local variables cannot be used to share state.
 Thread local variables have other uses, of course, but their most.
-A thread local variable is modeled by the java.lang.ThreadLocal class:
 In typical usage, you subclass the ThreadLocal class and override the.
 One case where you might use a thread local variable to avoid synchronization is in a.
 Thread local objects are declared static so that the object itself (that is, the results.
+When the calculate() method in our example is called, the thread local hash map is.
 Since access to the map is from only a single thread, we're able to use a.
 HashMap object rather than a Hashtable object (or otherwise synchronizing the hash.
 This approach is worthwhile only if the calculation is very expensive since obtaining.
@@ -712,6 +809,8 @@ And in general, the performance of the ThreadLocal class has been fairly.
 Another case where this technique is useful is dealing with thread-unsafe classes.
 Values stored by threads in thread local variables are unrelated.
 This class allows a child thread to inherit the value of the thread local variable from its.
+If you like, you can use the childValue() method to further augment this behavior.
+When the child thread calls the get() method of the thread local variable, the get()
 In this chapter, we've examined some advanced techniques for synchronization.
 We've learned about the Java memory model and why it inhibits some.
 Here are the class names and Ant targets for the examples in this chapter:
@@ -733,6 +832,7 @@ In those terms, a semaphore with a counter of one is the.
 The Semaphore class keeps tracks of the number of permits it can issue.
 Therefore, a semaphore can be used to represent the number of locks.
 It could also be used to throttle the number of threads working.
+The Semaphore interface is very similar to the Lock interface.
 If a semaphore is constructed with its fair flag set to true, the semaphore tries to.
 The downside to this option is speed: it takes more.
 Of all the different types of thread synchronization tools, the barrier is probably the.
@@ -740,10 +840,12 @@ This is generally used when an application operates in phases.
 For example, many compilers make multiple passes between loading the source and.
 Given its simplicity, why is the barrier not more commonly used? The functionality is.
 We can solve the coordination problem in two ways, without using a barrier.
+However, in some cases it is preferable to use barriers.
 It may be easier to code all of the logic as one method, particularly if the.
 When the barrier is constructed, the developer must specify the number of parties.
 This number is used to trigger the barrier: the threads are.
 There is also an option to specify an action—an object that.
+Each thread that calls the await() method gets back a unique return value.
 The first thread to arrive is one less than the number.
 Upon arrival of the last thread, the action is executed, the.
 The waiting threads can be interrupted, a thread may break through the.
@@ -765,6 +867,9 @@ The boolean return value for the timeout variant of the.
 The exchanger implements a synchronization tool that does not really have.
 This class is closer to a collection class than a synchronization tool—it is mainly used.
 It is also very specific in that threads have to be paired.
+The exchange() method is called with the data object to be exchanged with another.
+If another thread is already waiting, the exchange() method returns with the.
+If no other thread is waiting, the exchange() method waits for.
 A timeout option can control how long the calling thread waits.
 Unlike the barrier class, this class is very safe to use: it will not break.
 Timeouts and interrupts also do not break the exchanger as they do in the barrier.
@@ -788,6 +893,7 @@ Developers should design their programs at as high a level as.
 Using these libraries, however, does not remove the responsibility for.
 Deadlock between threads competing for the same set of locks is the hardest problem.
 It's a hard enough problem, in fact, that it cannot.
+To review, deadlock occurs if two threads execute the newCharacter() and.
 As we mentioned at the time, this example is simple, but more complicated conditions.
 Deadlock is difficult to detect because it can involve many classes that call each.
 Nonetheless, a close examination of the source code is the only option presently.
@@ -808,11 +914,13 @@ By synchronizing with only one lock, we are preventing access.
 The most practical rule to avoid deadlock is to make sure that the locks are always.
 In our example, it means that either the score or.
 This implies the need for a lock hierarchy—meaning that locks are not only.
+Since the resetScore() method now also grabs the score lock first, it is not possible.
 Understand which locks are assigned to which subsystems and understand the.
 This allows us to form groups of locks and map out.
 The relationship of the locks must be understood in order to be.
 If you are developing a very complex Java program, it's a good idea to develop a lock.
 There are a few more concerns about deadlock when using the Lock interface (or any.
+However, what happens if the thread that calls the resetScore() method encounters.
 Under those systems, another thread could wait forever when it tries.
 But we are using the Lock interface instead of the synchronized keyword.
 There is a simple way around this: we can use Java's finally clause to make sure.
@@ -854,10 +962,16 @@ This list is not static; it holds all the thread.
 The deadlock locks are added and removed from the registry by using the.
 When a thread is about to perform a hard wait on a lock,
 A deadlock is detected if the lock is already in the wait tree.
+With the ability to detect deadlocks, we can now override the lock() method of the.
+In that regard, our new lock() method is also minimally.
+The first part of the lock() method is for nested locks.
+There is no race condition for this case: only the owner.
 And since there is no chance that the owner of the lock will change if the owner is the.
+The second part of the lock() method is used to obtain new locks.
 Otherwise, the thread is placed on the hard wait list for.
 There is no reason to override the lock methods that accept a timeout since these are.
 The interruptible lock request is disabled by routing it to the uninterruptible.
+The reacquisition of the lock is a hard wait since the await() method can't.
 If you've already examined the code, you'll notice that the implementation of the.
 Instead, it simply performs a hard wait prior to waiting for the signal.
 This means that if a later lock attempt is made, a loop can still be detected,
@@ -888,12 +1002,15 @@ How can the simple solution of switching the "thread owns the lock" to the "thre
 A better way to envision it is to treat the operations as.
 Since the reacquisition is mandatory (i.e., it will eventually occur), we mark the.
 This is just an artifact of examining the wait tree from.
+When the lock() method is called at a later time,
 From that perspective, we can use either the ownership state or hard wait state for.
 Why don't we have to check for potential deadlocks on the condition variable side? It.
 Marking for the wait operation prior to unlocking works in a pseudo.
 Another explanation is that there is no need to check because we already.
+Isn't marking for the hard wait prior to performing the await() operation a problem?
 Can it cause spurious deadlock exceptions? Can it cause an error condition in other.
 The extra question here addresses the issue of interfering with the.
+That question doesn't apply on the lock() method side because we.
 However, the answers to the other questions are not exactly the same as before.
 We are creating a temporary loop—a loop that is created even.
 Second, the one thread node that is within this small loop is not performing.
@@ -918,7 +1035,9 @@ The modification with some deadlock checking removed is available online in our.
 This change is also provided online in our alternate deadlock-detecting lock class.
 The deadlock-detecting lock regards all lock requests with a timeout as soft locks.
 What if we do not agree with this premise? This topic is open to debate.
+Here is an implementation of the tryLock() method that treats the request as a soft.
 This change is also provided in the online examples as an alternative to the.
+Its implementation is practically identical to that of the lock() method.
 Again, the difference is that we now place all lock requests within a try-finally.
 This allows the method to clean up after the request, regardless if it exits.
 This example treats the operation as a soft wait for requests.
@@ -966,7 +1085,6 @@ Generally, reader/writer locks are used when there are many more readers than.
 This is why the reader/writer lock is needed—to share data.
 To solve this, the reader/writer lock does not grant the read lock to a new thread if.
 Instead it places the reader into a wait state until.
-ReentrantReadWriteLock class consults its fairness flag to see what to do next.
 The strong integration of locks into the Java language and API is very useful for.
 While it is not possible to have a program threaded.
 Here are the class names and Ant targets for the examples in this chapter:
@@ -988,16 +1106,26 @@ Consequently, all calls to Swing objects must be made on the event-dispatching.
 That's the thread that Swing uses internally to change the state of its objects;
 Swing objects that have not been displayed can be created and manipulated.
 That means you can create your GUI objects in any thread but.
+The invokeAndWait() method can be called from any thread other than the.
 As we mentioned, all the event callbacks of your program occur on the.
 This is good news since it means that most of the code that.
 In our sample typing program, we access Swing components from these methods:
 To write a threadsafe Swing program, we must make sure that the methods listed.
 The Swing classes have already made sure that all callbacks occur on the.
-In the CharacterDisplayCanvas class, we were able to work around Swing's.
+The initComponents() method is called from the main thread of the program,
+Finally, the setScore() method accesses Swing components only within the.
 This is due to historical reasons, and you can use.
+The invokeLater() and invokeAndWait() methods allow you to define a task and.
 It can also be called when the random character generator.
+The invokeLater() method takes a Runnable object as its parameter.
+Note that the run() method is in its own object.
+For the most part, the invokeAndWait() method looks similar, but it has three.
+On the other hand, the invokeAndWait() method is synchronous: it does not return.
 As a rule of thumb, then, you should use the.
+The second difference is that the invokeAndWait() method cannot itself be called.
+The third difference is that the invokeAndWait() method can throw an.
 If you have code that you want to take effect immediately and that might be called.
+You can then either call invokeAndWait() (if you're not on the.
 We could use that method in our ScoreLabel class like this:
 There's another case when Swing programs and threads interact: a long-running.
 While an event callback is executing, the rest of the GUI is.
@@ -1011,6 +1139,7 @@ We've used all our Swing utilities and techniques in this example.
 When the server gets an error or the user presses the Stop button, we need to tell the.
 The Swing classes comprise one of the largest set of classes in the Java API.
 This places a responsibility on the developer, who must make sure that she follows.
+Swing's use of the invokeLater() method gives us a hint about how we might handle.
 Here are the class names and Ant targets for the examples in this chapter:
 In this chapter, we'll look at how threads interact with the collection classes provided.
 We'll examine some synchronization issues and how they affect our choice.
@@ -1039,15 +1168,15 @@ A class that implements a sorted (and ordered) map collection.
 A class that implements a list and a queue collection, providing a doubly linked.
 A set collection that sorts its items based on the order in which they are added.
 A map collection that sorts its items based on the order in which they are.
+Unlike all other maps, this class uses = for key comparison.
 A specialized map collection that uses only Enum values as keys.
-A number of classes in the java.util.concurrent package are designed to provide.
 A FIFO queue that can be either bounded or unbounded.
 The bound on this queue is one (no elements are.
 A class that implements an unbounded queue with a time-based order.
+Retrieval from the queue is based on the object whose getDelay() method.
 When writing a multithreaded program, the most important question when using a.
 In the simple case, you're going to use the collection.
 In this case, the easiest object to use is a threadsafe collection (e.g., a Vector or.
-That's what we've done all along in our CharacterEventHandler class:
 In this case, using a vector is sufficient for our purposes.
 A second option would be to use a thread-unsafe class (e.g., the ArrayList class)
 In this example, it doesn't matter whether we synchronize on the collection object or.
@@ -1058,6 +1187,7 @@ Any of these options protect access to the data held in the collection.
 A more complex case arises when you need to perform multiple operations atomically.
 In the previous section, we were able to use simple.
 As a result, we could rely on the container to provide the synchronization.
+We alluded to a race condition in the fireNewCharacter() method.
 In other programs, that may not necessarily be the case.
 Suppose we want to keep track of all the characters that players typed correctly (or.
 Here we use thread-unsafe collections to hold the data and explicitly synchronize.
@@ -1065,6 +1195,7 @@ Hashtable collections in this code without also synchronizing as we did earlier.
 Although retrieving a value from a hashtable is threadsafe, and replacing an element.
 The moral of the story is that using a threadsafe collection does not guarantee the.
 Many situations call for using each element of a collection.
+We called the toArray() method, which returns an array containing every.
 More generally, all collection classes implement one or more methods that return a.
 That may or may not be a problem for your program; if it is a problem, the.
 To use an enumeration of a collection that may also be used by multiple threads, you.
@@ -1138,10 +1269,12 @@ Java's requirement for a priority-based, preemptive scheduling mechanism maps we
 Our first example, where the threads all complete at about the same time, is executed.
 Let's examine how the scheduling process works in a little more detail.
 A thread object is in the initial state from the period when it is created (that is,
+A thread is in the runnable state once its start() method has been called.
 A thread that is in the runnable state may not actually be running; it may be.
 A thread that is running on a CPU is called a currently.
 A thread that is blocked is one that cannot be run because it is waiting for.
 We've seen APIs that also block, but internally those methods are all.
+A thread is in the exiting state once its run() method returns (or its.
 The basic process of thread scheduling is essentially the same whether it's performed.
 We can conceive that a thread scheduler keeps track of all the threads on which it.
 For simplicity, we conceive of these threads as being on an ordered list; in reality,
@@ -1174,6 +1307,7 @@ With complex priorities, it can still run much less often.
 On the other hand, complex priorities mean that you cannot guarantee thread.
 In particular, you cannot use thread priorities to try and prevent race.
 The Thread class contains a number of methods and variables related to thread.
+The setPriority() method changes the priority of a particular thread.
 In the Java Thread class, three static final variables define the allowable range of.
 The minimum priority a thread can have (although the virtual machine is.
 The symbolic definition of priority constants is not necessarily useful.
@@ -1184,6 +1318,7 @@ On the other hand, not all operating systems support 10 distinct levels of threa
 The best we can do for portable applications is to use the three symbolic.
 What happens when we run this program is very dependent on the operating system.
 We'll discuss that effect for several popular platforms in the.
+The Thread class also includes a yield() method, which asks the host operating.
 On the green thread model (see the next section), the yield( )
 We'll now look at how all of this plays out in the implementation of the Java virtual.
 But we stress that these details actually matter in very few cases.
@@ -1279,9 +1414,11 @@ Java's implementation of thread pools is based on an executor.
 Executors are a useful design pattern for multithreaded programs because they allow.
 It also provides a task scheduling executor, which we examine.
 This interface provides a means for you to manage the executor and its tasks.
+So there's a period of time between calling the shutdown() or shutdownNow()
 You can check to see if the executor service is in the terminated.
 An executor service also allows you to handle many tasks in ways that the simple.
 The invokeAll( ) methods execute all the tasks in the given.
+The invokeAny() methods execute the tasks in the given collection, but.
 To use a thread pool, you must do two things: you must create the tasks that the pool.
 ExecutorService interface, which tells us how to feed it tasks and how to shut it.
 We'll look at the other aspects of that class in this section, beginning with how.
@@ -1289,6 +1426,7 @@ The core pool size, maximum pool size, keep alive times, and so on control how t
 For now, we can use a constructor to create the tasks and put them in the thread.
 In this example, we're using the tasks to calculate Fibonacci numbers as we do in.
 Once the pool is constructed, we simply add the tasks to it (using.
+When we're done, we gracefully shut down the pool; the.
 The two fundamental things that affect a thread pool are its size and the queue used.
 These are set in the constructor of the thread pool; the size can change.
 The first set of methods deal with the thread pool's size, and the remaining methods.
@@ -1296,6 +1434,7 @@ The size of the thread pool varies between a given minimum (or core) and.
 If you specify different numbers for the minimum and maximum number of.
 The queue is the data structure used to hold tasks that are awaiting execution.
 The choice of queue affects how certain tasks are scheduled.
+The getQueue() method returns the queue, but you should use.
 These parameters allow considerable flexibility in the way the thread pool operates.
 The basic principle is that the thread pool tries to keep its minimum number of.
 If it gets too busy (where busy is a property of the particular queue.
@@ -1309,10 +1448,10 @@ What are the implications of all this? It means that the choice of pool size and
 Note that you can prevent rejection of a task if.
 In this case, adding a task to the queue always.
 As tasks are added to the pool, it creates threads until it.
-In our example, we used a LinkedBlockingQueue with an unbounded capacity and a.
 This is perhaps the most common configuration of thread pools: it.
 If you use a thread pool, there is no magic formula that you can use to determine its.
 Depending on the type of queue you use in the thread pool, a task may be rejected by.
+Tasks are rejected if the queue is full or if the shutdown( )
 When a task is rejected, the thread pool calls the rejected execution handler.
 There is one rejected execution handler for the entire pool; it applies to all potential.
 You can write your own rejected execution handler, or you can use one of four.
@@ -1338,22 +1477,29 @@ Unlike a runnable object, a callable object can return a result or throw a check
 When you ask an executor service to run a callable object, the service returns a.
 Future object that allows you to retrieve those results, monitor the status of the task,
 Callable and future objects have a one-to-one correspondence: every callable object.
+The get() method blocks until the call() method has returned (or until the optional.
+If the call() method throws an exception, the get() method.
 The future object keeps track of the state of an embedded Callable object.
+When the cancel() method is called, the corresponding callable object may be in one.
 It may be waiting for execution, in which case its state is set to.
-In that case, if the mayInterruptIfRunning flag is false, the.
-If the mayInterruptIfRunning flag is true, however, the thread running the callable.
 The callable object must still pay attention to this, periodically.
 When an object in a thread pool is cancelled, there is no immediate effect: the object.
 So, cancelling an object on a thread pool queue does not.
+One way to deal with this situation is to call the purge() method on the thread pool.
+The purge() method looks over the entire queue and removes any cancelled objects.
 One caveat applies: if a second thread attempts to add something to the pool (using.
+A better way to cancel objects with thread pools is to use the remove() method of the.
 You can associate a Runnable object with a future result using the FutureTask class:
 This class is used internally by the executor service: the object returned from the.
+Future interface to monitor the status of the run() method of the embedded.
 A FutureTask object can hold either an embedded runnable or callable object,
+The get() method of a future task that embeds a callable task returns whatever is.
 We use this class in our next example and also in our examples in Chapter 15(See.
 Swing classes are not threadsafe, so they must always be called.
 In the case of Swing, that means that they must be called from.
 What if you have a different library that isn't threadsafe and want to use the library in.
 The methods of this class function exactly like their counterparts in the.
+SwingUtilities class: the invokeLater() method runs its task asynchronously and.
 In this chapter, we began exploration of executors: utilities that process Runnable.
 The thread pool executor is one of two key executors in Java.
 The combination of individual tasks and a lack of CPU resources is key to when to use.
@@ -1371,6 +1517,7 @@ Previously, we've just considered the timing as part of the task.
 We've seen tools that allow threads to wait for specific periods of time.
 In our discussion of the Thread class, we examined the concept of a thread.
 Our discussion of this method of the Thread class represents the first time that.
+The wait() method of the Object class allows a thread to wait for any event.
 This method also provides the option to return if a specific time period passes.
 This allows the program to execute a task at a later time if the event occurs or.
 This functionality is also emulated with condition variables using the.
@@ -1379,16 +1526,18 @@ This class also provides convenience methods to support certain periodic.
 In effect, the task to process the data is to be.
 As these examples show, in some cases, a program needs to execute code only after.
 We've used these methods in our examples when a program needs to execute code.
-The java.util.Timer class was added to JDK 1.3 specifically to provide a convenient.
 Tasks to be executed by the Timer class must inherit from the TimerTask class.
 TimerTask object so that two methods can be attached to the task; these methods.
 The downside of this technique is that the task can't inherit from other classes.
+The cancel() method is used to stop the class from being executed.
 If the task is not running, it is the time at which the.
 Its purpose is a bit obscure but it will make.
 The Timer class provides the means to execute tasks at a later time.
 Four constructors are provided to create different versions of the Timer class.
 The other parameter is used to name the thread; this is important if the threads are.
+The first two overloaded versions of the schedule() method are used to schedule.
 The first allows for the specification of a delay: a time period in.
+The last two overloaded versions of the schedule() method are used to schedule.
 The third parameter is used to specify the period in milliseconds.
 There are a few important issues in the timer implementation, particularly for.
 This means that if the Timer object is overwhelmed, a task.
@@ -1401,43 +1550,60 @@ We're more than five seconds off; skip this because another.
 Table 11-1 shows when tasks would be executed under different scheduling models of.
 In this example, we're assuming that the task is to be run every.
 Neither takes into account the time required to execute the.
+The cancel() method is provided by the Timer class to destroy the timer.
 The Timer object can no longer be used to schedule any more tasks.
 The task is deleted from the queue by the timer when it is time for the task to execute:
+The purge() method is important only when a large number of.
 Web sites that are reachable are displayed in green; web.
 We start with the timer task that contacts the web site:
+The run() method periodically contacts the given URL and then updates the status.
 The program that sets up the task looks like this:
+Also note that since a task cannot be reused, the.
 This application points out the basic shortcomings of the Timer class.
 Although our task uses timeouts to talk to the web server, it's conceivable that a.
+That's the reason we put logic into the run() method of the task to check to see.
 The alternative is to create a new timer for each panel.
 The downside is that we now have one thread for.
 As we've discussed, Swing objects cannot be accessed from arbitrary threads—which.
 SwingUtilities class to overcome this, but Java also provides a Timer class just for.
 Most of the methods provided by this class are used to.
-Unlike the java.util.Timer class, this Timer class uses the ActionListener.
 This provides an interface that Swing developers are accustomed to: all.
 This value is used by the timer as both the initial time to wait to fire the.
 This allows the developer to get specific types of listeners that are registered to the.
 In most cases, this is probably not very useful, as the limitation of the timer as.
+The getDelay() and setDelay() methods are used to retrieve and modify the time.
+The isRepeats() and setRepeats() methods are used to control whether events are.
 By default, the timer repeats events, as this Timer class was originally.
 This is important for tasks such as blinking the cursor.
+The getLogTimers() and setLogTimers() methods are used to control debugging of.
 If debugging is activated, messages are sent to standard output to report.
 Finally, the timer must be activated upon completion of the registration of the.
-We can use the javax.swing.Timer class in our typing program.
+The restart() method resets the timer: the timer then waits.
+The isRunning() method is used to determine whether the timer has been.
 Note that this implementation is much simpler than our previous implementations.
+Previously, we set up a thread in the setDone() method; now, we simply call the.
 Using the timer has also allowed us to simplify the locking around the calls to the.
+Knowing when the animation should run used to require a.
 The Timer class itself has the waiting logic within it: operationally, we haven't.
 But in terms of development, using a timer has saved us some effort.
 This is a clear example of why using higher-level thread constructs makes things.
 This is not necessary: it is possible for the timer itself to maintain this information.
 It is much more flexible to allow any Runnable object to be used as the.
+Finally, relying upon the run() method is too restrictive for tasks.
 These parameters are basically the same parameters as the thread pool.
 Note, however, that the constructors have no parameter to specify the maximum.
+The schedule() method is used to schedule a one-time task.
 ScheduledFuture object returned by this method to perform the usual tasks on the.
 For instance, this model is better for animation since there is.
 Table 11-2 shows when tasks would be executed under different scheduling models of.
 It does not compensate for the .5-second delay, so it drifts over time.
+The execute() and submit() methods are used to schedule a task to run.
 Still, it may be useful for one task to add other tasks to be run in the.
+The shutdown() and shutdownNow() methods are also part of the thread pool class.
+The shutdown() method is used to shut down the executor but allows all pending.
+The shutdownNow() method is used to try to cancel the tasks in the.
 Therefore, setting both to false empties the queue but allows currently running tasks.
+This is similar to how the Timer class is shut down.
 With the support of thread pools, callable tasks, and fixed delay support, you might.
 First, it provides the option to specify an absolute time.
 Timer class is simpler to use: it may be preferable if only a few tasks or repeated.
@@ -1452,14 +1618,12 @@ We'll have to poll the license task periodically to see whether it has finished.
 In a more complicated case, the license task might check with a license server and.
 IOException, which is why we've declared that this task throws that exception.
 If we got a result, we know that the license has expired.
+The checkLicense() method is called every time status is reported; it polls the.
+When the poll succeeds, the checkLicense() method sets a done flag.
 If you look carefully, you'll notice that there's no synchronization for the.
 That blocks the event-dispatching thread so we are already assured that only one.
 In this chapter, we've looked at various ways in which tasks may be scheduled in the.
-The simplest way to do this is to use the java.util.Timer class, which can.
 Each instance of a timer is a single thread; that.
-The javax.swing.Timer class is functionally similar, except that it ensures that tasks.
-However, the javax.swing.Timer class has a fixed time schedule for all.
-Finally, the ScheduledThreadPoolExecutor class provides a more flexible (but more.
 Because it uses a thread pool, it can be more.
 The key benefit of task executors and timers is that they free you from having to.
 Here are the class names and Ant targets for the examples in this chapter:
@@ -1481,16 +1645,21 @@ Once a data connection has been negotiated, the server and client communicate.
 Since the setup is generic, we can develop a generic TCPServer class that handles the.
 Here's the implementation of this class, which serves as the.
 The TCPServer class implements the Runnable interface; it creates multiple threads.
+The logic to handle the clients is contained within the run() method.
 When we first enter the run( ) method, the server variable is.
 When a new connection has been accepted, we clone the TCPServer.
+To start the server, you must call the startServer() method.
+The stopServer() method is used to stop the server: it.
 Note that the stopServer( ) method stops the server thread,
+One more point about this implementation: you'll notice that the startServer() and.
 If the client threads need to share data, they are.
 For our first example, we'll subclass the TCPServer class to perform I/O within the.
 We'll develop only the first part of that server, the part that sends a.
 Developing a server like this depends on establishing a protocol between the client.
 For our example, we use a simple protocol where messages are a single.
 The WELCOME message must be sent by the server when it accepts a new client into.
-GET_STRING_RESPONSE message is sent by the server when it has processed a.
+Remember that the run() method in this class is called after a new connection has.
+Each time it executes the readByte() method, it blocks until the client.
 This class is also responsible for starting the server, which is a simple case of.
 We've not provided any way to stop the server other.
 Now we must develop the client side of our first example.
@@ -1509,6 +1678,8 @@ The design pattern of this example is known as the leader-follower pattern.
 It can then release the lock, and the next thread in line then obtains the.
 To use this pattern, we must extend our TCPServer class:
 Notice that our implementation is now much simpler because we no longer need to.
+We establish a fixed number of threads in the startServer()
+Each thread executes the run() method, where each in turn gets a client.
 Because the thread itself operates on the socket, the server object no.
 Our actual TypeServer implementation is very similar to its previous incarnation,
 Handling only a single request has simplified this implementation as well.
@@ -1528,6 +1699,7 @@ As this data travels over the network, it may become fragmented.
 In the case of a network failure (or an extremely ill-timed computer.
 Therefore, when the application requests the 17 bytes, it may get back only the few.
 The difference between blocking and nonblocking I/O is in how this situation is.
+With blocking I/O, the readUTF() method can just request the additional.
 Requesting that data blocks until the data finally makes its way to the machine,
 You can't immediately retry reading the data because it still may.
 Worse, you'd lose any benefit of nonblocking I/O: if you're.
@@ -1544,23 +1716,29 @@ The reason we can do this all in a single thread is that the I/O that occurs in 
 As before, we need to provide a subclass of this framework that handles the actual.
 Here's how we'd write a subclass based on our typing server protocol:
 Note the greatly increased complexity in this example from our multithreaded.
+In the recv() method, we're reading all the data available from a client.
 Our requests are a single byte long, so when I/O is available, we know that there's at.
-GET_STRING_RESPONSE message consists of the single byte indicating the message.
 Notice how we read this from a temporary buffer in.
+In the send() method, we also check to make sure that we've written all the data.
 Our new I/O server is very efficient at handling a large number of clients, but it may.
+In other cases, we might have a handleClient() method that.
 This situation is handled with a thread pool: as requests come into the server, the.
 From a threading perspective, the interesting thing to note here is that the handling.
 One point about using multiple threads and the new I/O classes: the buffers and.
 Traditional I/O methods in Java can also block: we've seen how reading from a socket.
+What is the effect of calling interrupt() on a thread that is blocked in I/O? The.
+Linux, the interrupt() method causes the blocked I/O method to throw an.
+So what's a programmer to do? The safest answer is not to rely on the interrupt()
 If interruptible I/O as a generic feature is added to Java in the future, it will.
 If you do rely on interruptible I/O, be aware that the I/O in question is not restartable:
 The difficulty of dealing with the issue of restarting I/O that has been.
+Under certain circumstances, you can still use the interrupt() method to close down.
 What we've done in this class is to start two threads: one that is reading the data and.
 This allows us to shut down the thread (and close the input stream associated.
 Do other things until we need to shut down the reader ...
 A concrete implementation of the interruptible reader might look like this:
 Rather than going to all this effort, we might simply have closed the input stream.
-InterruptibleReader class that closed the input stream (which would have saved us.
+Similarly, we might have written a shutdown() method in the.
 The reason you might select this approach is that it keeps things consistent.
 See 17.) describes how you can arrange to interrupt a group of threads at once,
 Using multiple threads well is very important in any Java program that performs a lot.
@@ -1586,7 +1764,9 @@ Some of the applets have created additional thread groups to.
 Not all virtual machine-level threads have a corresponding Java thread object, so the system group does not.
 You can create your own thread groups as well and make this hierarchy arbitrarily.
 Thread groups are created just like any Java object; when you instantiate a.
+If a security manager has been installed, the getThreadGroup() method of.
 Otherwise, the thread joins the current thread group (the thread group of the.
+The interrupt() method is really the only method of the ThreadGroup class.
 The second advantage of thread groups relates to thread security.
 To make security decisions in this way, however, requires that you write a custom.
 One of Java's hallmarks is that it is designed from the ground up with security in mind.
@@ -1598,11 +1778,18 @@ Checks if the current thread is allowed to modify the state of the thread group.
 Like all methods in the SecurityManager class, these methods throw a.
 SecurityException if they determine that performing the operation would violate.
 As an example, here's a conflation of the code that the.
+This is canonical behavior for thread security: the checkAccess() method is called,
 Assuming that no exception is thrown, an internal method is called that actually.
 Both the Thread and ThreadGroup classes have an internal method called.
+The checkAccess() method within the Thread and ThreadGroup classes is.
+The checkAccess() method within the ThreadGroup class is final; it may not.
 Because only one method in the SecurityManager class is used to check for security.
+The checkAccess() method itself looks to see which thread group the target thread.
+If the thread is not a member of the root thread group, the checkAccess()
 Java security is normally determined via a series of policy files, including the files.
+When the checkAccess() method (or any other method of the security.
 For thread access, code must be granted one of these two permissions:
+When the checkAccess() method is called and each method presently on the stack.
 By default, this permission is granted to all code, and the other thread permissions.
 By default, then, threads can modify the state of any other thread (including itself)
 However, the security policy of the Java virtual machine is quite flexible and can be.
@@ -1611,6 +1798,7 @@ A daemon thread is identical to a user thread in almost every way.
 The canonical daemon thread in Java is the garbage collection thread (and, in recent.
 If we don't have any other threads running, however, there's nothing for the garbage.
 So if the garbage collector is the only thread left running in the Java.
+The daemon mode of a thread is set by calling the setDaemon() method with either.
 By default, a thread is a user thread if it is created by a user thread; it is a daemon.
 Classes in Java are loaded by a classloader object, which consults the directories and.
 Despite the similarity of this hierarchy to the thread group hierarchy, the two are.
@@ -1627,8 +1815,13 @@ Clearly, the application classes it needs to deserialize the object won't be.
 This hook is unrelated to threading issues: the context classloader can be set and.
 The default context classloader for a thread is the classloader that loaded the class.
 If you've defined and used multiple classloaders in your application,
+The run() method is executed inside a context that allows the virtual.
+All uncaught exceptions are handled by code outside of the run() method before the.
 The default exception handler is a Java method; it can be.
 This means that it is possible for a program to write a new default.
+It is called only when an exception is thrown from the run()
+The thread is technically completed when the run() method returns, even.
+By the time the run() method has returned, it's too late to.
 Here's an example that does that when its thread eventually encounters an.
 Use Java Mail to send the administrator's pager an email.
 When the out of memory error occurs, the application prints a message alerting the.
@@ -1636,12 +1829,21 @@ The static methods of the Thread class set or retrieve a default thread handler 
 When a thread is constructed, its exception handler is set to the.
 By default, the exception handler for a thread is its thread group: the ThreadGroup.
 The ThreadDeath class is a special Throwable class that was formerly used to stop a.
+When the stop() method is called on a thread, that thread immediately.
+After all, if we didn't want the thread to die, why was the stop()
+The ThreadDeath class is what caused the stop() method to become deprecated.
+Because it's thrown immediately upon receipt of the stop() method, it has the.
 This leads us to one limited circumstance in which the ThreadDeath class is useful as.
+The normal way to do this is to return from the run() method, but it.
 Even so, a thread that wants to terminate itself cannot simply throw a ThreadDeath.
 Still, you have to be very careful only to do this when it's.
 Using this particular constructor can lead to unportable Java programs.
 The stack is where a thread keeps track of information about the methods it's.
 Let's look again at our class that calculates Fibonacci numbers:
+When a thread executes the run() method of this class, it creates a stack frame.
+When the run() method calls the fib() method, a new.
+At some point, then, the stack resembles Figure 13-4: the run() method.
+At this point, as the fib() method returns, frames are popped off the.
 Stack frames contain more information than the local variables of a method: they.
 In addition, the bookkeeping information for a stack is dependent on the Java.
 The size of the stack (and the frames it holds) impacts Java's memory usage in two.
@@ -1663,6 +1865,7 @@ On many Java implementations, you can also specify the stack size for all thread
 This is a good technique to use when your application throws an out of memory error.
 However, this argument is nonstandard, so it is not available in all Java.
 The Thread class has four miscellaneous methods that provide information about a.
+The countStackFrames() method can only be called on a thread that is suspended;
 In this chapter, we've filled in a lot of the details about how threads work.
 We've also looked at how threads handle uncaught exceptions: though they normally.
 Here are the class names and Ant targets for the examples in this chapter:
@@ -1749,12 +1952,14 @@ Since it is never changed during an iteration and is directly.
 However, for now, simply considering it as a loop-private variable is good.
 We may try to break the parts of this loop among many threads as follows:
 The code in this new version is functionally the same as the previous version, albeit.
+The original mathematical calculation is moved to a new method, loopDoRange()
 Second, although the lookupTable array is not loop private, the individual members.
 The only synchronization we need is in the assignment of the different ranges.
 The code for this new version is more complicated than our first version.
 Given the complexity we introduced to handle this simple loop, it may become too.
 In our new LoopHandler class, we have implemented the logic that we applied in our.
 The logic of creating, tracking, and joining back with the original.
+Just as in our earlier example, the algorithm calls the loopDoRange()
 Now our implementation of the SinTable class is much simpler:
 In this case, we simply configure the ranges needed by the loop handler, provide the.
 We define the process of distributing the iterations of the loop to the individual.
@@ -1861,6 +2066,7 @@ A new loop handler must be created for each iteration of the outer loop.
 Although using the loop handler works without any problems, the overhead may be.
 The fact that our original LoopHandler class can be used only once is merely a design.
 The loop index can never be set back to the start of the loop nor can the range.
+To fix this, we simply add two new methods, reset() and.
 To avoid creating a lot of threads, we use the thread pool executor we.
 Prior to threading any loop, we should always examine that loop.
 When moving from the outer loop to the inner loop, we must examine the.
@@ -1874,10 +2080,12 @@ Having a loop handler that can be used more than once is also very important.
 The task of sending a string to a file or the display is an I/O-bound task.
 However, what if the printing portion of the loop is small when compared with the.
 The only problem that needs to be solved is the ordering of the output.
+In this new version of the getValues() method, we are also printing the table to.
 Obviously, this simple example can be transformed with a loop.
 This output index could be related to the index of the.
 In any case, an output index should not be assigned to more than one.
 Technically, we could have done the same thing with a single-dimensional array of string buffers.
+Printing an object to the virtual display is done with the print() and println()
 Along with the object to be printed, the program must supply an index as a.
 The loop printer is created prior to the loop, all printing that was previously sent to a.
 Since the loop printer sends all the information to one.
@@ -1947,7 +2155,9 @@ So for those who may be interested, here is a quick review of our obsolete class
 The BusyFlag class implements a basic, no-frills, mutually exclusive lock.
 Simplistically, the purpose of this class is to use Java's basic synchronization.
 It grabs the busy flag if it is available while.
+The getBusyFlag() method uses the tryGetBusyFlag() method to repeatedly try.
 And if the counter is zero, this method declares that.
+The getBusyFlagOwner() method is merely an administration method that allows a.
 You must own the lock in order to use this method.
 You must own the lock in order to use this method.
 You must own the lock in order to use this method.
@@ -1955,17 +2165,20 @@ The CondVar class implements a basic condition variable for use with the BusyFla
 The purpose of this class is to allow Java's wait-and-notify mechanism to work with.
 It also allows a single lock to have more than.
 The CondVar class provides four methods for waiting for notification; three of these.
+This method frees the ownership of the busy flag completely.
 Upon returning, it grabs the lock (note that it must do that as many times.
 Also note that it may still wait upon receiving notification as it can still block while.
 In fact, that's the case with all notification-based techniques (the.
 Two of the convenience methods allow the program to specify a timeout or wait.
 The last one allows you to specify an alternate busy flag class—a flag that.
 Condition class, a common Lock object could be created just for notification between.
+The cvSignal() method is used to send a single notification—using the notify()
 As with the wait methods, it is overloaded to allow the program to specify an.
+The cvBroadcast() method is used to send notifications to all the.
 The Barrier class is a basic, no-frills implementation of a barrier.
 The last thread to reach the barrier is assigned the value of zero, and.
 Here is an implementation of the RWLock (reader/writer lock) class:
-ReentrantReadWriteLock class, this class is implemented in a way to prevent lock.
+The interface to the reader-writer lock is very simple: there's a lockRead() method.
 This is to allow the RWLock class to order the requests for.
 Because we need to keep track of how each thread wants to acquire the.
 This is the RWNode class; our waiters vector holds elements.
@@ -1986,13 +2199,14 @@ We use condition variables for the last two cases because they share the same lo
 Note that objects that are to be run by the thread pool are expected to implement the.
 Interestingly enough, there is no way to shut down a thread pool automatically.
 And because they have a reference to the thread pool itself, the thread pool cannot be.
+Then, when the thread pool has run all of its.
 Here is an implementation of the JobScheduler class to execute a task:
 The JobScheduler class implements a time-based execution system—similar to the.
-ScheduledThreadPoolExecutor class, this class also uses a thread pool internally,
 This option is useful if the job is a long-term task or for a job.
 In addition, we need to find the time for the job that is due to run.
 For completeness, we've added a little complexity in our JobScheduler class.
 In our JobScheduler class, this is all handled by a single thread that calls the.
+The task of deciding whether the job needs to be executed again.
 Most of the logic for the JobScheduler class is actually the.
 Used for a job that is to be executed once; simply runs the job.
 Used for a job that is to be executed once; runs the job after the specified.
@@ -2000,10 +2214,8 @@ Used for a job that is to be executed once; runs the job at the time specified.
 No error is generated if the job is not in the.
 As rich as the set of methods provided by this class, it can be considered weak in.
 In those systems, developers can specify criteria such as day of the week, day of the.
-ScheduledThreadPoolExecutor class, it is also missing some of the control features.
 DaemonLock class is to allow the job scheduler to shut down gracefully.
 We accomplish this by making the threads in the job scheduler daemon threads; that.
-Note that the ScheduledThreadPoolExecutor class doesn't need to use something.
 In a way, this appendix is like a history lesson: we have just reviewed the major.
 Our look is the result of reader comments, our own experimentation, and feedback.
 The animal on the cover of Java Threads, Third Edition is a marine invertebrate.
