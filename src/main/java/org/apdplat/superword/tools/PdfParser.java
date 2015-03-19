@@ -146,7 +146,7 @@ public class PdfParser {
         List<String> data = new ArrayList<>();
         StringBuilder paragraph = new StringBuilder();
         //将PDF解析出来的文本按行分割
-        String[] lines = text.split("\n");
+        String[] lines = text.split("[\n\r]");
         for (int i = 0; i < lines.length; i++) {
             String line = lines[i].trim();
             //段落结束
@@ -193,7 +193,7 @@ public class PdfParser {
     }
 
     private static void addLineToParagraph(String line, String lastLine, String nextLine, StringBuilder paragraph){
-        if(StringUtils.isBlank(line)){
+        if(StringUtils.isBlank(line) || line.contains("�")){
             return;
         }
         boolean add = true;
