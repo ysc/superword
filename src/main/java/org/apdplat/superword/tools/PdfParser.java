@@ -24,6 +24,8 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.sax.BodyContentHandler;
+import org.apdplat.superword.model.Word;
+import org.apdplat.superword.rule.TextAnalysis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +37,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 将pdf文档转换为txt文档
@@ -46,8 +49,10 @@ public class PdfParser {
     private static final Logger LOGGER = LoggerFactory.getLogger(PdfParser.class);
 
     private static final int SENTENCE_WORD_MIN_COUNT = 10;
+    private static final int MAX_WORD_CHAR_COUNT = 18;
     private static final float SENTENCE_CAP_WORD_MAX_RATE = 0.4f;
     private static final Set<String> punctuation = new HashSet<>();
+    private static final Set<Word> DICTIONARY = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
 
     static {
         punctuation.add(",");
@@ -333,13 +338,22 @@ public class PdfParser {
         }
         //判断句子中的大写字母开头的单词数
         int capWordCount = 0;
+        //最长单词
+        int maxWordCharCount = 0;
         for(String word : words){
             if(Character.isUpperCase(word.charAt(0))){
                 capWordCount++;
             }
+            if(word.length() > maxWordCharCount){
+                maxWordCharCount = word.length();
+            }
         }
         if(capWordCount > words.length*SENTENCE_CAP_WORD_MAX_RATE){
             LOGGER.debug("忽略首字母大写单词数" + capWordCount + "多于" + words.length*SENTENCE_CAP_WORD_MAX_RATE + "的句子：" + sentence);
+            return null;
+        }
+        if(maxWordCharCount > MAX_WORD_CHAR_COUNT){
+            LOGGER.debug("忽略有超长单词的句子，单词长度" + maxWordCharCount + "大于" + MAX_WORD_CHAR_COUNT + "的句子：" + sentence);
             return null;
         }
         //判断句子中的非字母单词数
@@ -355,6 +369,21 @@ public class PdfParser {
         }
         if(specialWordCount > Math.log(words.length)/2){
             LOGGER.debug("忽略非字母单词数" + specialWordCount + "多于" + Math.log(words.length)/2 + "的句子：" + sentence);
+            return null;
+        }
+        //不是单词的词数
+        int notWordCount = 0;
+        Set<String> toCheck = TextAnalysis.seg(sentence).stream().collect(Collectors.toSet());
+        LOGGER.debug("需要检查单词个数："+toCheck.size());
+        for(String word : toCheck){
+            if(!DICTIONARY.contains(new Word(word.toLowerCase(), ""))){
+                LOGGER.debug("未知单词："+word);
+                notWordCount++;
+            }
+        }
+        LOGGER.debug("未知的单词个数："+notWordCount);
+        if(notWordCount > toCheck.size()*0.4){
+            LOGGER.debug("待检查的单词在已有词典中不存在数" + notWordCount + "大于" + toCheck.size()*0.4 + "的句子：" + sentence);
             return null;
         }
         return sentence;
