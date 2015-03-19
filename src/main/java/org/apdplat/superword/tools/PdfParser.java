@@ -52,6 +52,7 @@ public class PdfParser {
     private static final int MAX_WORD_CHAR_COUNT = 18;
     private static final float SENTENCE_CAP_WORD_MAX_RATE = 0.4f;
     private static final Set<String> punctuation = new HashSet<>();
+    private static final Set<Character> CORRUPT_CHAR = new HashSet<>();
     private static final Set<Word> DICTIONARY = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
 
     static {
@@ -198,14 +199,10 @@ public class PdfParser {
     }
 
     private static void addLineToParagraph(String line, String lastLine, String nextLine, StringBuilder paragraph){
-        if(StringUtils.isBlank(line) || line.contains("�")){
+        if(StringUtils.isBlank(line)){
             return;
         }
-        boolean add = true;
-        if(isProgramCode(line)){
-            add = false;
-        }
-        if(add && nextLine!=null){
+        if(nextLine!=null){
             //当前行是数字开头、字母结束
             if(Character.isDigit(line.charAt(0))
                     && Character.isAlphabetic(line.charAt(line.length()-1))
@@ -213,30 +210,24 @@ public class PdfParser {
                     && (StringUtils.isBlank(nextLine)
                         || Character.isDigit(nextLine.charAt(0))
                         || Character.isUpperCase(nextLine.charAt(0)))){
-                add = false;
+                LOGGER.debug("忽略数字标题，不做分析："+line);
+                return;
             }
         }
-        if(add){
-            paragraph.append(line).append(" ");
-        }else{
-            LOGGER.debug("忽略文本，不做分析："+line);
-        }
+        paragraph.append(line).append(" ");
     }
 
-    public static boolean isProgramCode(String sentence){
+    public static boolean isProgramCode(String paragraph){
         if(//Java代码
-                sentence.startsWith("package")
-                        || sentence.startsWith("import")
-                        || sentence.startsWith("public")
-                        || sentence.startsWith("private")
-                        || sentence.contains("()")
-                        || sentence.contains(");")
-                        || sentence.contains("=")
-                        || sentence.startsWith("}")
-                        || sentence.endsWith("{")
-                        || sentence.startsWith("@")
+                paragraph.startsWith("package")
+                        || paragraph.startsWith("import")
+                        || paragraph.startsWith("public")
+                        || paragraph.startsWith("private")
+                        || paragraph.contains(");")
+                        || paragraph.contains("}")
+                        || paragraph.contains("{")
                         //html和xml标签
-                        || sentence.startsWith("<")){
+                        || paragraph.startsWith("<")){
             return true;
         }
         return false;
@@ -245,12 +236,161 @@ public class PdfParser {
     private static void process(String paragraph, List<String> data){
         if (StringUtils.isNotBlank(paragraph)) {
             LOGGER.debug("段落：" + paragraph);
-            //将段落切分为句子
-            List<String> sentences = segSentence(paragraph);
-            if(!sentences.isEmpty()) {
-                data.addAll(sentences);
+            //检查段落合法性
+            if(paragraphValid(paragraph)) {
+                //将段落切分为句子
+                List<String> sentences = segSentence(paragraph);
+                if (!sentences.isEmpty()) {
+                    data.addAll(sentences);
+                }
             }
         }
+    }
+
+    public static boolean paragraphValid(String paragraph){
+        //分析文本是否已经被损坏
+        //首字母可以不用检查
+        char[] chars = paragraph.toCharArray();
+        for(int i=1; i<chars.length; i++){
+            char c = chars[i];
+            /**
+             8208 ‐
+             8209 ‑
+             8210 ‒
+             8211 –
+             8212 —
+             8213 ―
+             8214 ‖
+             8215 ‗
+             8216 ‘
+             8217 ’
+             8218 ‚
+             8219 ‛
+             8220 “
+             8221 ”
+             8222 „
+             8223 ‟
+             8224 †
+             8225 ‡
+             8226 •
+             8227 ‣
+             8228 ․
+             8229 ‥
+             8230 …
+             8231 ‧
+             */
+            if(c >= 8208 && c <= 8231){
+                continue;
+            }
+            /**
+             32
+             33 !
+             34 "
+             35 #
+             36 $
+             37 %
+             38 &
+             39 '
+             40 (
+             41 )
+             42 *
+             43 +
+             44 ,
+             45 -
+             46 .
+             47 /
+             48 0
+             49 1
+             50 2
+             51 3
+             52 4
+             53 5
+             54 6
+             55 7
+             56 8
+             57 9
+             58 :
+             59 ;
+             60 <
+             61 =
+             62 >
+             63 ?
+             64 @
+             65 A
+             66 B
+             67 C
+             68 D
+             69 E
+             70 F
+             71 G
+             72 H
+             73 I
+             74 J
+             75 K
+             76 L
+             77 M
+             78 N
+             79 O
+             80 P
+             81 Q
+             82 R
+             83 S
+             84 T
+             85 U
+             86 V
+             87 W
+             88 X
+             89 Y
+             90 Z
+             91 [
+             92 \
+             93 ]
+             94 ^
+             95 _
+             96 `
+             97 a
+             98 b
+             99 c
+             100 d
+             101 e
+             102 f
+             103 g
+             104 h
+             105 i
+             106 j
+             107 k
+             108 l
+             109 m
+             110 n
+             111 o
+             112 p
+             113 q
+             114 r
+             115 s
+             116 t
+             117 u
+             118 v
+             119 w
+             120 x
+             121 y
+             122 z
+             123 {
+             124 |
+             125 }
+             126 ~
+             */
+            if(c >= 32 && c <= 126){
+                continue;
+            }
+            CORRUPT_CHAR.add(c);
+            LOGGER.debug("忽略含有非法字符（"+c+"="+(int)c+"）的文本，不做分析："+paragraph);
+            return false;
+        }
+        if(isProgramCode(paragraph)){
+            LOGGER.debug("忽略程序代码，不做分析："+paragraph);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -344,7 +484,7 @@ public class PdfParser {
             if(Character.isUpperCase(word.charAt(0))){
                 capWordCount++;
             }
-            if(word.length() > maxWordCharCount){
+            if(!word.contains("http://") && word.length() > maxWordCharCount){
                 maxWordCharCount = word.length();
             }
         }
@@ -471,6 +611,7 @@ public class PdfParser {
         SENTENCE_LENGTH_INFO.clear();
     }
     public static void showSentenceWordLengthInfo(){
+        LOGGER.debug("句子词长分布：");
         SENTENCE_LENGTH_INFO
                 .keySet()
                 .stream()
@@ -478,6 +619,8 @@ public class PdfParser {
                 .forEach(k -> {
                     LOGGER.debug(k + " -> " + SENTENCE_LENGTH_INFO.get(k));
                 });
+        LOGGER.debug("未识别的字符：");
+        CORRUPT_CHAR.stream().sorted().forEach(c -> LOGGER.debug((int)c+"="+c.toString()));
     }
     public static void main(String[] args) throws Exception{
         resetSentenceWordLengthInfo();
