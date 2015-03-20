@@ -40,8 +40,6 @@ import java.util.regex.Pattern;
 public class TextAnalyzer {
     private TextAnalyzer() {
     }
-
-    private static final List<String> UN = Arrays.asList("tion co ed ng ca alice jp gc ".split("\\s+"));
     private static final Pattern PATTERN = Pattern.compile("\\d+");
     private static final Logger LOGGER = LoggerFactory.getLogger(TextAnalyzer.class);
 
