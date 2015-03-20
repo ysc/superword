@@ -29,6 +29,8 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -109,6 +111,7 @@ public class Summary {
                          .append(Character.toLowerCase(c))
                          .append("]{1}");
                     }
+                    Pattern pattern = Pattern.compile(p.toString());
                     html.append("<h1>")
                             .append(i.incrementAndGet())
                             .append("、单词 ")
@@ -124,9 +127,10 @@ public class Summary {
                                 String book = " <u><i>" + entry.getKey() + "</i></u>";
                                 entry.getValue()
                                      .forEach(t -> {
-                                         t = t.replaceAll(p.toString(), emPre+word+emSuf);
-                                         if(t.startsWith(emPre)){
-                                             t = emPre+Character.toUpperCase(t.charAt(18))+t.substring(19);
+                                         Matcher matcher = pattern.matcher(t);
+                                         while(matcher.find()){
+                                             String target = matcher.group();
+                                             t = t.replaceAll(target, emPre+target+emSuf);
                                          }
                                          html.append("\t<li>")
                                              .append(t)
@@ -154,6 +158,7 @@ public class Summary {
         Map<String, Map<String, List<String>>> data = new LinkedHashMap<>();
         Map<String, AtomicInteger> wordInOneBookCollectCount = new HashMap<>();
         Map<String, AtomicInteger> wordInAllBookCollectCount = new HashMap<>();
+        Set<Integer> hashes =new HashSet<>();
         try {
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
@@ -172,6 +177,10 @@ public class Summary {
                     List<String> lines = Files.readAllLines(file);
                     String book = file.toFile().getName().replace(".txt", "");
                     lines.forEach(line -> {
+                        //忽略重复出现的句子
+                        if(hashes.contains(line.hashCode())){
+                            return;
+                        }
                         final List<String> wordSet = TextAnalyzer.seg(line);
                         words
                             .forEach(word -> {
@@ -186,6 +195,7 @@ public class Summary {
                                     wordInAllBookCollectCount.get(word).incrementAndGet();
                                     data.get(word).putIfAbsent(book, new ArrayList<>());
                                     data.get(word).get(book).add(line);
+                                    hashes.add(line.hashCode());
                                 }
                             });
                     });
@@ -221,6 +231,7 @@ public class Summary {
                         "creativity",
                         "coyote",
                         "reaction");
+        Collections.sort(words);
         Map<String, Map<String, List<String>>> data = findEvidence(Paths.get("src/main/resources/it"), words, 100, 10);
         String html = toHtmlFragment(data);
         return html;
@@ -235,7 +246,7 @@ public class Summary {
     }
 
     public static void main(String[] args) throws Exception {
-        //String html = summary();
+        String html = summary();
         //String html = summaryForPreciousWords(275, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summaryForPreciousWords(275, 550, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summaryForPreciousWords(550, 800, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
@@ -245,9 +256,10 @@ public class Summary {
         //String html = summaryForPreciousWords(1700, 2000, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summaryForPreciousWords(2000, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summary(Integer.MAX_VALUE, Integer.MAX_VALUE, "mixin");
-        List<Map.Entry<String, AtomicInteger>> words = preciousWords("src/main/resources/it", WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt"));
-        AtomicInteger i = new AtomicInteger();
-        words.forEach(e -> LOGGER.info(i.incrementAndGet()+"、"+e.getKey()+"\t"+e.getValue()));
-        //Files.write(Paths.get("target/summary.txt"), html.getBytes("utf-8"));
+        //List<Map.Entry<String, AtomicInteger>> words = preciousWords("src/main/resources/it", WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt"));
+        //AtomicInteger i = new AtomicInteger();
+        //words.forEach(e -> LOGGER.info(i.incrementAndGet()+"、"+e.getKey()+"\t"+e.getValue()));
+
+        Files.write(Paths.get("target/summary.txt"), html.getBytes("utf-8"));
     }
 }
