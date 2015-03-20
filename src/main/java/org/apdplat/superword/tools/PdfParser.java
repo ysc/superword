@@ -25,7 +25,6 @@ import org.apache.tika.metadata.Metadata;
 import org.apache.tika.parser.AutoDetectParser;
 import org.apache.tika.sax.BodyContentHandler;
 import org.apdplat.superword.model.Word;
-import org.apdplat.superword.rule.TextAnalysis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -513,7 +512,7 @@ public class PdfParser {
         }
         //不是单词的词数
         int notWordCount = 0;
-        Set<String> toCheck = TextAnalysis.seg(sentence).stream().collect(Collectors.toSet());
+        Set<String> toCheck = TextAnalyzer.seg(sentence).stream().collect(Collectors.toSet());
         LOGGER.debug("需要检查单词个数："+toCheck.size());
         for(String word : toCheck){
             if(!DICTIONARY.contains(new Word(word.toLowerCase(), ""))){

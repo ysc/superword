@@ -17,12 +17,10 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
-package org.apdplat.superword.rule;
+package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Word;
-import org.apdplat.superword.tools.WordLinker;
-import org.apdplat.superword.tools.WordSources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,20 +31,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
- * 文本词频统计
+ * 文本分析工具
  *
  * @author 杨尚川
  */
-public class TextAnalysis {
-    private TextAnalysis() {
+public class TextAnalyzer {
+    private TextAnalyzer() {
     }
 
     private static final List<String> UN = Arrays.asList("tion co ed ng ca alice jp gc ".split("\\s+"));
     private static final Pattern PATTERN = Pattern.compile("\\d+");
-    private static final Logger LOGGER = LoggerFactory.getLogger(TextAnalysis.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TextAnalyzer.class);
 
     /**
      * @param files 文件相对路径或绝对路径
@@ -107,7 +104,6 @@ public class TextAnalysis {
     /**
      * 分词
      * @param sentence
-     * @param debug 打开开关可在开发时跟踪分词细节
      * @return
      */
     public static List<String> seg(String sentence) {
