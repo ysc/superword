@@ -60,17 +60,17 @@ public class CompoundWord {
         return data;
     }
 
-    private static void check(String word, int postion, Map<Integer, List<Word>> data, Set<Word> words){
+    private static void check(String word, int position, Map<Integer, List<Word>> data, Set<Word> words){
         //忽略长度小于3的词
-        if(postion < 3 || word.length() - postion < 3){
+        if(position < 3 || word.length() - position < 3){
             return;
         }
-        String one = word.substring(0, postion);
-        String two = word.substring(postion, word.length());
+        String one = word.substring(0, position);
+        String two = word.substring(position, word.length());
         if(words.contains(new Word(one, "")) && words.contains(new Word(two, ""))){
-            data.put(postion, new ArrayList<>());
-            data.get(postion).add(new Word(one, ""));
-            data.get(postion).add(new Word(two, ""));
+            data.put(position, new ArrayList<>());
+            data.get(position).add(new Word(one, ""));
+            data.get(position).add(new Word(two, ""));
         }
 
     }
@@ -83,10 +83,14 @@ public class CompoundWord {
             if (v.isEmpty()) {
                 return;
             }
-            html.append(i.incrementAndGet()).append("、").append(WordLinker.toLink(k.getWord())).append(" 的组合：</br>\n");
+            html.append(i.incrementAndGet())
+                .append("、")
+                .append(WordLinker.toLink(k.getWord()))
+                .append(" 的组合：</br>\n");
             v.values().forEach(words -> {
                 words.forEach(word -> {
-                    html.append("\t").append(WordLinker.toLink(word.getWord()));
+                    html.append("\t")
+                        .append(WordLinker.toLink(word.getWord()));
                     element.add(word);
                 });
                 html.append("</br>\n");
@@ -97,9 +101,17 @@ public class CompoundWord {
             return html.toString();
         }
 
-        html.append("\n</br>不重复的被组合词有：").append(element.size()).append("个，分别是：</br>\n");
+        html.append("\n</br>不重复的被组合词有：")
+            .append(element.size())
+            .append("个，分别是：</br>\n");
         AtomicInteger j = new AtomicInteger();
-        element.stream().sorted().forEach(word -> html.append(j.incrementAndGet()).append("、").append(WordLinker.toLink(word.getWord())).append("</br>\n"));
+        element
+                .stream()
+                .sorted()
+                .forEach(word -> html.append(j.incrementAndGet())
+                                     .append("、")
+                                     .append(WordLinker.toLink(word.getWord()))
+                                     .append("</br>\n"));
 
         return html.toString();
     }

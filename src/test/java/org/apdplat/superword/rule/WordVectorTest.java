@@ -24,6 +24,10 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
+/**
+ *
+ * @author 杨尚川
+ */
 public class WordVectorTest {
     @Test
     public void testOf(){
