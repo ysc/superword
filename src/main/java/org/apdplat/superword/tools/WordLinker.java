@@ -21,12 +21,22 @@ package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * 单词链接工具
  * @author 杨尚川
  */
 public class WordLinker {
     private WordLinker(){}
+
+    private static final String EM_PRE = "<span style=\"color:red\">";
+    private static final String EM_SUF = "</span>";
+    private static final String ICIBA = "http://www.iciba.com/";
+    private static final String YOUDAO = "http://dict.youdao.com/search?q=";
 
     public static String toLink(String word){
         return toLink(word, "");
@@ -37,29 +47,37 @@ public class WordLinker {
     }
 
     private static String linkToICIBA(String word, String emphasize){
-        StringBuilder html = new StringBuilder();
-        html.append("<a target=\"_blank\" href=\"http://www.iciba.com/")
-                .append(word)
-                .append("\">");
-        if(StringUtils.isNotBlank(emphasize)) {
-            html.append(word.replace(emphasize, "<font color=\"red\">" + emphasize + "</font>"));
-        }else{
-            html.append(word);
-        }
-        html.append("</a>");
-        return html.toString();
+        return linkTo(word, emphasize, ICIBA);
     }
     private static String linkToYOUDAO(String word, String emphasize){
+        return linkTo(word, emphasize, YOUDAO);
+    }
+    private static String linkTo(String word, String emphasize, String webSite){
+        StringBuilder p = new StringBuilder();
+        for (char c : emphasize.toCharArray()) {
+            p.append("[")
+                    .append(Character.toUpperCase(c))
+                    .append(Character.toLowerCase(c))
+                    .append("]{1}");
+        }
+        Pattern pattern = Pattern.compile(p.toString());
         StringBuilder html = new StringBuilder();
-        html.append("<a target=\"_blank\" href=\"http://dict.youdao.com/search?q=")
+        html.append("<a target=\"_blank\" href=\"")
+                .append(webSite)
                 .append(word)
                 .append("\">");
         if(StringUtils.isNotBlank(emphasize)) {
-            html.append(word.replace(emphasize, "<font color=\"red\">" + emphasize + "</font>"));
-        }else{
-            html.append(word);
+            Set<String> targets = new HashSet<>();
+            Matcher matcher = pattern.matcher(word);
+            while(matcher.find()){
+                String target = matcher.group();
+                targets.add(target);
+            }
+            for(String target : targets){
+                word = word.replaceAll(target, EM_PRE+target+EM_SUF);
+            }
         }
-        html.append("</a>");
+        html.append(word).append("</a>");
         return html.toString();
     }
 }
