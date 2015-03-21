@@ -19,6 +19,7 @@
  */
 package org.apdplat.superword.rule;
 
+import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Suffix;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.WordLinker;
@@ -73,7 +74,15 @@ public class DynamicSuffixRule {
         public static String toHtmlFragment(List<Word> words, List<Suffix> suffixes) {
             StringBuilder html = new StringBuilder();
             html.append("<h4>common prefix different suffix: ");
-            suffixes.forEach(suffix -> html.append(suffix.getSuffix()).append("\t"));
+            suffixes.forEach(suffix -> {
+                                html.append("-").append(suffix.getSuffix());
+                                if(StringUtils.isNotBlank(suffix.getDes())){
+                                    html.append(" (")
+                                        .append(suffix.getDes())
+                                        .append(") ");
+                                }
+                                html.append("\t");
+                            });
             html.append(" (hit ")
                 .append(words.size())
                 .append(")</h4></br>\n")
@@ -83,15 +92,15 @@ public class DynamicSuffixRule {
                 String w = word.getWord();
                 String common = null;
                 //这里用for比较适合，因为要break
-                for(Suffix suffix : suffixes) {
+                for (Suffix suffix : suffixes) {
                     String s = suffix.getSuffix().toLowerCase();
                     s = s.replaceAll("-", "").replaceAll("\\s+", "");
-                    if(w.endsWith(s)){
+                    if (w.endsWith(s)) {
                         common = w.substring(0, w.length() - s.length());
                         break;
                     }
                 }
-                if(common != null){
+                if (common != null) {
                     html.append("\t")
                             .append("<tr><td>")
                             .append(wordCounter.incrementAndGet())
@@ -101,9 +110,12 @@ public class DynamicSuffixRule {
                         String s = suffix.getSuffix().toLowerCase();
                         s = s.replaceAll("-", "").replaceAll("\\s+", "");
                         html.append("<td>")
-                                .append(WordLinker.toLink(c + s))
+                                .append(WordLinker.toLink(c + s, s))
                                 .append("</td>");
                     });
+                    html.append("<td>")
+                            .append(WordLinker.toLink(c, c))
+                            .append("</td>");
                 }
                 html.append("</tr>\n");
             });
@@ -123,7 +135,10 @@ public class DynamicSuffixRule {
             //List<Suffix> suffixes = Arrays.asList(new Suffix("d", ""), new Suffix("sion", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("ize", ""), new Suffix("ization", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("e", ""), new Suffix("ity", ""));
-            List<Suffix> suffixes = Arrays.asList(new Suffix("nate", ""), new Suffix("nation", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("nate", ""), new Suffix("nation", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("t", ""), new Suffix("tly", ""), new Suffix("ce", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ist", "...人"), new Suffix("ism", "...主义"));
+            List<Suffix> suffixes = Arrays.asList(new Suffix("or", ""), new Suffix("our", ""));
 
             List<Word> data = DynamicSuffixRule.findBySuffix(words, suffixes);
             String htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixes);
