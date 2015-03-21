@@ -57,14 +57,30 @@ public class PdfParser {
     static {
         punctuation.add(",");
         punctuation.add("’");
+        punctuation.add("‐");
+        punctuation.add("‑");
+        punctuation.add("‒");
+        punctuation.add("–");
+        punctuation.add("—");
         punctuation.add("-");
+        punctuation.add("―");
         punctuation.add(":");
         punctuation.add(";");
         punctuation.add("/");
+        punctuation.add("+");
+        punctuation.add("=");
+        punctuation.add("==");
+        punctuation.add("%");
+        punctuation.add("!");
         punctuation.add("'");
         punctuation.add("\"");
+        punctuation.add("[");
+        punctuation.add("]");
         punctuation.add("(");
         punctuation.add(")");
+        punctuation.add("“");
+        punctuation.add("”");
+        punctuation.add("?");
     }
 
     private static final Map<Integer, AtomicInteger> SENTENCE_LENGTH_INFO = new ConcurrentHashMap<>();
@@ -156,14 +172,19 @@ public class PdfParser {
             String line = lines[i].trim();
             //段落结束
             if (paragraphFinish(line)) {
-                process(paragraph.toString(), data);
+                process(paragraph.toString().trim(), data);
                 //重置
                 paragraph.setLength(0);
             }
             LOGGER.debug("PDF"+(i+1)+"行：" + line);
             //移除行间连接符-
             while (line.endsWith("-")
-                    || line.endsWith("‐")) {
+                    || line.endsWith("‐")
+                    || line.endsWith("‑")
+                    || line.endsWith("‒")
+                    || line.endsWith("–")
+                    || line.endsWith("—")
+                    || line.endsWith("―")) {
                 LOGGER.debug("发现行被折断");
                 if ((i + 1) < lines.length) {
                     //去除行末的-
@@ -222,6 +243,7 @@ public class PdfParser {
                         || paragraph.startsWith("import")
                         || paragraph.startsWith("public")
                         || paragraph.startsWith("private")
+                        || paragraph.startsWith("/**")
                         || paragraph.contains(");")
                         || paragraph.contains("}")
                         || paragraph.contains("{")
@@ -381,8 +403,21 @@ public class PdfParser {
             if(c >= 32 && c <= 126){
                 continue;
             }
+            /**
+             *
+             64256 ﬀ
+             64257 ﬁ
+             64258 ﬂ
+             64259 ﬃ
+             64260 ﬄ
+             64261 ﬅ
+             64262 ﬆ
+             */
+            if(c >= 64256 && c <= 64262){
+                continue;
+            }
             CORRUPT_CHAR.add(c);
-            LOGGER.debug("忽略含有非法字符（"+c+"="+(int)c+"）的文本，不做分析："+paragraph);
+            LOGGER.debug("忽略含有非法字符（"+c+"="+(int)c+"）的文本，字符下标："+i+"，不做分析："+paragraph);
             return false;
         }
         if(isProgramCode(paragraph)){
@@ -401,8 +436,11 @@ public class PdfParser {
         List<String> data = new ArrayList<>();
         //切分之前进行预处理
         paragraph = prepareSeg(paragraph);
+        if(StringUtils.isBlank(paragraph)){
+            return data;
+        }
         //根据分隔符分割句子
-        for(String s : paragraph.split("[.．。]")) {
+        for(String s : paragraph.split("[.．。•]")) {
             if(StringUtils.isBlank(s)){
                 continue;
             }
@@ -435,6 +473,10 @@ public class PdfParser {
             return null;
         }
         sentence = sentence.trim();
+        if(sentence.endsWith(",")){
+            LOGGER.debug("以逗号结尾，不做分析："+sentence);
+            return null;
+        }
         //移除行首的非字母字符
         int i=0;
         for(char c : sentence.toCharArray()){
@@ -501,13 +543,14 @@ public class PdfParser {
             for(String c : punctuation){
                 word = word.replace(c, "");
             }
-            if(StringUtils.isNotBlank(word) && !StringUtils.isAlpha(word)){
+            if(StringUtils.isNotBlank(word)
+                    && !StringUtils.isAlpha(word)){
                 LOGGER.debug("特殊非字母单词："+word);
                 specialWordCount++;
             }
         }
         if(specialWordCount > Math.log(words.length)/2){
-            LOGGER.debug("忽略非字母单词数" + specialWordCount + "多于" + Math.log(words.length)/2 + "的句子：" + sentence);
+            LOGGER.debug("总次数："+words.length+"，忽略非字母单词数" + specialWordCount + "多于" + Math.log(words.length)/2 + "的句子：" + sentence);
             return null;
         }
         //不是单词的词数
@@ -525,10 +568,50 @@ public class PdfParser {
             LOGGER.debug("待检查的单词在已有词典中不存在数" + notWordCount + "大于" + toCheck.size()*0.4 + "的句子：" + sentence);
             return null;
         }
+        //检查[]()是否配对
+        if(sentence.contains("[")
+                || sentence.contains("]")
+                || sentence.contains("(")
+                || sentence.contains(")")
+                || sentence.contains("“")
+                || sentence.contains("”")
+                || sentence.contains("\"")){
+            char[] chars = sentence.toCharArray();
+            int pre=0;
+            int suf=0;
+            int quotCount=0;
+            for(int j=0; j<chars.length; j++){
+                char c = chars[j];
+                switch (c){
+                    case '[': LOGGER.debug("匹配："+c+"，下标："+j);pre++;break;
+                    case '(': LOGGER.debug("匹配："+c+"，下标："+j);pre++;break;
+                    case ']': LOGGER.debug("匹配："+c+"，下标："+j);suf++;break;
+                    case ')': LOGGER.debug("匹配："+c+"，下标："+j);suf++;break;
+                    case '“': LOGGER.debug("匹配："+c+"，下标："+j);pre++;break;
+                    case '”': LOGGER.debug("匹配："+c+"，下标："+j);suf++;break;
+                    case '"': LOGGER.debug("匹配："+c+"，下标："+j);quotCount++;break;
+                }
+            }
+            if(pre != suf){
+                LOGGER.debug("[]()配对检查失败，前向数："+pre+"，后向数："+suf);
+                return null;
+            }
+            if(quotCount%2==1){
+                LOGGER.debug("[]()配对检查失败，双引号数："+quotCount);
+                return null;
+            }
+        }
         return sentence;
     }
 
+    /**
+     * 检查段落是否合法，不合法则放弃切分句子
+     * @param paragraph
+     * @return
+     */
     private static String prepareSeg(String paragraph){
+        paragraph = paragraph.replace(".)", ". ");
+        paragraph = paragraph.replace("!)", ". ");
         if(paragraph.contains(".")) {
             paragraph = paragraph.trim();
             StringBuilder data = new StringBuilder();
@@ -624,7 +707,7 @@ public class PdfParser {
     public static void main(String[] args) throws Exception{
         resetSentenceWordLengthInfo();
         //提取文件
-        //String file = "/Users/apple/百度云同步盘/【大数据】相关技术英文原版电子书/spring/Spring in Action 4th Edition.pdf";
+        //String file = "/Users/apple/百度云同步盘/【大数据】相关技术英文原版电子书/activemq/ActiveMQ in Action.pdf";
         //parseFile(file);
         //提取子类别
         //String path = "/Users/apple/百度云同步盘/【大数据】相关技术英文原版电子书/cassandra";
