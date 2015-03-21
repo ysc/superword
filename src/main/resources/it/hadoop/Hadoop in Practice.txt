@@ -9,10 +9,12 @@ At the time, we were getting by with our home-grown distributed system, but the 
 After some research we came across the Hadoop project, which seemed to be a perfect fit for our needs—it supported storing large volumes of data and provided a mechanism to combine them.
 Within a few months we’d built and deployed a MapReduce application encompassing a number of MapReduce jobs, woven together with our own MapReduce workflow management system onto a small cluster of 18 nodes.
 It was a revelation to observe our MapReduce jobs crunching through our data in minxv.
+Of course we couldn’t anticipate the amount of time that we’d spend debugging and performance-tuning our MapReduce jobs, not to mention the new roles we took on as production administrators—the biggest surprise in this role was the number of disk failures we encountered during those first few months supporting production!
 As our experience and comfort level with Hadoop grew, we continued to build more of our functionality using Hadoop to help with our scaling challenges.
 We also started to evangelize the use of Hadoop within our organization and helped kick-start other projects that were also facing big data challenges.
 The greatest challenge we faced when working with Hadoop (and specifically MapReduce) was relearning how to solve problems with it.
 PREFACExvi flavor of parallel programming, which is quite different from the in-JVM programming that we were accustomed to.
+The biggest hurdle was the first one—training our brains to think MapReduce, a topic which the book Hadoop in Action by Chuck Lam (Manning Publications, 2010) covers well.
 After you’re used to thinking in MapReduce, the next challenge is typically related to the logistics of working with Hadoop, such as how to move data in and out of HDFS, and effective and efficient ways to work with data in Hadoop.
 These areas of Hadoop haven’t received much coverage, and that’s what attracted me to the potential of this book—that of going beyond the fundamental word-count Hadoop usages and covering some of the more tricky and dirty aspects of Hadoop.
 As I’m sure many authors have experienced, I went into this project confidently believing that writing this book was just a matter of transferring my experiences onto paper.
@@ -40,15 +42,18 @@ Many techniques in this book are Java-based, which means readers are expected to
 Part 1 contains a single chapter that’s the introduction to this book.
 Hadoop basics and looks at how to get Hadoop up and running on a single host.
 It wraps up with a walk-through on how to write and execute a MapReduce job.
+Part 2, “Data logistics,” consists of two chapters that cover the techniques and tools required to deal with data fundamentals, getting data in and out of Hadoop, and how to work with various data formats.
 Getting data into Hadoop is one of the first roadblocks commonly encountered when working with Hadoop, and chapter 2 is dedicated to looking at a variety of tools that work with common enterprise data sources.
 Chapter 3 covers how to work with ubiquitous data formats such as XML and JSON in MapReduce, before going on to look at data formats better suited to working with big data.
+Part 3 is called “Big data patterns,” and looks at techniques to help you work effectively with large volumes of data.
 Chapter 6 looks at how to debug MapReduce performance issues, and also covers a number of techniques to help make your jobs run faster.
+Part 4 is all about “Data science,” and delves into the tools and methods that help you make sense of your data.
 Chapter 7 covers how to represent data such as graphs for use with MapReduce, and looks at several algorithms that operate on graph data.
 Chapter 8 describes how R, a popular statistical and data mining platform, can be integrated with Hadoop.
 Chapter 9 describes how Mahout can be used in conjunction with MapReduce for massively scalable predictive analytics.
+Part 5 is titled “Taming the elephant,” and examines a number of technologies that make it easier to work with MapReduce.
 The appendixes start with appendix A, which covers instructions on installing both Hadoop and all the other related technologies covered in the book.
 Appendix B covers low-level Hadoop ingress/egress mechanisms that the tools covered in chapter 2 leverage.
-Appendix C looks at how HDFS supports reads and writes, and appendix D covers a couple of MapReduce join frameworks written by the author and utilized in chapter 4
 All source code in listings or in text is in a fixed-width font like this to separate it from ordinary text.
 Code annotations accompany many of the listings, highlighting important concepts.
 Git is a source control management system, and GitHub provides hosted git repository services.
@@ -84,10 +89,10 @@ Manning’s commitment to our readers is to provide a venue where a meaningful d
 It’s not a commitment to any specific amount of participation on the part of the author, whose contribution to the book’s forum remains voluntary (and unpaid)
 For the last four years he has gained expertise in Hadoop solving big data problems across a number of projects.
 He has presented at JavaOne and Jazoon and is currently a technical lead at VeriSign.
-The illustrations were obtained from a helpful librarian at the Ethnographic Museum in Split, itself situated in the Roman core of the medieval center of the town: the ruins of Emperor Diocletian’s retirement palace from around AD 304
 The book includes finely colored illustrations of figures from different regions of Croatia, accompanied by descriptions of the costumes and of everyday life.
 Kistanja is a small town located in Bukovica, a geographical region in Croatia.
 It is situated in northern Dalmatia, an area rich in Roman and Venetian history.
+The word mamok in Croatian means a bachelor, beau, or suitor—a single young man who is of courting age—and the young man on the cover, looking dapper in a crisp, white linen shirt and a colorful, embroidered vest, is clearly dressed in his finest clothes, which would be worn to church and for festive occasions—or to go calling on a young lady.
 Dress codes and lifestyles have changed over the last 200 years, and the diversity by region, so rich at the time, has faded away.
 It is now hard to tell apart the inhabitants of different continents, let alone of different hamlets or towns separated by only a few miles.
 Perhaps we have traded cultural diversity for a more varied personal life—certainly for a more varied and fast-paced technological life.
@@ -142,7 +147,6 @@ Figure 1.7 shows a pseudo-code definition of a reduce function.
 Hadoop’s MapReduce architecture is similar to the master-slave model in HDFS.
 The main components of MapReduce are illustrated in its logical architecture, as shown in figure 1.8
 With some MapReduce and HDFS basics tucked under your belts, let’s take a look at the Hadoop ecosystem, and specifically, the projects that are covered in this book.
-Map outputs for the same key (such as “hamster") go to the same reducer, and are then combined together to form a single input record for the reducer.
 The reduce function is called once per unique map output key.
 The Hadoop ecosystem is diverse and grows by the day.
 It’s impossible to keep track of all of the various projects that interact with Hadoop in some form.
@@ -174,10 +178,10 @@ A single master node runs the master HDFS, MapReduce, and HBase daemons.
 Running these masters on the same host is sufficient for small-to-medium Hadoop clusters, but with larger clusters it would be worth considering splitting them onto separate hosts due to the increased load they put on a single server.
 After reviewing Hadoop’s physical architecture you’ve likely developed a good idea of who might benefit from using Hadoop.
 Let’s take a look at companies currently using Hadoop, and in what capacity they’re using it.
-Hadoop has a high level of penetration in high-tech companies, and is starting to make inroads across a broad range of sectors, including the enterprise (Booz Allen Hamilton, J.P.
 Facebook uses Hadoop, Hive, and HBase for data warehousing and real-time application serving.8 Their data warehousing clusters are petabytes in size with thousands of nodes, and they use separate HBase-driven, real-time clusters for messaging and real-time analytics.
 Twitter uses Hadoop, Pig, and HBase for data analysis, visualization, social graph analysis, and machine learning.
 Twitter LZO-compresses all of its data, and uses Protocol Buffers for serialization purposes, all of which are geared to optimizing the use of its storage and computing resources.
+Yahoo! uses Hadoop for data analytics, machine learning, search ranking, email antispam, ad optimization, ETL,9 and more.
 Morgan, Groupon, LinkedIn, AOL, Last.fm, and StumbleUpon are some of the other organizations that are also heavily invested in Hadoop.
 Microsoft is also starting to work with Hortonworks to ensure that Hadoop works on its platform.
 Google, in its MapReduce paper, indicated that it used its version of MapReduce to create its web index from crawl data.10 Google also highlights applications of MapReduce to include activities such as a distributed grep, URL access frequency (from log data), and a term-vector algorithm, which determines popular keywords for a host.
@@ -253,6 +257,7 @@ In bash and other shells it’s normal to affix the * wildcard to filesystem com
 You would therefore (incorrectly) assume that the command hadoop fs -ls /tmp/* would work.
 But if you run this, and /tmp exists in your filesystem, your shell will expand the path based on the contents of /tmp on your local filesystem, and pass these filenames into Hadoop.
 At this point Hadoop will attempt to list files in HDFS that reside on your local system.
+The workaround is to prevent path expansion from occurring by enclosing the path in double quotes—this would become hadoop fs -ls "/tmp/*"
 Finally, to stop your cluster the process is similar to how you start it:
 With these essentials under your belt your next step is to write a MapReduce job (don’t worry, it’s not word count) that you can run in your new cluster.
 A better approach would be to tokenize each line and produce an intermediary file containing a word per line.
@@ -317,6 +322,7 @@ Hadoop supports ingress and egress at a low level in HDFS and MapReduce.
 Files can be moved in and out of HDFS, and data can be pulled from external data sources and pushed to external data sinks using MapReduce.
 Figure 2.1 shows some of Hadoop’s ingress and egress mechanisms.
 The fact that your data exists in various forms and locations throughout your environments complicates the process of ingress and egress.
+How do you bring in data that’s sitting in an OLTP (online transaction processing) database? Or ingress log data that’s being produced by tens of thousands of production servers? Or work with binary data sitting behind a firewall? Moving data in and out of Hadoop.
 Further, how do you automate your data ingress and egress process so that your data is moved at regular intervals? Automation is a critical part of the process, along with monitoring and data integrity responsibilities to ensure correct and safe transportation of data.
 In this chapter we’ll survey the tools that simplify the process of ferrying data in and out of Hadoop.
 We’ll also look at how to automate the movement of log files, ubiquitous data sources for Hadoop, but which tend to be scattered throughout your environments and therefore present a collection and aggregation challenge.
@@ -335,6 +341,7 @@ An idempotent operation produces the same result no matter how many times it’s
 In a relational database the inserts typically aren’t idempotent, because executing them multiple times doesn’t produce the same resulting database state.
 Alternatively, updates often are idempotent, because they’ll produce the same end result.
 Any time data is being written idempotence should be a consideration, and data ingress and egress in Hadoop is no different.
+How well do distributed log collection frameworks deal with data retransmissions? How do you ensure idempotent behavior in a MapReduce job where multiple tasks are inserting into a database in parallel? We’ll examine and answer these questions in this chapter.
 In the context of data ingress this can be useful because moving large quantities of small files into HDFS potentially translates into NameNode memory woes, as well as slow MapReduce execution times.
 Having the ability to aggregate files or data together mitigates this problem, and is a feature to consider.
 The data format transformation process converts one data format into another.
@@ -475,7 +482,6 @@ Summary We’ve used Flume on a single machine, using the default configuration 
 In a fully distributed setup the Node hosts would need to specify where the Flume Master is located in flume-site.xml, as the next example demonstrates.
 Figure 2.13 Flume Collector data sink supports a variety of output formats.
 How do you determine the number of Flume masters that you should run? Let's say you want to be able to support the failure of two master Flume nodes.
-To figure out the number of Flume masters you should run, take the number of Flume master nodes that could fail, double it, and add 1
 Flume uses an embedded ZooKeeper in each of the Master daemons, but you can configure it to use an external ZooKeeper if one already exists in your environment.
 If you’re capturing Apache logs, you can configure the web server to launch a Flume ad hoc Node and pipe the log output directly to Flume.
 If that Node is talking to a remote Collector, then, unfortunately, the client Node can’t be configured for automatic failover or end-to-end reliability, because the Node can’t be managed by the Flume Master.
@@ -518,7 +524,6 @@ Let’s use the default settings, create a local directory called /tmp/slurper/i
 If you’re running your environment on a Hadoop distribution other than CDH, the HADOOP_HOME environment variable needs to be set with the location of your Hadoop installation:
 A key feature in the Slurper’s design is that it doesn’t work with partially written files.
 Files must be atomically moved into the source directory (file moves in both the Linux3 and HDFS filesystems are atomic)
-Alternatively, you can write to a filename that starts with a period (.), which is ignored by the Slurper, and after the file write completes, you’d rename the file to a name without the period prefix.
 Another key consideration with the Slurper is the assurance that files being copied are globally unique.
 If they aren’t, the Slurper will overwrite that file in HDFS, which is likely an undesirable outcome.
 Moving files is atomic only if both the source and destination are on the same partition.
@@ -527,12 +532,15 @@ Files are first co into this directory in the destination system, and then the s
 The previous approach works well if you’re working with a small number of files that you’re moving into HDFS on a daily basis.
 But if you’re dealing with a large volume of files you want to think about partitioning them into separate directories.
 This has the benefit of giving you more finely grained control over the input data for your MapReduce jobs, as well as helping with the overall organization of your data in the filesystem (you wouldn’t want all the files on your computer to reside in a single flat directory)
+How can you have more dynamic control over the destination directory and the filename that the Slurper uses? The Slurper configuration file (slurper.conf) has a SCRIPT option (which is mutually exclusive of the DEST_DIR option), where you can specify a script that can provide that dynamic mapping of the source files to destination files.
 Let’s assume that the files you’re working with contain a date in the filename, and you’ve decided that you want to organize your data in HDFS by date.
 Let’s write a script that can perform this mapping activity.
 The following example is a Python script that does this:
+What if you want to compress the output file in HDFS, and also verify that the copy is correct? You’d need to use the COMPRESSION_CODEC option, whose value, CompressionCodec classname, also needs to be used.
 The Slurper also supports verification, which rereads the destination file after the copy has completed, and ensures that the checksum of the destination file matches the source file.
 If you want to configure the Slurper to use Snappy for compression and verify the copy, you’d update the slurper.conf file and add the following lines:
 Now that you have the basic mechanics in place, your final step is to run your tool as a daemon, so that it continuously looks for files to transfer.
+This script won’t create a PID file or perform a nohup—because neither makes sense in the context of respawn since inittab is managing the process—and uses the DATASOURCE_NAME configuration value to create the log filename.
 This means that multiple Slurper instances can all be launched with different config files logging to separate log files.
 Summary The Slurper is a handy tool for data ingress from a local filesystem to HDFS.
 It also supports data egress by copying from HDFS to the local filesystem.
@@ -547,7 +555,6 @@ It’s a Hadoop workflow engine that manages data processing activities.
 For our scenario Oozie has a coordinator engine that can start workflows based on data and time triggers.
 Discussion In this technique, you perform a download of a number of URLs every 24 hours using Oozie to manage the workflow and scheduling.
 The flow for this technique is shown in figure 2.15
-You’ll use Oozie’s data triggering capabilities to kick off a MapReduce job every 24
 Oozie has the notion of a coordinator job, which can launch a workflow at fixed intervals.
 The first step is to look at the coordinator XML configuration file.
 This file is used by Oozie’s Coordination Engine to determine when it should kick off a workflow.
@@ -568,7 +575,6 @@ The overall state is RUNNING, which means that the job is waiting for the next i
 When the overall job has completed (after the end date has been reached), the status will transition to SUCCEEDED.
 Because the job ran twice you should confirm that there are two output directories in HDFS corresponding to the two materialized dates:
 If you wish to stop the job, use the -suspend option:
-As long as the job is running, it’ll continue to execute until the end date, which in this example has been set as the year 2016
 Summary I showed you one example of the use of the Oozie coordinator, which offers cron-like capabilities to launch periodic Oozie workflows.
 The Oozie coordinator can also be used to trigger a workflow based on data availability.
 For example, if you had an external process, or even MapReduce generating data on a regular basis, you could use Oozie’s data-driven coordinator to trigger a workflow, which could aggregate or process that data.
@@ -605,13 +611,11 @@ MapReduce job usingDBInputFormat to import data froma relational database intoHD
 Using a helper class to add the MySQL JAR to the distributed cache so that your map and reduce tasks have access to the JAR.
 Database configuration step, where you specify the JDBC driver and the.
 This should a low number or you may ng down your database.
-Avro is a data serialization library that we’ll discuss in detail in chapter 3
 Before you can continue, you’ll need access to a MySQL database and have the MySQL JDBC JAR available.10 You have access to a script (see note) that will create the necessary MySQL user and schema, and load the data for this technique.
 It then loads the stocks sample data (more details in the preface) into the stocks table.
 All of these steps are performed by running the following command:
 MySQL installation instructions can be found in appendix A, if you don’t already have it installed.
 That section also includes a link to get the JDBC JAR.
-You want a map-only job, so set the reducers to 0
 The preface has instructions to download, build, and run the examples.
 Scrip thro your Here’s a quick peek at what the script did with the following MySQL client commands:
 The utility run.sh will launch the DBImportMapReduce MapReduce job, as shown in the following code:
@@ -627,6 +631,7 @@ Figure 2.19 illustrates the time differences between when the initial count quer
 If data in the table being exported is inserted or deleted, you’ll likely get duplicate records and potentially worse side effects.
 Therefore, either perform the import against an immutable table, or carefully choose your queries to guarantee that the results won’t change during the import.
 As the figure 2.19 indicates, because multiple mappers will be running with differing LIMIT and OFFSET settings, the query should be written in a way that will ensure consistent and repeatable ordering in mind, which means that the query needs to leverage a unique key, such as a primary key.
+Phew! Importing data from a relational database seems more involved than it should be—which makes you wonder if there’s a better way to perform the import.
 The previous technique required a fair amount of work as you had to implement the Writable and DBWritable interfaces, and then write a MapReduce job to perform the import.
 Surely there’s an easier way to import relational data! Problem You want to load relational data into your cluster and ensure your writes are efficient and at the same time idempotent.
 The initial query is submitted by the MapReduce client to determine the number of rows to import.
@@ -661,6 +666,7 @@ You can introspect the structure of the Avro file to see how Sqoop has laid out 
 Table 2.5 Sqoop arguments that control the file formats of import commands.
 If you run your generic Avro dumper utility against the Sqoop-generated files in HDFS you’ll see the following:
 In reality you’ll more likely want to periodically import a subsection of your tables based on a query.
+But what if you want to import all of the Apple and Google stocks in 2007 and stick them into a custom HDFS directory? The following code shows how you would do this with Sqoop:
 The --query SQL shown in the previous snippet can also be used to include only a subset of the columns in a table to be imported.
 One of the things that makes SequenceFiles hard to work with is that there isn’t a generic way to access data in a SequenceFile.
 You must have access to the Writable class that was used to write the data.
@@ -738,6 +744,7 @@ Set th this ca fit her interna and th doesn’t $ hbase shell.
 With your data in place you’re ready to export it to HDFS.
 An example use of the Export class is shown in the following snippet, where you’re exporting the whole HBase table:
 The Export class also supports exporting only a single column family, and can also compress the following output:
+What if you want to process that exported data in HDFS? The following code shows an example of how you would read the HBase SequenceFile and extract the Avro stock records.14
 Snappy’s a good e since the SequenceFile lly applies the compression, e compressed content need to be split.
 You can run the code against the HDFS directory that you used for the export and view the results:
 Summary Exporting data from HBase into HDFS is made easier with the built-in HBase Export class.
@@ -875,6 +882,7 @@ We compared and contrasted various log collection frameworks and showcased how F
 We also looked at how Sqoop could be used for relational database ingress and egress, and wrapped up with a look at HBase imports and exports.
 MapReduce’s model for computational parallelism offers its own unique challenges when working with various file formats, so the focus in the next chapter will be on how to work with common file formats such as XML and JSON, as well as helping you pick file formats better suited for life in Hadoop, such as SequenceFiles and Avro.
 MapReduce offers straightforward, well-documented support for working with simple data formats such as log files.
+But the use of MapReduce has evolved beyond log files to more sophisticated data serialization formats—such as text, XML, and JSON—to the point that its documentation and built-in support runs dry.
 The goal of this chapter is to document how to work with common data serialization formats, as well as to examine more structured serialization formats and compare their fitness for use with MapReduce.
 Imagine that you want to work with the ubiquitous data serialization formats XML and JSON.
 These formats work in a straightforward manner in most programming languages, with several tools available to help you with marshalling, unmarshalling, and validating where applicable.
@@ -942,6 +950,7 @@ If you aren’t at the start of the file, you need to figure ou where to start r
 The only way to do this is t keep reading characters until you hit a newline, at which poin.
 MapReduce uses a similar process for supporting output data as it does for input data.
 The OutputFormat performs some basic validation of the data sink properties, and the RecordWriter writes each reducer output to the data sink.
+Much like the InputFormat class, the OutputFormat class, as shown in figure 3.5, defines the contracts that implementers must fulfill, including checking the information related to the job output, providing a RecordWriter, and specifying an output committer, which allows writes to be staged and then made “permanent” upon task and/or job success.
 Please refer to chapter 5 for more details on output committing.
 Just like the TextInputFormat, the TextOutputFormat also extends a base class, FileOutputFormat, which takes care of some complicated logistics such as output committing, which we’ll cover further in this chapter.
 For now let’s take a look at the work the TextOutputFormat is performing (source at http://goo.gl/8ab7Z):
@@ -973,6 +982,7 @@ In this code you use Java’s built-in Streaming API for XML (StAX) parser to ex
 If you run the MapReduce job against Cloudera’s core-site.xml and use the HDFS cat command to show the output, you’ll see the following output:
 This output shows that you’ve successfully worked with XML as an input serialization format with MapReduce.
 Not only that—you can support huge XML files since the InputFormat supports splitting XML.
+Having successfully read XML, the next question is how do you write XML? In your reducer you have callbacks that occur before and after your main reduce method is called, which you can use to emit a start and end tag, as shown in the following example.3
 This could also be embedded in an OutputFormat, but I’ll leave that as an exercise for the reader.
 If you want to work with XML in Pig, the Piggybank library (a user-contributed library of useful Pig code, detailed in chapter 10) contains an XMLLoader.
 It works in a way similar to this technique and captures all of the content between a start and end tag, supplying it as a single byte array field in a Pig tuple.
@@ -992,6 +1002,7 @@ Imagine you have some code that’s downloading JSON data from a streaming REST 
 The data amount that’s being downloaded is large, so each file being produced is multiple gigabytes in size.
 You’ve been asked to write a MapReduce job that can take as input these large JSON files.
 What you have here is a problem in two parts: first, MapReduce doesn’t come with an InputFormat that works with JSON.
+Second, how does one even go about splitting JSON? Figure 3.7 shows the problem with splitting JSON.
 To split files, given a random offset in a file, you’ll need to be able to determine the start of the next JSON element.
 This is made more challenging when working with JSON because it’s a hierarchical data format and the same element name can be used in multiple levels, as shown in the figure.
 Problem You want to work with JSON inputs in MapReduce and also ensure that input JSON files can be partitioned for concurrent reads.
@@ -1014,6 +1025,7 @@ An approach similar to what we looked at in section 3.2.1 for writing XML could 
 Elephant Bird contains a JsonLoader and an LzoJsonLoader, which you can use to work with JSON in Pig.
 Each Pig tuple contains a chararray field for each JSON element in the line.
 Summary This solution assumes that the JSON input is structured with a line per JSON object.
+How would you work with JSON objects that are across multiple lines? An experimental project on GitHub8 works with multiple input splits over a single JSON file.
 This approach searches for a specific JSON member and retrieves the containing object.
 You can also review a Google Code project called hive-json-serde,9 which can support both serialization and deserialization.
 As you can see, using XML and JSON in MapReduce is kludgy and has rigid requirements about how to lay out your data.
@@ -1086,11 +1098,11 @@ Linux co reset yo terminal after se binary d your scr if you agree.
 Now let’s run the identity MapReduce job against the stocks SequenceFile that you created earlier in this technique:
 Because all it’s doing is echoing the input to the output, you should see identical content in both files.
 Let’s make sure that’s the case by reading in the job output file(s)
+First of all, how do you verify that the output is a SequenceFile? Easy, just cat it—the first 3 bytes should be SEQ, followed by a fourth byte containing the SequenceFile version, which is then followed by the key and value classes:
 Now try using the SequenceFile reader code you wrote earlier to dump it to standard output:
 An identity function is a mathematical term to denote a function that returns the same value that was used as its argument.
 In MapReduce this means the same thing—the map identity function emits all the key/value pairs that it is supplied, as does the reducer, without any transformation or filtering.
 A job that doesn’t explicitly set a map or reduce class results in Hadoop using a built-in identity function.
-You want block-level compres (you can also set this to RECOR.
 Set the compression codec that should be used; this case you’re using the default codec, which.
 Because SequenceFiles are key/value based, and the default serialization data format for SequenceFiles is Writable, the use of SequenceFiles is 100 percent transparent to your map and reduce classes.
 We demonstrated this by using MapReduce’s built-in identity map and reduce classes with the SequenceFile as input.
@@ -1103,7 +1115,6 @@ Hive contains built-in support for SequenceFiles but has two restrictions.
 Second, out of the box it only works with SequenceFile values that are Writable, and the way it supports them is to perform a toString() to convert the value into a Text form.
 Appendix A and chapter 11 contain details on installing and using Pig.
 Writable, so you have to write a Hive SerDe, which deserializes your Writable into a form Hive can understand.
-We’ll cover custom Hive SerDe examples in more detail in chapter 10
 Summary SequenceFiles are useful in that they solve two problems that make using MapReduce challenging; they’re natively splittable, and they also have built-in support for compression, which makes it transparent to the user.
 The thorn in the side of SequenceFiles is their lack of support outside of Java, which limits what other tools you can use with them.
 If your data mostly stays in HDFS, however, and is processed with MapReduce (or Hive/ Pig), SequenceFiles may be what you need.
@@ -1117,8 +1128,6 @@ Solution Elephant Bird has a file format that can store Protocol Buffer encoded 
 Discussion We’ll cover how you can use Protocol Buffers in your MapReduce jobs.
 We’ll go through the steps to define a schema, generate Java classes from the schema, and then use your classes in a MapReduce job.
 The key to this solution is Elephant Bird,18 an open source project maintained by Twitter, which contains LZOP compression utilities.
-Twitter uses Protocol Buffers extensively19 to store and work with data in MapReduce,
-A MapReduce ticket asking for native Protocol Buffers support has been open since 2008
 However, there’s been little activity since the end of 2008 on this ticket.
 To work with Protocol Buffers and Elephant Bird, you’ll need to download and install them as well as set up LZOP compression on your system.
 Elephant Bird supports two encoding mechanisms for Protocol Buffers: lineoriented and block-based.
@@ -1150,7 +1159,6 @@ If you run this job it’ll read your input text file containing stock details, 
 You can dump the contents of the MapReduce output file using some reader code (source on GitHub at http://goo.gl/PEyUZ):
 Elephant Bird also contains a loader that can be used to read the LZOP-compressed Protocol Buffers data contained within Elephant Bird’s serialization container.
 Run the following command, and then copy the output string of the script prior to running Pig:
-The map output value is the Stock Protocol Buffers object,
 The map output key is the stock symbol, so use the Text type.tes that you he Elephant.
 If you run the next example and don’t specify your input filename to have an .lzo suffix, it’ll be ignored by the MapReduce job.
 Now launch Pig and dump the contents of the LZOP-compressed Protocol Buffers file to standard out:
@@ -1182,6 +1190,7 @@ But you should find it straightforward to copy and factor out the compression co
 Another item worth noting is that Elephant Bird doesn’t supply Hive SerDe classes to allow you to work with Thrift in Hive.
 Let’s look at what’s likely the most capable data serialization format of all our options, Avro.
 Doug Cutting created Avro, a data serialization and RPC library, to help improve data interchange, interoperability, and versioning in MapReduce.
+Avro utilizes a compact binary data format—which you have the option to compress—that results in fast serialization times.
 While it has the concept of a schema, similar to Protocol Buffers, Avro improves on Protocol Buffers because it works natively with MapReduce.
 As you can see in this figure, the schema is serialized as part of the header, which makes deserialization simple, and loosens restrictions around users having to use the schema in some form when interacting with Avro for deserialization.
 Each data block contains a number of Avro records and by default is 16 KB in size.
@@ -1193,7 +1202,6 @@ Problem You want to work with a data serialization library that works well with 
 Solution Avro code-generation and MapReduce integration are covered in this technique.
 We also cover an examination of how Avro schema evolution works so that your code can support data serialized using different versions of your Avro schema.
 Discussion You can use Avro in one of two ways: either with code-generated classes or with its generic classes.
-In this technique we’ll work with the code-generated classes, but you can see an example of how Avro’s generic records are used in the small files technique in chapter 5
 Since you’ll take the code-generated route, everything starts with a schema.
 You’ll continue to model the stock prices in this section, so the first step will be to create an Avro schema to represent an entry in the stock data:27
 Avro compilers come in two flavors: they can either compile a protocol file or a schema file.
@@ -1274,18 +1282,15 @@ If the L supplied process t Next, you need to provide methods to read the next r
 At this point, you’ve created an InputFormat and a RecordReader that both can work with CSV files.
 Now that you’ve completed the InputFormat, it’s time to move on to the OutputFormat.
 Methods for reading the next record and retrieving the key and value of the record.
-Split the line using the separator, apply transformation if a transformer was supplied,
 Proxy the request for the key to the LineRecordReader, which in turn returns the byte offset of the line in the file.
 OutputFormat classes follow a similar patter to InputFormat classes, where the OutputFormat class handles the logistics around creating the output stream, and delegates the stream writes to the RecordWriter.
 The CSVOutputFormat indirectly extends the FileOutputFormat class (via the TextOutputFormat), which handles all of the logistics related to creating the output filename, creating an instance of a compression codec (if compression was enabled), and output committing, which we’ll discuss shortly.
 That leaves the OutputFormat class with the tasks of supporting a custom field delimiter for your CSV output file, and also creating a compressed OutputStream if required.
 It must also return your CSVRecordWriter, which will write CSV lines to the output stream:40
 Your RecordWriter must write each record emitted by the reducer to the output destination.
-You require that the reducer output key is in array form representing each token in the CSV line, and you specify that the reducer output value must be a NullWritable,
 Define a configuration constant that users can specify a custo.
 Read a custom separator from configuration, and if none exists.
 The constructor, which only sets the field separator and the output stream, is excluded, as seen here.41
-Write the object to the byte stream, handling Text as a special * case.
 The write method is called for each record emitted by the reducer.
 Now you need to apply the new input and output format classes in a MapReduce job.
 Your MapReduce jobs will take CSV as input, and also produce CSV which is separated by colons, not commas.
@@ -1306,6 +1311,7 @@ If the code is written with code reuse in mind, you’d be covered.
 We’ve covered how you can write your own IO format classes to work with a custom file format in MapReduce.
 Now we need to look at a crucial aspect of working with output formats—output committing.
 In the CSV OutputFormat example earlier in this chapter, you extended FileOutputFormat, which takes care of “committing” output after the task has succeeded.
+Why do you need “commits” in MapReduce, and why should you care?
 As a job and its tasks are executing, at some point they will start writing job output.
 Tasks and jobs can fail, they can be restarted, and they can also be speculatively executed.45 To allow OutputFormats to correctly handle these scenarios, MapReduce has the notion of an OutputCommitter, which is a mechanism by which MapReduce invokes a callback when an individual task as well as the overall job have completed.
 This is great if your data sink is HDFS, where you can leverage FileOutputFormat and its committing mechanism.
@@ -1397,7 +1403,7 @@ Use the key from each record fed to the map function from the large dataset to l
 Figure 4.5 shows how the replicated join works in MapReduce.
 The implementation of the replicated join is straightforward, and you can see a demonstration in Hadoop in Action.
 Appendix D provides a generalized framework to perform replicated joins, which can work with data from any InputFormat and OutputFormat.
-We’ll use this framework in the next technique.) This join framework dynamically determines whether the contents of the distributed cache or the input split should be cached, depending on which is smaller.
+This join framework dynamically determines whether the contents of the distributed cache or the input split should be cached, depending on which is smaller.
 Is there a way to utilize map-side joins in cases where initially neither of the datasets are small enough to fit in memory? Time to look at semi-joins.
 Imagine a situation where you’re working with two large datasets that you want to join, such as user logs and user data from an OLTP database.
 Neither of these datasets is small enough to cache in a map task’s memory, so it would seem you’ll have to resign.
@@ -1420,6 +1426,7 @@ You do this by having the map function perform a projection of the user name, an
 To cut down on the amount of data transferred between the map and reduce phases, have the map task cache all of the user names in a HashSet and emit the values of the HashSet in the cleanup method.
 The result of the first job is a unique set of users that appears in the log files.
 The second step is an elaborate filtering MapReduce job, where the goal is to remove users from the user dataset that don’t exist in the log data.
+The first job operates on the large dataset—in our case, the user logs—and.
 Figure 4.7 The first job in the semi-join produces a unique set of user names that exist in the log files.
 The unique user’s output from job 1 will be substantially smaller than the entire user dataset, which makes it the natural selection for caching.
 This is a good time to quickly look at the replicated join framework in appendix D.
@@ -1469,7 +1476,6 @@ Determines how sorted records are logically grouped together for a single reduce
 Finally, the grouping RawComparator is responsible for determining the group boundaries across the sorted records.
 The default behavior in MapReduce is for all three functions to operate on the entire output key emitted by map functions.
 Secondary sorts are useful when you want some of the values for a unique map key to arrive at a reducer ahead of other values.
-I’ll show the value of secondary sorting in other techniques in this book, such as the optimized repartition join, and the friendsof-friends algorithm in chapter 7
 Problem You want to order values sent to a single reducer invocation for a natural key.
 Solution This technique covers writing your partitioner, sort comparator, and grouping comparator classes, which are required for secondary sort to work.
 Discussion In this technique we’ll look at how to use secondary sort to order people’s names.
@@ -1518,7 +1524,6 @@ Once the samples have been extracted, they’re sorted and then N -1 keys are wr
 The InputSampler isn’t a MapReduce job; it reads records from the InputFormat and produces the partition within the process calling the code.
 The following code shows the steps you need to execute prior to calling the InputSampler function:14
 The probability that a key will be picked from the input.
-Set the number of reducers (which is used by the InputSampler when.
 Set the InputFormat for the j which the InputSampler uses.
 You also need to specify the map outpu key and value classes, even if th.
 This code uses all the items in the JobConf object to form this task.
@@ -1598,7 +1603,6 @@ In doing so you create fewer files in HDFS, which means less data to be stored i
 Avro is a data serialization and RPC library invented by Doug Cutting, the creator of Hadoop.
 He created Avro primarily to help improve data interchange, interoperability, and versioning in Hadoop.
 Avro has strong schema evolution capabilities that give it an advantage over competitors such as SequenceFiles.
-Avro and its competitors were covered extensively in chapter 3
 Let’s take a look at the Java code in the following listing,3 which will create the Avro file.
 Check the value of dfs.block.size to see what it’s set to in your cluster.
 Reads a directory containing small files and produces a single Avro file in HDFS.
@@ -1618,7 +1622,6 @@ Looks promising—let’s make sure that the output file is in HDFS:
 Because Avro writes the schema into every Avro file, you don’t need to tell Avro information about the schema as part of deserialization.
 Create an Avro reader object by supplying the InputStream of the file in HDFS.
 Note that you don’t need to supply schema information, because Avro encodes that in.
-The hashes are the same as th you generated with the write,
 Even though this chapter is about HDFS, the next thing you’ll likely want to do is to process the files that you wrote in MapReduce.
 The next listing5 shows the code for this MapReduce job.
 A MapReduce job that takes as input Avro files containing the small files.
@@ -1651,6 +1654,7 @@ Finally, MapR, which provides a Hadoop distribution, has its own distributed fil
 Using MapR for your distributed storage is a big change to your system, so it’s unlikely you’ll move to MapR to mitigate this problem with HDFS.
 You may encounter times when you’ll want to work with small files in Hadoop, and using them directly would result in bloated NameNode memory use and MapReduce jobs that run slowly.
 This technique helped you mitigate these issues by packaging small files into larger container files.
+What if you have the opposite problem, where your files are plenty big and you want to be more efficient about how you store your data? Can you compress data in Hadoop, and how does that work with things like MapReduce? Read on to find out.
 Data compression is a mechanism to reduce the size of data to a more compact form to save on storage space and to make it more efficient to transfer the data.
 Compression is an important aspect of dealing with files, and becomes all the more important when dealing with the data sizes that Hadoop supports.
 Your goal with Hadoop is to be as efficient as possible when working with your data, and picking a suitable compression codec7 will result in your jobs running faster and allow you to store more data in your cluster.
@@ -1665,7 +1669,9 @@ A compression codec is a programming implementation capable of reading and writi
 ZFS, short for Z File System, is a filesystem developed by Sun Microsystems that provides innovative features to enhance data integrity.
 To properly evaluate the codecs you first need to specify your evaluation criteria, which should be based in terms of functional and performance traits.
 For compression your criteria is likely to include the following:
+Splittability—Can a compressed file be split for use by multiple mappers? If a compressed file can’t be split, only a single mapper will be able to work on it.
 If that file spans multiple blocks, you’ll lose out on data locality, because the map will likely have to read blocks from remote DataNodes incurring the overhead of network IO.
+Native compression support—Is there a native library that performs compression and decompression? This will usually out-perform a compression codec written in Java with no underlying native library support.
 Deflate Deflate is similar to zlib, which is the same compression algorithm that gzip uses without the gzip headers.
 At one time LZO/LZOP came bundled with Hadoop, but they have since been removed due to GPL licensing restrictions.
 Snappy Snappy (http://code.google.com/p/hadoop-snappy/) is a recent addition to codec options in Hadoop.
@@ -1674,12 +1680,15 @@ This won’t matter if you work primarily with files that are smaller than or eq
 When you’re performing your own evaluation, I recommend you perform your tests using your data, and preferably on hosts similar to your production nodes.
 This way you’ll have a good sense of the expected compression and runtimes for the codecs.
 Let’s see how the compression codecs currently available compare with each other in table 5.2 (we’ll cover the space/time comparison in the next section)
+Now that you understand the codecs, how do they square up when looking at their space/time trade-offs? I generated a 128 MiB (one mebibyte is 220 bytes) text file by concatenating the source code of Hadoop and various other open source libraries, and then used that to compare the codec run times and their compression sizes.
 The results of these tests can be seen in table 5.3
 Figure 5.3 shows the compressed sizes in bar graph form.
 You need to preprocess them to create an index file, which is then used by their respective CompressionCodec implementations to determine the file splits.
 We’ll cover how you achieve this in a later section on LZOP.
+Deﬂate + gzip: runners-up doing well in compressed ﬁle sizes.
 Figure 5.4 shows the compressed times in bar graph form.
 These times will vary significantly based on hardware, and are only supplied to give a sense of how they relate to each other.
+What do the space and time results tell you? If squeezing as much data into your cluster as possible is your top priority, and you can live with long compression times, then bzip2 may be the right codec for you.
 If you want to compress your data but introduce the least amount of CPU overhead when it comes to reading and writing compressed files, you should look at Snappy.
 Anyone looking for a balance between compression and execution times would have to eliminate bzip2 from the picture.
 LZO(P) + Snappy:  decompression times are a wash, but look at how much faster they are compared to Deflate/gzip at compression.
@@ -1704,6 +1713,7 @@ Technically, you can get out-of-the-box splittable compression with bzip2, but i
 Hadoop except for LZO/LZOP and Snappy, so if you want to work with those three.
 As you’ve learned, there are a number of compression codecs you can use.
 To use them you need to know their class names, which are covered in table 5.4
+How would you compress an existing file in HDFS using any one of the codecs mentioned in the previous table? The following code supports doing that:10
 Construct an instance of the codec with the help of Hadoop’s ReflectionUtils.
 Each codec has a default extensio (which was shown for each codec earlie in this section), and it’s a best practic.
 You can use any standard Java OutputStream writing mechanism to write to your compressed stream; here.
@@ -1837,6 +1847,7 @@ Let’s say you want to extract the metrics for a job where the output was writt
 You would supply that directory name to the CLI, as follows:
 The previous output is only a small subset of the overall output produced by the command, and it’s worth executing it yourself to see the full metrics it exposes.
 This output is useful in quickly evaluating metrics such as average- and worst-task execution times.
+Where does the job history file exist? Figure 6.1 shows its location.
 The job history filename can be confusing because the file ends with a .jar extension, but it’s a text file, marshalled with the JobHistory class.
 You can use the same class to reverse engineer a Java representation of this file.
 You can use the Hadoop CLI only to extract the job statistics from the HDFS output directory, but my utilities have support for that, as well as for extracting statistics from the NameNode log directory.
@@ -1955,10 +1966,10 @@ This number should ideally be set to a number smaller than the number of reduce 
 You can view the number of slots by going to the JobTracker UI, as shown in figure 6.15
 Summary There are circumstances where you can’t avoid running with a small number of reducers, such as when you’re writing to an external resource (such as a database) that you don’t want to overwhelm.
 A common anti-pattern in MapReduce is using a single reducer when you want job output to have total order, and not ordered within the scope of a reducer’s output.
-The number of map and reduce task “slots" in your cluster.
 Figure 6.15 The available slots in your cluster using the JobTracker UI.
 If your job is writing to HDFS, you should make use of the available reduce slots in your cluster.
 You can easily determine this number by looking at the JobTracker, as I showed in this technique.
+The ideal number of reducers is equal to the number of reduce slots in your cluster—minus a few slots—so that if a certain percentage of nodes goes down you’ll still be able to run all the reducers in parallel.
 If the number is significantly less than the number of available slots, you’re likely not maximizing the parallelization of your work.
 If the number is greater than the number of reducers, your job execution time takes longer, because the additional number of reducers will need to execute after the first batch has completed.
 Bear in mind this is a general and simple rule that works well when your cluster is running only a single job at a time.
@@ -2002,6 +2013,7 @@ Summary The simplest ways to cut down on shuffle and sort times is to use a comb
 Both approaches reduce the amount of data flowing between the map and reduce tasks and lessen the network and CPU/disk burden related to the shuffle and sort phases.
 You can also tune a variety of configuration settings to increase the sort buffer size, as well as the number of threads used on the reduce side and map side to transfer map outputs.
 In this section we’ll look at problems that can affect both map and reduce tasks.
+Look at the median and mean (average) shuﬀle and sort times for the reduce tasks…
 The number of threads in the reducer is controlled with.
 Imagine that you’ve tuned your job such that the map tasks are all working on large files that can be split, and your number of reducers is set to the number of reduce slots configured in your cluster.
 Your job could still be running slowly due to other environmental issues, as you’ll see in this next technique.
@@ -2107,7 +2119,6 @@ You can use hdparm to measure the sequential read rate of your hard disk.
 Replace /dev/md1 with the name of your disk device (consult /etc/fstab for device names):
 Percentage of CPU time during which I/O requests were issued.
 Device saturation occurs when this  value is close to 100%
-The average time in milliseconds for a request to be completed,
 The average time it took to service a request after it was popped.
 If the delta between await and svctm becomes significant, this signals that the disk isn't keeping up with requests.
 The number of megabytes read (r) and written (w) from the device per second.
@@ -2116,9 +2127,7 @@ A networking problem will have a big impact on the performance of MapReduce and 
 In this technique we’ll look at ways to ensure you’ve configured your nodes correctly, and also look at how you can test the network throughput between nodes.
 Problem You want to determine if a job runs slowly due to network issues.
 Solution Examining the output of the Linux tools ethtool and sar can help diagnose network mis-configurations.
-Discussion The first thing you need to check is that you’ve configured your ethernet card to run at the correct speed, and that it’s running at full duplex (the ability of the network.
 Compare this value with the advertised speed of your ethernet card and switch.
-A full list of ethernet cards can be obtained with “/sbin/ifconfig ."
 Figure 6.31 shows how to use ethtool to get that information.
 The ethtool command will give you the totals for items such as transmitted bytes.
 To view differences in network card metrics as they happen you can use sar, as shown in figure 6.32
@@ -2304,7 +2313,6 @@ The goal of the combiner is to aggregate and condense data if possible.
 Stop words are common words frequently filtered out as part of natural language processing; see http://en.wikipedia.org/wiki/Stop_words.
 Skewed record sizes in combination with any reduce- or map-side caching can be particularly problematic as they frequently result in the dreaded OutOfMemoryError exception in Java.
 You won’t find any easy way to handle these situations.
-Another approach is to consider using lossy data structures that compress data, such as Bloom filters, which are covered in chapter 7
 Summary Next up we’ll take a look at user space MapReduce code and constructs in Java that can have a detrimental impact on performance.
 We’ll also look at some patterns to optimize your code.
 MapReduce’s execution patterns exercise code in different ways than what you may be accustomed to with other Java applications.
@@ -2337,8 +2345,8 @@ The clone method uses Hadoop’s serialization to make a copy of the Writable, s
 One of the oldest rules in Java has always been that string concatenation using the plus operator should be avoided at all cost, which the following code example shows:
 The reason it was discouraged is that older compilers would generate bytecode using the StringBuffer class, whose synchronization slowed down its execution.
 In recent years, however, the generated bytecode replaced StringBuffer with its nonsynchronized cousin StringBuilder.
+Does that mean that the plus operator is now safe to use? The answer is complicated, and is a yes in situations where the resulting String length is less than 16 characters.
 A detailed analysis of this topic is available at http://goo.gl/9NGe8, but the bottom line is that the safest bet is to use the StringBuilder class, and ideally use the constructor to preallocate enough space for the resulting String to avoid reallocation of the internal byte array in StringBuilder.
-Often you want to cache data in your map and reduce tasks, such as you saw in the map-side join techniques in chapter 4
 In Java caching data is expensive, so let’s briefly get a sense of how much space is taken up when working with common Strings and arrays.
 To start things off, what do you think is the memory usage of the following code?
 Let’s go through the exercise of calculating the memory usage of the previous ArrayList and its contents:
@@ -2347,7 +2355,7 @@ The ArrayList is occupying 24 bytes of memory and we’ve not yet stored anythin
 Let’s look at the memory usage for the Object array within the ArrayList:
 Each element in the array requires 4 bytes for the object reference.
 Finally, you need to understand the memory usage of Strings in Java, which are calculated with the following formula:
-Again the result of this formula needs to be rounded up to the nearest multiple of 8
+The grand total of memory usage for storing the two strings in the ArrayList is 128 bytes!
 The reason I went through this exercise is to build awareness of the overhead incurred in Java to cache data.
 This is also relevant in MapReduce because you often want to cache data, and it’s useful to be able to accurately calculate the memory usage when caching data.
 More details for memory usage in Java can be seen at http:// goo.gl/V8sZi.
@@ -2376,7 +2384,6 @@ We’ll run through a number of useful algorithms that can be performed over gra
 You’ll learn how to use Bloom filters, whose unique space-saving properties make them handy to solve distributed system problems in P2P (peer-to-peer) and distributed databases.
 We’ll also create Bloom filters in MapReduce, and then use them to optimize joins in MapReduce.
 A chapter on scalable algorithms wouldn’t be complete without mention of statistics and machine learning.
-In addition, sorting and joining algorithms are covered in chapter 4
 Let’s kick things off with a look at how to model graphs in MapReduce.
 Graphs are mathematical constructs that represent an interconnected set of objects.
 They’re used to represent data such as the hyperlink structure of the internet, social networks (where they represent relationships between users), and in internet routing to determine optimal paths for forwarding packets.
@@ -2431,8 +2438,6 @@ If you didn’t do this, you couldn’t make this an interactive process because
 The second function of the map is, for all adjacent nodes, to output each adjacent node with its distance and a backpointer, if the node has a non-infinite distance number.
 The backpointer carries information about the nodes visited from the starting node, so that when you reach the end node you know the exact path that was taken to get there:2
 The MapReduce-ready form of the input data, with the addition of a numeric that indicates the number of hops.
-The starting node is Dee, so she has a hop of 0
-Set the default distance to the node to be infinite (which you represent.
 When outputting the original input node, as well as the adjacent nodes and the distances to them, the format (not contents) of the map output value are identical, to make it easier for your reducer to read the data.
 To do this you use a Node class to model the notion of a node, its adjacent nodes, and the distance from the starting node.
 Its toString method generates a string form of this data, which is used as the map output key, as shown in the following listing.3
@@ -2550,7 +2555,6 @@ To add an element into a Bloom filter, it’s hashed k times, and a modulo of th
 That bit in the bit array is then toggled to 1 (one)
 Figure 7.21 shows three elements being added to a Bloom filter and their locations in the bit array.
 To check the membership of an element in the Bloom filter, just like with the add operation, the element is hashed k times and each hash key is used to index into the bit array.
-A true response to the membership query is only returned in cases where all k bit array locations are set to 1
 This is an example of a true positive membership result because the element had been previously added to the Bloom filter.
 The next example shows how you can get a false positive result for a membership query.
 The element being queried is d, which hadn’t been added to the Bloom filter.
@@ -2612,7 +2616,6 @@ Figure 7.29 shows how you would filter data in a mapper such that the join in Ma
 The code for the mapper is shown in the following listing:16
 Figure 7.29 A MapReduce job using a map to join and filter.
 Retrieve a list of the files in the distributed cache.
-Extract the Bloom filter from the first file (assuming the distributed cache only contains.
 Check if the user (the key) is a member of your Bloom filter and, if it is, output it to.
 The only additional item you need to perform in your MapReduce driver code is to add the Bloom filter file you created in the previous technique into the distributed cache, as follows:
 Your MapReduce job doesn’t have a reducer, so the map output will be written to HDFS.
@@ -2629,6 +2632,7 @@ Copy the user tweets into HDFS (the user age file was copied in the previous tec
 The two datasets being joined, the user ages, and the user tweets.
 Most of the algorithms laid out in this chapter are straightforward.
 What makes things interesting is how they’re applied in MapReduce in ways that enable you to efficiently work with large datasets.
+The two main data structures presented were graphs—good for modeling relationships—and Bloom filters, which excel at compact set membership.
 With graphs we looked at how you would use them to model social networks and web graphs, and went through some algorithms such as FoFs and PageRank to mine out interesting facts about your data.
 With Bloom filters we looked at how to use MapReduce to create a Bloom filter in parallel, and then apply that Bloom filter to optimize a semi-join operation in MapReduce.
 We’ve only scratched the surface in this chapter with regard to how data can be modeled and processed.
@@ -2669,7 +2673,6 @@ Care should be taken to install R in the same directory on all the nodes.
 Also make sure that all nodes are running the same version of R.
 We’ll look at a handful of R basics to help you understand the techniques in this chapter, as detailed in figure 8.1
 In R, vectors are the most useful data structure because most of the numerical functions support them.
-This chapter focuses mostly on using vectors (because the examples in this chapter.
 If the result of a function or operation in R isn’t assigned to a variable, by default it’s printed on the console.
 We’ve looked at some simple examples of how to get up and running with R.
 It’s time to introduce Hadoop into the equation and look at how you can use R in combination with Hadoop Streaming.
@@ -2697,7 +2700,6 @@ The R script to perform that task is shown here:2
 This sink function controls the destination of outp Because your code is being used in Hadoop Streaming, y.
 Summary Figure 8.3 shows how Streaming and R work together in a map-only job.
 Any MapReduce code can be challenging to test, but the great thing about using Hadoop Streaming code is that it’s very easy to test on the command line without having to involve MapReduce at all.
-The following shows how the Linux cat utility (a simple.
 Read a line from standard inpu is the number of lines that sh.
 Concatenate the symbol, date, and mean for the day and write.
 Each record is pushed as a single line to the R child process.
@@ -2738,14 +2740,12 @@ The map output key and value are separated by tab by default.
 Map output keys are grouped together, so our code needs to read the input line by line, and when we see a change in the input key we can process all the values for that key.
 Just like on the map side, the R script should write its output as.
 By default the tab character separates the output key from.
-This follows the same pattern that we saw in the previous “map-only" R Streaming job.
 The only difference is that the output isn't written to the OutputFormat, and instead is collected and spilled to disk, awaiting fetch commands from reducer tasks.
 You can perform a simple cat that shows you that the output is identical to what you produced when calling the R script directly:
 Figure 8.6 shows some Streaming configuration settings, which can be used to customize reduce inputs and outputs.
 For additional Streaming features such as more control over sorts, please look at the Hadoop streaming documentation.4
 We’ve looked at how you can use R in combination with Streaming to calculate the means over your stock data.
 One of the disadvantages of this approach is that this can’t be easily integrated into client-side R scripts.
-Specify the map R script (the same scrip you ran in the previous map-only technique.
 Specify that MapReduce should part output based on the first token in the.
 Rhipe, short for R and Hadoop Integrated Processing Environment, is an open source project that, as the name suggests, provides a closer integration of R and Hadoop than what you saw with R and Streaming.
 In R and Streaming you used the command line to launch a Hadoop job, whereas with Rhipe you can actually work with MapReduce directly in R.
@@ -2757,6 +2757,8 @@ Solution This technique shows how Rhipe allows you to write client-side R code t
 It also takes a look at how Rhipe R callbacks are used in the scope of Rhipe MapReduce jobs.
 Discussion The Rhipe script to calculate the stock CMA is shown next.
 Notice that the MapReduce integration is fully baked into Rhipe, which makes it easy to integrate MapReduce into your existing R scripts and processes:5
+To set a custom output key/value separator string, use the following conﬁguration key.
+To set a custom input key/value separator string, use the following conﬁguration key.
 Summary As opposed to your R with Streaming technique, with Rhipe you can execute the R script directly, which in turn will launch the MapReduce job:
 To try and understand how Rhipe works, and how your R code is integrated with Rhipe, we’ll walk through the series of steps in a Rhipe workflow, starting with a look at the main parts of your R script, and how the MapReduce job is triggered, as shown in figure 8.7
 Define the map expression that’s executed in the map task.
@@ -2771,6 +2773,7 @@ Now we’ll see how Rhipe works on the reduce side (as shown in figure 8.9)
 Rhipe also contains a number of functions that can be used to read and write to.
 One area to watch out for in Rhipe is that it doesn’t use Streaming and instead uses its own map and reduce functions and its own Input/Output Format classes.
 As a result, it can’t use other Input/Output Format classes, which you may already have in place to work with your data formats.
+Executing the R script results in Rhipe kicking-oﬀ a MapReduce job.
 The reduce expression, with three callbacks called at the start, during and end of each unique map output key.
 That concludes our look at Rhipe, which offers an integration of R and Hadoop into client-side R scripts.
 The final section takes a look at RHadoop, which also offers a client-side integration of R and Hadoop, albeit in a more lightweight way.
@@ -2887,6 +2890,7 @@ Inner join between users to be recommended with the ratings data.
 Inner join co-occurrence matrix items with items reviewed by user.
 Multiple user rating for each co-occurring item and rank to determine best predictions.
 Classification, also known as supervised learning, is a fancy term for a system that makes predictions on data based on some previously known data.
+As humans we do this all the time—when you see an email titled “REQUEST FOR URGENT BUSINESS RELATIONSHIP,” do you eagerly open it? The answer is, no.
 Prior experience has told you that the combination of words, and the fact that they’re uppercase, means that this email is most likely spam.
 This is an example of human supervised learning, where your current behavior is a result of previous observations you made on similar data.
 You may not have seen an email subject with the exact same sequence of words, but you’ve seen enough examples of similar email subjects which were spam to make you immediately suspicious.
@@ -2903,7 +2907,6 @@ Some of the terms you just saw will be used throughout this section, and are def
 Training—The process by which categorized documents are used to build a model, which can be used by a classifier to categorized unseen documents.
 Classifier—A classifier uses a model extracted from the training data to make predictions about unseen documents or datasets.
 Before we dive into the Hadoop side of supervised learning, we’ll walk through building a handmade classifier using a simple training dataset to get an idea of the overall process.
-A category (also called a “label") is a class of items that you want to classify your data into.
 The examples here show the categories in a spam classification system.
 Training data is a representative real-world sample of data with corresponding categories, used to train a classifier.
 Test data is a representative real-world sample of data which a trained classifier uses to validate the.
@@ -2937,11 +2940,12 @@ The following code shows this probability being calculated for a word in a speci
 The probability that a randomly selected document is in this.
 We can ignore P(D) since it acts as a scaling factor and doesn't change the ranking.
 These values will be used as the value of P(W|C) in the Bayes formula, which you’ll see shortly.
+So you have the probability that each individual word is in a category, but how do you calculate the probability of the overall document being in a category? Bayes comes to the rescue with a theorem into which you can plug your word probabilities, as you see in figure 9.10
 Probability that for a given category C ,i the words in D appear in that category.
+We ignore P(D) to arrive at a simpliﬁed Bayes’ theorem.
 Calculated as the number of times W1  appears in Cidivided by the total number of documents in Ci.
 Calculated as the number of documents in the category Ci divided by the total number of documents.
 If you run your code, you’ll see the same values that you calculated by hand earlier:
-Money" doesn't appear in the ham category, so you set its probability to 0.1
 In real life your classifier wouldn’t work because of the small amount of training documents.
 You’d ideally want a large and equal number of spam and ham documents for training purposes.
 Let’s move on to look at how you’d do that with Mahout.
@@ -2967,7 +2971,6 @@ Summary In this technique we looked at how we could use Mahout to train and test
 The scalability that can be achieved with training in Mahout comes at a high cost, as highlighted in figure 9.12, which shows all the MapReduce jobs that must execute to train the model.
 The size of the n-grams (the number of contiguous words used to create features)
 You want to run this in MapReduce, but if you specify sequential, the test will be performed in the client-side JVM.
-Calculate the sum of TF/IDF values for each word, for each category,
 When training the model, you can play with the -ng argument, which specifies the size of the n-grams extracted from the training data.
 You ran with it set to 1, which means every word was an independent feature, but the overall accuracy of the classifier can improve with larger values.
 When you completed testing your classifier, you were presented with something called a confusion matrix.
@@ -3016,12 +3019,10 @@ This will start an iterative sequence of MapReduce jobs until such a time as the
 When the clustering has completed there should be a number of directories in HDFS that contain output for each of the MapReduce iterations.
 Read through each line of input and create a vector with a 2D data.
 Generate a SequenceFile in HDFS with the input data represented in vector form.
-In your case it’s empty, but if you want to specify an initial set of centroids you’d write them here, and not specify the -k option (which wipes out the contents of this directory and.
 The number of centroids to sample from the input vectors (K)
 Summary When the clustering has completed, you can use the clusterdump Mahout utility to dump out the cluster details of the last job:
 If you superimpose these clusters on top of the original scatterplot, you can see how well the algorithm worked.
 Note that the clusters will vary based on the initial centroids, so your results will differ from those presented here (see figure 9.17)
-The number of data points connected to this cluster, which for this cluster is 65
 The radius of the cluster, expressed as a standard deviation of the distance from the centroid to all 65 data points in the cluster.
 Clustering is sensitive to the initial locations of the centroids; if they had been more randomly distributed, the clustering algorithm would have identified more of the clusters.
 In this simplified example, you only worked with data in two dimensions, which is easy to visualize and vectorize.
@@ -3038,6 +3039,7 @@ The solid gray circle represents the cluster radius standard deviation from the 
 Mahout in Action (Owen et al., Manning, 2011) also contains a section that goes through this exercise in detail.
 Mahout contains other clustering algorithms, some of which can be seen in table 9.2
 This brings to a close part 4, the series of chapters related to data science.
+In part 5, we’ll look at tools and approaches that make life that much easier when working with Hadoop, which I’ve dubbed, “Taming the elephant.”
 Hierarchical clustering is the process or finding bigger clusters, and also the smaller clusters inside the bigger clusters.
 It tries to find bigger clusters first and then does finegrained clustering on these clusters—hence the name Top Down.
 Canopy clustering Canopy clustering is a simple, fast, and surprisingly accurate method for grouping objects into clusters.
@@ -3045,6 +3047,7 @@ Canopy clustering is often used as an initial step in more rigorous clustering t
 By starting with an initial clustering, the number of more expensive distance measurements can be significantly reduced by ignoring points outside of the initial canopies.
 Fuzzy K-means Fuzzy K-means (also called Fuzzy C-means) is an extension of K-means, the popular simple clustering technique.
 While K-means discovers hard clusters (a point belong to only one cluster), Fuzzy K-means is a more statistically formalized method and discovers soft clusters where a particular point can belong to more than one cluster with certain probability.
+Part 5 is called “Taming the elephant,” and it’s dedicated to examining languages, tools, and processes that make it easier to work with MapReduce.
 Why is elephant in the title? Hadoop was created by Doug Cutting, who named the framework after his son’s yellow stuffed elephant.
 Chapter 10 dives into Hive, a SQL-like domain-specific language that’s one of the most accessible interfaces when you work with MapReduce.
 Pig, covered in chapter 11, offers a good compromise as an abstracted MapReduce language that can bump down into Java code when you need a lower level of access to Hadoop.
@@ -3060,7 +3063,6 @@ Are you going to break out your IDE and start writing Java MapReduce code? Not l
 This is where languages such as Hive come into play.
 Hive, with its SQL-like syntax, allows you to write and start executing MapReduce jobs in the same time that it would take you to write your main method in Java.
 Hive is one of the easiest to use of the high-level MapReduce frameworks.
-It’s essentially a Hadoop data warehouse tool, which in some organizations (such as Hacking with Hive.
 Hive owes much of its popularity to the fact that its language is essentially SQL, and as such is accessible to those who’ve had some exposure to SQL in the past.
 Hive was originally an internal Facebook project that eventually tenured into a fullblown Apache project.
 It was created to simplify access to MapReduce by exposing a SQL-based language for data manipulation.
@@ -3168,7 +3170,6 @@ Hive can work with bot Hadoop Writables and the Java primitives, but it’s reco
 This UDF works on the request field, which you split into three parts: the HTTP method, the resource.
 Ignore URLs that don’t pertain to the movie part of your w.
 Extract the text after the leading movie path, which contains your movie title.
-The Description annotation is used to provide usage information in the Hive shell (you’ll see.
 Create a converter that you can use in the eval method to convert all the argum.
 Converters, which you’ll use to convert the input types to the types you want.
 The Description annotation, which we used to annotate the GeolocUDF class in the previous listing, can be viewed in the Hive shell with the DESCRIBE FUNCTION command:
@@ -3179,12 +3180,10 @@ Creates a string that’s used in situations such as exceptions to provide some 
 Hive also has UDTFs, which operate on scalar data but can emit more than one output for each input.
 Much like SQL, a join in Hive combines records from two tables by using values common to each.
 As you saw in chapter 4, joins in MapReduce were fairly complex, especially when working with joins such as map-side joins.
-Joins in Hive abstract away the complexities that you saw when working with MapReduce joins in chapter 4
 But when working with big data, you need to understand what Hive is doing behind the scenes and what optimizations are available to streamline your joins.
 The overall goal of your data analytics is to provide the top movie categories for each country.
 So far you have a Hive table containing geolocated IP addresses and movie titles.
 You now need to combine your movie titles with another Hive table that also contains movie titles in addition to the category for the movie.
-This will require a join, so we’ll look at how joins can be optimized much like we did for MapReduce in chapter 4
 Problem Your Hive joins are running slower than expected, and you want to learn what options you have to speed them up.
 Solution Look at how you can optimize Hive joins with repartition joins, replication joins, and semi-joins.
 Discussion We’ll cover three type of joins in Hive: the repartition join, which is the standard reduce-side join; the replication join which is the map-side join; and the semi-join which only cares about retaining data from one table.
@@ -3194,6 +3193,7 @@ For this technique let’s suppose that you have another table which contains ca
 This is an example of an inner join, which only returns results for rows where both tables have the same join value:
 To provide results even when there’s no match, you need to use an outer join.
 There are three types of outer joins: left, right, and full.
+The result of a left outer join always contains all the rows from the “left” table, even if the join condition doesn’t find any matching row in the “right” table:
 A right outer join is essentially the same as the left outer join, with the roles reversed.
 Rows from the right table are always returned, and only matching rows from the left table are included:
 In this join rows from both tables are always included, even if there’s no match:
@@ -3206,7 +3206,6 @@ A replicated join is a map-side join where a small table is cached in memory and
 You can see how it works in MapReduce in figure 10.9
 To perform a replicated join, there’s a hint you can give to Hive to indicate which table is small and should be cached:
 In joins, it’s important that the largest table is the last table in your Hive statement.
-This is because in the MapReduce implementation of the join, Hive caches matching rows from all the other tables, and then streams the last table, just like the optimized repartition join in chapter 4
 The hint which triggers the map join and also tells Hive which table (movie_categories) to cache.
 The MAPJOIN is merely a hint, and Hive will only perform a map-side join if the following conditions are met:
 Isn’t Hive smart enough to automatically convert a repartition join into a replicated join if one of the tables is small enough? As it turns out, it is, but this behavior isn’t enabled by default.
@@ -3218,6 +3217,7 @@ Hive, by default, doesn’t attempt to do anything about this, but it can be con
 Enable Hive’s automatic join optimization to convert repartition joins to replicated joins.
 This output tells you that Hive decided to go ahead and use a.
 In a semi-join you can’t have the result contain any fields from the right-hand side of the join, which.
+So what happens when Hive detects skew? You can see the additional step that Hive adds in figure 10.10, where skewed keys are written to HDFS and processed in a separate MapReduce job.
 It should be noted that this skew optimization only works with reduce-side repartition joins, not map-side replication joins.
 Summary This technique covered a wide variety of joining options in Hive.
 Your goal was to join movie titles and their categories together, and assuming that your movie category table can fit into memory, the best join option would have been an inner replicated join.
@@ -3432,6 +3432,7 @@ If you recall from the overview earlier in the chapter, a group operator results
 It’s advised that your functions be algebraic or accumulator if you are working with group tuples to help with memory utilization and to break up the work.
 Called one time, once all the tuple chunks have been sent to the accumulate function.
 You want to geolocate IPs in your log files for data analytics, data mining, or potentially security reasons.
+Problem How do you write an evaluation function in Pig? And how do you join your log data with geolocation data? Solution Write an EvalFunc that uses the Distributed Cache to perform IP geolocation using the MaxMind library and data.
 Learn how to register multiple UDFs that can support different input types.
 Discussion This technique will highlight how you write a custom evaluation function, and also how you can use the distributed cache in Pig.
 The distributed cache is a MapReduce mechanism that allows local files and files in HDFS to be made available to MapReduce code.
@@ -3455,7 +3456,6 @@ Before getting into the PigLatin code to run the geolocation, let’s quickly re
 At this stage you have a relation called addrstatus_counts that contains a unique combination of IP address and HTTP status code, and a count of log entries for each combination:
 Handle the case where you’re passed a NULL or empty tuple.
 Get the first field in the tuple, which you assume to be the IP address.
-Create the MaxMind geolocation class an specify the file (in the distributed cach.
 Perform the geolocation and extract the country from the result.
 MaxMind uses N/A to indicate no data for an IP.
 Now let’s run your UDF against the IPs in your log file.
@@ -3465,6 +3465,7 @@ You’ll need to manually set a config setting to specify the file to load into 
 With UDFs you can optionally define both input and output type information.
 The advantage of doing this is that the Pig framework will perform validations, which will let the user know if there’s a type mismatch.
 In your code you specified the output type as String, but you assumed that your input would be a tuple with a single String field.
+What would youdo if youwanted yourUDF to specify what you expect your input type to be? And is there a way to support different input data types? In the example, youmay want to be able to support both the dot-separated string form of an IP, and the numeric form of the IP.
 You have two options available: you can either determine the type (using instanceof) in your execmethod, or you can specify in your UDF type-specific alternative implementations, which is neater and removes ugly type-switching code.
 If this function isn’t supplied, the original UDF will always be used regardless of input type.
 In the example, you want to use your existing UDF to process IP addresses in string form, but use a different UDF to process IP addresses in numeric form:8
@@ -3665,13 +3666,12 @@ A collection can be created in one of two ways: as a result of a read method inv
 There are three types of collections in Crunch, as seen in figure 12.2
 The PGroupedTable is a special collection that’s a result of calling groupByKey on the PTable.
 This results in a reduce phase being executed to perform the grouping.
+What is Crunch? Collection classes contain a number of methods, which operate on the contents of the collections, as seen in figure 12.3
 These operations are executed in either the map or reduce phase.
 Functions can be applied to the collections that you just saw using the parallelDo method in the collection interfaces.
 All the parallelDo methods take a DoFn implementation, which performs the actual operation on the collection in MapReduce.
 Crunch comes with a number of built-in operations (such as joining, grouping, and counting), which, as you’ve seen throughout the book in various guises, represent.
 Combine all the values for each group into a single value.
-MapReduce] Called once for each element in the input collection.
-MapReduce] Called after all the collection items have been submitted to the process method.
 All members of the DoFn implementation must be Serializable, because Crunch serializes the function.
 Because Crunch already has these operations defined, you don’t need to wrestle with MapReduce to write your own.
 Crunch also lets you define your own custom operations, which you’ll use later in this chapter.
@@ -3758,7 +3758,6 @@ Summary There were two areas we covered in this technique: first, how to perform
 At the time of writing, the built-in support for joins in Crunch are limited to a twotable repartition join.
 But Crunch is very powerful and writing joins such as semi-joins and replicated joins is feasible.
 Cascading abstracts MapReduce into a logical model comprised of tuples, pipes, and taps.
-The first token in the line is the IP address,
 Start execu data in the pipeline; the pipes represent operations being performed on tuples; and taps are data sources and data sinks.
 TextLine represents a tuple stream, where each tuple represents a line of te The tuple consists of two fields: the byte offset in the file for the line t.
 Define the data source that will be used to add tuples to the TextLine.
@@ -3794,7 +3793,6 @@ When you write MapReduce code, it’s a good idea to abstract away the code doin
 This is true not only for your map and reduce functions, but also for your InputFormats, OutputFormats, data serialization, and partitioner code.
 Let’s look at a simple example to better illustrate this point.
 The following code shows a reducer that calculates the mean for a stock:
-This is a trivial example, but the way the code is structured means you can’t easily test this in a regular unit test because MapReduce has constructs such as Text, DoubleWritable,
 If you were to structure the code to abstract away the work, you could easily test the user space code that’s doing your work, as the following code shows:
 With this improved code layout you can now easily test the SMA class that’s adding and calculating the simple moving average, without the Hadoop code getting in your way.
 When you write unit tests, you try to discover how your code handles both positive and negative input data.
@@ -3820,6 +3818,7 @@ This is the MapDriver, and as such you need to specify the key/value input and o
 The withOutput method is used to specify the output key/value, which MRUnit will compare against the output generated by the mapper being tested.
 If a failure’s encountered, it logs the discrepancy, and throws an exception.
 If you call the withInput method more than once, it will overwrite the key and value from the previous call to withInput.
+What if you wanted to leverage the power of MRUnit, and also leverage the informative errors that JUnit provides when assertions fail? You could modify your code4 to do that, and bypass MRUnit’s testing code:
 With this approach, if there’s a mismatch between the expected and actual outputs, you get a more meaningful error message, which report-generation tools can use to easily describe what failed in the test:
 To cut down on the inevitable copy-paste activities with this approach, I wrote a simple helper class5 to use JUnit asserts in combination with using the MRUnit driver.
 The run method executes the map function and returns a list of all.
@@ -3844,6 +3843,7 @@ The following code8 is a unit test for testing a pipeline containing two sets of
 With the MapReduce driver you need t specify six types, the map input an.
 Multiple MapReduce drivers are called in a sequence, creating a pipeline of jobs.
 Compare the expected output to the actual output of the final MapReduce job in the pipeline.
+Summary What type of test should you use for your code? Take a look at table 13.1 for some pointers.
 MRUnit has a few limitations, some of which we touched upon in this technique:
 The MapDriver and ReduceDriver support only a single key as input, which can make it more cumbersome to test map and reduce logic that requires multiple keys, such as those that cache the input data.
 MRUnit isn’t integrated with unit test frameworks that provide rich error-reporting capabilities for quicker determination of errors.
@@ -3901,14 +3901,18 @@ You will also look at how you can SSH to individual TaskTracker nodes and examin
 Discussion So, a job has failed and you want to find out information about the cause of the failure.
 When a job fails, it’s useful to look at the logs to see if they tell you anything about the failure.
 Each map and reduce task has its own logs, so you need to identify the.
+Reproduce problem in dev environment, ﬁx problem, and write unit test using problem.
 Check the job inputs are correct, and also ensure that.
+Are all items in section “Coding guidelines for eﬀective debugging”
 Ensure adequate logging and exception handling, turn on verbose logging.
+Do the contents of the output ﬁles line up with the reduce.
 The easiest way to do this is to use the JobTracker UI.
 Select the job that failed from the main JobTracker page, and you’ll be presented with some statistics about tasks, as shown in figure 13.6
 If you click on the number of a failed task you’ll see a page containing all of the failed tasks and a stack trace for each task, an example of which is shown in figure 13.7
 A number of scenarios under which tasks will fail include following:
 Depending on the problem, you may find additional useful information in the logs, or in the standard out (stdout) or standard error (stderr) of the task process.
 You can view all three outputs easily by selecting the All link under the Logs column, as shown in figure 13.8
+This is all fine and dandy, but what if you don’t have access to the UI? How do you figure out the failed tasks and get at their output files? The job history command-line.
 This output is informative: not only do you see the exception, but you also see the task name and the host on which the task was executed.
 Our task didn't produce any output on standard out, just some Log4J warnings on standard error.
 The syslog shows us the exception that's causing the job to fail.
@@ -3922,7 +3926,6 @@ What if you only have SSH access to the cluster? One option is to run Lynx, a te
 If you don’t have Lynx you’ll have to know how to access the task logs directly.
 You know the hostname from the URL, so you’ll need to first SSH to that host.
 The logs for each task are contained in the Hadoop logs directory.
-In the example, you’re running on a packaged CDH installation and CDH doesn’t override the default logs directory, so because HADOOP_HOME is /usr/lib/hadoop,
 Using curl to download the outputs from the TaskTracker URL.
 For the curl command to work you’ll need to run it from a host that has access to the TaskTracker node.
 Under this directory you’ll find at least the following three files:
@@ -3954,6 +3957,7 @@ When you’ve located this directory, you’ll see a number of files related to 
 This file contains information about the location of the input split file in HDFS, as well as an offset that’s used to determine which of the input splits this task is working on.
 Both the task and job split files are a mixture of text and binary content, so unfortunately, you can’t crack out your command-line editor to easily view their contents.
 This is a subsection of the output, showing a failed task.
+This directory contains a  binary ﬁle with input splits details.
 To help with this situation, I’ve written a utility that can read the input split file for a task and use that information to open the job split file in HDFS, jump into the taskspecific offset, and read the task-specific split information.
 Be warned that there’s a good chance this won’t work with versions other than Hadoop 0.20.x.
 If you run this on the input.split file for your failed task you’ll gain some insight into the file and data about the start and end of the split (assuming the input for the task is a file):
@@ -3990,7 +3994,6 @@ Catch exceptions and provide meaningful logging output to help track down proble
 In the following code,13 you’ll see applied a number of the previously described principles.
 A mapper job with some best practices applied to assist debugging.
 When the task starts, write the input spli details to the log.
-If the logger’s in debug mode (whi should never be in production environm.
 Note that you enclose the key and value with square bracke you can easily identify leading and tr.
 Also note that t important because it helps isolate pote.
 Note that yo enclosed both strings wit square brackets to easi.
@@ -4039,13 +4042,11 @@ It’s possible that the data source you’re working with doesn’t scale to su
 I recommend you limit the number of map and/ or reduce tasks to a small number to minimize the likelihood of this occurring.
 Speculative execution is a mechanism used in MapReduce to guard against slow nodes in a cluster.
 As the map and reduce phases of a job near completion, MapReduce will launch duplicate tasks that work off of the same inputs as the remaining tasks.
-This is fine if your job is writing its outputs using the standard MapReduce output mechanism (and assuming the InputFormat being used is correctly handling output committing (see chapter 3 for more details)
 But what if your job is writing to a database or some other external resource, or directly to a file in HDFS? Now you have multiple tasks both writing the same data, which is probably not what you want.
 If you’re using an OutputFormat that’s based on the FileOutputFormat, and you want to write additional output to HDFS, the best approach is to write into the task’s attempt directory.
 Each task’s reduce (or map if a no-reduce job is being run) is written to a temporary attempt directory, and only if the task succeeds are the files moved into the job output directory.
 The following code16 shows a map-only job that is writing output to a side-effect file:
 Sqoop is a tool to import and export database data to and from HDFS.
-More details on Sqoop can be found in chapter 2
 Ask t FileO for t worki for t OutputStream sideEffectStream;
 If you run this job you should observe two output files, one written to be the RecordWriter, and the other written by you directly from your map task:
 Working with bad input is often the norm in MapReduce, but if you have code that doesn’t expect the unexpected, it may start failing when it sees data it doesn’t expect.
@@ -4099,15 +4100,18 @@ By default this is under $HADOOP_HOME/logs on each Hadoop node.
 A.2 Flume Flume is a log collection and distribution system that can transport log files across a large number of hosts into HDFS.
 It’s an Apache project in incubator status, originally developed and currently maintained and supported by Cloudera.
 Chapter 2 contains a section on Flume and how it can be used.
+The resource link titled “CDH3 Installation Guide” shows how to install Flume on CDH.
 For the purpose of the book, the Flume Master and Flume Node packages should be installed.
 Because Flume is currently in incubator status, there aren’t any installation instructions for non-CDH Hadoop distributions.
 It’s a Hadoop workflow engine that manages data processing activities.
 An excellent Flume user guide with a high level of detail.
 Cloudera article on how to use Flume to collect Apache web server logs.
+The previous resource link titled “CDH3 Installation Guide” shows how to install Oozie on CDH.
 Oozie is currently in incubator status, so there aren’t any download packages or instructions from Apache.
 A.4 Sqoop Sqoop is a tool for importing data from relational databases into Hadoop, and vice versa.
 It can support any JDBC-compliant database, and also has native connectors for efficient data transport to and from mySQL and PostgreSQL.
 Chapter 2 contains details on how imports and exports can be performed with Sqoop.
+The resource link above titled “Sqoop Installation” shows how to install Sqoop on CDH.
 If you’re planning on using Sqoop with MySQL, you’ll need to download the MySQL JDBC driver tarball from http://dev.mysql.com/downloads/connector/j/, explode it into a directory, and then copy the JAR file into the Sqoop lib directory:
 You’ll need to set the following environment variables for Sqoop.
 If you’re planning on using Sqoop with MySQL, you’ll need to download the MySQL JDBC driver tarball from http://dev.mysql.com/downloads/connector/j/, explode it into a directory, and then copy the JAR file into the Sqoop lib directory:
@@ -4117,12 +4121,15 @@ HIVE_HOME Only required if you’re planning on using Hive with Sqoop.
 HBASE_HOME Only required if you’re planning on using HBase with Sqoop.
 Chapter 2 contains a number of techniques that show how the binaries are used for imports and exports.
 A.5 HBase HBase is a real-time key/value distributed column-based database modeled after Google’s BigTable.
+The resource link titled “CDH3 Installation Guide” shows how to install HBase on CDH.
 For the purpose of the book, it’s sufficient to install HBase in standalone mode (http://goo.gl/1Y6Bi)
+The previous resource links titled “Apache HBase getting started” and “Apache HBase Reference Guide” have comprehensive installation and configuration instructions for HBase.
 A.6 Avro Avro is a data serialization system that provides features such as compression, schema evolution, and code generation.
 It can be viewed as a more sophisticated version of a SequenceFile, with additional features such as schema evolution.
 Chapter 3 contains details on how Avro can be used in MapReduce as well as with basic input/output streams.
 Avro is a full-fledged Apache project, so you can download the binaries from the downloads link from the previous Apache project page link.
 In this book we’ll use it in conjunction with Elephant Bird and Rhipe.
+You’ll need a C++ compiler, which can be installed on 64-bit RHEL systems with the following command:
 Avro 1.5.4 Javadocs with instructions on how Avro can be used in MapReduce.
 Downloads page, containing a link for version 2.3.0 (required for use with Elephant Bird)
 Thrift documentation is lacking, something which the project page attests to.
@@ -4143,7 +4150,6 @@ You’ll also need to have Maven installed and the automake and libtool packages
 After it’s built, copy the libraries into your Hadoop lib directory:
 Make sure you remove the newlines and spaces such that there are no whitespace characters between the commas.
 The following codecs also assume that you have the LZO/P codecs available.
-However, if you’re running client-side Hadoop code that’s not being invoked via this script, you’ll need to add the following to your Java command line (there should be no whitespace after the colon and the /usr...
 A.10 LZOP LZOP is a compression codec that can be used to support splittable compression in MapReduce.
 Chapter 5 has a section dedicated to working with LZOP.
 In this section we’ll cover how to build and set up your cluster to work with LZOP.
@@ -4162,12 +4168,12 @@ Prebuilt versions of the libraries aren’t bundled, so you’ll need to build t
 After you’ve downloaded and exploded the tarball, change into the directory that was just exploded and run the build to generate both the native and Java libraries:
 After you’re done, copy the resulting libraries into the Hadoop library directives:
 Make sure you remove the newlines and spaces such that there are no whitespace characters between the commas.
-But if you’re running client-side Hadoop code that’s not being invoked via this script, you’ll need to add the following to your Java command line (there should be no whitespace after the colon and the /usr...
 A.11 Elephant Bird Elephant Bird is a project that provides utilities for working with LZOP-compressed data.
 It also provides a container format that supports working with Protocol Buffers and Thrift in MapReduce.
 Please refer to their respective sections in this appendix for instructions.
 After this is done, copy the Elephant Bird JAR from your Maven repository located at http://goo.gl/C6nPp and copy it into your Hadoop lib directory.
 A.12 Hoop Hoop is an HTTP/S server which provides access to all the HDFS operations.
+The “Getting started” resource link has comprehensive instructions on how to download, configure, and run the Hoop server.
 The code in the book is compiled against version 2.0.5 of Elephant Bird.
 The installation instructions above ensure that the 2.0.5 Elephant Bird JAR is placed into the Hadoop lib directory.
 If a newer version of the Elephant Bird JAR is copied into the Hadoop lib directory there’s a chance that some of the examples in this book will fail.
@@ -4175,6 +4181,8 @@ A.13 MySQL MySQL (or another JDBC-compliant database) is needed by some projects
 MySQL packages are usually available for most Linux systems and can be downloaded using the normal package installation scripts.
 For non-Linux systems‚ consult the MySQL project page at www.mysql.com for download and installation instructions.
 A.14 Hive Apache Hive is a data warehouse project that provides a simplified and SQL-like abstraction on top of Hadoop.
+The resource link titled “CDH3 Installation Guide” shows how to install Hive on CDH.
+The resource link titled “Apache release and downloads” contains a download link to get to the Hive tarball.
 The tarball can be extracted on any node that has access to a Hadoop instance.
 The following shows instructions on installation into the /usr/local directory:
 Out of the box, Hive is configured to use an embedded database (Derby) to store metadata.
@@ -4192,6 +4200,8 @@ In a multiuser environment, you need to make sure that the directories used by H
 When you copy the following XML, you’ll need to remove any whitespace between the start and end tags and the actual value.
 The following lines assume Hive is installed under /usr/local/hive, and that Hadoop is installed under /usr/local/hadoop:
 A.15 Pig Apache Pig is a MapReduce pipeline project that provides a simplified abstraction on top of Hadoop.
+The resource link titled “CDH3 Installation Guide” shows how to install Pig on CDH.
+The resource link titled “Apache release and downloads” contains a download link to get to the Hive tarball.
 Download the tarball and then extract to a local directory.
 The following shows instructions on installation into the /usr/local directory:
 There are many useful user-defined functions in PiggyBank, which is a Pig contrib.
@@ -4306,7 +4316,6 @@ Notify the NameNode of your intent to create a file.
 The response is an HTTP temporar redirect with a location field containin the DataNode URL to be used for th.
 The options for APPEND are the same as for the creation operation; refer to table B.2 for more details:
 Your next operation is to perform a directory listing in your directory:
-Construct the DataNode URL (it’s too long to fit on a singl.
 Use the HDFS concatenate command to view the contents of the file.
 A file status operation returns some statistics around a file or directory:
 WebHDFS is a big step forward for HDFS in allowing rich client-side access to HDFS via HTTP.
@@ -4382,7 +4391,6 @@ If the file is larger than ten blocks, it once again asks the NameNode for block
 Now that you understand how HDFS reads data, you can see that it’s optimized for local reads, which is an important characteristic of a distributed system.
 MapReduce leverages this knowledge and intelligently schedules its map tasks to execute on nodes such that the map reads the data from local disk and not over the network.5 You can also leverage this knowledge when making decisions about the architecture of your application.
 Whether or not MapReduce can schedule a map task on a node that has all of its data local is dependent on a variety of factors.
-In this appendix we’ll look at the two join frameworks we used in chapter 4
 The second is a framework provided to perform a replicated join, and you’ll build in some smarts that will allow you to cache the smaller of the datasets being joined.
 D.1 An optimized repartition join framework The Hadoop contrib join package requires that all the values for a key be loaded into memory.
 How can you implement a reduce-side join without that memory space overhead? In this optimization you’ll cache the dataset that’s smallest in size, and then perform a join as you iterate over data from the larger dataset.
@@ -4390,7 +4398,6 @@ This involves performing a secondary sort over the map output data so that the r
 Figure D.2 shows a class diagram broken into two parts, with a generic framework, and some sample implementation classes.
 The goal is to create a generic repartition join mechanism that can work with any datasets.
 For the sake of brevity we’ll highlight the main elements of the package.
-The goals of this class are to classify one dataset as the smaller dataset, and to generate 493
 First we’ll look at the configure method, which is called at.
 The goal here is to label each dataset so the reducer can distinguish between both datasets, and also to determine whether the input split you’re processing is the smaller or larger dataset:
 Emit key/value where key is a composite key containing the join field and the dataset identifier.
@@ -4450,6 +4457,7 @@ As a bonus, the book’s examples create a well-structured and understandable co
 Th is book assumes the reader knows the basics of Hadoop.
 Alex Holmes is a senior soft ware engineer with extensive expertise in solving big data problems using Hadoop.
 He has presented at JavaOne and Jazoon and is a technical lead at VeriSign.
+Interesting topics that    tickle the creative brain.”—Mark Kemna, Brillig “Ties together the Hadoop ecosystem.
 Hadoop in Practice brief contents contents preface acknowledgments about this book Roadmap Code conventions and downloads Third-party libraries Datasets Getting help Author Online About the author About the cover illustration.
 Technique 62 Using Mahout to train and test a spam classifier.
 Technique 75 A four-step process to working rapidly with big data.

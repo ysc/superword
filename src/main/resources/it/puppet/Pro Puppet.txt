@@ -2,6 +2,8 @@ Pro Puppet Learn how to automate your system administration tasks across an enti
 This book holds all the knowledge, insider tips and techniques you need to install, use, and develop with Puppet, the popular configuration management tool.
 It shows you how to create Puppet recipes, extend Puppet, and use Facter to gather configuration data from your servers.
 You’ll discover how to use Puppet to manage Postfix, Apache and MySQL servers, as well as how to load-balance your Puppet Masters.
+How to scale Puppet to suit small, medium and large organizations.
+How advanced Puppet techniques can make managing your environment easier.
 Pro Puppet will teach you how to extend Puppet’s capabilities to suit your environment.
 Whether you have a small network or a large corporate IT infrastructure, this book will enable you to use Puppet to immediately start automating tasks and create reporting solutions.
 For your convenience Apress has placed some of the front matter material after the index.
@@ -15,7 +17,6 @@ My experience is not unique, and this sort of development is a common response t
 Very few of the scripts developed in this ad hoc manner are ever published, documented, or reused.
 Indeed, copyright for most custom material rests with the operator or system administrator’s organization and is usually left behind when they move on.
 This leads to the same tool being developed over and over again.
-Sometimes they are even developed over and over again in the same company if previous incarnations don’t suit a new incumbent (or occasionally, if they are indecipherable to a new incumbent!)
 These custom scripts and applications rarely scale to suit large environments, and they often have issues of stability, flexibility, and functionality.
 In multi-platform environments, such scripts also tend to suit only one target platform, resulting in situations such as the need to create a user creation script for BSD, another one for Linux, and still another for Solaris.
 This increases the time and effort required to develop and maintain the very tools you are hoping to use to reduce administrative efforts.
@@ -45,11 +46,11 @@ This book will introduce you to Puppet, an open source configuration management 
 Puppet is an open source framework and toolset for managing the configuration of computer systems.
 In this book, we’re going to look at how you can use Puppet to manage your configuration.
 As the book progresses, we’ll introduce Puppet’s features and then show you how to integrate Puppet into your provisioning and management lifecycle.
-To do this, we’ll take you through configuring a real-world scenario that we’ll introduce in Chapter 2
 In this chapter, we start with a quick overview of Puppet, what it is, how it works, and which release to use, and then we show you how to install Puppet and its inventory tool, Facter.
 We’ll then configure it and show you how create your first configuration items.
 We’ll also introduce you to the concept of “modules,” Puppet’s way of collecting and managing bundles of configuration data.
 We’ll then show you how to apply one of these modules to a host using the Puppet agent.
+What Is Puppet? Puppet is Ruby-based, licensed as GPLv2 and can run in either client-server or stand-alone modes.
 Kanies has been involved with Unix and systems administration since 1997 and developed Puppet from that experience.
 Shortly after this, Puppet Labs released their flagship product, Puppet.
 Puppet can be used to manage configuration on UNIX (including OSX) and Linux platforms, and recently Microsoft Windows platforms as well.
@@ -57,6 +58,7 @@ Puppet is often used to manage a host throughout its lifecycle: from initial bui
 Puppet is designed to continuously interact with your hosts, unlike provisioning tools which build your hosts and leave them unmanaged.
 Puppet has a simple operating model that is easy to understand and implement.
 Deployment Puppet is usually deployed in a simple client-server model (Figure 1-2)
+The server is called a “Puppet master”, the Puppet client software is called an agent and the host itself is defined as a node.
 The Puppet master runs as a daemon on a host and contains the configuration required for your environment.
 The Puppet agents connect to the Puppet master via an encrypted and authenticated connection using standard SSL, and retrieve or “pull” any configuration to be applied.
 Importantly, if the Puppet agent has no configuration available or already has the required configuration then Puppet will do nothing.
@@ -87,7 +89,6 @@ The resource in Listing 1-1 specifies that a package called vim should be instal
 In Listing 1-1, the resource type is the package type.
 Puppet comes with a number of resource types by default, including types to manage files, services, packages, and cron jobs, among others.
 Note You can see a full list of the types Puppet can currently manage (and their attributes) at http://docs.puppetlabs.com/references/stable/type.html.
-You can also extend Puppet to support additional resource types, as we’ll discuss in Chapter 10
 Next is the title of the resource, here the name of the package we want to install, vim.
 The type and title of the resource can be combined together to allow Puppet to create a reference to the resource.
 We’ll see this a lot more in later chapters when we build relationships between resources, allowing us to create structure in our configuration, for example installing a package before starting its associated service.
@@ -99,6 +100,7 @@ The present value tells Puppet we want to install the package.
 To uninstall the package we would change the value of this attribute to absent.
 Resource Abstraction Layer With our resource created, Puppet takes care of the details of how to manage that resource when our agents connect.
 Puppet handles the “how” by knowing how different platforms and operating systems manage certain types of resources.
+Each type has a number of “providers.”  A provider contains the “how” of managing packages using a particular package management tool.
 For the package type, for example, for there are more than 20 providers covering a variety of tools including yum, aptitude, pkgadd, ports, and emerge.
 When an agent connects, Puppet uses a tool called “Facter” to return information about that agent, including what operating system it is running.
 Puppet then chooses the appropriate package provider for that operating system and uses that provider to check if the vim package is installed.
@@ -209,7 +211,9 @@ On most platforms, Puppet’s configuration will be located under the /etc/puppe
 Note We’re assuming your operating system uses the /etc/ directory to store its configuration files, as most Unix/Linux operating systems and distributions do.
 If you’re on a platform that doesn’t, for example Microsoft Windows, substitute the location of your puppet.conf configuration file.
 The puppet.conf configuration file is constructed much like an INI-style configuration file and divided into sections.
+For example, the [agent] section configures the Puppet agent, and the [master] section configures the Puppet master binary.
 All components of Puppet will set options specified in the [main] section.
+Note On releases before 2.6.0, each section was named for the Puppet binary command rather than the function, for example the [master] section was called [puppetmasterd] and the [agent] section was [puppetd]
 If you have this older style configuration, then Puppet 2.6.0 and later versions will prompt you to update your configuration file when you start Puppet.
 At this stage, we’re only going to add one entry, certname, to the puppet.conf file.
 The certname option specifies the name of the Puppet master.
@@ -232,7 +236,6 @@ We’ll talk about a variety of other options throughout this book.
 This port needs to be open on your master’s firewall (and any intervening firewalls and network devices), and your client must be able to route and connect to the master.
 To do this, you need to have an appropriate firewall rule on your master, such as the following rule for the Netfilter firewall:
 A INPUT -p tcp -m state --state NEW --dport 8140 -j ACCEPT.
-The preceding line allows access from everywhere to TCP port 8140
 If possible, you should lock this down to only networks that require access to your Puppet master.
 Note You can create similar rules for other operating systems’ firewalls such as pf or the Windows Firewall.
 Starting the Puppet Master The Puppet master can be started via an init script on most Linux distributions.
@@ -308,7 +311,6 @@ The import statement will load all files with a suffix of .pp in the directories
 In Listing 1-3, we’ve created a variable that contains the fully qualified domain name of our Puppet.
 Agent Configuration Let’s add our first agent definition to the nodes.pp file we’ve just asked Puppet to import.
 You can see the node definition we’re going to add in Listing 1-4
-Note We’ll see more of node regular expressions in Chapter 3
 Next, we specify an include directive in our node definition.
 The include directive specifies a collection of configuration that we want to apply to our host.
 There are two types of collections we can include in a node:
@@ -351,7 +353,6 @@ A number of resources on your hosts, for example a Web server or an MTA (Mail Tr
 Relationships allow you to specify that certain resources, for example those configuring your network, are processed before those resources that configure your Web server or MTA.
 For example, if a file resource changes, then you can tell Puppet to restart a service resource.
 This means you can change a service’s configuration file and have that change trigger a restart of that service to ensure it is running with the updated configuration.
-We’ll see a lot more of these relationships and other metaparameters in Chapter 3
 Note You can see a full list of the available metaparameters at http://docs.puppetlabs.com/references/stable/metaparameter.html.
 Its first three attributes allow us to specify the owner, group and permissions of the file.
 In this case, the file is owned by the root user and group and has its mode set to 0440 (currently the mode can only be set using octal notation)
@@ -368,12 +369,12 @@ This is the equivalent of the path to a network file share.
 The first portion of this share is modules, which tells us that the file is stored in a module.
 Next we specify the name of the module the file is contained in, in this case sudo.
 Finally, we specify the path inside that module to find the file.
+All files in modules are stored under the files directory; this is considered the “root” of the module’s file “share.” In our case, we would create the directory etc under the files directory and create the sudoers file in this directory.
 As your configuration gets more complicated, you should consider adding it to a version-control system such as Subversion or Git.
 A version-control system allows you to record and track changes to files, and is commonly used by software developers.
 For configuration management, version control allows you to track changes to your configuration.
 This is highly useful if you need to revert to a previously known state or make changes without impacting your running configuration.
 You can find information about how to use Subversion at http://svnbook.red-bean.com/ and some specific ideas about how to use it with Puppet at http://projects.puppetlabs.com/projects/puppet/wiki/Puppet_Version_Control.
-We’ll also show you how a version control system might work with Puppet in Chapter 3
 Applying Our First Configuration We’ve created our first Puppet module! Let’s step through what will happen when we connect an agent that includes this module.
 Lastly, it will download the sudoers file and install it into /etc/sudoers.
 Remember we created a node statement for our host in Listing 1.4:
@@ -384,13 +385,13 @@ To run in “noop” mode, specify --noop on the command line.
 In Listing 1-7, we’ve run the Puppet agent and connected to the master.
 We’ve run the agent in the foreground, in verbose mode and with the --onetime option that tells the Puppet agent to only run once and then stop.
 We can see a configuration run commence on our host:
+Tip In Puppet, the combined configuration to be applied to a host is called a “catalog” and the process of applying it is called a “run.” You can find a glossary of Puppet terminology at http://projects.puppetlabs.com/projects/puppet/wiki/Glossary_Of_Terms.
 First we see that the agent has cached the configuration for the host.
 By default, Puppet uses this cache if it fails to connect to the master during a future run.
 First the sudo package is installed and then the /etc/sudoers file is copied across.
 We can see that during the copy process Puppet has backed up the old file, a process Puppet calls file bucketing.
 This means that if we’ve made a mistake and overwritten the file incorrectly we can always recover it.
 Tip Puppet can back up files remotely to our master using the filebucket type.
-We’ll show you how to do this in Chapter 3
 The last line of the catalog run tells us this process took 10.54 seconds to complete.
 If we look on the Puppet master, we can see the results of the run logged there too.
 This catalog is then sent down to the agent and applied on the target host.
@@ -411,6 +412,7 @@ As we configure each host, we’ll introduce some of the different features and 
 By the end of the chapter you’ll have a firm grasp of the basics.
 In subsequent chapters, we’ll build on this knowledge and introduce some of Puppet’s more advanced features.
 Getting Started Before proceeding, we must have the proper setup, so we need to install the Puppet master and agent and then create node definitions for each of our hosts.
+Note As we mentioned in Chapter 1, the Puppet software is called the “agent.” Puppet calls the definition of the host itself a “node.”
 Installing Puppet First, we need to install the Puppet master and agent.
 We’re installing the agent on the Puppet master because we’re going to use Puppet to manage itself! We then need to connect, create and sign certificates for each host.
 To do this, you should follow the installation instructions for the relevant operating system from Chapter 1 on each of the four hosts.
@@ -427,7 +429,6 @@ In version 0.25.0 and later, we can also specify these nodes in the form of a re
 Using External Sources Puppet also has the ability to use external sources for your node data.
 These sources can include LDAP directories, databases or other external repositories.
 This allows you to leverage existing sources of information about your environment, such as asset management systems or identity stores.
-This functionality is called External Node Classification, or ENC, and we’ll discuss it in more detail in Chapter 3
 Specifying a Default Node You can also specify a special node called default.
 If no other node definition exists, then the contents of this node are applied to the host.
 You can use this to have one node inherit the contents of another node.
@@ -545,6 +546,7 @@ We can now refer to this resource as File["passwd"] as an aliased short-hand.
 Note You should also read about the alias metaparameter, which provides a similar capability, at http://docs.puppetlabs.com/references/latest/metaparameter.html#alias.
 In our current example, the name of the package we’re managing varies on different hosts.
 Therefore, we want to specify a generic name for the resource and a platform-selected value for the actual package to be installed.
+You can see that inside this new name attribute we’ve specified the value of the attribute as $operatingsystem followed by a conditional syntax that Puppet calls a “selector.” To construct a selector, we specify the a variable containing the value we want to select on as the value of our attribute, here $operatingsystem, and follow this with a question mark (?)
 We then list on new lines a series of selections, for example if the value of $operatingsystem is Solaris, then the value of the name attribute will be set to openssh, and so on.
 You can also see some other examples of regular expressions in selectors at http://docs.puppetlabs.com/guides/language_tutorial.html#selectors.
 This value is used if no other listed selection matches.
@@ -567,6 +569,7 @@ Functions are commands that run on the Puppet master to perform actions.
 Puppet has a number of other functions, including the generate function that calls external commands and returns the result, and the notice function that logs messages on the master and is useful for testing a configuration.
 Functions only run on the Puppet master and cannot be run on the client, and thus can only work with the resources available on the master.
 You can see a full list of functions at http://docs.puppetlabs.com/references/stable/function.html and we’ll introduce you to a variety of other functions in subsequent chapters.
+We’re going to come back to the ssh::params class and add more variables as we discover other elements of our OpenSSH configuration that are unique to particular platforms, but for the moment how does including this new class change our Package["ssh"] resource?
 You can see our namespacing is useful for other things, here using variables from other classes.
 We can refer to a variable in another class by prefixing the variable name with the class it’s contained in, here ssh::params.
 Our resource is now much neater, simpler and easier to read.
@@ -582,6 +585,8 @@ For example, the require metaparameter tells Puppet that all the resources in th
 In our example, the OpenSSH package must be installed before Puppet tries to manage the service’s configuration file.
 If the current resource (the service’s configuration file) is changed, then Puppet should notify all the resources contained in the ssh::service class.
 In our current case, a “notification” will cause the service resources in the ssh::service class restart, ensuring that if we change a configuration file that the service will be restarted and running with the correct, updated configuration.
+Tip In Puppet 2.6.0, a shorthand method called “chaining” was introduced for specifying metaparameter relationships, such as require and notify.
+So why specify the whole ssh::service class rather than just the Service["sshd"] resource? This is another piece of simple best practice that allows us to simplify maintaining our classes and the relationships between them.
 Imagine that, instead of a single package, we had twenty packages.
 If we didn’t require the class then we’d need to specify each individual package in our require statement, like this:
 We’d need to do that for every resource that required our packages, making our require statements cumbersome, potentially error prone, and most importantly requiring that every resource that requires packages be updated with any new package requirements.
@@ -616,7 +621,6 @@ Note that we’ve used an array to specify both packages in a single resource st
 The postfix::config class Next, we have the postfix::config class, which we will use to configure our Postfix server.
 You may have noticed some new syntax: We specified the File resource type capitalized and without a title.
 This syntax is called a resource default, and it allows us to specify defaults for a particular resource type.
-In this case, all File resources within the postfix::config class will be owned by the user postfix, the group postfix and with a mode of 0644
 Resource defaults only apply to the current scope, but you can apply global defaults by specifying them in your site.pp file.
 A common use for global defaults is to define a global “filebucket” for backing up the files Puppet changes.
 You can see the filebucket type and an example of how to use it globally at http://docs.puppetlabs.com/references/stable/type.html#filebucket.
@@ -641,6 +645,7 @@ You can see a fairly typical Postfix main.cf configuration file with the additio
 You can specify any variable in a template like this.
 This is a very simple template and ERB has much of the same capabilities as Ruby, so you can build templates that take advantage of iteration, conditionals and other features.
 You can learn more about how to use templates further at http://docs.puppetlabs.com/guides/templating.html.
+Tip You can easily check the syntax of your ERB templates for correctness using the following command: erb x -T '-' mytemplate.erb | ruby –c.
 Replace mytemplate.erb with the name of the template you want to check for syntax.
 The postfix::service class Next we have the postfix::service class, which manages our Postfix service:
 And finally, we have the core postfix class where we include all the other classes from our Postfix module:
@@ -671,7 +676,6 @@ Lastly, we can apply our mysql module to the db.example.com node.
 Now, when the db.example.com node connects, Puppet will apply the configuration in both the base and mysql modules.
 In addition to the normal mode of changing configuration (and the --noop mode of modelling the proposed configuration), Puppet has a new audit mode that was introduced in version 2.6.0
 A normal Puppet resource controls the state you’d like a configuration item to be in, like this for example:
-This file resource specifies that the /etc/hosts file should be owned by the root user and group and have permissions set to 0660
 Every time Puppet runs, it will check that this file’s settings are correct and make changes if they are not.
 In audit mode, however, Puppet merely checks the state of the resource and reports differences back.
 Using this new metaparameter we can specify our resource like this:
@@ -750,7 +754,6 @@ Just like a set of production, testing, and development systems, which are separ
 We show you how to configure environments on your Puppet masters and how to control which agents connect to which environment.
 Each agent can connect to a specific environment that will contain a specific set of configuration.
 Finally, we exercise the workflow of making changes using our version control system, testing those changes in a safe and easy way using environments, then promoting the tested changes to the production environment in Puppet.
-In order to demonstrate all of this to you, we create another host for the Example.com Pty Ltd organization we first introduced in Chapter 1
 This host has been introduced to allow Example.com to test changes to their email server without impacting the production mail server.
 Note This chapter starts to demonstrate the power of Puppet for re-using configuration: Rather than starting a new configuration from scratch, we can use existing Puppet manifests to create a new mail server.
 Configuring Puppet Environments To configure Puppet environments, you need to add them to the Puppet master’s configuration.
@@ -767,8 +770,8 @@ Most systems include an init script to accomplish this task.
 In order to fully utilize environments, your Puppet manifests should be organized into modules.
 In this chapter, we use the modules we’ve created to manage our production environment, the main environment defined in Listing 3-1
 Populating the New Environments Once you’ve defined the multiple environments on the Puppet master server, you need to populate these new search paths with the Puppet modules and manifests you’ve already created in production.
+In the “Version Controlling Your Modules” section of Chapter 2, our hypothetical company configured Puppet modules using the Git version control system.
 We’ll expand on the file organization and introduce a strategy to manage and migrate changes between Puppet environments.
-Note If you have not yet installed Git and would like to do so now, please refer back to the Git installation information in Chapter 2
 We will use Git to make sure each of our three new environments; main (or production), development and testing will receive an identical copy of our production environment.
 The version control system will also allow us to easily keep these three environments synchronized when necessary, while also allowing them to diverge when we want to try out new changes.
 Three environments with identical modules and manifests will allow us to quickly make changes in the development or testing environment without impacting the production environment.
@@ -890,6 +893,7 @@ Many large teams find it beneficial to create per-contributor environments in ad
 Per-contributor environments allow each person to test their own branches without interfering with the development environments of other individuals.
 Testing the Puppet Agent Against the sshd Configuration File Now that we’ve switched to our new topic branch in the development environment, we’re able to test the Puppet agent against the development environment.
 Notice that this Puppet agent run is running in noop mode, and that the agent tells us it would have.
+You’re able to verify that the production environment remains unchanged, just like we did in the “Making Changes to the Development Environment” section when we updated the Postfix configuration file.
 Simply remove the environment command line option to cause the agent to execute in the default production environment again:
 Making Changes to the Postfix Configuration File While the system operator is working on the change to the sshd_config file, the developer in our hypothetical company is working on a change to the Postfix configuration file.
 Once the developer has cloned his personal copy of the central repository, he’s able to make his change to the Postfix configuration file.
@@ -911,6 +915,7 @@ The overall workflow the developer follows is to push their topic branch to the 
 Before publishing his topic branch to a different repository, he decides to clean up his commit history to remove the entire commit that he created simply to fix a single character mistake he introduced.
 The git rebase command allows him to quickly and easily modify his topic branch to clean up this mistake.
 This command will open, in your default text editor, a list of commits to the topic branch since it diverged from the master development branch.
+In order to clean up the commit history, the developer replaces “pick” with “squash” in the line listing his commit to add the missing curly brace.
 This will effectively combine this commit with the commit above it, where the curly brace should have been present in the first place.
 However, if you remove everything, the rebase will be aborted.
 Once the developer makes this change, he saves the file and quits the editor.
@@ -964,6 +969,7 @@ You’ll see how tags provide the ability to quickly roll back changes that migh
 First, the team decides to release the current testing branch into production.
 Before doing so, the system administrator creates a tag so this release can be easily referred back to in the future.
 The system administrator does this in his own personal repository in his home directory:
+The process of creating a tag is often called “cutting a release.” The system administrator has done just this, tagged the current testing branch as a release to production, and then published the new tagged release into the central repository.
 New branches, such as the testing or topic branches, were activated in the development and testing environments in the previous section.
 The process of activating a new production release is very similar, except instead of checking out a branch, which may change over time, a specific tag is checked out, which is static and refers to a very specific point in the history of configuration changes.
 To activate the new production release, the system administrator logs into the Puppet master system as the user puppet, fetches the new tag from the central repository, and then checks out the tagged production release.
@@ -986,7 +992,6 @@ Rebase against the master branch to remove any unnecessary commits.
 Activate and try the changes in the development puppet environment.
 Periodically merge and activate change lists from multiple people into a testing branch.
 Periodically cut a release of the testing branch using version control tags.
-Resources • Debian stable, testing, unstable releases and distributions http://www.debian.org/doc/FAQ/ch-ftparchives.en.html.
 We’ve seen that the Puppet agent and master require very little work to get up and running on a handful of nodes using the default configuration.
 It is, however, a significantly more involved undertaking to scale Puppet to handle hundreds of nodes.
 Yet many installations are successfully using Puppet to manage hundreds, thousands and tens of thousands of nodes.
@@ -995,6 +1000,7 @@ In this chapter you’ll see how to enable a single Puppet master system to hand
 We also demonstrate how to configure more than one Puppet master system to handle thousands of nodes using a load balancer.
 Throughout, we make a number of recommendations to help you avoid the common pitfalls related to performance and scalability.
 Finally, you’ll learn how to measure the performance of the Puppet master infrastructure in order to determine when it’s time to add more capacity.
+We also provide two small scripts to avoid the “thundering herd effect” and to measure catalog compilation time.
 First, though, we need review some of the challenges you’ll be facing along the way.
 Identifying the Challenges Earlier in the book, you learned a bit about Puppet’s client-server configuration and the use of SSL to secure connections between the agent and the master.
 As a result, when we’re scaling Puppet we are in fact scaling a web service, and many of the problems (and the solutions) overlap with traditional web scaling.
@@ -1077,7 +1083,6 @@ The Puppet master virtual host will use the combined access logs to record incom
 We can also see the Puppet agent sends the list of facts about itself in the request URI.
 The Puppet master compiles the modules and manifests into a configuration catalog and provides this catalog in the HTTP.
 The “200” status code indicates that this operation was successful.
-We cover more information about reports and reporting features in Puppet in Chapter 10
 In addition to the Apache access_log, the Puppet master process itself continues to log information about itself to the system log.
 This information is available in /var/log/messages on Enterprise Linux bases systems and in /var/log/daemon on Ubuntu/Debian systems.
 And that’s it! You’ve added an Apache and Passenger front-end to your Puppet master that will allow you to scale to a much larger number of hosts.
@@ -1108,7 +1113,6 @@ All traffic between the front-end load balancer and the back-end Puppet master s
 Requests directly to the worker virtual hosts may easily be forged and should only be allowed from the load balancer.
 If this is an unacceptable configuration for your environment, please consider using a TCP load balancer in order to preserve and pass through the SSL encryption to the back-end Puppet master virtual hosts.
 Puppet Master Worker Configuration When running the Puppet master behind a load balancer, there will be multiple Puppet master processes running on different hosts behind the load balancer.
-The load balancer will listen on the Puppet port of 8140
 Incoming requests will be dispatched to available back-end worker processes, as illustrated in Figure 4-1
 The example configuration presented in this chapter configures the Puppet CA and workers all on the same host using unique TCP ports bound to the loopback interface.
 To get started with our load-balancing configuration, you’ll copy the existing Puppet master virtual host we configured in the previous section into two additional virtual host configurations.
@@ -1132,7 +1136,6 @@ At the top of the load balancer virtual host configuration, a pool of back-end v
 Part of the responsibility of the front-end load balancer is to determine if each back-end worker is online and available to handle requests.
 The Puppet agent nodes will not see an error message unless all back-end worker virtual hosts are marked as offline.
 When additional back-end virtual hosts are added to the system, they should be listed using the BalancerMember keyword in the Proxy stanza.
-Once listed, they’ll automatically be added to the rotation of back-end workers used by the front-end virtual host listening on port 8140
 The second important section of the front-end virtual host configuration file is the three RequestHeader lines.
 These three configuration statements configure the front-end load balancer to set three client request headers containing authentication information.
 When a back-end Puppet master virtual host receives a client request from the load balancer, it will inspect these client request headers and set environment variables based on their contents.
@@ -1166,7 +1169,6 @@ Now that you’ve seen one and no back-end masters working, let’s bring back b
 In doing so, you will configure the second Puppet master worker.
 The second back-end worker running on TCP port 18141 is almost identical to the first worker virtual host configuration, except the port number is incremented by one.
 First re-enable the first backend worker, and then define the second back-end worker:
-This command renamed the disabled configuration file back to the original name of 18140
 This command reads the configuration file of the first worker and writes out a new configuration file for the second worker.
 The Rack configuration for each worker process is identical and needs no modification when bringing additional workers online.
 Using the rsync command, we’re able to create an identical copy of the existing Puppet rack configuration for use with the new worker virtual host.
@@ -1228,6 +1230,7 @@ Note that the primary Puppet CA worker is using the default CA directory.
 Once the certificate has been signed, you can run the Puppet agent on the new node again to make sure the agent is able to download its signed certificate from the master.
 You can also check the logs again to make sure HTTP Status 200 is present, now that the Puppet agent has the signed certificate:
 You can see two log entries, matching up with the Puppet agent downloading its signed certificate and the certificate revocation list maintained by the Puppet CA worker.
+Both entries contain HTTP Status 200 “OK” codes, indicating that the Puppet agent successfully transferred the certificate and revocation list from the Puppet CA.
 You can also see that the access logs for the active Puppet CA worker does not contain any catalog requests.
 With this, you’ve configured the front-end HTTP load balancer to direct all certificate related requests to a single Puppet CA worker.
 This redirection ensures that the certificate revocation list and serial.txt files are maintained properly.
@@ -1250,7 +1253,6 @@ The first command we’ve executed is a standard curl HTTP request.
 Rather than display the contents of the request body, we display the HTTP Response headers on standard output.
 The HTTP header output provides an indication of the status of the response, with anything other than status 200 indicating an error.
 After requesting the Puppet CA certificate, you can look at the error log file of the front-end load balancer to see how the request as handled.
-As expected, the iptables firewall rule prevented the load balancer from forwarding the request to the primary Puppet CA worker listening on port 18142
 The load balancer properly failed over to the hot standby Puppet CA worker listening on port 18143 and forwarded the request to the virtual host.
 Now we want to make sure we can still provision new Puppet managed nodes while the hot standby certificate authority is currently active.
 With a different CA directory configured on the hot standby, the process of listing and signing certificates is slightly different, requiring the use of the puppet cert -cadir configuration option:
@@ -1318,7 +1320,6 @@ We talked about specifying them in a variety of forms as node statements in your
 We also mentioned that Puppet has the capability to store node information in external sources.
 This avoids the need to specify large numbers of nodes manually in your manifests files, a solution which is timeconsuming and not scalable.
 The script returns classes, inheritance, variables and environment configuration that Puppet can then use to define a node and configure your hosts.
-Tip  External node classifiers are also one of the means by which tools like the Puppet Dashboard and Foreman can be integrated into Puppet and provide node information, as you will see in Chapter 7
 The second capability allows you to query Lightweight Directory Access Protocol (LDAP) directories for node information.
 This integration is used less often than ENCs, but it is especially useful because you can specify an existing LDAP directory, for example your asset management database or an LDAP DNS back end, for your node data.
 Using external node classification, either via an ENC or via LDAP, is the recommended way to scale your Puppet implementation to cater for large volumes of hosts.
@@ -1329,10 +1330,10 @@ In this chapter, we discuss both approaches to storing node information in exter
 First we look at creating an external node classifier, and we provide some simple examples of these for you to model your own on; then we demonstrate the use of the LDAP node classifier.
 It is often used as a configuration file format; for example, the database configuration file used in Ruby on Rails applications, database.yml, is a YAML file.
 Let’s look at some simple YAML examples to get an idea for how it works.
-The start of a YAML document is identified with three dashes, “---“
 Every ENC needs to return these three dashes as the start of its output.
 We’ve then got a list of items preceded by dashes.
 We can also express the concept of assigning a value to an item, for example:
+Here we’ve added our three dashes and then expressed that the value of item “foo” is “bar.” We can.
 We’ve again started with our three dashes and then specified the names of the lists we’re creating: foo and baz.
 Inside each list are the list items, again preceded with a dash, but this time indented one space to indicate their membership of the list.
 For the YAML to be valid, it must be structured correctly.
@@ -1402,6 +1403,7 @@ Now you can add an include statement to your slapd.conf configuration file; ther
 Or you can add a schema to a running OpenLDAP server, like so:
 To update OpenLDAP with the new schema, you may also now need to restart your server.
 Now that you’ve added the schema and configured the LDAP server, you need to tell Puppet to use an LDAP server as the source of its node configuration.
+Let’s look at the required configuration options from the [master] section of the puppet.conf configuration file in Listing 5-7
 First, we set the node_terminus option to ldap to tell Puppet to look to an LDAP server as our node source.
 Lastly, in the ldapbase option, we specify the base search path.
 Puppet recommends that hosts be stored in an OU called Hosts under our main directory structure, but you can configure this to suit your environment.
@@ -1526,8 +1528,10 @@ Configuring Puppet Master for Stored Configuration In the previous sections you 
 You’re now ready to configure the Puppet master to connect to the database and store configuration information.
 This configuration is done in the puppet.conf file located in the configuration directory, /etc/puppet by default.
 Before configuring the Puppet master we need to make sure a database has been created for use with Puppet.
+Any database name will suffice; in this example, the operator uses the default name of “puppet” accompanied by a MySQL account named “puppet” with a password of “teppup.”
 Finally, create a MySQL account named “puppet” to access this new database.
 Notice the password is set to “teppup.” The username and password should be changed to something more secure and reflected in puppet.conf.
+The lines in Listing 6-6 need to be inserted in the [master] section of the configuration file.
 If you chose to change the name of the database, the account, or the account password, please make sure to reflect those changes in the puppet.conf settings.
 The database tables will not be created until the Puppet master compiles a catalog.
 We can easily test the configuration of Stored Configs using a standalone Puppet master and agent.
@@ -1558,8 +1562,10 @@ These exported resources may then be collected on another node, allowing nodes t
 In this section we’ll examine a number of common use cases for exported resources.
 The first example will export the public SSH host identification key from each Puppet-managed node and store the resources centrally in the stored configuration database.
 Every node may then collect all of the public host keys from all other nodes.
+This configuration increases security and eliminates the “unknown host” warning commonly shown when logging in via SSH for the first time.
 The second example we provide uses exported resources to dynamically re-configure a load balancer when additional Puppet master worker processes come online.
 Finally, you’ll see how to dynamically and automatically reconfigure the Nagios monitoring system to check the availability to new Puppet managed systems.
+Automated SSH Public Host Key Management When new systems are brought online in a large network, the known_hosts files of all other systems become stale and out of date, causing “unknown host” warnings when logging in using SSH.
 Puppet provides a simple and elegant solution to this problem using stored configurations and exported resources.
 When new systems are brought online, Puppet updates the known_hosts file on all other systems by adding the public host key of the new system.
 We learned in this chapter any resource may be declared virtually using the @ symbol before the resource declaration.
@@ -1570,6 +1576,7 @@ This Puppet code snippet looks a little strange compared to what we’ve worked 
 The class ssh::hostkeys should be included in the catalog of all nodes in the network for their SSH.
 To make sure each resource has a unique title for the entire network, the title also contains the fully qualified domain name of the node exporting the public host keys.
 The host_aliases parameter provides additional names and addresses the node may be reached by.
+This information is important to prevent the “unknown host” warnings when connecting to the node from another system.
 In this example, we’re providing the fully qualified domain name, short hostname, and IP address of the system.
 Each of these values comes from facter and is automatically provided.
 They type and key parameters provide the public key information itself.
@@ -1670,6 +1677,7 @@ With thin stored configurations, only exported resources, node facts, and tags a
 This limited set of information greatly reduces the number of synchronous database updates required for each Puppet agent run.
 The option is located in puppet.conf on each Puppet master system.
 See how the Example.com operator enables thin stored configurations for his network in Listing 6-23
+Only the line thin_storeconfigs = true needs to be added into the master section of puppet.conf.
 The Puppet master should then be restarted to reflect this change.
 No client-side configuration settings are required to enable thin stored configurations.
 Queue Support for Stored Configurations Queue support is intended to take much of the load related to stored configurations off the Puppet master systems themselves.
@@ -1701,6 +1709,7 @@ If there is a problem with the configuration file, the service may fail to start
 Finally, checking the log files to make sure ActiveMQ is listening for stomp messages on port 6163 is a sensible final verification that things are working as expected.
 Note  By default, all of the software installed on a Debian system is completely free, open source software.
 While ActiveMQ is distributed under an open source license, the Sun Java runtime is not.
+In an effort to accommodate non-free software like Java in a free software project, the Debian maintainers have created the “non-free” and “contrib” repositories.
 These additional package repositories provide a good compromise between the conflicting goals of commercial and free open source software.
 More information about the non-free and contrib repositories is available online at http://www.debian.org/social_contract.
 Once this additional repository is enabled, the operator uses the aptitude executable to install the Java Development Kit:
@@ -1716,7 +1725,9 @@ The sudo command in Listing 6-29 ensures the ActiveMQ service is running under t
 Puppet Master Queue Configuration With ActiveMQ up and running, we now need to connect the Puppet queue daemon process to the message bus to handle queued messages and write them to the database.
 The first step in this process is to install the stomp gem.
 This Ruby library provides a stomp protocol interface for Ruby applications (Listing 6-30)
+In the [main] section of the puppet.conf file, the puppet queue application will be configured to read from ActiveMQ and write to the database, offloading the work from the master (shown in Listing 6-31)
 When queue support is enabled, the puppet queue daemon will pick up the settings in the [main] section to read data from the ActiveMQ stomp interface and write the information to the SQL database.
+In addition, the Puppet master application will use the settings in [main] and the settings in [master] to read from the SQL database and write to the ActiveMQ queue.
 With these settings in place, let’s see how the operator tests out the new queue system.
 First, he starts the Puppet master as he normally would:
 He hasn’t yet started the Puppet queue application, so we expect any configuration updates to be queued in the ActiveMQ system until the Puppet queue application is running and drains the queue.
@@ -1791,7 +1802,6 @@ Create the database “Dashboard” with the Ruby rake command based on the edit
 Note We assume you’ve installed the Dashboard via a package.
 If you have not, then be sure to use the appropriate directory where you installed the Dashboard.
 The database.yml file is a YAML configuration file and any settings we specify in the file need to be valid YAML.
-Ruby on Rails applications use the concept of environments (production, development, etc.) to allow you to specify multiple databases and configurations for different purposes in a single application.
 For our purposes, we’re just going to create a single environment for a production Dashboard instance, as you can see in Listing 7-1
 The database.yml file contains a series of database configurations for the different Rails environments.
 Inside each environment block we need to specify the name of the database we’re using, the username and password used to connect to that database, as well as the encoding and database type.
@@ -1831,7 +1841,6 @@ Note Passenger is only sometimes available as a package on operating systems oth
 Often, the easiest method of installing Passenger is via Ruby Gems, with gem install passenger.
 Next, you need to configure an Apache virtual host for our Dashboard implementation, which will include enabling the required Passenger module.
 The Puppet Dashboard provides an example of this virtual host, which you can see in Listing 7-2
-We will put the file in our Apache configuration directory,
 The virtual host file first loads the mod_passenger module, in this case customized for a Debian or Ubuntu environment.
 If we’d installed Passenger via a gem those lines might look more like this:
 You can read about each in more detail at http://www.modrails.com/documentation/Users%20guide%20Apache.html#_configuring_phusion_ passenger.
@@ -1844,6 +1853,7 @@ One of the limitations of the current Dashboard tool is its lack of authenticati
 Currently Dashboard does not provide any of these, though they are on the product’s roadmap.
 The best way to protect your Dashboard from unauthorized access is to:
 Configure a combination of host- and network-based firewalls to limit access to the Dashboard from appropriate network segments.
+If you do specify HTTP basic authentication, remember that ANY connection – including report aggregation and external nodes – will need to be authenticated.
 This means including the HTTP Basic username and password in any supplied URL, for example setting the reporturl option in the puppet.conf file to http://username:password@dashboard.example.com.
 Integrating Puppet Dashboard Now that you’ve installed the Dashboard, you can integrate Puppet and start to make use of some of its capabilities.
 Finally, we’ll look at logging, database and data management, including backing up your Dashboard data.
@@ -1860,9 +1870,8 @@ Tip You can see a full list of all reports on the Dashboard by clicking the Repo
 Live Report Aggregation In addition to manual report importation, you can also configure Puppet to send your reports to the Dashboard.
 There are two methods to do this, depending on what version of Puppet you have running.
 For both methods you need to make changes on both the Puppet master and clients.
-Note Many of the changes we’re going to describe relate to reports and reporting capability we will talk about in Chapter 9
+For versions 2.6.0 and later, you need to enable reporting on our clients (if you haven’t already) by setting the report option in the [agent] section of the puppet.conf file, like so:
 On the master you need to enable a new type of report called http, which sends report data over an HTTP connection, and specify a location to send our HTTP report, reporturl.
-You don’t have to specify a URL, in which case it will default to the local host on port 3000
 To do this you need to update the [master] section of the Puppet’s master’s puppet.conf file.
 You then need to restart the Puppet master to update its configuration.
 Now, when Puppet clients connect, they will send a report to the URL you specified; Puppet Dashboard will receive and then process the report.
@@ -1870,7 +1879,6 @@ For versions 0.25.x and earlier, you need to use a report processor provided wit
 You first need to enable reporting on our Puppet clients by setting the report option in the [puppetd] section of the puppet.conf file to true.
 Then on the Puppet master, find the value of your libdir, the location of the Puppet libraries:
 Then copy the Puppet report processor into this directory from your Dashboard installation.
-This special report processor assumes that your Dashboard instance is on the local host at port 3000
 Change the following options at the top of the file:
 Update your puppet.conf file on the Puppet master in the [puppetmasterd] section:
 Viewing Reports Now that you’ve got Puppet adding its reports to the Dashboard, you can examine them and view the results.
@@ -1880,10 +1888,10 @@ Drilling down into an individual run will show log output, specifically that rel
 Also more resource metrics and timings on individual resource types will be displayed.
 You can see an example of this screen in Figure 7-4
 External Node Classification In addition to its ability to display reports and data, the Dashboard can also act as an external classifier.
-We discussed external node classification (ENC) and why it’s useful to simplify and organize large number of nodes in Chapter 5
 This can become even easier with a web interface like the Dashboard that configures these nodes, classes and parameters.
 To enable the Dashboard’s external node classification capability, you need to configure Puppet to use an ENC.
 On Puppet 2.6.x and later, this means adding an ENC to your master’s puppet.conf configuration file:
+Note On Puppet 0.25.x and earlier versions, this section is called [puppetmasterd] rather than [master]
 If this isn’t the case, you can edit it to suit your environment.
 Modify the line to reflect where your Dashboard is located.
 You will then need to restart the Puppet master to update your ENC configuration.
@@ -1903,7 +1911,6 @@ Note You can add classes, parameters and groups to existing nodes by clicking on
 You can also delete nodes, classes and groups by clicking on the dramatically-named Destroy button.
 With your node configuration in place on the Dashboard, when the Puppet master runs and uses the external node classifier to query for node data it will contact the Dashboard.
 The Dashboard’s API will return the required data, class and parameter information to populate the required node.
-Tip You can see more detail on this process in Chapter 5
 Logging, Database Backup and Performance With the Dashboard there are also a few simple management and maintenance tasks you need to know about.
 These logs are useful to find diagnostic and informational data about the running of the Dashboard.
 Each Rails environment, production, development, etc., produces a separate log file named for the environment being logged.
@@ -1918,6 +1925,7 @@ If you don’t have a tool, then you can use another in-built Rake task to creat
 This will create a SQL dump of the Dashboard database in a file called production.sql in the current directory.
 You can override this file name an location using the following command line:
 Conveniently, there is also a Rake task to restore the database:
+Note  Lots of Rake tasks? You can see a full list of the available tasks by running rake –T in the root directory of the Dashboard application.
 Lastly, you can purge older reports from your Dashboard database using another Rake task, reports:prune.
 For example, to prune reports 3 months old or older, you would use:
 You can run the rake reports:prune task without any options to get a full list of the task’s options.
@@ -1959,7 +1967,6 @@ You will need to update this line of the script to point to the location of your
 Tip  For more information on importing data to Foreman to Puppet, see: http://theforeman.org/projects/foreman/wiki/Puppet_Facts.
 Starting Foreman Like Puppet Dashboard, Foreman is a Rails application and can run using a variety of servers, including the in-built Webrick server and an external server such as Apache running Passenger.
 Or, you can run the supplied init script to achieve the same result:
-This will start Foreman on the local host running on port 3000
 You can then place Apache or another proxy in front of it if required.
 Running Foreman using Apache and Passenger is a more performant and scalable solution.
 Once Foreman is running, you should see the home page displayed in Figure 7-8
@@ -1976,8 +1983,8 @@ To import all the classes contained in your Puppet modules, run the following Ra
 This task will include all classes in modules specified in your modulepath.
 Once you have defined your hosts, you need to specify Foreman as the ENC for your Puppet.
 To do this, update the puppet.conf configuration file on the Puppet master:
+Note  On Puppet 0.25.x and earlier the section is called [puppetmasterd]
 The external_node.rb script is an ENC that is provided with Foreman.
-It assumes your Foreman instance is running on a host named foreman on port 3000
 Adjust this line to point it at your actual Foreman instance:
 Tip  You can click on the YAML link in an individual host definition to see what the ENC output would be for that host.
 This is a good way of confirming your host is accurately configured.
@@ -2072,6 +2079,7 @@ He picks the name “site” because this module is specific to his deployment a
 In this situation, the puppet-module tool provides a quick and convenient way to generate the skeleton directory structure of the module.
 As we can see in Listing 8-4, the generate action creates quite a bit of boilerplate for the operator to fill in and use as a guide.
 This saves quite a bit of work over the manual method of creating the module directory structure.
+The puppet-module tool prefixes each module with the author of the class, so the module is actually named “firewall.” Once the skeleton directory structure is created, Listing 8-5 shows how the operator adds a few iptables resources to the firewall class in init.pp.
 In your configuration, it is a good idea to commit the boilerplate code to version control at this point if you wish to do so.
 This will allow you to easily track changes you make to the generated code.
 The diff output in Listing 8-5 indicates that a number of iptables resources have been added to the firewall class in the init.pp file.
@@ -2081,6 +2089,7 @@ The workflow for developing modules generated by puppet-module is to develop the
 The first command builds the module package and fills in the metadata for the module.
 The second command moves the built module into the puppet-module search path.
 We’re now ready to try out the module and make sure the search path is working correctly.
+The operator uses puppet apply –e, shown in Listing 8-7, to evaluate a single class declaration.
 Finally, in Listing 8-8, the operator verifies the rules are properly being managed using the iptables command.
 Verifying that the iptables rules are being managed by Puppet.
 Using the iptables command, we’re able to see Puppet is correctly using the iptables module to manage the host-based firewall.
@@ -2133,6 +2142,7 @@ Let’s see how he modifies the module to support both Debian and Enterprise Lin
 In Listing 8-16, he installs the NTP package to obtain a template of the NTP configuration file and copies it into the templates directory of the module.
 Then, he checks the service name to see if it matches the Debian service name or not.
 Obtaining the NTP service name and configuration for Enterprise Linux.
+The operator notices the name of the service on Enterprise Linux-based systems is “ntpd,” which differs slightly from the “ntp” on Debian-based systems.
 Let’s see how, in Listing 8-17, he modifies the NTP class to handle this difference and manage the NTP service.
 The operator has made a number of small edits to the NTP module, as shown in the difference between the Debian-only module and the newly-added Enterprise Linux support.
 These changes justify a new build of the module with a new version number.
@@ -2145,12 +2155,14 @@ As we can see, the NTP service is being properly managed and brought online for 
 The operator commits this change to the Git repository using the commands in Listing 8-20 before publishing the module to the Forge.
 The operator is able to track when this version of the NTP module was released to the Forge by using the git tag action.
 Finally, he’s ready to publish the package created by the puppet-module build command.
+For up-to-date information about how to publish a module, please log into the Forge and use the “Add a Module” link located at: http://forge.puppetlabs.com/modules/new.
 You’ve just seen how the Example.com operator uses the puppet-module tool to install a module from the Puppet Forge.
 The iptables module allowed the operator to quickly manage host-based firewall rules without writing his own module from scratch.
 In addition, we saw how the operator quickly generated a skeleton module structure, and added a few resources to the NTP class to manage time synchronization.
 In the next section you’ll see how the Ruby DSL allows the Example.com developer to leverage Ruby to declare resources and classes in the configuration catalog.
 Within a single module, manifest files may be written in either of the Puppet or Ruby languages.
 These manifest files may be intermixed in the same catalog compilation.
+The file extension determines the language used; manifests with a “pp” or “rb” extension indicate a Puppet or Ruby manifest, respectively.
 For most problems and configurations, the simple language of Puppet manifests are more than adequate.
 However, in the situation where a dynamic data set is accessed through the ENC API, the Ruby DSL is an ideal solution to the problem of declaring resources from the data.
 Ruby’s ability to iterate over Hashes and Arrays with the each method provides a convenient way to declare a large number of resources.
@@ -2256,6 +2268,7 @@ By using the each method in Ruby, the developer is able to declare an arbitrary 
 In the next section, we switch gears and examine another valuable tool in the Puppet ecosystem.
 Cucumber Puppet allows you to easily and clearly test your Puppet infrastructure.
 Cucumber Puppet A common problem with Puppet and configuration management in general is testing.
+After working with Puppet for some time, the Example.com operator has the nagging question, “How can I test changes I make to my systems with Puppet?” A frequently-used solution to this problem is to maintain an entirely separate network identically configured to the production network.
 Changes to Puppet are then deployed to the testing network prior to deploying them to production.
 While effective, this strategy incurs the overhead of maintaining a separate network.
 Additional hardware and time must be invested in the testing network.
@@ -2379,8 +2392,10 @@ Indeed, we’ve already seen some examples of how to display Puppet reports (i.e
 Puppet’s reporting engine has undergone a lot of development in recent releases, especially with the new and more detailed reporting format first introduced in version 2.6.0
 In this chapter, we explain what command-line and data-based reports are available, how to configure reporting and reports, and how to work with them, then we look at graphing our reporting data and discuss how to build custom reports.
 Getting Started Puppet agents can be configured to return data at the end of each configuration run.
+Puppet calls this data a “transaction report.” The transaction reports are sent to the master server where a number of report processors exist that can utilize this data and present it in a variety of forms.
 You can also develop your own report processors to customize the reporting output.
 The default transaction report comes in the form of a YAML file.
+As mentioned in earlier chapters, YAML is a recursive acronym for “YAML Ain’t Markup Language.” YAML is a human-readable data serialization format that draws heavily from concepts in XML and the Python and C programming languages.
 The transaction reports contain all events and log messages generated by the transaction and some additional metrics.
 The metrics fall into three general types: time, resource and change metrics.
 Within each of these metrics there are one or more values.
@@ -2410,7 +2425,6 @@ The default report, store, simply stores the report file on the disk.
 There is also the log processor that sends logs to the local log destination, to syslog for example.
 Also available is the tagmail report processor that sends email messages based on particular tags in transaction reports.
 Next, the rrdgraph report processor that converts transaction reports into RRD-based graphs.
-Lastly, we’ve already seen the http report processor in Chapter 8
 Selecting which report processors will run is done using the reports configuration option in the puppet.conf configuration file.
 Each report processor you want to enable should be listed in the reports option with multiple processors separated by commas.
 You can also enable report processors on the command line.
@@ -2466,14 +2480,12 @@ These external report processors can easily be written in Ruby to take advantage
 You can use any tool that supports the importation of third-party YAML data.
 The second method involves writing your own report processor and adding it to Puppet.
 Unlike plug-ins for facts, functions, types and providers, Puppet doesn’t have an automatic way to distribute custom reports.
-Note  We show how to distribute other forms of custom code, like facts, in Chapter 10
 Instead the report processors are stored in the lib/puppet/reports directory.
 For example, on an Ubuntu Puppet master we’d add our custom report processor to the.
 We would then specify the new report in the reports configuration option.
 The existing report processors make excellent templates for new processors.
 In Listing 10-3 you can see the Ruby code for the http report processor.
 Each host sends its report as a YAML dump and this sends this YAML to a client via HTTP POST.
-The YAML is the `report` parameter of the request." DESC.
 As you can see from this example, it is very easy to create your own report processor.
 Tip  Other ideas for Puppet report processors include RSS feeds for new reports, IRC, XMPP or instant messaging, or SMS notifications of new reports.
 You could also parse particular events in reports or collate metrics for use in other kinds of performance management systems.
@@ -2503,6 +2515,7 @@ We first configure Puppet so we can write custom facts, then we test our new fac
 Note  If the idea of learning any Ruby is at all daunting, a fast alternative way to add a fact without writing any Ruby code is via Facter’s support of environmental variables.
 Any environmental variables set by the user Facter is running as (usually the root user) that are prefixed with FACTER_ will be added to Facter as facts.
 So, if you were to set an environmental variable of FACTER_datacenter with a value of Chicago, then this would become a fact called datacenter with the value of Chicago.
+Configuring Puppet for Custom Facts The best way to distribute custom facts is to include them in modules, using a Puppet concept called “plug-ins in modules.” This concept allows you to place your custom code inside an existing or new.
 Puppet module and then use that module in your Puppet environment.
 Custom facts, custom types, providers, and functions are then distributed to any host that includes a particular module.
 Modules that distribute facts are no different from other modules, and there are two popular approaches to doing so.
@@ -2518,7 +2531,9 @@ So where in our modules do facts go? Let’s create a simple module called bind 
 Here we’ve created our standard module directory structure, but we’ve added another directory, lib.
 The lib directory contains any “plug-ins” or additional facts, types or functions we want to add to Puppet.
 We’re going to focus on adding facts; these are stored in the lib/facter directory.
+In addition to adding the lib/facter directory to modules that will distribute facts, you need to enable “plug-ins in modules” in your Puppet configuration.
 To do this, enable options in the [main] section of the Puppet master’s puppet.conf configuration file, as you can see on the next line:
+When set to true, the pluginsync setting turns on the “plug-ins in modules” capability.
 Now, when clients connect to the master, each client will check its modules for facts and other custom items.
 Puppet will take these facts and other custom items and sync them to the relevant clients, so they can then be used on these clients.
 Caution  The sync of facts and other items occurs during the Puppet run.
@@ -2566,18 +2581,21 @@ Explore existing Puppet modules, plug-ins, facts and other code via Google and o
 Like all systems administrators, we know that imitation is the ultimate form of flattery.
 In the following sections, we demonstrate how to configure Puppet to distribute your own custom code.
 You’ll also see how to write a variety of custom types and providers, and finally how to write your own Puppet functions.
+Configuring Puppet for Types, Providers and Functions The best way to distribute custom types, providers and functions is to include them in modules, using “plug-ins in modules,” the same concept we introduced earlier this chapter to distribute custom facts.
 Just like custom facts, you again place your custom code into a Puppet module and use that module in your configuration.
 Puppet will take care of distributing your code to your Puppet masters and agents.
 Again, just like custom facts, you can take two approaches to managing custom code: placing it in function-specific modules or centralizing it into a single module.
 We’re going to demonstrate adding custom code in a single, function-specific module.
 So, where in our modules does custom code go?  Let’s create a simple module called apache as an example:
-Here we’ve created our standard module directory structure, but we’ve added another directory,
 We saw the lib directory earlier in the chapter when we placed custom facts into its Facter subdirectory.
 The lib directory also contains other “plug-ins” like types, providers and functions, which we want to add to Puppet.
+Like we did when we configured Puppet for custom facts, you need to enable “plug-ins in modules” in your Puppet configuration.
 To do this, enable the pluginsync option in the [main] section of the Puppet master’s puppet.conf configuration file, as follows:
+The pluginsync setting, when set to true, turns on the “plug-ins in modules” capability.
 Puppet will take this custom code and sync it to the relevant agents.
 Functions run on the Puppet master rather than the Puppet agents, so they won’t be synched down to an agent.
 They will only be synched if the Puppet agent is run on the Puppet master, i.e., if you are managing Puppet with Puppet.
+Note  In earlier releases of Puppet, “plug-ins in modules” required some additional configuration.
 You can read about that configuration on the Puppet Labs Documentation site at http://docs.puppetlabs.com/guides/plugins_in_modules.html.
 Writing a Puppet Type and Provider Puppet types are used to manage individual configuration items.
 Puppet has a package type, a service type, a user type, and all the other types available.
@@ -2593,6 +2611,7 @@ Inside the lib/puppet/type directory, we’re going to create a file called repo
 We can also see a @doc string which is where we specify the documentation for your type.
 The ensurable statement is a useful shortcut that tells Puppet to create an ensure property for this type.
 The ensure property determines the state of the configuration item, for example:
+The ensurable statement tells Puppet to expect three methods: create, destroy and exists? in our provider (You’ll see the code for this in Listing 10-6)
 A command to check for the existence of the resource.
 All we then need to do is specify these methods and their contents and Puppet creates the supporting infrastructure around them.
 Types have two kinds of values - properties and parameters.
@@ -2631,6 +2650,7 @@ Lastly, the exists? method checks to see if the resource exists.
 Its operation is pretty simple and closely linked with the value of the ensure attribute in the resource:
 If exists? is false and ensure is set to present, then the create method will be called.
 If exists? is true and ensure is set to absent, then the destroy method will be called.
+In the case of our method, the exists? method works by checking if there is already a directory at the location specified in the resource[:path] parameter.
 We can also add another provider, this one for Git, in:
 You can see that this provider is nearly identical to the Subversion provider we saw in Listing 10-3
 We used the git command and its clone function rather than the Subversion equivalents, but you can see that the destroy and exists? methods are identical.
@@ -2733,7 +2753,7 @@ Some basic testing of the function can be performed by executing the function fi
 This loads the Puppet library (Puppet must be installed on the host) and then runs the file containing the function we created in Listing 10-12
 This will allow us to determine whether the file parses without error.
 It does not tell us if the function performed correctly.
-We can also use the Ruby IRB (Interactive Ruby Shell) to confirm our function is properly defined,
+Replace “raise this error” with the error text you’d like to raise.
 Here we’ve launched irb and then required Puppet and our new function.
 Puppet can see the new function and that it parses as a correct function.
 The best way to test a function is to use it in a manifest, and the easiest way to do that is to add your.
@@ -2825,7 +2845,6 @@ Please check http://www.rabbitmq.com to find out if more recent releases are ava
 Once the server software is installed, the Stomp connector plugins need to be installed.
 The installation of the plugins is shown in Listing 11-6
 Similar to the Debian installation, the operator downloads the AMQP and Stomp connector libraries into the RabbitMQ plugins directory and then restarts the rabbitmq-server service.
-Once the service has been restarted, the operator proceeds to configure RabbitMQ to enable the Stomp protocol and listen on TCP port 6163
 RabbitMQ Configuration Once the RabbitMQ packages and plugins have been installed, some configuration is required.
 The configuration of RabbitMQ for use with MCollective is identical for both Debian-based and Enterprise Linux-based systems.
 As mentioned in the installation sections, MCollective communicates using the Stomp protocol.
@@ -2874,9 +2893,9 @@ Similar to the MCollective server software, only the client and common packages 
 Once the software has been installed, the operator must configure the MCollective client and server systems to connect to the RabbitMQ service.
 In the next section, you’ll see how MCollective is configured on all platforms.
 MCollective Server Configuration The MCollective server needs to be configured to connect to the RabbitMQ server.
-The MCollective process connects to the service using a standard TCP connection to port 6313
 Let’s see how the operator configures the MCollective server in Listing 11-17
 There are three key settings to change when installing and configuring MCollective.
+This password should match the password used in Listing 11-9, “Configuring the RabbitMQ MCollective account.”
 The operator first configures the hostname of the Stomp protocol server.
 Next, the operator configures MCollective to log in to the Stomp service using the username mcollective and a password.
 Finally, the operator configures a pre-shared key to sign messages as they travel across the message bus.
@@ -3022,7 +3041,6 @@ More often than not, someone has already solved the issue, problem or challenge 
 New features, functions, and fixes are available in every release.
 It is a good idea to check out the various resources we talk about in the Resources section below, such as the mailing list archives and the Wiki, when you have an issue.
 These forums are also where announcements are made about new releases of Puppet and related tools.
-Getting Support and Training Puppet is an open-source tool and there are a lot of sources of information and support available for it (including this book!)
 In addition, Puppet’s parent company, Puppet Labs, offers the Puppet Enterprise product (the pre-packaged commercial edition of Puppet), support contracts, and custom development, consulting and training programs worldwide.
 Note  Full disclosure: Both authors work for Puppet Labs and have a financial stake in its success.
 There are also a number of members of the Puppet community who offer services, implementation support and consulting services.
@@ -3046,13 +3064,12 @@ Trademarked names, logos, and images may appear in this book.
 Rather than use a trademark symbol with every occurrence of a trademarked name, logo, or image we use the names, logos, and images only in an editorial fashion and to the benefit of the trademark owner, with no intention of infringement of the trademark.
 The use in this publication of trade names, trademarks, service marks, and similar terms, even if they are not identified as such, is not to be taken as an expression of opinion as to whether or not they are subject to proprietary rights.
 Apress and friends of ED books may be purchased in bulk for academic, corporate, or promotional use.
+The information in this book is distributed on an “as is” basis, without warranty.
 Although every precaution has been taken in the preparation of this work, neither the author(s) nor Apress shall have any liability to any person or entity with respect to any loss or damage caused or alleged to be caused directly or indirectly by the information contained in this work.
 The source code for this book is available to readers at www.apress.com.
 You will need to answer questions pertaining to this book in order to successfully download the code.
 Dedicated to my partner and best friend, Ruth Brown, who continues to be wonderful.
-Dedicated to my parents, Pete and Gloria, who year after year accommodate my inability to shut the laptop while on vacation with them, and to Dave Alden for teaching me about configuration management,
 James is the author of five technical books about open source software and a long-time member of the open source community.
-James authored the first (and this second!) book about Puppet and works for Puppet Labs running Client Services.
 James speaks regularly at conferences including OSCON, Linux.conf.au, FOSDEM, OpenSourceBridge, DevOpsDays and a number of others.
 He is a past president of Linux Australia and has run Linux.conf.au and serves on the program committee of Linux.conf.au and OSCON.
 Jeff is a long-time Puppet community member and open source software advocate.

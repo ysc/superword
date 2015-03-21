@@ -18,7 +18,6 @@ Figure 1: A slice of an example table that stores Web pages.
 The contents column family contains the page contents, and the anchor column family contains the text of any anchors that reference the page.
 We settled on this data model after examining a variety of potential uses of a Bigtable-like system.
 As one concrete example that drove some of our design decisions, suppose we want to keep a copy of a large collection of web pages and related information that could be used by many different projects; let us call this particular table the Webtable.
-In Webtable, we would use URLs as row keys, various aspects of web pages as column names, and store the contents of the web pages in the contents: column under the timestamps when they were fetched, as illustrated in Figure 1
 Every read or write of data under a single row key is atomic (regardless of the number of different columns being read or written in the row), a design decision that makes it easier for clients to reason about the system’s behavior in the presence of concurrent updates to the same row.
 Each row range is called a tablet, which is the unit of distribution and load balancing.
 As a result, reads of short row ranges are efficient and typically require communication with only a small number of machines.
@@ -34,11 +33,11 @@ A column key is named using the following syntax: family:qualifier.
 Column family names must be printable, but qualifiers may be arbitrary strings.
 An example column family for the Webtable is language, which stores the language in which a web page was written.
 We use only one column key in the language family, and it stores each web page’s language ID.
-Another useful column family for this table is anchor; each column key in this family represents a single anchor, as shown in Figure 1
 The qualifier is the name of the referring site; the cell contents is the link text.
 Access control and both disk and memory accounting are performed at the column-family level.
 In our Webtable example, these controls allow us to manage several different types of applications: some that add new base data, some that read the base data and create derived column families, and some that are only allowed to view existing data (and possibly not even to view all of the existing families for privacy reasons)
 Each cell in a Bigtable can contain multiple versions of the same data; these versions are indexed by timestamp.
+They can be assigned by Bigtable, in which case they represent “real time” in microseconds, or be explicitly assigned by client.
 Applications that need to avoid collisions must generate unique timestamps themselves.
 Different versions of a cell are stored in decreasing timestamp order, so that the most recent versions can be read first.
 To make the management of versioned data less onerous, we support two per-column-family settings that tell Bigtable to garbage-collect cell versions automatically.
@@ -48,7 +47,9 @@ The garbage-collection mechanism described above lets us keep only the most rece
 The Bigtable API provides functions for creating and deleting tables and column families.
 It also provides functions for changing cluster, table, and column family metadata, such as access control rights.
 Client applications can write or delete values in Bigtable, look up values from individual rows, or iterate over a subset of the data in a table.
-Irrelevant details were elided to keep the example short.) The call to Apply performs an atomic mutation to the Webtable: it adds one anchor to www.cnn.com and deletes a different anchor.
+Figure 2 shows C++ code that uses a RowMutation abstraction to perform a series of updates.
+The call to Apply performs an atomic mutation to the Webtable: it adds one anchor to www.cnn.com and deletes a different anchor.
+Figure 3 shows C++ code that uses a Scanner abstraction to iterate over all anchors in a particular row.
 Clients can iterate over multiple column families, and there are several mechanisms for limiting the rows, columns, and timestamps produced by a scan.
 Bigtable supports several other features that allow the user to manipulate data in more complex ways.
 First, Bigtable supports single-row transactions, which can be used to perform atomic read-modify-write sequences on data stored under a single row key.
@@ -92,6 +93,7 @@ As a table grows, it is automatically split into multiple tablets, each approxim
 The first level is a file stored in Chubby that contains the location of the root tablet.
 The root tablet contains the location of all tablets in a special METADATA table.
 Each METADATA tablet contains the location of a set of user tablets.
+The root tablet is just the first tablet in the METADATA table, but is treated specially—it is never split—to ensure that the tablet location hierarchy has no more than three levels.
 The METADATA table stores the location of a tablet under a row key that is an encoding of the tablet’s table.
 Each METADATA row stores approximately 1KB of data in memory.
 If the client’s cache is empty, the location algorithm requires three network round-trips, including one read from Chubby.
@@ -104,7 +106,8 @@ When a tablet is unassigned, and a tablet server with sufficient room for the ta
 When a tablet server starts, it creates, and acquires an exclusive lock on, a uniquely-named file in a specific Chubby directory.
 The master monitors this directory (the servers directory) to discover tablet servers.
 A tablet server stops serving its tablets if it loses its exclusive lock: e.g., due to a network partition that caused the server to lose its Chubby session.
-Chubby provides an efficient mechanism that allows a tablet server to check whether it still holds its lock without incurring network traffic.) A tablet server will attempt to reacquire an exclusive lock on its file as long as the file still exists.
+Chubby provides an efficient mechanism that allows a tablet server to check whether it still holds its lock without incurring network traffic.
+A tablet server will attempt to reacquire an exclusive lock on its file as long as the file still exists.
 If the file no longer exists, then the tablet server will never be able to serve again, so it kills itself.
 Whenever a tablet server terminates (e.g., because the cluster management system is removing the tablet server’s machine from the cluster), it attempts to release its lock so that the master will reassign its tablets more quickly.
 The master is responsible for detecting when a tablet server is no longer serving its tablets, and for reassigning those tablets as soon as possible.
@@ -128,7 +131,6 @@ The master is able to keep track of these changes because it initiates all but t
 Tablet splits are treated specially since they are initiated by a tablet server.
 The tablet server commits the split by recording information for the new tablet in the METADATA table.
 The tablet server will notify the master of the split, because the tablet entry it finds in the METADATA table will specify only a portion of the tablet that the master asked it to load.
-The persistent state of a tablet is stored in GFS, as illustrated in Figure 5
 Updates are committed to a commit log that stores redo records.
 Of these updates, the recently committed ones are stored in memory in a sorted buffer called a memtable; the older updates are stored in a sequence of SSTables.
 This metadata contains the list of SSTables that comprise a tablet and a set of a redo points, which are pointers into any commit logs that may contain data for the tablet.
@@ -212,7 +214,8 @@ The master removes obsolete SSTables as a mark-and-sweep garbage collection [25]
 Finally, the immutability of SSTables enables us to split tablets quickly.
 Instead of generating a new set of SSTables for each child tablet, we let the child tablets share the SSTables of the parent tablet.
 We set up a Bigtable cluster with N tablet servers to measure the performance and scalability of Bigtable as N is varied.
-We used the same number of clients as tablet servers to ensure that clients were never a bottleneck.) Each machine had two dual-core Opteron 2 GHz chips, enough physical memory to hold the working set of all running processes, and a single gigabit Ethernet link.
+We used the same number of clients as tablet servers to ensure that clients were never a bottleneck.
+Each machine had two dual-core Opteron 2 GHz chips, enough physical memory to hold the working set of all running processes, and a single gigabit Ethernet link.
 The machines were arranged in a two-level tree-shaped switched network with approximately 100-200 Gbps of aggregate bandwidth available at the root.
 All of the machines were in the same hosting facility and therefore the round-trip time between any pair of machines was less than a millisecond.
 The tablet servers and master, test clients, and GFS servers all ran on the same set of machines.
@@ -242,7 +245,6 @@ This transfer saturates various shared 1 Gigabit links in our network and as a r
 Table 1 shows a rough distribution of tablet servers per cluster.
 Many of these clusters are used for development purposes and therefore are idle for significant periods.
 Table 2 provides some data about a few of the tables currently in use.
-Some tables store data that is served to users, whereas others store data for batch processing; the tables range widely in total size, average cell size,
 In the rest of this section, we briefly describe how three product teams use Bigtable.
 It provides aggregate statistics, such as the number of unique visitors per day and the page views per URL per day, as well as site-tracking reports, such as the percentage of users that made a purchase, given that they earlier viewed a specific page.
 To enable the service, webmasters embed a small JavaScript program in their web pages.
@@ -316,6 +318,7 @@ The manner in which Bigtable uses memtables and SSTables to store updates to tab
 In both systems, sorted data is buffered in memory before being written to disk, and reads must merge data from memory and disk.
 C-Store and Bigtable share many characteristics: both systems use a shared-nothing architecture and have two different data structures, one for recent writes, and one for storing long-lived data, with a mechanism for moving data from one form to the other.
 The systems differ significantly in their API: C-Store behaves like a relational database, whereas Bigtable provides a lower level read and write interface and is designed to support many thousands of such operations per second per server.
+C-Store is also a “read-optimized relational DBMS”, whereas Bigtable provides good performance on both read-intensive and write-intensive applications.
 We have described Bigtable, a distributed system for storing structured data at Google.
 Bigtable clusters have been in production use since April 2005, and we spent roughly seven person-years on design and implementation before that date.
 As of August 2006, more than sixty projects are using Bigtable.

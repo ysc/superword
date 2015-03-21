@@ -9,6 +9,7 @@ Permission to make digital or hard copies of all or part of this work for person
 To copy otherwise, to republish, to post on servers or to redistribute to lists, requires prior specific permission and/or a fee.
 In this paper, we describe Tenzing, a SQL query execution engine built on top of MapReduce.
 Users have access to the underlying platform through SQL extensions such as user defined table valued functions and native support for nested relational data.
+We take advantage of indexes and other traditional optimization techniques—along with a few new ones—to achieve performance comparable to commercial parallel databases.
 Thanks to MapReduce, Tenzing scales to thousands of cores and petabytes of data on cheap, unreliable hardware.
 We worked closely with the MapReduce team to implement and take advantage of MapReduce optimizations.
 Our enhancements to the MapReduce framework are described in more detail in section 5.1
@@ -47,11 +48,9 @@ The query server parses the query into an intermediate parse tree.
 The query server fetches the required metadata from the metadata server to create a more complete intermediate format.
 The optimizer goes through the intermediate format and applies various optimizations.
 For each MapReduce, the query server finds an available master using the master watcher and submits the query to it.
-At this stage, the execution has been physically partitioned into multiple units of work(i.e.
 The query server monitors the intermediate area for results being created and gathers them as they arrive.
 Tenzing also adds a number of enhancements on core SQL.
 These enhancements are designed to be fully parallelizable to utilize the underlying MapReduce framework.
-Tenzing supports all the standard SQL operators (arithmetic operators, IN, LIKE, BETWEEN, CASE, etc.) and functions.
 In addition, the execution engine embeds the Sawzall [19] language so that any built-in Sawzall function can be used.
 Users can also write their own functions in Sawzall and call them from Tenzing.
 The Tenzing compiler does several basic optimizations related to filtering.
@@ -96,16 +95,16 @@ For tables which are both static and frequently used, we permanently cache the d
 Only the first use of the table results in a read into the worker.
 Subsequent reads are from the cached copy on local disk.
 We cache the join results from the last record; since input data often is naturally ordered on the join attribute(s), it saves us one lookup access.
-Bigtable), Tenzing supports remote lookup joins on the key (or a prefix of the key)
 We employ an asynchronous batch lookup technique combined with a local LRU cache in order to improve performance.
 The optimizer can intelligently switch table order to enable this if needed.
 Tenzing has an implementation which is most effective when the two tables being joined are roughly the same size and neither has an index on the join key.
-Neither table fits completely in memory, • One table is an order of magnitude larger than the.
+One table is an order of magnitude larger than the.
 Neither table has an efficient index on the join key.
 These conditions are often satisfied by OLAP queries with star joins to large dimensions, a type of query often used with Tenzing.
 Note that no sorting is required in any of the MapReduces, so it is disabled for all of them.
 The reducer code is identical to the hash aggregation pseudo-code in 4.2.1
 The Tenzing scheduler can intelligently parallelize operations to make hash joins run faster.
+We also added several optimizations to the MapReduce framework to improve the efficiency of distributed hash joins, such as sort avoidance, streaming, memory chaining and block shuﬄe.
 These functions have proven to be quite popular with the analyst community.
 Consider the following example with analytic functions which ranks employees in each department by their salary:
 Currently, Tenzing does not support the use of multiple analytic functions with different partitioning keys in the same query.
@@ -168,6 +167,14 @@ The original implementation of Tenzing serialized all intermediate data to GFS.
 This led to poor performance for multi-MapReduce queries, such as hash joins and nested sub-selects.
 We improved the performance of such queries significantly by implementing streaming between MapReduces, i.e.
 We subsequently improved performance further by using memory chaining, where.
+Certain operators such as hash join and hash aggregation require shuﬄing, but not sorting.
+The MapReduce API was enhanced to automatically turn off sorting for these operations.
+When sorting is turned off, the mapper feeds data to the reducer which directly passes the data to the Reduce() function bypassing the intermediate sorting step.
+Typically, MapReduce uses row based encoding and decoding during shuﬄe.
+This is necessary since in order to sort the data, rows must be processed individually.
+We implemented a block-based shuﬄe mechanism on top of the existing row-based shuﬄer in MapReduce that combines many small rows into compressed blocks of roughly 1MB in size.
+By treating the entire block as one row and avoiding reducer side sorting, we were able to avoid some of the overhead associated with row serialization and deserialization in the underlying MapReduce framework code.
+This lead to 3X faster shuﬄing of data compared to row based shuﬄing with sorting.
 The backend can detect the size of the underlying data to be processed.
 If the size is under a threshold (typically 128 MB), the query is not sent to the pool, but executed directly in the client process.
 Because it is built on the MapReduce framework, Tenzing has excellent scalability characteristics.
@@ -182,7 +189,6 @@ However, this proved to be inefficient because of the serialization and deserial
 The second and current implementation uses Dremel’s SQL expression evaluation engine, which is based on direct evaluation of parse trees of SQL expressions.
 While more efficient than the original Sawzall implementation, it was still somewhat slow because of its interpreter-like nature and row based processing.
 For the third iteration, we did extensive experiments with two major styles of execution: LLVM based native code generation with row major block based intermediate data and column major vector based processing with columnar intermediate storage.
-The results of benchmarking LLVM vs vector on some typical aggregation queries is shown in table 3
 All experiments were done on the same dual-core Intel machine with 4 GB of RAM, with input data in columnar form in-memory.
 Note that the LLVM engine is a work in progress and has not yet been integrated into Tenzing.
 Table sizes are in millions of rows and throughput is again measured in millions of rows per worker per second.
@@ -199,6 +205,7 @@ Vector processing engines always materialize intermediate results in main memory
 In contrast our generated native code can store results on the stack (better data locality) or even registers, depending on how the JIT compiler optimizes.
 If selectivity of source data is low, vector processing engines load less data into cache and thus scan faster.
 Because our engine stores data in rows, scans end up reading more data and are slower.
+While LLVM provides support for debugging JITed code [16], there are more powerful analysis and debugging tools for the native C/C++ routines used by most vector processing engines.
 The majority of queries in our workload are analytic queries that have aggregations and/or joins.
 These operations are significant performance bottlenecks compared to other operators like selection and projection.
 We believe that native code generation engine deals better with these bottlenecks and is a promising approach for query processing.
@@ -207,7 +214,6 @@ Hadoop [8] is an open source implementation of the MapReduce framework.
 These powerful but complex frameworks are designed for software engineers implementing complex parallel algorithms.
 These have limited optimizations built in, and are more suited for reasonably experienced analysts, who are comfortable with a procedural programming style, but need the ability to iterate quickly over massive volumes of data.
 Language extensions, usually with special purpose optimizers, built on top of the core frameworks.
-These seem to be mostly geared towards programmers who want to quickly build large scalable pipelines with relatively simple operations (e.g.
 Declarative query languages built on top of the core frameworks with intermediate to advanced optimizations.
 These are geared towards the reporting and analysis community, which is very comfortable with SQL.
 The latter is an interesting hybrid that tries to approach the performance of parallel DBMS by using a cluster of singlenode databases and MapReduce as the glue layer.

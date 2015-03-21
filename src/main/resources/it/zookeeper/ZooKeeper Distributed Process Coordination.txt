@@ -35,7 +35,6 @@ Indicates variables, functions, types, parameters, objects, and other programmin
 Shows commands or other text that should be typed literally by the user.
 Indicates placeholders in code or commands that should be replaced by appropriate values.
 This icon signifies a tip, suggestion, or a general note.
-Using Code Examples Supplemental material (code examples, exercises, etc.) is available for download at http://bit.ly/zookeeper-code.
 This book is here to help you get your job done.
 In general, if example code is offered with this book, you may use it in your programs and documentation.
 You do not need to contact us for permission unless you’re reproducing a significant portion of the code.
@@ -64,6 +63,7 @@ Coordinating the actions of these independent programs is far more difficult tha
 It is easy for developers to get mired in coordination logic and lack the time to write their application logic properly—or perhaps the converse, to spend little time with the coordination logic and simply to write a quick-and-dirty master coordinator that is fragile and becomes an unreliable single point of failure.
 ZooKeeper was designed to be a robust service that enables application developers to focus mainly on their application logic rather than coordination.
 It exposes a simple API, inspired by the filesystem API, that allows developers to implement common coordination tasks, such as electing a master server, managing group membership, and managing metadata.
+ZooKeeper is an application library with two principal implementations of the APIs—Java and C—and a service component implemented in Java that runs on an ensemble of dedicated servers.
 Having an ensemble of servers enables ZooKeeper to tolerate faults and scale throughput.
 When designing an application with ZooKeeper, one ideally separates application data from control or coordination data.
 For example, the users of a web-mail service are interested in their mailbox content, but not on which server is handling the requests of a particular mailbox.
@@ -98,6 +98,7 @@ It uses ZooKeeper as a controller for implementing sharding and failover, and al
 There are a lot more examples out there; this is a just a sample.
 Given this sample, let’s now bring the discussion to a more abstract level.
 When programming with ZooKeeper, developers design their applications as a set of clients that connect to ZooKeeper servers and invoke operations on them through the ZooKeeper client API.
+A simpler way to deal with many aspects of concurrency that often lead to incorrect.
 ZooKeeper, however, is not magic; it will not solve all problems out of the box.
 It is important to understand what ZooKeeper provides and to be aware of its tricky aspects.
 One of the goals of this book is to discuss ways to deal with these issues.
@@ -185,6 +186,7 @@ Failing over, however, is not as simple as starting to process requests that com
 The new primary master must be able to recover the state of the system at the time the old primary master crashed.
 For recoverability of the master state, we can’t rely on pulling it from the faulty master because it has crashed; we need to have it somewhere else.
 Suppose that the primary master is up, but the backup master suspects that the primary master has crashed.
+This false suspicion could happen because, for example, the primary master is heavily loaded and its messages are being delayed arbitrarily (see the discussion in “Building Distributed Systems with ZooKeeper” on page 7)
 The backup master will execute all necessary procedures to take over the role of primary master and may eventually start executing the role of primary master, becoming a second primary master.
 Even worse, if some workers can’t communicate with the primary master, say because of a network partition, they may end up following the second primary master.
 This scenario leads to a problem commonly called split-brain: two or more parts of the system make progress independently, leading to inconsistent behavior.
@@ -348,6 +350,7 @@ The client library is responsible for the interaction with ZooKeeper servers.
 Each client imports the client library, and then can communicate with any ZooKeeper node.
 Standalone mode is pretty much what the term says: there is a single server, and ZooKeeper state is not replicated.
 In quorum mode, a group of ZooKeeper servers, which we call a ZooKeeper ensemble, replicates the state, and together they serve client requests.
+From this point on, we use the term “ZooKeeper ensemble” to denote an installation of servers.
 This installation could contain a single server and operate in standalone mode or contain a group of servers and operate in quorum mode.
 ZooKeeper Quorums In quorum mode, ZooKeeper replicates its data tree across all servers in the ensemble.
 But if a client had to wait for every server to store its data before continuing, the delays might be unacceptable.
@@ -362,12 +365,12 @@ To understand what this means, let’s look at an example that shows how things 
 Say we have five servers and a quorum can be any set of two servers.
 The service returns to the client saying that the znode has been created.
 The service in this state is able to make progress because there are three servers available and it really needs only two according to our assumptions, but these three servers have never seen the new znode /z.
-This is an example of the split-brain scenario mentioned in Chapter 1
 To avoid this problem, in this example the size of the quorum must be at least three, which is a majority out of the five servers in the ensemble.
 To make progress, the ensemble needs at least three servers available.
 To confirm that a request to update the state has completed successfully, this ensemble also requires that at least three servers acknowledge that they have replicated it.
 Consequently, if the ensemble is able to make progress, then for every update that has completed successfully, we have at least one server available that contains a copy of that update (that is, the possible quorums intersect in at least one node)
 Using such a majority scheme, we are able to tolerate the crash of f servers, where f is less than half of the servers in the ensemble.
+For example, if we have five servers, we can tolerate up to f = 2 crashes.
 The number of servers in the ensemble is not mandatorily odd, but an even number actually makes the system more fragile.
 However, this system will only tolerate a single crash, because a double crash makes the system lose majority.
 Consequently, with four servers, we can only tolerate a single crash, but quorums now are larger, which implies that we need more acknowledgments for each request.
@@ -446,7 +449,6 @@ In order for servers to contact each other, they need some contact information.
 In theory servers can use multicasts to discover each other, but we want to support ZooKeeper ensembles that span multiple networks in addition to single networks that support multiple ensembles.
 To accomplish this, we are going to use the following configuration file:
 We’ll concentrate on the last three lines here, the server.n entries.
-The rest are general configuration parameters that will be explained in Chapter 10
 Each server.n entry specifies the address and port numbers used by ZooKeeper server n.
 The first field is the hostname or IP address of server n.
 The second and third fields are TCP port numbers used for quorum communication and leader election.
@@ -469,7 +471,7 @@ If we now look at the log for server 1, we see:
 We now have a quorum of servers (two out of three) available.
 Now we need to configure the clients to connect to the service.
 The connect string lists all the host:port pairs of the servers that make up the service.
-We’re including the third server, even though we never started it, because it can illustrate some useful properties of ZooKeeper.)
+We’re including the third server, even though we never started it, because it can illustrate some useful properties of ZooKeeper.
 When the server connects, we should see a message of the form:
 Note the port number, 2182 in this case, in the log message.
 We may also notice a failed connection attempt to 2183 followed by a successful connection attempt to one of the other ports.
@@ -564,7 +566,7 @@ Setting the ZooKeeper CLASSPATH We need to set up the appropriate classpath to r
 ZooKeeper uses a number of third-party libraries in addition to the ZooKeeper JAR file.
 To make typing a little easier and to make the text a little more readable we will use an environment variable CLASSPATH with all the required libraries.
 The script zkEnv.sh in the bin directory of the ZooKeeper distribution sets this environment variable for us.
-On Windows, use the call command instead of the period and the zkEnv.cmd script.)
+On Windows, use the call command instead of the period and the zkEnv.cmd script.
 Once we run this script, the CLASSPATH variable will be set correctly.
 We will use it to compile and run our Java programs.
 Creating a ZooKeeper Session The ZooKeeper API is built around a ZooKeeper handle that is passed to every API call.
@@ -647,9 +649,10 @@ Usually we put some information about the process that becomes the master in thi
 For now we will have each process pick a random server ID and use that for the initial data.
 We also need an access control list (ACL) for the new znode.
 Often ZooKeeper is used within a trusted environment, so an open ACL is used.
-As the name indicates, this is a very unsafe ACL to use in untrusted environments.)
+As the name indicates, this is a very unsafe ACL to use in untrusted environments.
 ZooKeeper provides per-znode ACLs with a pluggable authentication method, so if we need to we can restrict who can do what to which znode, but for this simple example, let’s stick with OPEN_ACL_UNSAFE.
 Of course, we want the /master znode to go away if the acting master dies.
+As we saw in “Persistent and ephemeral znodes” on page 19, ZooKeeper has ephemeral znodes for this purpose.
 We’ll define an EPHEMERAL znode that will automatically be deleted by ZooKeeper when the session that created it closes or is made invalid.
 So, we will add the following lines to our code:
 If a znode already exists with that name, the create will fail.
@@ -749,7 +752,8 @@ So, before we requeue a status update, we need to make sure that we are requeuin
 We do this check and retry in a synchronized block.
 We do an unconditional update (the third parameter; the expected version is –1, so version checking is disabled), and we pass the status we are setting as the context object.
 If we get a connection loss event, we simply need to call updateStatus with the status we are updating.
-We passed the status in the context parameter of set Data.) The updateStatus method will do checks for race conditions, so we do not need to do those here.
+We passed the status in the context parameter of set Data.
+The updateStatus method will do checks for race conditions, so we do not need to do those here.
 To understand the problems with reissuing operations on a connection loss a bit more, consider the following scenario:
 The client library tries to issue the setData, but encounters networking problems.
 The worker asks the client library to issue a setData with Idle as the data.
@@ -802,13 +806,15 @@ Takeaway Messages The commands we use in zkCli correspond closely to the API we 
 The API is so close to the commands in zkCli that you could easily write an application that matches commands used when experimenting with zkCli.
 First, when using zkCli we usually are in a stable environment where unexpected failures don’t happen.
 For code we are going to deploy, we have to handle error cases that complicate the code substantially.
-Remember, ZooKeeper helps organize distributed state and provides a framework for handling failures; it doesn’t make failures go away, unfortunately.) Second, it is worthwhile to become comfortable with the asynchronous API.
+Remember, ZooKeeper helps organize distributed state and provides a framework for handling failures; it doesn’t make failures go away, unfortunately.
+Second, it is worthwhile to become comfortable with the asynchronous API.
 It can give big performance benefits and can simplify error recovery.
 It is not uncommon to have application processes that need to learn about changes to the state of a ZooKeeper ensemble.
 For instance, in our example in Chapter 1, backup masters need to know that the primary master has crashed, and workers need to know when new tasks have been assigned to them.
 ZooKeeper clients could, of course, poll the ZooKeeper ensemble periodically to determine whether changes have occurred.
 Polling, however, is not efficient, especially when the expected changes are somewhat rare.
 For example, let’s consider backup masters; they need to know when the primary has crashed so that they can fail over.
+To reduce the time it takes to recover from the primary crash, we need to poll frequently—say, every 50 ms—just for an example of aggressive polling.
 If there are multiple backup masters, we multiply this frequency by the number of backups to obtain the total request traffic generated just to poll ZooKeeper for the status of the primary master.
 Even if such an amount of traffic is easy for a system like ZooKeeper to deal with, primary master crashes should be rare, so most of this traffic is unnecessary.
 Suppose we therefore reduce the amount of polling traffic to ZooKeeper by increasing the period between requests for the status of the primary, say to 1 second.
@@ -842,6 +848,7 @@ If several more tasks have been assigned to the worker after it received the not
 The getChildren call also sets a new watch, guaranteeing that the worker will not miss tasks.
 Actually, having one notification amortized across multiple events is a positive aspect.
 It makes the notification mechanism much more lightweight than sending a notification for every event for applications that have a high rate of updates.
+Getting More Concrete: How to Set Watches All read operations in the ZooKeeper API—getData, getChildren, and exists—have the option to set a watch on the znode they read.
 To use the watch mechanism, we need to implement the Watcher interface, which consists of implementing a process method:
 A znode path in the case that the watched event is not None.
 The first three events refer to a single znode, whereas the fourth event concerns the children of the znode on which it is issued.
@@ -872,6 +879,7 @@ The Master-Worker Example Let’s now look at how we deal with changes of state 
 Here is a list of tasks that require a component to wait for changes:
 We next show some code snippets to illustrate how to code these tasks with ZooKeeper.
 We provide the complete example code as part of the additional material to this book.
+Mastership Changes Recall from “Getting Mastership” on page 51 that an application client elects itself master by creating the /master znode (we call this “running for master”)
 If the znode already exists, the application client determines that it is not the primary master and returns.
 That implementation, however, does not tolerate a crash of the primary master.
 If the primary master crashes, the backup masters won’t know about it.
@@ -881,6 +889,7 @@ If someone else has already created the znode, then the client needs to watch it
 If anything unexpected happens, then it logs the error and doesn’t do anything else.
 This exists call is to set a watch on the /master znode.
 If the /master znode is deleted, then it runs for master again.
+Following the asynchronous style we used in “Getting Mastership Asynchronously” on page 56, we also create a callback method for the exists call that takes care of a few cases.
 First, it tries the exists operation again in the case of a connection loss event because it needs to set a watch on /master.
 Second, it is possible for the /master znode to be deleted between the execution of the create callback and the execution of the exists operation.
 Consequently, we need to check whether stat is null whenever the response from exists is positive (return code is OK)
@@ -969,7 +978,8 @@ Note that resubmitting may create a duplicate of the task.
 Set a watch on the status znode for this task.
 Has My Sequential Znode Been Created? Dealing with a CONNECTIONLOSS event when trying to create a sequential znode is somewhat tricky.
 Because ZooKeeper assigns the sequence number, it is not possible for the disconnected client to determine whether the znode has been created when there might be concurrent requests to create sequential znodes from other clients.
-Note that all the create requests we are talking about in this note refer to the children of the same znode.) To overcome this limitation, we have to give some hint about the originator of the znode, like adding the server ID as part of the task name.
+Note that all the create requests we are talking about in this note refer to the children of the same znode.
+To overcome this limitation, we have to give some hint about the originator of the znode, like adding the server ID as part of the task name.
 Using this approach, it is possible to determine whether the task has been created by listing all task znodes.
 Here we check if the status node already exists (maybe the task has been processed fast) and set a watch.
 We provide a watcher implementation to react to the notification of the znode creation and a callback implementation for the exists call:
@@ -1013,7 +1023,6 @@ The signature of check is similar to that of setData, but it doesn’t include d
 If the version of the znode in the given path does not match, the multi call fails.
 To illustrate, this is roughly how the code would look if we were to implement the example we have just discussed:
 Note that if we store the path along with the master ID in /master, this scheme does not work.
-The /master znode is created every time by a new master, which makes its version consistently 1
 Watches as a Replacement for Explicit Cache Management It is undesirable from the application’s perspective to have clients accessing ZooKeeper every time they need to get the data for a given znode, the list of children of a znode, or anything else related to the ZooKeeper state.
 Instead, it is much more efficient to have clients cache values locally and use them at will.
 Once such values change, of course, you want ZooKeeper to notify the clients so they can update the caches.
@@ -1184,7 +1193,6 @@ Another reason is that an authenticated session can no longer authenticate itsel
 The clearest example of this lost state is the ephemeral znodes that get deleted when a session is closed.
 Internally, ZooKeeper keeps a less visible state that is also discarded when a session is closed.
 An unrecoverable failure happens when the client fails to provide proper credentials to authenticate the session, or when it reconnects to an expired session after a Disconnec ted event.
-The client library does not determine that a session has failed on its own—
 The easiest way to deal with unrecoverable failures is to terminate the process and restart.
 This allows the process to come back up and reinitialize its state with a new session.
 If the process is going to keep running, it must clear out any internal application process state associated with the old session and reinitialize with a new one.
@@ -1324,11 +1332,9 @@ The session may expire due to network issues or other issues, such as garbage co
 In the case of session expiration, the client must take into account that the ZooKeeper state might have changed and that some of its ZooKeeper requests might not have gone through.
 Version Is Reset When Znode Is Re-Created This might sound like a naive observation, but it is necessary to remember that when a znode is deleted and re-created, its version number is reset.
 An application that tries to make version checks after a znode is re-created might fall into this trap.
-Say that a client gets the data of a znode (e.g., /z), changes the data of the znode, and writes it back under the condition that the version is 1
 If the znode is deleted and recreated while the client is updating the data, the version matches, but it now contains the wrong data.
 Another possible scenario is for changes to a znode to occur by deleting and re-creating the znode; the znode is never changed with setData but is different nevertheless.
 In this case, checking the version gives no clue about changes to the znode.
-The znode may change an arbitrary number of times and its version will still be 0
 This scenario is possible because the server serving a given client might not have processed the change yet.
 Say that a client wants to read the znode that it has heard through a direct channel has changed.
 The ZooKeeper implementation deals with this issue by making it unlikely that a quorum of followers will abandon a leader without the leader noticing.
@@ -1412,7 +1418,6 @@ Watcher function for processing events, defined next in this section.
 Client ID of a session that has been previously established and that this client is trying to reconnect to.
 To obtain the client ID of an established session, we call zoo_client_id.
 Context object that is used with the returned zkhandle_t handle.
-There is no current use for this parameter, so it should be set to 0
 If you are not building on Windows, leave ZOOAPI empty.
 In principle, nothing needs to be configured if you are building on Windows; the distribution configuration should be sufficient.
 The call to zookeeper_init may return before the session establishment actually completes.
@@ -1424,7 +1429,8 @@ Watch Data Structures ZooKeeper does not have a way to remove watches so as long
 Consequently, it’s important to keep watch data structures around even if the process no longer cares about the session, because the completion functions may still get invoked.
 To put everything together, this is the init function we have for our master:
 The first two lines set the seed for random number generation and set the identifier of this master.
-Recall that we can have one or more backup masters as well as a primary master.) Next, we set the severity level of the log messages.
+Recall that we can have one or more backup masters as well as a primary master.
+Next, we set the severity level of the log messages.
 Bootstrapping the Master Bootstrapping the master refers to creating a few znodes used in the operation of the master-worker example and running for primary master.
 It passes a zhandle_t instance, which is a global static variable in our implementation.
 The path is a parameter of the call of type const char*
@@ -1488,6 +1494,7 @@ Back at Yahoo!, there were applications that used to run on BSD and were single-
 They needed a single-threaded version of the client library to be able to use ZooKeeper.
 If you’re not in a situation that forces the use of the single-threaded library, then just go with the multithreaded library.
 To use the single-threaded version, we can reuse the code shown throughout this chapter, but we need to additionally implement an event loop.
+This is the same init call shown in “Starting a Session” on page 122 to get a ZooKeeper handle.
 Indicates that a read event on the file descriptor fd has happened.
 Indicates that a write event on the file descriptor fd has happened.
 In the single-threaded case, we have to do it ourselves.
@@ -1524,6 +1531,7 @@ Fluent API A fluent API enables us to write code by chaining calls instead of re
 For example, with the standard ZooKeeper API, we create a znode synchronously by invoking something like:
 With the fluent API of Curator, we make the same call this way:
 The create call returns a CreateBuilder instance and the subsequent calls return an object of a type that CreateBuilder extends.
+Builders are available for the other operations as well—delete, setData, getData, checkExists, and getChildrenthrough the Curator framework client object.
 To execute the same operation asynchronously, we add inBackground as follows:
 This returns immediately, and we have to create one or more listeners to receive the callback that is returned when the znode is created.
 We discuss listeners and how to register them in the next section.
@@ -1549,6 +1557,7 @@ A special kind of listener deals with errors reported when a background thread c
 This is a low-level detail, but it might be necessary if you want to handle them in your application.
 When the application needs to deal with such errors, it must implement a different kind of listener:
 Note that implementing listeners as event handlers, as we discussed in this section, is somewhat different from the way we proposed to implement ZooKeeper applications in previous chapters.
+For the master-worker example implemented directly on top of ZooKeeper (see “A Common Pattern” on page 72), we chain calls and callbacks, and each callback is handled by a different callback implementation.
 With Curator, the details of a callback or a watch notification are encapsulated into an Event object, which makes it amenable to an implementation using a single event handler.
 State Changes in Curator Curator exposes a different set of states than ZooKeeper.
 It has, for example, a SUSPEND ED state, and it uses LOST to represent session expiration.
@@ -1626,6 +1635,7 @@ Instead, it explains how ZooKeeper works internally, by describing its protocols
 This content is important because it gives some deeper insight into why things work the way they work with ZooKeeper.
 This insight is important if you’re planning on running ZooKeeper.
 As we saw in earlier chapters, ZooKeeper runs on an ensemble of servers while clients connect to these servers to execute operations.
+But what exactly are these servers doing with the operations the clients send? We hinted in Chapter 2 that we elect a distinguished server that we call the leader.
 The remaining servers, who follow the leader, are called followers.
 The leader is the central point for handling all requests that change the ZooKeeper system.
 It acts as a sequencer and establishes the order of updates to the ZooKeeper state.
@@ -1683,7 +1693,7 @@ The server that wins this election enters the LEADING state, while the other ser
 The leader election messages are called leader election notifications, or simply notifications.
 When a server enters the LOOKING state, it sends a batch of notification messages, one to each of the other servers in the ensemble.
 The message contains its current vote, which consists of the server’s identifier (sid) and the zxid (zxid) of the most recent transaction it executed.
-For the purposes of leader election, a zxid is a single number, but in some other protocols it is represented as an epoch and a counter.)
+For the purposes of leader election, a zxid is a single number, but in some other protocols it is represented as an epoch and a counter.
 Upon receiving a vote, a server changes its vote according to the following rules:
 Let voteId and voteZxid be the identifier and the zxid in the current vote of the receiver, whereas myZxid and mySid are the values of the receiver itself.
 In short, the server that is most up to date wins, because it has the most recent zxid.
@@ -1727,6 +1737,7 @@ The follower needs to check that the proposal is from the leader it is currently
 The first property guarantees that transactions are delivered in the same order across servers, whereas the second property guarantees that servers do not skip transactions.
 Given that the transactions are state updates and each state update depends upon the.
 A quorum must acknowledge a transaction before the leader commits it, and a follower records on disk the fact that it has acknowledged the transaction.
+As we’ll see in “Local Storage” on page 170, transactions can still end up on some servers and not on others, because servers can fail while trying to write a transaction to storage.
 ZooKeeper can bring all servers up to date whenever a new quorum is created and a new leader chosen.
 ZooKeeper, however, does not expect to have a single active leader the whole time.
 Leaders may crash or become temporarily disconnected, so servers may need to move to a new leader to guarantee that the system remains available.
@@ -1844,7 +1855,6 @@ The servers do not need to coordinate to take snapshots, nor do they have to sto
 Because servers keep executing requests while taking a snapshot, the data tree changes as the snapshot is taken.
 We call such snapshots fuzzy, because they do not necessarily reflect the exact state of the data tree at any particular point in time.
 Say that a data tree has only two znodes: /z and /z'
-Initially, the data of both /z and /z' is the integer 1
 To understand this process, assume that applying a transaction consists of reexecuting the corresponding operation.
 In the case just described, the operation sets the data of the znode to a specific value, and the value is not dependent on anything else.
 Say that we are setting the data of /z' unconditionally (the version number is -1 in the setDa ta request)
@@ -1870,6 +1880,7 @@ To keep a session alive, a server needs to receive heartbeats for the session.
 Heartbeats come in the form of new requests or explicit ping messages (see LearnerHan dler.run())
 In quorum mode, a leader sends a PING message to learners and the learners send back the list of sessions that have been touched since the last PING.
 The leader sends a ping to learners every half a tick.
+A tick (described in “Basic Configuration” on page 179) is the minimum unit of time that ZooKeeper uses, expressed in milliseconds.
 So, if the tick is set to be 2 seconds, then the leader sends a ping every second.
 A data structure called the expiry queue (see ExpiryQueue) keeps session information for the purposes of expiration.
 The data structure keeps sessions in buckets, each bucket corresponding to a range of time during which the sessions are supposed to expire, and the leader expires the sessions in one bucket at a time.
@@ -1884,6 +1895,7 @@ A ZooKeeper deployment might have thousands of clients and consequently thousand
 Checking for session expiration in a fine-grained manner is not suitable in such situations.
 Related to this comment, note that if the expirationInterval is short, ZooKeeper ends up performing session expiration checks in a fine-grained manner.
 The expirationInterval is currently one tick, which is typically on the order of seconds.
+Servers and Watches Watches (see “Watches and Notifications” on page 20) are one-time triggers set by read operations, and each watch is triggered by a specific operation.
 To manage watches on the server side, a ZooKeeper server implements watch managers.
 An instance of the WatchManager class is responsible for keeping a list of current watches that are registered and for triggering them.
 All types of servers (standalone, leader, follower, and observer) process watches in the same way.
@@ -1904,7 +1916,7 @@ It maintains a list of ZooKeeper servers it can connect to and transparently swi
 This reset is enabled by default, but can be disabled by setting disableAu toWatchReset.
 Serialization For the serialization of messages and transactions to send over the network and to store on disk, ZooKeeper uses Jute, which grew out of Hadoop.
 For a long time the ZooKeeper developer team has been discussing options for replacing Jute, but we haven’t found a suitable replacement so far.
-It has served us well, though, and it hasn’t been critical to replace it.)
+It has served us well, though, and it hasn’t been critical to replace it.
 Here is an example of a Jute definition we have in this file:
 This example defines a module containing the definition of a create transaction.
 ZooKeeper also needs the Zab protocol to propagate state updates, which guarantees a consistent state despite possible crashes of the ZooKeeper servers.
@@ -1968,6 +1980,7 @@ The snapshots are written using a background thread that does not lock the datab
 Unless the dataLogDir option is set, the transaction log is also stored in this directory.
 The transaction log is very sensitive to other activity on the same device as this directory.
 The server tries to do sequential writes to the transaction log because the data must be synced to storage before the server can acknowledge a transaction.
+Other activity on the device—notably snapshots—can severely affect write throughput by causing disk heads to thrash during syncing.
 So, best practice is to use a dedicated log device and set dataLogDir to point to a directory on that device.
 The timeouts used by the ZooKeeper ensemble are specified in units of tickTime.
 This means, in effect, that the tickTime sets the lower bound on timeouts because the minimum timeout is a single tick.
@@ -2026,6 +2039,7 @@ However, some servers are set up with multiple network interfaces, generally one
 If you do not want a server to allow client connections from the public network, set the client PortAddress to the address of the interface on the private network.
 When clients make a connection, they request a specific timeout, but the actual timeout they get will not be less than minSessionTimeout.
 ZooKeeper developers would love to be able to detect client failures immediately and accurately.
+Unfortunately, as “Building Distributed Systems with ZooKeeper” on page 7 explained, systems cannot do this under real conditions.
 The timeouts to use depend on the responsiveness of the ZooKeeper client and server machines and, more importantly, the latency and reliability of the network between them.
 The timeout must be equal to at least the network round trip time between the client and server, but occasionally packets will be dropped, and when that happens the time it takes to receive a response is increased by the retransmission timeout as well as the latency of receiving the retransmitted packet.
 Setting this timeout too low will result in incorrect detection of client failures.
@@ -2043,11 +2057,13 @@ Because you may have more than one transfer happening at a time, you may want to
 If you set the initLimit too high, it will take longer for initial connections to faulty servers to fail, which can increase recovery time.
 For this reason it is a good idea to benchmark how long it takes for a follower to connect to a leader on your network with the amount of data you plan on using to find your expected time.
 The timeout, specified in number of ticks, for a follower to sync with a leader.
+A follower will always be slightly behind the leader, but if the follower falls too far behind—due to server load or network problems, for example—it needs to be dropped.
 If the leader hasn’t been able to sync with a follower for more than syn cLimit ticks, it will drop the follower.
 Just like initLimit, syncLimit does not have a default and must be set.
 Unlike initLimit, syncLimit does not depend on the amount of data stored by ZooKeeper; instead, it depends on network latency and throughput.
 On high-latency networks it will take longer to send data and get responses back, so naturally the syncLimit will need to be increased.
 Even if the latency is relatively low, you may need to increase the syncLimit because any relatively large transaction may take a while to transmit to a follower.
+A “yes” or “no” flag indicating whether or not a leader will service clients (zookeep er.leaderServes)
 The ZooKeeper server that is serving as leader has a lot of work to do.
 It talks with all the followers and executes all changes.
 This means the load on the leader is greater than that on the follower.
@@ -2072,7 +2088,7 @@ The default value of 5 seconds is very generous and probably will not need to be
 It selects among different leader election algorithms, but all have been deprecated except for the one that is the default.
 Authentication and Authorization Options This section contains the options that are used for authentication and authorization.
 This system property specifies the digest for the “super” user’s password.
-This feature is disabled by default.) A client that authenticates as super bypasses all ACL checking.
+A client that authenticates as super bypasses all ACL checking.
 The value of this system property will have the form super:encoded_di gest.
 The following example command line generates an encoded digest for the password asdf:
 To start a server using this digest, you can use the following command:
@@ -2132,6 +2148,7 @@ If another process starts making the disk thrash or uses all the memory or CPU, 
 A particularly problematic scenario is when a ZooKeeper server process runs on the same server as one of the application processes that it manages.
 If that process goes into an infinite loop or starts behaving badly, it may adversely affect the ZooKeeper server process at the very moment that it is needed to allow other processes to take over from the bad one.
 Dedicate a machine to run each ZooKeeper server in order to avoid these problems.
+Configuring a ZooKeeper Ensemble The notion of quorums, introduced in “ZooKeeper Quorums” on page 24, is deeply embedded in the design of ZooKeeper.
 The quorum is relevant when processing requests and when electing a leader in replicated mode.
 If a quorum of ZooKeeper servers is up, the ensemble makes progress.
 Observers participate in the ensemble, receiving requests from clients and process state updates from the servers.
@@ -2140,8 +2157,9 @@ The ensemble also does not consider observer notifications when electing a leade
 The Majority Rules When an ensemble has enough ZooKeeper servers to start processing requests, we call the set of servers a quorum.
 Of course, we never want there to be two disjoint sets of servers that can process requests, or we would end up with split brain.
 We can avoid the split-brain problem by requiring that all quorums have at least a majority of servers.
-Note: half of the servers do not constitute a majority; you must have greater than half the number of servers to have a majority.)
+Note: half of the servers do not constitute a majority; you must have greater than half the number of servers to have a majority.
 When we set up a ZooKeeper ensemble to use multiple servers, we use majority quorums by default.
+ZooKeeper automatically detects that it should run in replicated mode because there are multiple servers in the configuration (see “Cluster Configuration” on page 183), and it defaults to using majority quorums.
 The right side of the assignment is a colon-separated list of server identifiers.
 Note that groups must be disjoint and the union of all groups must be the ZooKeeper ensemble.
 In other words, every server in the ensemble must be listed once in some group.
@@ -2249,6 +2267,8 @@ Applications should not store their own data in this subtree; instead, it is res
 The /zookeep er/quota znode is an example of this use.
 The limit on the number of znodes is called the count, whereas the limit on the amount of data is called the bytes.
 In the case of zookeeper_limits, n and m represent levels at which warnings will be triggered.
+If one of them is –1, it will not act as a trigger.
+In the case of zookeeper_stats, n and m represent the current number of znodes in the subtree and the current number of bytes in the data of the znodes of the subtree.
 Quota Tracking of Metadata The quota tracking for the number of bytes in the subtree does not include the metadata overhead for each znode.
 This metadata is on the order of 100 bytes, so if the amount of data in each znode is small, it is more useful to track the count of the number of znodes rather than the number of bytes of znode data.
 As a matter of fact, we can create and delete these files to create and delete quotas ourselves.
@@ -2264,10 +2284,12 @@ When hosting multiple tenants, administrators will usually divide up the data tr
 Each application developer can write her application as if she has a dedicated ZooKeeper service.
 File System Layout and Formats We have talked about snapshots and transaction logs and storage devices.
 This section describes how this is all laid out on the file system.
+A good understanding of the concepts discussed in “Local Storage” on page 170 will come in handy in this section; be prepared to refer back to it.
 As we have already discussed, data is stored in two ways: transaction logs and snapshots.
 Both of these end up as normal files in the local file system.
 Transaction logs are written during the critical path of transaction processing, so we highly recommend storing them on a dedicated device.
-We realize we have said this multiple times, but it really is important for good, consistent throughput and latency.) Not using a dedicated device for the transaction log does not cause any correctness issues, but it does affect performance.
+We realize we have said this multiple times, but it really is important for good, consistent throughput and latency.
+Not using a dedicated device for the transaction log does not cause any correctness issues, but it does affect performance.
 In a virtualized environment, for example, dedicated devices might not be available.
 Snapshots need not be stored on a dedicated device because they are taken lazily in a background thread.
 Snapshots are written to the path specified in the DataDir parameter, and transaction logs are written to the path specified in the DataLogDir parameter.
@@ -2334,7 +2356,7 @@ Provides the same information as stat, except the connection information, which 
 Provides session information, listing the currently active sessions and when they will expire.
 This word can be used only on a server that is acting as the leader.
 Lists the basic server configuration parameters that the server was started with.
-The leader will list some additional parameters that apply only to leaders.)
+The leader will list some additional parameters that apply only to leaders.
 Lists a brief summary of the watches tracked by the server.
 Lists detailed information on the watches tracked by the server, grouped by session.
 Lists detailed information on the watches tracked by the server, grouped by the znode path being watched.
@@ -2362,7 +2384,6 @@ Figure 10-11 shows some of the additional information that is exposed by JMX.
 We can now see that server 2 is acting as a follower.
 As we see, server 1 is acting as a leader.
 One additional operation, FollowerInfo, is available on the leader to list the followers.
-When we click this button, we see a rather raw list of information about the other ZooKeeper servers connected to server 1
 Up to now, the information we’ve seen from JMX looks prettier than the information we get from four-letter words, but we really haven’t seen any new functionality.
 Let’s look at something we can do with JMX that we cannot do with four-letter words.
 The attributes of the connection list various pieces of information that are useful for debugging operational issues.
@@ -2411,3 +2432,4 @@ The European wildcat was once found throughout Europe and is considered by some 
 During the past 300 years, the range of the European wildcat, through pressures brought about by hunting and the spread of human population, has been significantly reduced.
 Although many of the wildcat subspecies live in remote regions, others are in relative close proximity to human habitation and therefore near domestic and feral cat populations, within which they often mate.
 Over an extended period of time, it is possible that certain subspecies will simply “breed” themselves out of existence.
+Created PDF documents can be opened with Acrobat and Adobe Reader 5.0 and later.

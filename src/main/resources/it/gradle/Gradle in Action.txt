@@ -62,12 +62,15 @@ You should be able to use this knowledge to implement complex, extendable, enter
 The third part describes how Gradle can be used in the context of continuous deliver, focusing on topics like polyglot builds, code quality, artifact assembly, and deployment.
 The chapters in part 1, Introducing Gradle, are as follows:
 Introduction to project automation—This chapter gives a gentle introduction into why it’s a good idea to automate your projects and how build tools can help get xix.
+Next generation builds with Gradle—How does Gradle compare to existing JVMlanguage build tools? This chapter covers Gradle’s extensive feature set and how it helps automate your software delivery process in the context of a Continuous Delivery deployment pipeline.
 As a first taste, you’ll write a simple build script and run it on the command line.
 Building a Gradle project by example—This chapter introduces a Java-based web application as a vehicle to demonstrate some of Gradle’s core features.
 We’ll explore the use of the Java plugin for standardized and nonconventional use cases and examine productivity tools for fast development turnaround.
+Build script essentials—What are the main building blocks of a Gradle project? This chapter discusses the use of important domain objects, namely projects and tasks.
 We’ll touch on how these objects map to the corresponding classes in the Gradle API, Gradle’s build lifecycle, the incremental build feature, and the mechanics of registering lifecycle hooks.
 Dependency management—No enterprise project can do without reusing functionality from external libraries.
 This chapter explores Gradle’s declarative support for dependency management, version conflict resolution strategies, and the inner workings of its cache.
+Multiproject builds—Does your project consist of multiple, modularized software components? This chapter covers the options for organizing build logic in a multiproject setting, how to declare project dependencies, and the use of partial builds to improve execution time.
 Testing with Gradle—Testing your code is an important activity of the software development lifecycle.
 By the end of this chapter, you’ll write tests with JUnit, TestNG, and Spock and execute them as part of the build lifecycle.
 You’ll also learn how to configure test execution, register listeners to react to test lifecycle events, and organize different types of tests with the help of source sets.
@@ -85,6 +88,7 @@ This chapter discusses the installation and configuration procedures needed to r
 Artifact assembly and publishing—A build either consumes or produces binary artifacts.
 This chapter explores the artifact assembly process and the configuration needed to publish artifacts, including their metadata, to a binary repository.
 Infrastructure provisioning and deployment—A configured target environment is a prerequisite for any software deployment.
+In this chapter, we’ll discuss the importance of “infrastructure as code” for setting up and configuring an environment and its services in an automated fashion.
 A Driving the command line—This appendix explains how to operate Gradle from the command line.
 We’ll explore tasks available to all Gradle builds, plus command line options and their use cases.
 Who should read the book? This book is primarily for developers and build automation engineers who want to implement a repeatable build that’s easy to read and extend.
@@ -195,6 +199,7 @@ If you’re practicing agile software development, you’re interested in receiv
 You’ll want to know if your source code can be compiled without any errors or if there’s a potential software defect indicated by a failed unit or integration test.
 This type of automation is usually triggered if code was checked into version control, as shown in figure 1.2
 Think of scheduled automation as a time-based job scheduler (in the context of a Unix-based operation system, also known as a cron job)
+It runs in particular intervals or at concrete times—for example, every morning at 1:00 a.m.
 As with all cron jobs, scheduled automation generally runs on a dedicated server.
 This kind of automation is particularly useful for generating reports or documentation for your project.
 The practice that implements scheduled and triggered builds is commonly referred to as continuous integration (CI)
@@ -216,6 +221,8 @@ Node : A unit of work; in the case of a build tool, this is a task (for example,
 Directed edge : A directed edge, also called an arrow, representing the relationship between nodes.
 If a task defines dependent tasks, they’ll need to execute before the task itself can be executed.
 Often this is the case because the task relies on the output produced by another task.
+Here’s an example: to execute the task “assemble deliverable,” you’ll need to run its dependent tasks “copy class files to directory” and “compile source code.”
+For example, if two different tasks depend on the task “source code compilation,” you only want to execute it once.
 You may have noticed that the nodes are shown in an inverted order from the tasks in figure 1.4
 This is because the order is determined by node dependencies.
 As a developer, you won’t have to deal directly with the DAG representation of your build.
@@ -224,6 +231,7 @@ Figure 1.4 A common scenario of tasks executed in a predefined order.
 It’s important to understand the interactions among the components of a build tool, the actual definition of the build logic, and the data that goes in and out.
 Let’s discuss each of the elements and their particular responsibilities.
 Figure 1.6 illustrates a build file that describes four tasks and how they depend on each other.
+The tasks we discussed in the scenario earlier—compiling source code, copying files to a directory, and assembling a ZIP file—would be defined in the build file.
 Oftentimes, a scripting language is used to express the build logic.
 That’s why a build file is also referred to as a build script.
 Some tasks may not need any input to function correctly, nor is creating an output considered mandatory.
@@ -340,6 +348,7 @@ This will matter if you have long-running builds (for example, two hours or long
 This book will introduce you to a tool that does provide all of these great features: Gradle.
 Together, we’ll cover a lot of ground on how to use it and exploit all the advantages it provides.
 Life for developers and QA personnel without project automation is repetitive, tedious, and error-prone.
+Every step along the software delivery process—from source code compilation to packaging the software to releasing the deliverable to test and production environments—has to be done manually.
 Project automation helps remove the burden of manual intervention, makes your team more efficient, and leads the way to a push-button, fail-safe software release process.
 You learned that the different types of project automation are not exclusive.
 A build tool is one of the enablers for project automation.
@@ -361,6 +370,8 @@ But the landscape of modern software development has changed, and so have the ne
 Today, projects involve large and diverse software stacks, incorporate multiple programming languages, and apply a broad spectrum of testing strategies.
 With the rise of agile practices, builds have to support early integration of code as well as frequent and easy delivery to test and production environments.
 Established build tools continuously fall short in meeting these goals in a simple but customizable fashion.
+How many times have your eyes glazed over while looking at XML to figure out how a build works? And why can’t it be easier to add custom logic to your build? All too often, when adding on to a build script, you can’t Next-generation builds with Gradle.
+Why Gradle? Why now? shake the feeling of implementing a workaround or hack.
 There has to be a better way of doing these things in an expressive and maintainable way.
 Gradle is the next evolutionary step in JVM-based build tools.
 It draws on lessons learned from established tools like Ant and Maven and takes their best ideas to the next level.
@@ -409,6 +420,7 @@ Over the course of years, both tools significantly improved and extended their f
 But even though both are highly popular and have become industry standards, they have one weak point: build logic has to be described in XML.
 As a build script grows in complexity, maintaining the build code becomes a nightmare.
 Each element of work (a target in Ant’s lingo) can be combined and reused.
+Why Gradle? Why now? single units of work into full workflows.
 For example, you might have one target for compiling Java source code and another one for creating a JAR file that packages the class files.
 Building a JAR file only makes sense if you first compiled the source code.
 In Ant, you make the JAR target depend on the compile target.
@@ -442,10 +454,11 @@ If you’re a developer, automating your project is part of your day-to-day busi
 Don’t you want to treat your build code like any other piece of software that can be extended, tested, and maintained? Let’s put software engineering back into the build.
 Gradle build scripts are declarative, readable, and clearly express their intention.
 It’s impressive to see how much less code you need to write in Gradle to achieve the same goal.
+Where other build tools like Maven propose project layouts that are “my way or the highway,” Gradle’s DSL allows for flexibility by adapting to nonconventional project structures.
 Figure 2.1 Gradle combines the best features from other build tools.
+Why Gradle? Why now? Never change a running system, you say? Your team already spent a lot of time on establishing your project’s build code infrastructure.
 Gradle doesn’t force you to fully migrate all of your existing build logic.
 Good integration with other tools like Ant and Maven is at the top of Gradle’s priority list.
-We’ll take a deeper look at Gradle’s integration features and potential migration strategies in chapter 9
 ThoughtWorks, a highly regarded software development consultancy, periodically publishes a report on emerging technologies, languages, and tools—their so-called technology radar.
 The goal of the technology radar is to help decision makers in the software industry understand trends and their effect on the market.
 Figure 2.2 Comparing build script size and readability between Maven and Gradle.
@@ -458,9 +471,7 @@ Many of their software products, such as the Spring framework and Grails, are li
 Let’s take a closer look at what sets Gradle apart from its competitors: its compelling feature set (see figure 2.3)
 To summarize, Gradle is an enterprise-ready build system, powered by a declarative and expressive Groovy DSL.
 It combines flexibility and effortless extendibility with the idea of convention over configuration and support for traditional dependency management.
-Recognition by ThoughtWorks “Two things have caused fatigue with XML-based build tools like Ant and Maven: too many angry pointy braces and the coarseness of plug-in architectures.
 While syntax issues can be dealt with through generation, plug-in architectures severely limit the ability for build tools to grow gracefully as projects become more complex.
-We have come to feel that plug-ins are the wrong level of abstraction, and prefer languagebased tools like Gradle and Rake instead, because they offer finer-grained abstractions and more flexibility long term.”
 Gradle’s compelling feature set (Gradleware) and strong community involvement, Gradle is becoming the numberone choice build solution for many open source projects and enterprises.
 The key to unlocking Gradle’s power features within your build script lies in discovering and applying its domain model, as shown in figure 2.4
 As you can see in the figure, a build script directly maps to an instance of type Project in Gradle’s API.
@@ -494,7 +505,6 @@ You don’t have to be a Groovy expert to get started.
 Because Groovy is written on top of Java, you can migrate gradually by trying out its language features.
 You could even write your custom logic in plain Java—Gradle couldn’t care less.
 Battlescarred Groovy veterans will assure you that using Groovy instead of Java will boost your productivity by orders of magnitude.
-Manning, 2009) For a primer on Groovy, see appendix B.
 One of Gradle’s big ideas is to give you guidelines and sensible defaults for your projects.
 Every Java project in Gradle knows exactly where source and test class file are supposed to live, and how to compile your code, run unit tests, generate Javadoc reports, and create a distribution of your code.
 All of these tasks are fully integrated into the build lifecycle.
@@ -518,7 +528,7 @@ Options range from a plain file system to a full-fledged enterprise repository.
 External dependencies may have a reference to other libraries or resources.
 Gradle provides an infrastructure to manage the complexity of resolving, retrieving, and storing dependencies.
 Once they’re downloaded and put in your local cache, they’re made available to your project.
-Recall the story of Tom and Joe from chapter 1
+Do you remember the last time your coworker said, “But it works on my box”? Builds have to produce the same result on different machines, independent of the contents of your local cache.
 Dependency managers like Ivy and Maven in their current implementation cannot fully guarantee reproducibility.
 Figure 2.5 In Gradle, Java projects are build by convention with sensible defaults.
 Changing the defaults is easy and achieved through convention properties.
@@ -528,7 +538,6 @@ At worst, this will cause a failing build that’s extremely hard to debug.
 Another common complaint specific to Ivy is the fact that dependency snapshot versions, artifacts currently under development with the naming convention –SNAPSHOT, aren’t updated correctly in the local cache, even though it changed on the repository and is marked as changing.
 There are many more scenarios where current solutions fall short.
 Gradle provides its own configurable, reliable, and efficient dependency management solution.
-We’ll have a closer look at its features in chapter 5
 Large enterprise projects usually consist of multiple modules to separate functionality.
 In the Gradle world, each of the submodules is considered a project that can define dependencies to external libraries or other modules.
 Gradle figures out for you which of the subproject dependencies need to be rebuilt, without having to store a subproject’s artifact in the local cache.
@@ -561,6 +570,7 @@ If you feel like complexity takes over, you may want to explore the option of a 
 If you want to share reusable code among builds and projects, plugins are your best friend.
 Representing Gradle’s most powerful extension mechanism, plugins give you full access to Gradle’s API and can be written, tested, and distributed like any other piece of software.
 Writing a plugin is surprisingly easy and doesn’t require a lot of additional descriptors.
+Wouldn’t it be a huge timesaver to be able to integrate with existing build tools? Gradle plays well with its predecessors Ant, Maven, and Ivy, as shown in figure 2.6
 If you’re coming from Ant, Gradle doesn’t force you to fully migrate your build infrastructure.
 Instead, it allows you to import existing build logic and reuse standard Ant tasks.
 Gradle builds are 100% compatible with Maven and Ivy repositories.
@@ -595,6 +605,7 @@ Gradleware is the technical service and support company behind Gradle.
 Not only does it provide professional advice for Gradle itself, it aims for a wide range of enterprise automation consulting.
 The company is backed by high-caliber engineers very experienced in the domain.
 Recently, Gradleware started to air free webinars to spark interest for newcomers and deepen knowledge for experienced Gradle users.
+Don’t you hate having to install a new runtime for different projects? Gradle Wrapper to the rescue! It allows for downloading and installing a fresh copy of the Gradle runtime from a specified repository on any machine you run the build on.
 This process is automatically triggered on the first execution of the build.
 The Wrapper is especially useful for sharing your builds with a distributed team or running them on a CI platform.
 Using command-line options, you can control everything from specifying the log level, to excluding tests, to displaying help messages.
@@ -652,7 +663,10 @@ Even though most of the popular IDEs provide a Gradle plugin, all you need now i
 The default naming convention for a Gradle build script is build.gradle.
 When executing the command gradle in a shell, Gradle looks for a file with that exact name.
 If it can’t be located, the runtime will display a help message.
+Let’s set the lofty goal of creating the typical “Hello world!” example in Gradle.
 Within that script, define a single atomic piece of work.
+To print the message “Hello world!” make use of Gradle’s lingua franca, Groovy, by adding the println command to the task’s action doLast.
+As expected, you see the output “Hello world!” when running the script.
 By defining the optional command-line option quiet with –q, you tell Gradle to only output the task’s output.
 Gradle allows for specifying the same logic in a more concise way.
 The left shift operator << is a shortcut for the action doLast.
@@ -667,6 +681,7 @@ Chapter 4 will cover the internals of tasks, so we won’t dive into too much de
 A feature we’ve talked about before is Gradle’s tight integration with Ant B.
 Because you have full access to Groovy’s language features, you can also print your message in a method named chant()
 Every script is equipped with a property called ant that grants direct access to Ant tasks.
+In this example, you print out the message “Repeat after me” using the Ant task echo to start the therapy session.
 A nifty feature Gradle provides is the definition of dynamic tasks, which specify their name at runtime.
 Groovy automatically exposes an implicit variable named it to indicate the loop iteration index.
 For the first iteration, the task would be called yayGradle0
@@ -688,7 +703,6 @@ Tasks without descriptions aren’t self-expressive; in chapter 3 you’ll learn
 Gradle provides the concept of a task group, which can be seen as a cluster of tasks assigned to that group.
 Out of the box, each build script exposes the task group Help tasks B without any additional work from the developer.
 If a task doesn’t belong to a task group, it’s displayed under Other tasks c.
-We’ll look at how to add a task to a task group in chapter 4
 You may wonder what happened to the other tasks that you defined in your build script.
 On the bottom of the output, you’ll find a note that you can get even more details about your project’s tasks by using the --all option.
 The --all option is a great way to determine the execution order of a task graph before actually executing it.
@@ -711,6 +725,7 @@ Now that you’re becoming familiar with the command line, let’s explore some 
 In this section, we explore the most important general-purpose options, flags to control your build script’s logging level, and ways to provide properties to your project.
 The gradle command allows you to define one or more options at the same time.
 Let’s say you want to change the log level to INFO using the –i option and print out any stack trace if an error occurs during execution with the option -s.
+To do so, execute the task groupTherapy command like this: gradle groupTherapy –is or gradle groupTherapy –i –s.
 As you can see, it’s very easy to combine multiple options.
 To discover the full set, run your build with the –h argument or see appendix A of this book.
 I won’t go over all the available options, but the most important ones are as follows:
@@ -757,6 +772,7 @@ By running your first build script, you saw how easy it is to become productive 
 Now it’s time to strengthen this newly acquired knowledge by building a real-world Java project.
 When starting a brand-new application, Java doesn’t guide you toward a standardized project structure.
 You may ask yourself where to put source, configuration, and library files.
+Stuck with a legacy application that has a different directory structure? No problem! Gradle allows for adapting its conventions to your needs.
 In this chapter, you’ll explore the inner workings of Gradle’s standardization paradigm by building a Java project and learning how to tailor it to nonconventional use cases.
 In the next step, you’ll extend your application by a web component and introduce productivity tools for fast development turnarounds.
 Then we’ll round out this chapter by looking at the Gradle wrapper, which allows you to create transferable and reproducible builds without having to install the Gradle runtime.
@@ -849,7 +865,6 @@ Especially in large enterprise projects, this feature proves to be a real timesa
 In chapter 4 you’ll learn how to apply this concept to your own tasks.
 In the command-line output, you can see concrete examples of skipped tasks: compileTestJava and testClasses.
 As you provide any unit tests in the default directory src/test/java, Gradle happily moves on.
-If you want to learn how to write tests for your application and integrate them into the build, see chapter 7
 Assembled JAR file containing Java class files and manifest; name of file is derived from project’s directory name.
 On the root level of your project, you’ll now also find a directory named build, which contains all output of the build run, including class files, test reports, the assembled JAR file, and temporary files like a manifest needed for the archive.
 If you’ve previously used the build tool Maven, which uses the standard output directory target, the structure should look familiar.
@@ -912,7 +927,7 @@ It’s time to modernize it by adding a visually attractive user interface.
 How to find a dependency Finding out detailed information about a dependency on Maven Central is straightforward.
 In Java, server-side web components of the Enterprise Edition (Java EE) provide the dynamic extension capabilities for running your application within a web container or application server.
 As the name Servlet may already indicate, it serves a client request and constructs the response.
-The response of a Servlet is rendered by the view component— the Java Server Page (JSP)
+The response of a Servlet is rendered by the view componentthe Java Server Page (JSP)
 Figure 3.4 illustrates the MVC architecture pattern in the context of a Java web application.
 A WAR (web application archive) file is used to bundle web components, compiled classes, and other resource files like deployment descriptors, HTML, JavaScript, and CSS files.
 To run a Java web application, the WAR file needs to be deployed to the server environment, a web container.
@@ -1116,6 +1131,7 @@ The Project instance gives you programmatic access to all Gradle features in you
 You’ll use many of these features throughout the book by invoking their corresponding API methods.
 Keep in mind that you’re not required to use the project variable when accessing properties and methods of your project—it’s assumed you mean the Project instance.
 The following code snippet illustrates valid method invocations on the Project instance:
+Figure 4.2 Main entry point of a Gradle build—the Project interface.
 Using Groovy syntax to access name and description properties with and without using project variable.
 In the previous chapters, you only had to deal with single-project builds.
 One of the most important principles of software development is separation of concerns.
@@ -1151,7 +1167,6 @@ For the rest of this chapter, you’ll make extensive use of tasks and Gradle’
 This means that they can only be accessed through their public getter and setter methods.
 Thankfully, Groovy provides you with some syntactic sugar, which allows you to use fields by their name.
 In this section, we’ll explore the most important features of a task by example.
-To demonstrate properties and methods of the class DefaultTask in action, I’m going to explain them in the context of the To Do application from chapter 3
 Now that you have the general build infrastructure in place, features can easily be added.
 To identify each release, a unique version number is added to the deliverable.
 Many enterprises or open source projects have their own versioning strategy.
@@ -1307,7 +1322,6 @@ Custom tasks consist of two components: the custom task class that encapsulates 
 Maintainability is only one of the advantages of writing a custom task class.
 Because you’re dealing with an actual class, any method is fully testable through unit tests.
 Testing your build code is out of the scope of this chapter.
-If you want to learn more, feel free to jump to chapter 7
 Another advantage of enhanced tasks over simple tasks is reusability.
 The properties exposed by a custom task can be set individually from the build script.
 With the benefits of enhanced tasks in mind, let’s discuss writing a custom task class.
@@ -1330,7 +1344,6 @@ The version POGO exposes different fields to represent the versioning scheme, as
 How does the enhanced task adapt to these requirements? You simply assign different values to the exposed properties, as shown in the following listing.
 Gradle ships with a wide range of out-of-the-box custom tasks for commonly used functionality, like copying and deleting files or creating a ZIP archive.
 In the next section we’ll take a closer look at some of them.
-Do you remember the last time a manual production deployment went wrong? I bet you still have a vivid picture in your mind: angry customers calling your support team,
 Working with tasks the boss knocking on your door asking about what went wrong, and your coworkers frantically trying to figure out the root cause of the stack trace being thrown when starting up the application.
 Forgetting a single step in a manual release process can prove fatal.
 Let’s be professionals and take pride in automating every aspect of the build lifecycle.
@@ -1494,6 +1507,7 @@ We’ll take a close look at key DSL configuration elements for grouping depende
 Dependency management sounds like an easy nut to crack, but can become difficult when it comes to dependency resolution conflicts.
 Transitive dependencies, the dependencies a declared dependency relies on, can be a blessing and a curse.
 Complex dependency graphs can cause a mix-up of dependencies with multiple versions resulting in unreliable, nondeterministic builds.
+You’ll learn how to find answers to questions like “Where does a specific dependency come from?” and “Why was this specific version picked?” to resolve version conflicts.
 Having learned from the shortcomings of other dependency managers like Ivy and Maven, Gradle’s special concern is performance, build reliability, and reproducibility.
 Almost all JVM-based software projects depend on external libraries to reuse existing functionality.
 For example, if you’re working on a web-based project, there’s a high likelihood that you rely on one of the popular open source frameworks like Spring MVC or Play to improve developer productivity.
@@ -1606,7 +1620,6 @@ To clearly identify the dependencies needed for Cargo, you’ll need to declare 
 Figure 5.5 Configurations can be added and accessed through the Project instance.
 For now, you’re only dealing with a single Gradle project.
 Limiting the visibility of this configuration to this project is a conscious choice in preparation for a multiproject setup.
-If you want to learn more about builds consisting of multiple projects, check out chapter 6
 You don’t want to let configurations spill into other projects if they’re not needed.
 The description that was set for the configuration is directly reflected when you list the dependencies of the project:
 After adding a configuration to the configuration container of a project, it can be accessed by its name.
@@ -1944,6 +1957,7 @@ Executing the help task projects after adding the settings file will produce a d
 Figure 6.3 Hierarchical multiproject structure for To Do application, which defines three subprojects.
 Adds given subproject to build; argument passed to include method is project path, not file path.
 Instead of calling method include for each project individually, pass a String[] of projects to a single call.
+Root project 'todo' +--- Project ':model' +--- Project ':repository' \--- Project ':web'
 By adding a single settings file, you created a multimodule build containing a root project and three subprojects.
 Let’s go deeper into the details of the settings file.
 You may have guessed already that there’s an API representation for it that you can use to query and modify the configuration of your build.
@@ -1969,7 +1983,6 @@ In step 1, Gradle searches for a settings file in a directory called master with
 If no settings file is found in step 1, Gradle searches for a settings file in the parent directories, starting from the current directory.
 If one of the steps finds a settings file and the project is included in its definition, the project is considered part of a multiproject build.
 Step 2 in the settings file resolution process applies to a hierarchical project layout you set up earlier.
-Let’s step back for a second and also examine the project layout shown in step 1
 Accessing Settings from the build file If you need access to the Settings instance from your build.gradle file after the settings have been loaded and evaluated, you can register a lifecycle closure or listener.
 Figure 6.5 The settings file is evaluated and executed during the initialization phase.
 Gradle projects can be structured hierarchically or with a flat layout, as shown in figure 6.7
@@ -2009,6 +2022,7 @@ Figure 6.8 Important methods of the Project API for implementing multiproject bu
 We won’t discuss these methods in this chapter; for specific use cases, refer to Gradle’s online manual.
 In this chapter, you’ll use all of the presented methods to configure your multiproject build.
 First, you’ll take the existing build code and apply it to only specific subprojects.
+To set up the build infrastructure for your three subprojects—model, repository, and web—you’ll create a project configuration block for each of them.
 The following listing shows the project definition within your single build.gradle file.
 You can see that the solution is far from perfect.
 Even though you defined an extra property for assigning the group and version for each subproject, you’re still left with duplicated code and the Java plugin has to be applied for each subproject individually.
@@ -2134,7 +2148,6 @@ Modularizing a project improves the quality attributes of your system—that is,
 Two guidelines make it easy to achieve that for your software: minimize coupling and maximize cohesion.
 In this chapter, you split the To Do application code base into modules.
 You created one module that holds the model classes, one that deals with the persistence of the data, and one that exposes the web application capabilities.
-Iterates through all subprojects accessible through root projectSets custom build filename for a subproject by using subprojects’ names,
 You learned that the settings file, executed during the initialization phase of the build lifecycle, determines which of the projects should be part of the build.
 The Project API provides methods for declaring project-specific build code.
 You learned that dependencies between projects in the current project hierarchy are declared using the same dependency mechanism as external dependencies.
@@ -2203,7 +2216,6 @@ In chapter 3 we talked about the default directory structure for placing product
 You put test source files into the directory src/test/java, and required resources files consumed by your test code into src/test/resources.
 After compiling test source code, the class files end up in the output directory build/ classes/test, nicely separated from the compiled production class files.
 All testing frameworks produce at least one artifact to indicate the results of the test execution.
-They’re usually intended for further processing by other quality assurance tools that we’ll look at in chapter 12
 Many testing frameworks allow for transforming the results into a report.
 Figure 7.2 gives a visual overview of the standard test directories provided by the Java plugin.
 With all this talk about testing frameworks, how do you tell Gradle to use a particular one? You’ll need to declare a dependency on an external library.
@@ -2221,7 +2233,7 @@ Figure 7.4 shows the test tasks provided by the Java plugin and how they fit int
 Figure 7.4 Test tasks seamlessly integrate into the build lifecycle.
 As shown in the figure, test compilation and execution happen after the production code is compiled and packaged.
 If you want to avoid executing the test phase, you can run gradle jar on the command line or make your task definition depend on the task jar.
-The annotation can either be the JUnit or TestNG implementation.)
+The annotation can either be the JUnit or TestNG implementation.
 If none of these rules apply or the scanned class is abstract, it won’t be executed.
 It’s time to apply what you’ve learned in the context of a full example.
 In the following section, you’ll write unit tests with the help of different testing frameworks and execute them with Gradle.
@@ -2246,7 +2258,6 @@ Listing 7.2 Declaring a dependency on JUnit in subproject repository.
 Test file an line of code where the exception occurred.
 Summary of test result including number of completed, failed, and skipped test cases.
 In the console output, you can see that one of the assertions failed.
-The only thing you know is that an assertion failed on line 24
 If you had a huge suite of tests, finding out the cause of any failed test would require you to open the test report.
 You can make the test output a bit chattier by running the task on the INFO logging level:
 Changing the logging level through a command-line option isn’t the only way to control the test log output.
@@ -2360,6 +2371,7 @@ The method events allows you to pass in a list of event types you’d like to be
 The following listing demonstrates how to log a message to the terminal every time a test is started, passed, skipped, or failed.
 Executing tests with logging turned on for the events started, passed, skipped, and failed will produce the following result:
 Each event is logged on a single line and is color-coded.
+Events that didn’t occur—in this case, skipped and failed—aren’t logged.
 Refer to the online documentation to learn about all available options.
 Executing huge test suites with thousands of test cases may take minutes if not hours, because they run sequentially.
 Given that today’s computers have blazingly fast multicore processors, you should use their computing powers to their fullest.
@@ -2370,7 +2382,6 @@ The next listing uses a simple formula to calculate the number of forks by avail
 Maximum number of test classes to execute in a forked test process.
 Let’s visualize the execution behavior based on a test suite with 18 test classes.
 The listing shows that the number of parallel test processes is calculated based on the number of logical cores available to your JVM, either virtual or physical.
-Therefore, the assigned value of the property maxParallelForks is 2
 With the property forkEvery set to 5, each forked test process will execute a group of five test classes.
 Figure 7.10 demonstrates how the test execution will play out at runtime.
 The assigned numbers in this example are not set in stone.
@@ -2404,6 +2415,7 @@ A unit test verifies that the smallest unit of code in your system, a method, wo
 This allows you to achieve a fast-running, repeatable, and consistent test case.
 They usually integrate other components of your system or external infrastructure like the file system, a mail server, or a database.
 As a result, integration tests usually take longer to execute.
+Oftentimes they also depend on the correct state of a system—for example, an existing file with specific content—making them harder to maintain.
 A common scenario for integration tests is verifying that your persistence layer works as expected.
 TestListener implementation that notifies user about test suite execution time.
 H2 is easy to set up and provides fast startup times, which makes it a perfect fit for this example.
@@ -2478,11 +2490,13 @@ You need a tool that automates bringing up the browser, manipulates the data obj
 On top of that, you also need to integrate the functional tests into your build to be able to run them in an automated and repeatable fashion.
 Let’s look at a specific use case and an automation tool that can help you test-drive the tests.
 When designing a functional test on the UI-level, it’s helpful to ask yourself the following questions:
+What’s the high-level user workflow? For example, the user has to insert 11 to-do items before the list offers pagination.
 What are the technical steps to reach this goal? For example, the user opens a browser and enters the URL /all to view the list of to-do items.
 To insert a new to-do item, they enter a name for a new to-do Item and press Enter.
 This UI interaction calls the URL /insert, which adds the to-do item to the list.
 Repeat this 11 times, and verify that pagination is displayed.
 For our purposes, we’ll pick a simple use case: open the URL to show the list of to-do items.
+Insert a new to-do item named “Write functional tests” into the text field and press Enter.
 Verify that it was successfully added to the list by inspecting its items.
 Functional testing test assumes that the list will start with zero to-do items.
 Figure 7.13 demonstrates the page workflow you’ll need to script.
@@ -2595,6 +2609,7 @@ You don’t want to lock yourself in, because you’d like to be able to transfe
 CloudBees provides a Java-based client library to communicate with runtime services over HTTP.
 Using the library within a Gradle script is straightforward: define it as a classpath dependency and write tasks to use the API.
 The CloudBees API provides an HTTP-based programming interface for managing services and applications on the RUN@cloud platform.
+But what if your coworker wants to use the same tasks in their project? Avoid the urge to just duplicate the code! Friends don’t let friends copy and paste code—this maxim is true for build logic as well.
 The right approach is to formalize the code into a Gradle plugin.
 You’ll start your journey by creating an account on CloudBees.
 Before you can interact with CloudBees’ PaaS through its API, you need to provision an account.
@@ -2932,6 +2947,7 @@ Gradle’s Maven plugin allows for publishing artifacts to local and remote Mave
 Migrating a build process from one build tool to another is a strategic, missioncritical endeavor.
 The end result should be a comparable, functional, and reliable build, without disruption to the software delivery process.
 On a smaller scale, migrating from one Gradle version to another can be as important.
+Gradle provides a plugin that compares the binary output of two builds—before and after the upgrade—and can make a deterministic statement about the result before the code is changed and checked into version control.
 In this chapter, you’ll learn how to use the plugin to upgrade your To Do application from one Gradle version to another.
 Let’s start by taking a closer look at Gradle’s Ant capabilities.
 On the one hand, it can import an existing Ant script and directly use Ant constructs from a Gradle build script as if they’re native Gradle language elements.
@@ -3036,10 +3052,12 @@ Optional or third-party Ant tasks usually require you to add another JAR file to
 You already learned how to do that in chapter 5 when you used the external Cargo Ant tasks to deploy your To Do application to a web container.
 Please refer to the code examples in chapter 5 for more information on how to use optional Ant tasks.
 So far, you’ve learned many ways to interact with existing Ant build scripts or tasks from Gradle.
+But what if you’re planning to move to Gradle long term? How do you approach a step-by-step migration?
 Gradle doesn’t force you to fully migrate an existing Ant script in one go.
 A good place to start is to import the existing Ant build script and get familiar with Gradle while using existing logic.
 In this first step, you only have to invest minimal effort.
 Let’s look at some other measures you may want to take.
+Try to implement the logic of the targets “the Gradle way” instead of falling back to an implementation backed by the AntBuilder.
 This approach automatically buys you incremental build functionality without actually having to explicitly declare inputs and outputs.
 Over time, you’ll see that your Ant build script will get smaller and smaller while the logic in your Gradle build will grow.
 If you’re an Ant user and aren’t already using Ivy’s dependency management, it will relieve you of the burden of having to manually manage external libraries.
@@ -3079,10 +3097,8 @@ But there are some counter strategies to deal with this situation, and we’ll d
 Before we dive into migrating from Maven to Gradle, let’s compare commonalities and differences between both systems.
 Then, we’ll map some of Maven’s core concepts to Gradle functionality.
 When directly comparing Maven and Gradle, you can find many commonalities.
-Both build tools share the same concepts (for example, dependency management and.
 Tasks from originating build script to be invoked when wrapped task is executed.
 Wrapping task with name cleanAnt that directs the call to imported clean Ant target.
-Maven and Gradle convention over configuration) even though they may be implemented differently, use diverging vocabulary, or require specific usage.
 Let’s discuss some important differences frequently asked about on the Gradle forum.
 Many of the Maven dependency scopes have a direct equivalent to a Gradle configuration provided by the Java or War plugin.
 There’s one Maven scope that only finds a representation with the War plugin: provided.
@@ -3098,7 +3114,6 @@ Maven ships with support for deploying an artifact to a local or remote Maven re
 As part of this process, a pom.xml file is generated containing the meta-information about the artifact.
 Gradle provides a 100% compatible plugin that resembles Maven’s functionality of uploading artifacts to repositories: the Gradle Maven Publishing plugin.
 We won’t discuss the plugin any further in this chapter.
-If you’re eager to learn more about it, jump directly to chapter 14
 A typical use case for a profile is to define properties for use in a specific deployment environment.
 If you’re coming to Gradle, you’ll want to either reuse an existing profile definition or to emulate this functionality.
 I’m sorry to disappoint you, but Gradle doesn’t support the concept of profiles.
@@ -3124,7 +3139,6 @@ In the previous section, we discussed major differences between the build tools 
 The illustrated approaches for bridging the gap between certain functionality will give you a head start on a successful migration.
 Because Gradle doesn’t offer importing Maven goals into the Gradle model at runtime, a migration will have to take place in parallel to the existing Maven setup.
 This procedure ensures a smooth migration without disrupting the build and delivery process.
-Let’s see how this can be done with the sample Maven POM file from chapter 1
 For a quick refresher on the code, look at the following listing.
 Maven’s artifactId element value maps to a Gradle project name.
 The plugin supports generating build.gradle and settings.gradle files by analyzing a Maven pom.xml file, as shown in figure 9.6
@@ -3182,6 +3196,7 @@ With Gradle’s maven2Gradle conversion task, you can get a head start on a succ
 Upgrading a Gradle build from one version to another shouldn’t cause any side effects or even influence your ability to compile, assemble, and deploy your application code.
 The build comparison plugin automates upgrade testing by comparing the outcomes of a build with two different versions.
 With this information in hand, you can mitigate the risk of a failed upgrade.
+Congratulations, you got to know Gradle’s most essential features! This chapter concludes part 2 of the book.
 In part 3, we’ll shift our focus to using Gradle in the context of a continuous delivery process.
 First, let’s discuss how to use Gradle within popular IDEs.
 Building an application on the developer’s machine is only part of the story.
@@ -3196,7 +3211,6 @@ Continuous delivery describes a build pipeline that orchestrates the end-to-end 
 The last four chapters of the book are devoted to implementing a pipeline with Gradle and third-party tools.
 We’ll start by looking at continuous integration, the backbone of every build pipeline.
 In chapter 13, you’ll use Jenkins, an open source continuous integration server, to model a chain of build steps.
-Between each of these steps, you’ll build in quality gates with the help of code analysis tools discussed in chapter 12
 Later on, you’ll take this artifact and deploy it to different environments.
 By the end of part 3, you’ll be able to use your Gradle skills to take your own projects to the next level.
 Being able to automate the full delivery process will save your organization lots of money and vastly improve your time-to-market ratio.
@@ -3303,6 +3317,7 @@ The same configuration can be achieved using the merge hooks.
 When applying the hook in the context of the WTP facet element, the closure is provided with an instance of WtpComponent.
 In the next listing, you’ll instantiate a new instance of type Facet, provide the data you need in the constructor, and add it to the list of facets.
 Listing 10.5 Adding the WTP JavaScript facet using a merge hook.
+Choosing the “right” type of hook You may ask yourself, which of these hooks should be used in what situation, or is there even a best practice? In short, there isn’t.
 The option you choose for your project is often subjective.
 Adds hook for manipulating WTP component file after Gradle populates its build information.
 It’s time to see the results of your hard work.
@@ -3648,7 +3663,6 @@ One of its distributions is a Java library that can be directly included in a Gr
 Apart from the plain Java API classes, this library includes an Ant task wrapping the provided functionality.
 It’s a matter of personal taste which of these approaches you use in your Gradle build—both of them work.
 For further examples, you’ll use the Ant task because it conveniently wraps the API.
-If you need a quick refresher on how to use an Ant task from Gradle, cross-reference chapter 9
 The following listing uses the project’s fileTree method to derive the list of your application’s JavaScript files as input.
 The output file is defined as all-min.js and is created in the directory build/js.
 Executing the task minifyJs will first compile your minification custom task under buildSrc, and then produce a single, optimized JavaScript file:
@@ -3705,6 +3719,7 @@ Listing 11.8 Adding the JavaScript plugin to the build script’s classpath.
 The task usage is very similar to what you’ve experienced so far.
 To run minification on your files, execute the task minifyJs.
 This task first calls the combineJs task to merge your application JavaScript files before shrinking their size.
+But what if your frontend team already implemented build automation that doesn’t use Gradle? Do you need to rewrite all their existing logic? Thankfully, you don’t.
 You can directly invoke other build automation tools from Gradle.
 If you’re deeply involved in the JavaScript community, you may know the build tool Grunt (http://gruntjs.com/)
 Grunt is targeted toward implementing common tasks like minifying, merging, and testing of JavaScript code in an automated fashion.
@@ -3907,7 +3922,6 @@ Code quality tools help you to automatically analyze your software and provide s
 In the Java space, you can choose from a wide range of open source and commercial solutions, such as Checkstyle, PMD, Cobertura, FindBugs, and Sonar.
 Many of these tools are already available in the form of Gradle core or third-party plugins and can be seamlessly integrated into your build.
 In this chapter, you’ll use many of these plugins to measure the code quality of your To Do application.
-Let’s step back for a minute and think back to the build pipeline stages introduced in chapter 2
 Where do we stand? So far you’ve learned how to compile your code and implement and execute various types of tests.
 These tasks cover the first two phases of the commit stage.
 If any of these tasks fail, the build will automatically fail.
@@ -3964,7 +3978,6 @@ In the next chapter, I’ll also demonstrate ways to avoid problems with other i
 In the following sections, you’ll learn how to use two plugins for generating code coverage: the JaCoCo and the Cobertura plugins.
 JaCoCo (http://www.eclemma.org/jacoco/), short for Java Code Coverage, is an open source toolkit for measuring code coverage through on-the-fly bytecode instrumentation.
 To achieve this, JaCoCo attaches a Java agent to the JVM class loader, which collects execution information and writes it to a file.
-Furthermore, it fully supports analyzing projects that are based on Java 7
 Separating different aspects of software functionality is a best practice.
 To separate your main build logic from code coverage logic, you’ll create a new build script named jacoco.gradle in the directory gradle on the root level of your project hierarchy.
 Later, you’ll add other Gradle build files to this directory.
@@ -3996,7 +4009,6 @@ If you want to get a full picture of the project’s overall coverage across tes
 To get an idea of how Cobertura’s report compares to the one produced by JaCoCo, you’ll configure Cobertura for your build.
 Cobertura (http://cobertura.sourceforge.net/) is a Java code coverage tools that needs to instrument the bytecode after it’s compiled.
 A report produced by Cobertura contains the percentage of line and branch coverage, as well as the cyclomatic complexity for each package.
-Unlike JaCoCo, Cobertura doesn’t support projects based on Java 7
 You’ll prepare the same setup as you did for integrating the JaCoCo plugin.
 Then, you’ll apply the script plugin to all subprojects of your build.
 The following project structure shows the new script under the directory gradle:
@@ -4020,6 +4032,7 @@ If you’re planning to use a different tool, please refer to the links provided
 In the next section, we’ll explore various static code analysis tools.
 Members of the software development team perform code reviews to identify architectural problems, security defects, and potential bugs.
 While this kind of review is extremely helpful in mitigating the risk of technical debt, this process easily becomes expensive and unmanageable for large software projects.
+How many of us have had to toil away at code reviews? Sure, they’re useful—you identify problems, security defects, and bugs—but it can easily get expensive and unwieldy.
 A cheap and automated way of finding issues in code is static code analysis.
 Static code analysis is the task of analyzing source code without actually executing the software to derive quality metrics.
 Metrics that can be extracted range from potential bugs and adherence to coding standards, to unnecessary code complexity and bad coding practices.
@@ -4127,6 +4140,7 @@ You can directly open your project’s dashboard and view aggregated quality met
 As the figure shows, Sonar can be fed metrics from the outside.
 The rule set for these metrics is defined in quality profiles.
 A quality profile, which is directly configured on Sonar, defines the code analysis tools you’d like to run on your source code and their acceptance criteria.
+For example, you could say, “A class must have a documented API greater than 70%.”
 This means that Sonar not only gives you the option to apply specific metric rule sets and thresholds per project, but also allows you to decide whether you want to use the analysis tools provided by Sonar to generate metrics.
 Let’s take the default, preconfigured quality profile called Sonar way, for example.
 It automatically analyzes your project through Checkstyle and PMD with 119 rules without having to configure the standard Gradle plugins.
@@ -4300,8 +4314,10 @@ If you want to build a project with Gradle hosted on a Git repository, you’ll 
 To access the plugin manager, click Manage Jenkins on the main dashboard page.
 You’ll end up on the Plugin Manager page, shown in figure 13.4
 In the upper-right corner, you’ll find a search input box called Filter.
+Enter the search criteria “git plugin” and tick the checkbox next to the plugin named Git Plugin, as shown in figure 13.5
 After pressing the button Install Without Restart, the plugin is downloaded and installed.
 Using this technique, you’ll also search for the Gradle plugin.
+Enter “gradle plugin” into the search box, as shown in figure 13.6
 You’ll see a screen similar to figure 13.7 that shows the downloaded and installed plugins.
 After a few moments, Jenkins is restarted and the plugins are fully functional.
 Jenkins defines the actual work steps or tasks in a build job.
@@ -4330,10 +4346,12 @@ Next, we’ll define what a build means if it’s triggered.
 Each task that should be executed is called a build step.
 Build steps can be added in the configuration section Build.
 The options you see in figure 13.11 are provided by the Gradle plugin you installed earlier.
+Choose the radio button Use Gradle Wrapper and enter the tasks “clean test” into the Tasks input box.
 This is one of the scenarios where the Gradle Wrapper really shines.
 Your build provides the runtime and clearly expresses which version of Gradle should be used.
 If you’re building the project on your developer machine, you’ll want to make good use of Gradle’s incremental build feature to save time and improve the performance of your build.
 In a CI setting, the build should be run from a clean slate to make sure all tests are rerun and recorded appropriately.
+That’s why you added “clean test” to the list of tasks.
 Scroll down to the section Post-build Actions, click the dropdown box Add Post-build Action, and choose the option E-mail Notification.
 The only thing you need to do to receive emails on a failed build is to enter your email address into the Recipients input box, as shown in figure 13.12
 After adding this entire configuration, make sure you save the settings by pressing Save on the bottom of the screen.
@@ -4689,10 +4707,11 @@ The best way to find out what information can be configured is to the check the 
 The guide describes the XML structure and available tags for configuring a POM.
 The generated standard POM can be modified with the help of the hook pom.withXml.
 By calling the method asNode(), you can retrieve the root node of that POM.
-New nodes can be added or existing ones modified (except for the identifiers.
 The following listing shows how to add more information to your plugin POM.
 The next listing shows the regenerated POM file, which now reflects your changes to the metadata.
 So far, you’ve installed the published artifacts to the local Maven cache.
+What if you wanted to publish them to a Maven repository on your local file system or the Artifactory repository you set up earlier? Nothing easier than that—the publishing API allows for declaring repositories as well.
+In chapter 8, you used the “old” Maven plugin to upload your project’s artifact to a local Maven repository so it could be consumed by another Gradle project.
 You used this technique for testing your plugin functionality on your local machine without having to make it public.
 The same functionality is provided by the Maven publishing plugin.
 Every repository you want to target needs to be declared in a repositories configuration block exposed by the publishing DSL.
@@ -4773,13 +4792,13 @@ After getting to know the core concepts of creating a distribution and publishin
 First, you’ll make some extensions to your existing Gradle build, and then you’ll extend your build pipeline by configuring a Jenkins job.
 In the context of continuous delivery, there are some important practices to discuss.
 They ultimately determine how you’ll implement the artifact packaging and publishing.
+Before an application can be deployed to a target environment—for example, a UAT (user acceptance test)—for manual testing by the QA team, or to production to give it into the hands of the end users, the deliverable, also called the deployable artifact, has to be built.
 It’s not uncommon for teams to rebuild this deliverable for each environment individually.
 While this approach works, it creates the unnecessary risk of introducing a difference to the deliverable.
 For example, the dependency manager may pick a newer version of a third-party library that became available on a repository that you didn’t intend to include.
 To avoid any side effects, you should only build your deliverable once and store it in a central location.
 As you learned earlier, a binary repository is the perfect fit for this use case.
 Binary repositories require you to publish an artifact with unique attributes.
-In chapter 5, you learned that a Maven repository describes these attributes as groupId,
 Figure 14.8 Creating the distribution in the context of the build pipeline.
 The main distinguishing difference between each artifact built by your pipeline is the version.
 The two other attributes, groupId and artifactId, will likely never change once you’ve settled on a meaningful value.
@@ -4887,14 +4906,13 @@ Once the deliverable artifacts are built, they can be shared with other projects
 Binary repositories provide the infrastructure for uploading, managing, browsing, and consuming any number or type of artifacts.
 In this chapter, you learned how to use Gradle’s publishing plugin to interact with a local or remote Maven repository.
 You took your plugin project from chapter 8, assembled the plugin JAR file, generated individualized metadata, and uploaded it to Artifactory, a popular binary repository.
-We discussed how to set up an account on Sonatype OSS (a.k.a.
-Maven Central) and JFrog Bintray and applied the publishing process to both repositories.
 In the context of continuous delivery, assembling and publishing artifacts plays a crucial role.
 Whenever possible, you’ll want to package the artifacts just once to avoid potential side effects.
 After uploading the artifacts to a repository, they can be reused.
 You learned how to implement a flexible versioning strategy to clearly identify a set of artifacts.
 Later, you extended your build pipeline with a new job for packaging and publishing the WAR file produced by your To Do application.
 In the last chapter of this book, you’ll finally roll out your To Do application to various target environments, write smoke tests to verify a successful deployment, and tag the release in version control.
+Any server outage inflicted by a faulty deployment—with the biggest hit on production systems—results in money lost for your organization.
 Automation is the next logical and necessary step toward formulating and streamlining the deployment process.
 In this chapter, we’ll talk about how to automate the deployment process with Gradle by the example of your To Do application.
 Before any deployment can be conducted, the target environment needs to be preconfigured with the required software infrastructure.
@@ -4961,10 +4979,10 @@ After a few moments, you should see the notice that the virtual machine was brou
 Vagrant file that defines how to configure and provision virtual machines.
 Puppet manifest file that defines how to configure a target virtual machine.
 In the Vagrantfile, you configured the virtual machine to be accessible by the IP address 192.168.1.33
-As part of your provisioning code, you defined Tomcat to run on port 8080
 To verify a successful installation of the web container, open the browser of your choice and enter the URL http://192.168.1.33:8080/
 To shut down the virtual machine, use the command vagrant destroy.
 In the next section, you’ll learn how to bootstrap Vagrant commands from Gradle.
+At this point, you may be thinking, “Why would I want to execute Vagrant commands from Gradle?” The short answer is automation.
 Any workflow that incorporates interacting with a virtual machine provided by Vagrant needs to be able to call the corresponding command from Gradle.
 To show you a simple workflow, let’s assume you want to execute functional tests on a virtual machine that mimics the infrastructure setup of a production server.
 Shut down the virtual machine via the command vagrant destroy.
@@ -5110,7 +5128,6 @@ The harsh reality is that deployments can fail even with the best preparation.
 Knowing about it as soon as possible is worth a mint.
 As a result, you can take measures to bring back the system into an operational state; for example, by rolling back the application to the last “good” version.
 In addition to these fail-fast tests, automated acceptance tests verify that important features or use cases of the deployed application are correctly implemented.
-For this purpose, you can use the functional tests you wrote in chapter 7
 Instead of running them on your developer machine against an embedded Jetty container, you’ll configure them to target other environments.
 Let’s first look at how to implement the most basic types of deployment tests: smoke tests.
 Your deployment automation code should incorporate tests that check that your system is in a basic, functional state after the deployment is completed.
@@ -5119,7 +5136,7 @@ If you turn on the power and see smoke coming out of the electrical parts, you k
 After a deployment, the target environment may need time to reach its fully functional state.
 For example, if the deployment process restarts a web container, it’s obvious that it won’t be able to serve incoming requests right away.
 If that’s the case for your environment setup, make sure to give some leeway before executing your suite of smoke tests.
-You also want to find out if the application’s homepage URL responds with the HTTP status code 200
+How do smoke tests look for a web application like your To Do application? Simple—you can fire basic HTTP requests to see if the Tomcat server is up and running.
 You’ll make your life even easier by using a Groovy.
 HTTPBuilder wraps the functionality provided by HttpComponents with a DSL-style configuration mechanism, which boils down the code you need to write significantly.
 You’ll use HTTPBuilder from a custom task named HttpSmokeTest that acts as an abstraction layer for making HTTP calls.
@@ -5196,6 +5213,7 @@ Deploying a given feature set for manual testing by the QA team into the UAT env
 Jenkins needs to know which version should be deployed when you hit the release button.
 Thankfully, the parameterized build plugin helps you to provide the appropriate version to the job.
 For each of the deployment jobs, make the following configuration.
+Any server outage inflicted by a faulty deployment—with the biggest hit on production systems—results in money lost for your organization.
 Automation is the next logical and necessary step toward formulating and streamlining the deployment process.
 Deployable artifacts often look different by nature, follow custom project requirements, and demand distinct runtime environments.
 While there’s no overarching recipe for deploying software, Gradle proves to be a flexible tool for implementing your desired deployment strategy.
@@ -5222,7 +5240,6 @@ It consists of three parts: discovery or help tasks, build setup tasks, and conf
 A.1 Discovery tasks Many discovery tasks provide information about the build.
 If you’re new to a project, they’re a good place to start discovering the configuration.
 Every Gradle build provides the discovery tasks shown in table A.1 from the get-go.
-For an in-depth discussion of declaring and consuming dependencies in your project, jump to chapter 5
 A.2 Build setup tasks At a minimum, every Gradle project requires a build.gradle file to define your build logic.
 This file can be created manually or conveniently generated by tasks of the build setup plugin.
 Table A.2 shows the build setup tasks for initializing a new Gradle build.
@@ -5296,6 +5313,7 @@ While this appendix will give you a head start on Groovy’s most important lang
 There are great resources out there in the form of books and dedicated Groovy web pages.
 The definitive guide to Groovy is the book Groovy in Action, Second Edition by Dierk Konig, et al (Manning, 2009)
 The DZone reference guide on Groovy provides a cheat sheet that’s handy to every beginner of the lan429
+B.2 How much Groovy do I need to know? If you’re new to Gradle you may wonder how much Groovy you actually need to know to write your first build scripts.
 When implementing trivial task actions within your build script, you can choose to write plain Java code or use Groovy’s expressive language constructs.
 Assume you want to determine all files within a directory and write their names to a new file named allfiles.txt.
 Sounds pretty simple, right? The following listing demonstrates the Java version of the task action doLast.
@@ -5329,7 +5347,6 @@ You can run Groovy scripts on the web without installing the Groovy runtime.
 Keep in mind that the language features used in your script are bound to the bundled Groovy version of the web console indicated on the page.
 If you’re coming from Java, you may know the keyword assert.
 Unlike Java’s pendant, which only works if you enable assertion checking by setting a runtime flag (-ea or –enableassertion), Groovy’s assert statement is always evaluated.
-Careful readers will note that the second assertion should fail, because you incremented the version variable by 1
 Groovy’s assert statement, also called power assert, provides helpful output to identify the root cause of an issue.
 The following output demonstrates a sample output for the listing:
 You’ll use the assert statement in the upcoming code examples as a tool to verify and document the desired behavior.
@@ -5387,6 +5404,7 @@ In most cases, properties and methods you invoke in the build script automatical
 Let’s examine the sample build script shown in listing B.20
 After getting to know some of Groovy’s language features by example, you may have a hunch how they work internally.
 I hope this example can demystify some of the “magic” beginners to Gradle and Groovy encounter.
+As parameter, provides a Map with a single key–value pair (see section B.4.6)
 Sets a new value for property version by calling setter method of Project under the hood (see section B.3)
 Calls method repositories on Project with a single closure parameter (see section B.4.8)
 Calls method dependencies on Project with a single closure parameter (see section B.4.8).Calls method compile with a String as parameter on.

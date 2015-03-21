@@ -61,6 +61,7 @@ Each call to from can even have its own sets of inclusions and exclusions if nee
 Transforming Directory Structure The outcome of Example 1-4 is to put all source files into one flat directory, build/ resources.
 Of course you may not want to flatten all of the source directories; you might instead want to preserve some of the structure of the source directory trees or even map the source directories onto a new tree.
 To do this, we can simply add additional calls to into inside the from configuration closures.
+Note that a top-level call to into is still required—the build file will not run without it —and the nested calls to into are all relative to the path of that top-level configuration.
 If the number of files or the size of the files being copied is large, then a copy task could be an expensive build operation at execution time.
 Gradle’s incremental build feature helps reduce the force of this problem.
 Gradle will automatically incur the full execution time burden on the first run of the build, but will keep subsequent build times down when redundant copying is not necessary.
@@ -84,6 +85,7 @@ In this example, the task doing the expanding is dedicated to preparing a config
 Ultimately, the map passed to expand() can come from anywhere.
 The fact that the Gradle build file is executable Groovy code gives you nearly unlimited flexibility in deciding on its origin.
 It’s helpful in this case to take a look at the source file, so we can directly see where the string substitution is happening.
+Filtering Line by Line The expand() method is perfect for general-purpose string substitution—and even some lightweight elaborations on that pattern—but some file transformations might need to process every line of a file individually as it is copied.
 The filter() method has two forms: one that takes a closure, and one that takes a class.
 We’ll look at both, starting with the simpler closure form.
 When you pass a closure to filter(), that closure will be called for every line of the filtered file.
@@ -123,6 +125,7 @@ This build results in the destinationDir property being set to the build/jar dir
 This is the expected behavior, and will work regardless of how Gradle is being invoked.
 If you already have a File object, the file() method will attempt to convert it into a project-relative path in the same way.
 The construction new File('build/jar') has no defined parent directory, so file(new File('build/jar')) will force its parent to the build’s project root directory.
+This example shows an awkward construction—real code would likely omit the inner File construction—but file()’s operation on File objects works as the example shows.
 You might use this case if you already had the File object lying around for some reason.
 File URLs are not a common case, but they often show up when resources are being loaded through the ClassLoader.
 It is like file() in that it attempts to produce project-relative absolute paths in the File objects it creates, but it differs in that it operates on collections of files.
@@ -167,11 +170,11 @@ Internally, the core Java plug-in does this with compile-time dependencies when 
 The Java compiler has a command-line switch for specifying the classpath, and that switch must be provided with an operatingspecific string.
 The asPath property converts a FileCollection into this OS-specific string.
 Here’s the results of the build with the previous addition:
-For a full treatment of configurations and dependencies, see Chapter 4
 You may prefer this scheme over repositories like Maven Central on principal.
 Gradle does not force you to use one mechanism of the other.
 As a teacher and frequent conference presenter on Gradle, sometimes I want to enable students to build Java code at times when there is no reliable internet connection.
-Many US hotels and conference centers are still woefully unprepared for a few hundred software developers, each with two or three devices on the wireless network and a seemingly insatiable appetite for bandwidth.) While I strongly prefer dependencies to be managed by my build tool, it might make sense for me to prepare lab materials with all of the dependencies statically located in the project in the style of old Ant builds.4 For some Java frameworks and APIs, chasing all of these JARs down by hand can be a burden.
+Many US hotels and conference centers are still woefully unprepared for a few hundred software developers, each with two or three devices on the wireless network and a seemingly insatiable appetite for bandwidth.
+While I strongly prefer dependencies to be managed by my build tool, it might make sense for me to prepare lab materials with all of the dependencies statically located in the project in the style of old Ant builds.4 For some Java frameworks and APIs, chasing all of these JARs down by hand can be a burden.
 By using module dependencies as file collections, we can automate this work.
 If we add the following trivial copy task to Example 1-19, we’ll find the lib directory quickly populated with all of the JARs we need after we run the task.
 Adding new dependencies to the project later will require only that we re-run the task, and the new JARs will appear as expected.
@@ -193,12 +196,12 @@ Source Sets are the domain objects Gradle uses to represent collections of sourc
 The allSource property of a SourceSet object returns a file collection containing all source inputs and, in the case of source sets compiled by the Java plug-in, all resource files as well.
 In our example build, inspecting the property would yield the results in Example 1-25
 Likewise, the build outputs are provided in the outputs property.
+The outputs are not given as an exhaustive list of all of the files generated by the compiler—this would require that we run the compiler before interpreting the source set—but instead as a list of the directories into which compiled outputs will be placed (Example 1-26)
 Printing out the output directories the Java compiler will use for the main source set.
 Lazy Files When programming with file collections, it might be tempting to think of them as static lists.
 For example, a call to fileTree() might scan the filesystem at the time it is called, producing an immutable list that the build can then manipulate.
 Immutable data structures have their uses, but in the Gradle lifecycle, this would make file collections difficult to use.
 As a result, instances of the FileCollection interface are lazily evaluated whenever it is meaningful to do so.
-If that file collection is created during the configuration phase (which is.
 Configuration-time build code sets up the task graph for Gradle to process.
 Actual build activity like copying, compiling, and archiving takes place during the execution phase.
 Hence, file collections are designed to be static descriptions of the collection semantics, and the actual contents of the collection are not materialized until they are needed at a particular time in the build execution.
@@ -271,6 +274,7 @@ This example creates three new build tasks: generateChangeLog, changeLogSync, an
 Build masters don’t have to write plug-ins in Groovy, but it’s a rewarding choice due to its similarity to the Gradle build file syntax and its productivity advantages over Java as a language.
 Extensions At this point our plug-in is starting to be able to do some work, but its configuration is rather pedantic (Example 2-4)
 We must configure each and every task with the database username, password, URL, and the changelog file.
+The real power of Gradle plug-ins comes not just from the ability to hide a bunch of imperative code behind a plug-in declarationcustom Ant tasks and Maven plug-ins had already accomplished this a decade before Gradle had its 1.0 release—but rather from the ability to extend the domain model of the build.
 The Extension API is the primary means of doing so.
 Design of plug-in extensions should begin with a sketch of what the desired build file syntax will look like.
 To design our build file syntax, we must first imagine what sorts of things our build will interact with in its now-expanding domain.
@@ -303,8 +307,9 @@ This indicates to the LiquibaseTasks that they should use the Database instance 
 The extension class has two methods: databases and changelogs, which accept a single parameter of type Closure.
 Second, it will set fields on that domain object using the property names referenced in the configuration block in the build file itself.
 Let’s refer again to just this piece of the proposed build DSL as shown in Example 2-9
-The inner sandbox block causes the new Database domain name object to be named “sandbox.” (Remember, this is a named domain object container, so all of the objects we create in it must have names.) The property assignments inside the curly braces of the sandbox block are converted into property assignments on the new instance of our Database class.
+The property assignments inside the curly braces of the sandbox block are converted into property assignments on the new instance of our Database class.
 The outer set of curly braces wrapping the sandbox block form the Groovy closure that is passed to the databases() method of the extension class.
+If you wanted to define additional databases for the build to access—perhaps a staging server or a production instance—those would be placed as peers to the sandbox definition.
 The complete source code of the sketched-out plug-in is available in a GitHub Gist.
 Remember, all of this code was typed directly into a plain Gradle build file, with no compilation or build steps required.
 This is a very efficient way to create a prototype, but of course a properly managed plug-in will need a build of its own, so it can be decorated with all of the appropriate testing, versioning, and release processes that attend mature software development.
@@ -316,7 +321,7 @@ This directory will automatically be included in the jar file under its META-INF
 The purpose of the file is to translate from the string ID of the plug-in to the fully qualified name of the class that implements the plug-in.
 The full build shown in the example project contains many extra features for packaging and deployment to the Central Repository, but it can be much simpler.
 The main problem is solving the compile-time classpath dependency on the Gradle APIs themselves.
-The plug-in also depends on Liquibase modules, but we already know how to bring in regular Maven-style dependencies from reading Buiding and Testing With Gradle.)
+The plug-in also depends on Liquibase modules, but we already know how to bring in regular Maven-style dependencies from reading Buiding and Testing With Gradle.
 The answer to the Gradle API question is the gradleApi() convenience method.
 Declared as a compile-time dependency, it brings in all of the internal Gradle classes needed to build a project that extends Gradle itself.
 The completed minimum subset build is shown in Example 2-11
@@ -329,7 +334,6 @@ We can apply appropriate versioning, source repository tagging, and other releas
 In short, this extension to the build tool brings new functionality to bear on the system, is expressed in new build language, and is engineered within the context of contemporary software development practice.
 This is the essence of the Gradle plug-in story, which is a very powerful story indeed.
 By itself, Gradle is a deeply customizable toolkit for creating custom build software.
-It comes with out-of-the-box conventions that are useful for highly standardized builds, and it exposes a rich set of APIs for introducing novel functionality into a noncommodity build as we saw in Chapter 2
 But your ability to customize a Gradle build doesn’t end with plug-ins.
 Gradle offers you the ability to modify the execution of that program by hooking a variety of events that occur during the configuration and execution of your build.
 These hooks are simply blocks of Groovy code that run when tasks are added, when projects are created, and at other times during Gradle’s internal configuration sequence.
@@ -345,7 +349,6 @@ During configuration, Gradle executes each build file as a Groovy script.
 The effect of configuration is not the actual execution of build.
 If it is a multi-project build, there is also a DAG of project objects, one for each project.
 Dependency order means that if task A depends on task B, task B will run first.
-During this phase, Gradle identifies the tasks in the task DAG that must be executed, and executes them in dependency order.2 All build activities (e.g., compiling code, copying files, uploading artifacts, etc.) occur during execution.
 Advising the Build Graph In the early 2000s, the paradigm of aspect-oriented programming (AOP) became a marginally popular way to manage the complexity of enterprise Java software.
 For example, a method that processes a web request might need to make security assertions before it runs, or it might have to emit logging after it runs.
 A method that writes to the database might have to have a database context set up first and a transaction committed after.
@@ -364,6 +367,7 @@ If the directory exists, the hook creates a task called testGrammars, ostensibly
 Try running the build with and without a grammars directory present.
 The beforeEvaluate() hook is not particularly useful in this case, since there is no way in a single build file to advise the build to do something before it is evaluated.3 Beforehooks are only useful in the case of a multiproject build.
 Example 3-2 has three builds, the parent project and two subprojects.
+The grammar check is only performed on the subprojects—now as a before-hook—by way of the allprojects method.
 The configuration inside the allprojects closure is applied to all projects, and therefore has a chance to affect the subprojects, since they have not yet been evaluated at the time the closure is run.
 If you run the example with and without the grammar directory in all three project directories, you’ll find that the parent project never gains the testGram mars task, since the beforeEvaluate hook can’t run on the project in which it is read.
 Note that the check for the file has become project.file() instead of merely file() as in the previous example.
@@ -375,6 +379,7 @@ This event fires at the end of the initialization phase, before any project eval
 Of course, not much of the Gradle object model is available for examination or configuration at this point in the lifecycle, but useful work is still possible.
 The gradle object is passed to the closure as a parameter (named g in Example 3-3), and can be operated upon as usual.
 This example shows the buildscript block being configured with classpath dependencies to support the loading of custom plug-ins in other builds within the project.
+This buildscript config—often an annoying bit of noise in small builds—is now abstracted away through the work of the projectsLoaded() hook.
 The entire project graph is available for inspection and manipulation at this point, and the caller can be assured that no build activity has taken place at the time the hook runs.
 Build Finished You may want to know when a build is finished, and whether it ran to completion or encountered an error.
 Certainly your build’s command-line user interface or continuous integration framework is going to give you this feedback, but we can imagine other ways we might want to capture this status and act on it.
@@ -414,6 +419,7 @@ Java classes have been compiled, static resources have been copied, and a JAR ha
 Simply running clean at this point will delete the entire build directory, wiping out all three of those resources indiscriminately.
 However, running cleanJar will delete only the JAR file, and running cleanResources will surgically remove only the build/ resources directory.
 Here’s a partial listing of the build directory after running cleanResources:
+This simple example may not show particularly advanced behavior—judicious use of the rm command would do the same thing—but it does illustrate the power of task rules.
 Creating a Rule Let’s create a rule to ping an arbitrary server and store the results of the ping.
 We’ll log them in the build directory and store them in the extended properties of the task itself, so other tasks in the build can optimize their activity based on the availability of the pinged server.
 Pinging a server is a one-line operation in Java (and by extension, in Groovy), but we don’t want to write a specific ping task for every server we might need to contact.
@@ -433,23 +439,29 @@ The interface specifies two methods: a getter for the description, which is used
 All of the imperative code has been removed from the build and placed in a source file where it belongs, so our build looks like Example 3-9 now.
 Running gradle tasks will now reveal the task rule definition after the statically defined tasks are listed.
 Fleshing the rule definition out a bit, we might want to add code in the apply() method to test the name of the task being referenced.
-Remember, the point of a task rule is to capture references to tasks that don’t exist, and create them if their name matches some convention.) Adding a bit more functionality to apply(), we have what we see in Example 3-10
+Remember, the point of a task rule is to capture references to tasks that don’t exist, and create them if their name matches some convention.
+Adding a bit more functionality to apply(), we have what we see in Example 3-10
 This rule definition can be further expanded with actual network reachability code in place of the println() call, with that functionality comfortably factored into methods as we see fit.
 But more importantly, since this rule is now a class, we can test it.
+Since the topic of unit testing is already covered in Building and Testing with Gradle —and the buildSrc project works exactly like a normal project in this regard—I will invite you to explore the full example code at your leisure.
 Generalizing Rules Beyond Tasks The rules we’ve programmed so far have all been task rules, or rules that create new tasks on demand.
 As it turns out, Gradle’s rule API doesn’t exist specifically at the task level, but rather at the level of the named domain object collection.
+That is, any named collection of things in Gradle—SourceSets, configurations, custom domain objects—can be created by rules.
 Conclusion When you have full control over the build source and are writing your own plug-in, often the easiest way to introduce new functionality is simply to code it directly into your custom plug-in.
 However, at times when build source is not available to you or is not convenient to modify, build hooks and rules provide powerful mechanisms for bringing concepts from aspect-oriented programming and metaprogramming into your build development.
 Dependencies are a formidable challenge, whether they are dependencies in a Java build, in a Ruby project, or in any other kind of system.
 For one thing to depend on another means accepting the liability that the depended-on thing might not be available when we need it, might be expensive to obtain, or might not work in the way we expected.
+Dependencies can seem like an annoyance—indeed, much of the undeserved criticism commonly directed against Maven focuses on dependency management—but they are an unavoidable fact of a complex ecosystem and are a sign that the actors in that ecosystem are trying to divide up their labor in worthwhile ways.
 We will consider the problem of dependency management primarily from a Java perspective, since the Java community has excelled both in creating an enormous dependency management problem, and in solving it effectively.
 Java’s early embrace of open source caused thousands of software modules to proliferate, and typical projects soon came to depend on dozens of these individual modules.
 Of course, Java dependency management solutions also apply to related languages of the JVM.
 Groovy and Scala builds will apply the exact same techniques shown in this chapter.
+What Is Dependency Management? You may have worked with a build that constructed the compile classpath for your compile step by blindly grabbing all the JAR files in a certain directory (usually called “lib”)
 Inevitably, this becomes a problem over time as the software grows.
 It becomes more and more costly to change or remove dependencies as it becomes increasingly difficult to determine the impact of doing so.
 Having your JAR files in the lib directory is not the problem.
 It’s that they are being used indiscriminately and that the relationships between them are completely opaque.
+It is common to see “dependency management” inaccurately equated with the automated fetching of dependencies from a remote source or even the automated fetching of transitive dependencies (i.e., dependencies of dependencies)
 This is a benefit of dependency management, not its essence.
 By declaring and modelling dependencies, tooling such as Gradle can automate working with dependencies by leveraging this information.
 This includes automatically fetching dependencies, detecting transitive dependency conflicts, and so on.
@@ -485,7 +497,6 @@ When one build depends on another build as a subproject, Gradle’s default beha
 The Gradle war plug-in adds providedCompile and providedRun time configurations that can be used to achieve the same effect as the Apache Maven dependency scope of provided.
 When we say that default extends runtime as shown in Example 4-2, we might intuitively understand the mechanism, but it’s still worth some explanation.
 To see the details, let’s look back at another case: how the testCompile configuration provides dependencies to the compileTestJava task.
-When compiling unit tests, we are likely to need access to every single compile-time dependency that the main source code needs, plus several other things (e.g., non-production mocks or stubs, a testing framework, etc.)
 Gradle supports this relationship by allowing one configuration to extend another.
 Hibernate and the Spring Framework are actually composed of several distinct modules each.
 Some of those modules depend on one another, and some stand alone, depending only on modules outside of their respective frameworks.
@@ -569,6 +580,7 @@ Sonatype’s Nexus and JFrog’s Artifactory are two examples of products that c
 Declaring such a repository in Gradle is a simple matter of providing the URL (Example 4-18)
 A Maven repository is merely a website that serves POMs and artifacts through a welldefined URL naming scheme.
 In some cases, we might want to obtain POMs from one website (say, a centralized corporate repo), but download build artifacts from a mirrored.
+In organizations with globally distributed teams, words like “workday” and “nightly” begin to lose crisp definition, but these remain the terms normally used to discuss builds of this kind.
 We might be motivated to do this to reduce bandwidth consumption or increase download speeds between the build server and the main repository.
 Maven famously caches all of its dependencies in the ~/.m2 directory, which is sometimes called the local Maven repository.
 Gradle maintains its own caching mechanism, but some builds might want to be able to dip into Maven’s local cache to resolve dependencies.
@@ -636,16 +648,16 @@ If a plug-in is properly packaged and deployed to a binary repository like Centr
 Dependency Caching It is one thing to be able to declare dependencies with a concise syntax and resolve them against a variety of artifact repositories.
 It is another thing entirely to do this while retaining the ability to execute builds quickly or run them when disconnected from the network.
 To support these goals, Gradle offers a sophisticated dependency cache, containing features no dependency management system before it has offered.
-Binary repository formats like Ivy and Maven expose both metadata (e.g., pom.xml and ivy.xml files) and binary artifacts themselves (e.g., JAR files, source archives, JavaDoc archives, etc.)
 In an important innovation, Gradle caches the metadata and artifacts separately.
 This allows the dependency cache to avoid a significant category of build.
-A repository is defined as a URL, a type (e.g., Maven, Ivy, etc.), and a layout.
 All Maven repos have the same layout, but Ivy repos may differ.
 However, the naive approach ignores the case in which different binary modules are uploaded to separate repositories with the same version number.
+This is always a pathological condition—the release management process should have bumped up the version number in one of those two builds—but it is nevertheless a reality in practical build environments.
 Gradle caches dependency metadata (pom.xml and ivy.xml) by the group ID, artifact ID, version number, and the repository from which the dependency was resolved.
 This will lead to an increase in network requests during a build, but only for small metadata files; it will only lead to more artifact downloading when such downloading is the right thing to do.
 There is, in effect, one metadata cache per repository, but Gradle maintains just one artifact cache for all dependencies.
 Thus, all of the metadata caches share common access to a local, disk-based store of downloaded binary artifacts.
+If they are both legitimately serving the same JAR—as defined by both files sharing the same SHA-1 hash code—then Gradle will only download the binary artifact once, and store it in one place on disk.
 Gradle relies heavily on hashes to optimize download performance; when resolving a dependency, it will first attempt to download the much-smaller SHA from the repo, skipping the download if it determines that it already has that content in the artifact cache.
 There are a couple of important command line switches that impact the way Gradle uses its dependency cache.
 The --offline switch tells Gradle to use cached dependencies, and not to attempt to re-resolve anything (e.g., changing dependencies) against networked repositories.

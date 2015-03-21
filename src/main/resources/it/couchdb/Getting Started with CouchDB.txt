@@ -5,6 +5,7 @@ While every precaution has been taken in the preparation of this book, the publi
 Introduction When I was about nine years old, I had an Acorn Electron, a home computer developed by Acorn Machines and one of the major precursors to modern home computing.
 It wasn’t my first machine; I cut my teeth on the Sinclair ZX81 and later the ZX Spectrum.
 Despite all these limitations, I built numerous different pieces of software for myself, including my very first database for my second greatest passion, books.
+Through the yeras, I’ve worked on many different database systems, including dB III+, Microsoft Access, Oracle, BRS, Filemaker, Omni 4D, and what I’m probably best known for, MySQL.
 The fundamentals of wanting to store information and retrieve it very quickly are all possible using these tools and just as I did in 1983, I’ve built some fun and serious applications in all of them.
 For the most part, though, the database became a tool—just another utility that became part of the toolkit for building the application.
 Then I was introduced to Apache CouchDB, and I rediscovered the passion I had when developing applications on the Electron.
@@ -213,6 +214,8 @@ Once the value has been updated, restart your CouchDB installation, and your Cou
 Of course, opening up CouchDB in this way means anybody can view it.
 You may or may not want this, and there is a complete security system built into CouchDB that can help protect your system.
 A simple step you can take, however, is to restrict the administration controls on your server.
+When CouchDB is first set up, it is running in what is called “Admin Party Mode.” This means anybody accessing the machine has full adminstration rights (including changing your database and document contents and your configuration)
+You can switch this off by clicking on the “Fix This” link next to the Admin Party Mode warning in the bottom right of the Futon window.
 This will prompt you for a username and password that will be given administration rights.
 One downside to this is that using the HTTP REST interface is more complex as you may need to authenticate for certain operations.
 With that in mind, let’s leap right into the basics of using the HTTP REST interface and how to get data into and out of your database.
@@ -226,7 +229,6 @@ The URL component of the HTTP request is important within CouchDB in that it is 
 Looking at everything without seeing it in action would be difficult, so let’s look at some basic interactions that you might typically perform with your CouchDB database.
 Using Futon Futon is a native web-based interface built into CouchDB.
 It provides a basic interface to the majority of the functionality, including the ability to create, update, delete, and view documents and views, provides access to the configuration parameters, and an interface for initiating replication.
-You can do nearly everything that you would need to do with your CouchDB database within Futon, including creating the data, writing the views and design documents,
 Most of the operations within CouchDB are based around the same simple principles of editing documents, The default view is the Overview page, which provides you with a list of the databases.
 The basic structure of the page is consistent regardless of the section you are in.
 The main panel on the left provides the main interface to the databases, configuration, or replication systems.
@@ -276,7 +278,6 @@ For example, you cannot access documents in the database accounts when viewing t
 We’ll talk a little more about that when we look at document design later in this chapter.
 Before creating our first database, we can check if the CouchDB instance is available by accessing the URL for the database using a simple GET request:
 We haven’t specified the request type, so curl will send a GET request.
-In this case, we’ve used the localhost address and the default CouchDB port number, 5984
 I’ve formatted in the output below for clarity, but CouchDB outputs this information as one long JSON string, which can be difficult to read.
 Fortunately, JSON doesn’t care about whitespace, and the compact nature of the output keeps the size of the responses down, but isn’t very human-readable.:
 Creating Databases You can explicitly set the HTTP command using the -X command-line option.
@@ -316,7 +317,8 @@ This time we specified the URL path as /recipes/lasagne, the first part is the d
 Because we used PUT we created a document with the URL path specified.
 Updating Documents Now that we’ve created the record, we can update it by using PUT with the new document data and supplying the revision number to verify that we are updating the document that we think we are updating.
 Updating the document is a case of sending the new JSON for the document:
-There are a few things going on here, so let’s list them out to be clear: • The URL contains the full path to the document (that is DATABASE/DOCID)
+There are a few things going on here, so let’s list them out to be clear:
+The URL contains the full path to the document (that is DATABASE/DOCID)
 We know now the document that we are updating, so we must reference it explicitly as the document to be affected by the update.
 Think of it in the same way as you would editing a file on your machine.
 Until the file is saved with a filename, you can’t edit the contents, only change the contents of the unsaved document.
@@ -360,6 +362,7 @@ For example, you can explicitly create a document with a given ID by using PUT a
 In CouchDB, PUT is used to create new objects, including databases, documents, views, and design documents.
 The COPY method is not an HTTP standard, but it is supported by CouchDB as a way of duplicating information.
 Errors The HTTP standards also include a series of error numbers.
+These are well-defined and understood (everybody must have come across a “404: resource not found” error while browsing the Internet)
 The benefit of the numbered errors is that they are easy to understand and cope with, and because they come back with the header, they are easy to identify without a heavy overhead.
 For completeness, CouchDB also includes a JSON error string for many of the operations so that you can get a CouchDB-specific error.
 A sample of the main error codes are listed below.
@@ -427,8 +430,10 @@ Remember to include standard fields such as timestamps (created, updated), and s
 Sounds obvious, but within a document database, the temptation can be to create a completely flat structure.
 A typical example is tags, often used to classify data:
 Don’t concatenate values because you can, but use a compound value to hold the information.
+For example, when listing ingredients within a recipe, the temptation is to put the full ingredient—2 cups carrots—into a single field within your document.
 When you come to extract or search on that information, you will probably want the carrots more than the measurement.
 Don’t rely on the implied field sequence of the document.
+For example, don’t assume that if you create the document with three fields—title, author, and description—that the fields will be stored or returned in that order.
 This doesn’t affect top-level fields so much since you can access them by name, but it does affect compound values.
 If you want to retain a specific order, use an array of compound values, as in the previous ingredient example.
 When thinking about your data structure, decide on whether you want to use one document that contains all of the information or multiple documents that you will later combine together with a clever view.
@@ -551,6 +556,7 @@ From that list, you can query and select information from the view, and search a
 A view does exactly what the name suggests: it creates a view on your data.
 That makes it sound incredibly simple, and in fact it really is, but the simplicity also gives the whole process a lot of power.
 In fact, views form the basis of a number of key elements of the way CouchDB displays, sorts, and searches information.
+Producing lists of data on specific elements of a document.
 Views are designed within the views section of your design document.
 You can create multiple views and multiple design documents to create different views and summaries of your information.
 View Basics The first thing you need to know about views is that creating a view also creates an index.
@@ -618,7 +624,8 @@ The reduce function within a view is optional, but if defined, the reduce functi
 You can switch this off by adding the reduce=false option to the query.
 The output is trimmed here, but you can see the recipe information has been grouped together by the keyword text, with the value showing a count of the recipes that include that keyword.
 Let’s take a closer look at the internal workings, but simplify our data set slightly so that the process and calculations are easier.
-When using a reduce function the reduction is applied as follows: • For each record of input, the corresponding reduce function is applied on the row.
+When using a reduce function the reduction is applied as follows:
+For each record of input, the corresponding reduce function is applied on the row.
 The key is output using an array of both the name and the city for the sales.
 Outputting the view without the reduce function produces the following information:
 Calling the view with reduction enabled, we receive a sum of all the records from the view:

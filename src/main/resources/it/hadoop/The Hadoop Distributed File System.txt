@@ -1,9 +1,11 @@
 Abstract—The Hadoop Distributed File System (HDFS) is designed to store very large data sets reliably, and to stream those data sets at high bandwidth to user applications.
 In a large cluster, thousands of servers both host directly attached storage and execute user application tasks.
 By distributing storage and computation across many servers, the resource can grow with demand while remaining economical at every size.
+We describe the architecture of HDFS and report on experience using HDFS to manage 25 petabytes of enterprise data at Yahoo!
 An important characteristic of Hadoop is the partitioning of data and computation across many (thousands) of hosts, and executing application computations in parallel close to their data.
 A Hadoop cluster scales computation capacity, storage capacity and IO bandwidth by simply adding commodity servers.
 Hadoop is an Apache project; all components are available via the Apache open source license.
+Yahoo! has developed and contributed to 80% of the core of Hadoop (HDFS and MapReduce)
 HBase was originally developed at Powerset, now a department at Microsoft.
 While the interface to HDFS is patterned after the UNIX file system, faithfulness to standards was sacrificed in favor of improved performance for the applications at hand.
 All servers are fully connected and communicate with each other using TCP-based protocols.
@@ -214,6 +216,7 @@ If the NameNode detects that a block’s replicas end up at one rack, the NameNo
 After the NameNode receives the notification that the replica is created, the block becomes over-replicated.
 The NameNode then will decides to remove an old replica because the overreplication policy prefers not to reduce the number of racks.
 Balancer HDFS block placement strategy does not take into account.
+This is to avoid placing new—more likely to be referenced—data at a small subset of.
 Therefore data might not always be placed uniformly across DataNodes.
 Imbalance also occurs when new nodes are added to the cluster.
 The balancer is a tool that balances disk space usage on an HDFS cluster.
@@ -251,7 +254,7 @@ It is a MapReduce job; each of the map tasks copies a portion of the source data
 The MapReduce framework automatically handles parallel task scheduling, error detection and recovery.
 Seventy percent of the disk space is allocated to HDFS.
 The remainder is reserved for the operating system (Red Hat Linux), logs, and space to spill the output of map tasks.
-MapReduce intermediate data are not stored in HDFS.) Forty nodes in a single rack share an IP switch.
+Forty nodes in a single rack share an IP switch.
 The rack switches are connected to each of eight core switches.
 The core switches provide connectivity between racks and to out-of-cluster resources.
 For each cluster, the NameNode and the BackupNode hosts are specially provisioned with up to 64GB RAM; application tasks are never assigned to those hosts.
@@ -262,14 +265,19 @@ Slower, smaller nodes are retired or relegated to clusters reserved for developm
 The choice of how to provision a cluster node is largely an issue of economically purchasing computation and storage.
 On an example large cluster (3500 nodes), there are about.
 Each day user applications will create two million new files on the cluster.
+At the start of 2010, this is a modest—but growingfraction of the data processing infrastructure at Yahoo!
+By the end of that year, Yahoo! had adopted Hadoop for internal use and had a 300-node cluster for development.
 Since then HDFS has become integral to the back office at Yahoo!
 More applications are moving to Hadoop, especially those that analyze and model user behavior.
 Becoming a key component of Yahoo!’s technology suite meant tackling technical problems that are the difference between being a research project and being the custodian of many petabytes of corporate data.
 But also important are economical performance, provisions for resource sharing among members of the user community, and ease of administration by the system operators.
 Durability of Data Replication of data three times is a robust guard against loss.
+It is unlikely Yahoo! has ever lost a block in this way; for a large cluster, the probability of losing a block during one year is less than .005
 The key understanding is that about 0.8 percent of nodes fail each month.
-Even if the node is eventually recovered, no effort is taken to recover data it may have hosted.) So for the sample large cluster as described above, a node or two is lost each day.
-Re-replication is fast because it is a parallel problem that scales with the size of the cluster.) The probability of several nodes failing within two minutes such that all replicas of some block are lost is indeed small.
+Even if the node is eventually recovered, no effort is taken to recover data it may have hosted.
+So for the sample large cluster as described above, a node or two is lost each day.
+Re-replication is fast because it is a parallel problem that scales with the size of the cluster.
+The probability of several nodes failing within two minutes such that all replicas of some block are lost is indeed small.
 The most commonly observed fault in this regard is the failure of a rack or core switch.
 Some failures of a core switch can effectively disconnect a slice of the cluster from multiple racks, in which case it is probable that some blocks will become unavailable.
 In either case, repairing the switch restores unavailable replicas to the cluster.
@@ -277,12 +285,13 @@ Another kind of correlated failure is the accidental or deliberate loss of elect
 If the loss of power spans racks, it is likely that some blocks will become unavailable.
 But restoring power may not be a remedy because one-half to one percent of the nodes will not survive a full power-on restart.
 Statistically, and in practice, a large cluster will lose a handful of blocks during a power-on restart.
-The strategy of deliberately restarting one node at a time over a period of weeks to identify nodes that will not survive a restart has not been tested.)
+The strategy of deliberately restarting one node at a time over a period of weeks to identify nodes that will not survive a restart has not been tested.
 In addition to total failures of nodes, stored data can be corrupted or lost.
 The block scanner scans all blocks in a large cluster each fortnight and finds about 20 bad replicas in the process.
 Caring for the Commons As the use of HDFS has grown, the file system itself has.
 The first such feature was a permissions framework closely modeled on the Unix permissions scheme for file and directories.
 In this framework, files and directories have separate access permissions for the owner, for other members of the user group associated with the file or directory, and for all other users.
+The principle differences between Unix (POSIX) and HDFS are that ordinary files in HDFS have neither “execute” permissions nor “sticky” bits.
 In the present permissions framework, user identity is weak: you are who your host says you are.
 When accessing HDFS, the application client simply queries the local operating system for user identity and group membership.
 In the new framework, the application client must present to the name system credentials obtained from a trusted source.
@@ -318,7 +327,6 @@ In the petabyte sort, the replication factor was set to two so that the test wou
 The nature of this task stresses the system’s ability to move data from and to the file system (it really isn't about sorting)
 The competitive aspect means that the results in Table 2 are about the best a user application can.
 The I/O rate in the last column is the combination of reading the input and writing the output from and to HDFS.
-In the second row, while the rate for HDFS is reduced, the total I/O per node will be about double because for the larger (petabyte!) data set, the MapReduce intermediates must also be written to and read from disk.
 In the smaller test, there is no need to spill the MapReduce intermediates to disk; they are buffered the memory of the tasks.
 Large clusters require that the HDFS NameNode support the number of client operations expected in a large cluster.
 The NNThroughput benchmark is a single node process which starts the NameNode application and runs a series of client threads on the same node.

@@ -28,6 +28,7 @@ Flexibility Impala integrates with existing Hadoop components, security, metadat
 You keep the flexibility you already have with these Hadoop strong points and add capabilities that make SQL queries much easier and faster than before.
 With SQL, you can turn complicated analysis programs into simple, straightforward queries.
 To help answer questions and solve problems, you can enlist a wide audience of analysts who already know SQL or the standard business intelligence tools built on top of SQL.
+They know how to use SQL or BI tools to analyze large data sets and how to quickly get accurate answers for many kinds of business questions and “what if ” scenarios.
 They know how to design data structures and abstractions that let you perform this kind of analysis both for common use cases and unique, unplanned scenarios.
 The filtering, calculating, sorting, and formatting capabilities of SQL let you delegate those operations to the Impala query engine, rather than generating a large volume of raw results and coding client-side logic to organize the final results for presentation.
 Impala embodies the Big Data philosophy that large data sets should be just as easy and economical to work with as small ones.
@@ -71,6 +72,7 @@ For problems that do not tax the capabilities of a single machine, many alternat
 After all, if all you want to do is sort or search through a few files, you can do that plenty fast with Perl scripts or Unix commands such as grep.
 The Big Data issues come into play when the files are too large to fit on a single machine, or when you want to run hundreds of such operations concurrently, or when an operation that takes only a few seconds for megabytes of data takes hours when the data volume is scaled up to gigabytes or petabytes.
 You can learn the basics of Impala SQL and confirm that all the prerequisite software is configured correctly using tiny data sets, as in the examples throughout this article.
+That’s what we call a “canary test,” to make sure all the pieces of the system are hooked up properly.
 To start exploring scenarios involving performance testing, scalability, and multi-node cluster configurations, you typically use much, much larger data sets.
 Try generating a billion rows of representative data, then once the raw data is in Impala, experiment with different combinations of file formats, compression codecs, and partitioning schemes.
 Don’t put too much faith in performance results involving only a few gigabytes of data.
@@ -83,6 +85,7 @@ Hadoop software stack, experimenting with Cloudera Impala is a valuable exercise
 Long-time data warehousing users might already be in the right mindset, because some of the traditional database best practices naturally fall by the wayside as data volumes grow and raw query speed becomes the main consideration.
 With Impala, you will do less planning for normalization, skip the time and effort that goes into designing and creating indexes, and stop worrying when queries cause full-table scans.
 Impala, as with many other parts of the Hadoop software stack, is optimized for fast bulk read and data load operations.
+Many data warehouse-style queries involve either reading all the data (“what is the highest number of different visitors our website ever had in one day?”) or reading some large set of values organized by criteria such as time (“what were the total sales for the company in the fourth quarter of last year?”)
 Impala divides up the work of reading large data files across the nodes of a cluster.
 Impala also does away with the performance overhead of creating and maintaining indexes, instead taking advantage of the multimegabyte HDFS block size to read and process high volumes of data in parallel across multiple networked servers.
 As soon as you load the data, it is ready to be queried.
@@ -94,6 +97,7 @@ Impala can even condense bulky, raw data into a data warehouse-friendly layout a
 When executing a query involves sending requests to several servers in a cluster, the way to minimize total resource consumption (disk I/O, network traffic, and so on) is to make each server do as much local.
 Impala queries typically work on data files in the multimegabyte or gigabyte range, where a server can read through large blocks of data very quickly.
 Impala does as much filtering and computation as possible on the server that reads the data to reduce overall network traffic and resource usage on the other nodes in the cluster.
+Thus, Impala can very efficiently perform “full table scans” of large tables, the kinds of queries that are common in analytical workloads.
 Impala makes use of partitioning, another familiar notion from the data warehouse world.
 Partitioning is one of the major optimization techniques you will employ to reduce disk I/O and maximize the scalability of Impala queries.
 Partitioned tables physically divide the data based on one or more criteria, typically by date or geographic region, so that queries can filter out irrelevant data and skip the corresponding data files entirely.
@@ -106,7 +110,7 @@ We can query a single table, multiple tables via joins, or build new queries on 
 Thus, you typically start with data files, then get them into Impala using one of these techniques:
 Issue a LOAD DATA statement to move data files into the Impala data directory for a table.
 Physically copy or move data files into the Impala data directory for a table.
-Not needed as much now, since the LOAD DATA statement debuted in Impala 1.1.)
+Not needed as much now, since the LOAD DATA statement debuted in Impala 1.1
 Issue a CREATE EXTERNAL TABLE statement with a LOCATION clause, to point the Impala table at data files stored in HDFS outside the Impala data directories.
 You can convert the data to a different file format in the destination table, filter the data using WHERE clauses, and transform values using operators and built-in functions.
 Use any of the Hive data loading techniques, especially for tables using the Avro, SequenceFile, or RCFile formats.
@@ -127,7 +131,6 @@ Administration When you administer Impala, it is a straightforward matter of som
 There is an impalad daemon that runs on each data node in the cluster and does most of the work, a statestored daemon that runs on one node and performs periodic health checks on the impalad daemons, and the roadmap includes one more planned service.
 Log files show the Impala activity occurring on each node.
 Administration for Impala is typically folded into administration for the overall cluster through the Cloudera Manager product.
-You monitor all nodes for out-of-space problems, CPU spikes, network failures,
 Files and Directories When you design a Impala schema, the physical implementation maps very intuitively to a set of predictably named directories.
 The data for a table is made up of the contents of all the files within a specified directory.
 Partitioned tables have extra levels of directory structure to allow queries to limit their processing to smaller subsets of data files.
@@ -136,7 +139,7 @@ You can even think of some of the SQL statements as analogous to familiar Unix c
 Impala, most INSERT statements include a SELECT portion, because the typical use case is copying data from one table to another.
 A Quick Unix Example Here is what your first Unix command line session might look like when you are using Impala:
 Now that the data files are in the HDFS filesystem, let’s go into the Impala shell and start working with them.
-Some of the prompts and output are abbreviated here for easier reading by first-time users.)
+Some of the prompts and output are abbreviated here for easier reading by first-time users.
 Back in the Unix shell, see how the CREATE DATABASE and CREATE TABLE statements created some new directories and how the LOAD DATA statement moved the original data files into an Impala-managed directory:
 In one easy step, you have gone from a collection of human-readable text files to a SQL table that you can query using standard, widely known syntax.
 The data is automatically replicated and distributed across a cluster of networked machines by virtue of being put into an HDFS directory.
@@ -158,7 +161,9 @@ Querying HBase data through Impala is a good combination for looking up single r
 MapReduce and Apache Pig If you use MapReduce, Apache Pig, or other Hadoop components to produce data in standard file formats such as text-based with optional LZO compression, Avro, SequenceFile, or RCFile, you can bring those data files under Impala control by simply moving them to the appropriate directory, or even have Impala query them from their original locations.
 The new Parquet file format is natively supported on Hadoop, with access from MapReduce, Pig, Impala, and Hive.
 You can also produce data files in these various formats through libraries available for Python, Java, and so on.
-You could create the simple delimited text format from any programming language, even a simple shell script.) You can choose whichever format is most convenient based on your current workflow, and either leave the data in that original format, or do a final conversion step if a different format offers much better compression or query performance for frequently consulted data.
+You could create the simple delimited text format from any programming language, even a simple shell script.
+You can choose whichever format is most convenient based on your current workflow, and either leave the data in that original format, or do a final conversion step if a different format offers much better compression or query performance for frequently consulted data.
+Schema on Read One of the tenets of Hadoop is “schema on read,” meaning that you are not required to do extensive planning up front about how your data is laid out, and you are not penalized if you later need to change.
 Historically, this principle has clashed with the traditional SQL model where a CREATE TABLE statement defines a precise layout for a table, and data is reorganized to match this layout during the load phase.
 Impala lets you define a schema for data files that you already have and immediately begin querying that data with no change to the underlying raw files.
 No more trying to predict how much room to allow for the longest possible name, address, phone number, product ID, and so on.
@@ -176,7 +181,8 @@ If you originally stored postal codes or credit card numbers as integers and lat
 Depending on your background and existing Apache Hadoop infrastructure, you can approach the Cloudera Impala product from different angles:
 If you are from a database background and a Hadoop novice, the Cloudera QuickStart VM lets you try out the basic Impala features straight out of the box.
 This single-node VM configuration is suitable to get your feet wet with Impala.
-For performance or scalability testing, you would use real hardware in a cluster configuration.) You run the VM in VMWare, KVM, or VirtualBox, start the Impala service through the Cloudera Manager web interface, and then interact with Impala through the impalashell interpreter or the ODBC and JDBC interfaces.
+For performance or scalability testing, you would use real hardware in a cluster configuration.
+You run the VM in VMWare, KVM, or VirtualBox, start the Impala service through the Cloudera Manager web interface, and then interact with Impala through the impalashell interpreter or the ODBC and JDBC interfaces.
 For more serious testing or large-scale deployment, you can download and install the Cloudera Impala software in a real cluster environment.
 You can freely install the software either through standalone packages or by using the Cloudera Manager “parcel” feature, which enables easier upgrades.
 You install the Impala server on each data node and designate one node (typically the same as the Hadoop namenode) to also run the Impala StateStore daemon.
@@ -187,7 +193,6 @@ In this article, you have learned how Impala fits into the Hadoop software stack
 Using Hive where convenient for some ETL tasks, then querying the data in Impala.
 Using data files produced by MapReduce, Pig, and other Hadoop.
 Utilizing data formats from simple (text), to compact and efficient.
-Avro, RCFile, SequenceFile), to optimized for data warehouse queries (Parquet)
 You have seen the interesting benefits Impala brings to users coming from different backgrounds:
 For Hadoop users, how Impala brings the familiarity and flexibility of fast, interactive SQL to the Hadoop world.
 For database users, how the combination of Hadoop and Impala makes it simple to set up a distributed database for data warehouse-style queries.

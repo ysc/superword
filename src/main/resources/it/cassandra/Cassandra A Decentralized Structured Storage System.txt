@@ -59,7 +59,6 @@ For reads, based on the consistency guarantees required by the client, the syste
 One of the key design features for Cassandra is the ability.
 This requires, the ability to dynamically partition the data over the set of nodes (i.e., storage hosts) in the cluster.
 Cassandra partitions data across the cluster using consistent hashing [11] but uses an order preserving hash function to do so.
-In consistent hashing the output range of a hash function is treated as a fixed circular space or “ring” (i.e.
 Each node in the system is assigned a random value within this space which represents its position on the ring.
 Each data item identified by a key is assigned to a node by hashing the data item’s key to yield its position on the ring, and then walking the ring clockwise to find the first node with a position larger than the item’s position.
 The application specifies this key and the Cassandra uses it to route requests.
@@ -74,10 +73,14 @@ Each key, k, is assigned to a coordinator node (described in the previous sectio
 The coordinator is in charge of the replication of the data items that fall within its range.
 In addition to locally storing each key within its range, the coordinator replicates these keys at the N-1 nodes in the ring.
 Cassandra provides the client with various options for how data needs to be replicated.
+Cassandra provides various replication policies such as “Rack Unaware”, “Rack Aware” (within a datacenter) and “Datacenter Aware”
 Replicas are chosen based on the replication policy chosen by the application.
+If certain application chooses “Rack Unaware” replication strategy then the non-coordinator replicas are chosen by picking N-1 successors of the coordinator on the ring.
+For “Rack Aware” and “Datacenter Aware” strategies the algorithm is slightly more involved.
 Cassandra system elects a leader amongst its nodes using a system called Zookeeper[13]
 All nodes on joining the cluster contact the leader who tells them for what ranges they are replicas for and leader makes a concerted effort to maintain the invariant that no node is responsible for more than N-1 ranges in the ring.
 The metadata about the ranges a node is responsible is cached locally at each node and in a fault-tolerant manner inside Zookeeper - this way a node that crashes and comes back up knows what ranges it was responsible for.
+We borrow from Dynamo parlance and deem the nodes that are responsible for a given range the “preference list” for the range.
 As is explained in Section 5.1 every node is aware of every other node in the system and hence the range they are responsible for.
 Cassandra provides durability guarantees in the presence of node failures and network partitions by relaxing the quorum requirements as described in Section5.2
 Data center failures happen due to power outages, cooling failures, network failures, and natural disasters.

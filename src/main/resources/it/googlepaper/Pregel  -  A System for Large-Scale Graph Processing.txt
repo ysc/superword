@@ -1,4 +1,5 @@
 Standard examples include the Web graph and various social networks.
+The scale of these graphs—in some cases billions of vertices, trillions of edges—poses challenges to their efficient processing.
 In this paper we present a computational model suitable for this task.
 Programs are expressed as a sequence of iterations, in each of which a vertex can receive messages sent in the previous iteration, send messages to other vertices, and modify its own state and that of its outgoing edges or mutate graph topology.
 This vertexcentric approach is flexible enough to express a broad set of algorithms.
@@ -164,6 +165,7 @@ To enable user monitoring, the master runs an HTTP server that displays this inf
 Each worker maintains a collection of aggregator instances, identified by a type name and instance name.
 When a worker executes a superstep for any partition of the graph, the worker combines all of the values supplied to an aggregator instance into a single local value: an aggregator that is partially reduced over all of the worker’s vertices in the partition.
 At the end of the superstep workers form a tree to reduce partially reduced aggregators into global values and deliver them to the master.
+We use a tree-based reduction—rather than pipelining with a chain of workers—to parallelize the use of CPU during reduction.
 The master sends the global values to all workers at the beginning of the next superstep.
 Its vertex value type is double to store a tentative PageRank, and its message type is double to carry PageRank fractions, while the edge value type is void because edges do not store information.
 In each of the first 30 supersteps, each vertex sends along each outgoing edge its tentative.
@@ -176,7 +178,7 @@ If the minimum of these updates is less than the value currently associated with
 In the first superstep, only the source vertex will update its value (from INF to zero) and send updates to its immediate neighbors.
 These neighbors in turn will update their values and send.
 The algorithm terminates when no more updates occur, after which the value associated with each vertex denotes the minimum distance from the source vertex to that vertex.
-The value INF denotes that the vertex cannot be reached at all.) Termination is guaranteed if all edge weights are non-negative.
+The value INF denotes that the vertex cannot be reached at all.
 Since the receiving vertex is ultimately only interested in the minimum, this algorithm is amenable to optimization using a combiner (Section 3.2)
 The combiner shown in Figure 6 greatly reduces the amount of data sent between workers, as well as the amount of data buffered prior to executing the next superstep.
 While the code in Figure 5 only computes distances, modifying it to compute the shortest paths tree as well is quite straightforward.
@@ -189,7 +191,6 @@ If it sent no messages (because it is already matched, or has no outgoing edges)
 Otherwise, it will receive a response in two supersteps and reactivate.
 In phase 1 of a cycle, each right vertex not yet matched randomly chooses one of the messages it receives, sends a message granting that request, and sends messages to other requestors denying it.
 In phase 2 of a cycle, each left vertex not yet matched chooses one of the grants it receives and sends an acceptance message.
-Left vertices that are already matched will never execute this phase, since they will not have sent a message in phase 0
 Finally, in phase 3, an unmatched right vertex receives at most one acceptance message.
 It notes the matched node and unconditionally votes to halt—it has nothing further to do.
 Pregel has been used for several different versions of clustering.
@@ -202,11 +203,9 @@ Each vertex V maintains a list containing at most Cmax semi-clusters, sorted by 
 Vertex V updates its list of semi-clusters with the semiclusters from c1, ..., ck, c.
 The algorithm terminates either when the semi-clusters stop changing or (to improve performance) when the number of supersteps reaches a user-specified limit.
 At that point the list of best semi-cluster candidates for each vertex may be aggregated into a global list of best semi-clusters.
-We report runtimes for binary trees (to study scaling properties) and lognormal random graphs (to study the performance in a more realistic setting) using various graph sizes with the weights of all edges implicitly set to 1
 The time for initializing the cluster, generating the test graphs in-memory, and verifying results is not included in the measurements.
 Since all experiments could run in a relatively short time, failure probability was low, and checkpointing was disabled.
 Although the previous experiments give an indication of how Pregel scales in workers and graph size, binary trees are obviously not representative of graphs encountered in practice.
-Therefore, we also conducted experiments with random graphs that use a log-normal distribution of outdegrees,
 It is similar in concept to MapReduce [14], but with a natural graph API and much more efficient support for iterative computations over the graph.
 Pregel is also different because it implements a stateful model where long-lived processes compute, communicate, and modify local state, rather than a dataflow model where any process computes solely on input data and produces output data input by other processes.
 Pregel was inspired by the Bulk Synchronous Parallel model [45], which provides its synchronous superstep model of computation and communication.
@@ -223,6 +222,7 @@ CGMgraph uses an object-oriented programming style, in contrast to the generic p
 The contribution of this paper is a model suitable for.
 Based on the input from our users we think we have succeeded in making this model useful and usable.
 Dozens of Pregel applications have been deployed, and many more are being designed, implemented, and tuned.
+The users report that once they switch to the “think like a vertex” mode of programming, the API is intuitive, flexible, and easy to use.
 This is not surprising, since we have worked with early adopters who influenced the API from the outset.
 For example, aggregators were added to remove limitations users found in the early Pregel model.
 Other usability aspects of Pregel motivated by user experience include a set of status pages with detailed information about the progress of Pregel programs, a unittesting framework, and a single-machine mode which helps with rapid prototyping and debugging.

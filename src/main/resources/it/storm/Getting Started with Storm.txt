@@ -89,6 +89,7 @@ Remote Mode doesn’t show debugging information, which is why it’s considered
 However, it is possible to create a Storm cluster on a single development machine, and it’s a good idea to do so before deploying to production, to make sure there won’t be any problems running the topology in a production environment.
 You’ll learn more about Remote Mode in Chapter 6, and I’ll show how to install a cluster in Appendix B.
 Hello World Storm For this project, we’ll create a simple topology to count words.
+We can consider this the “Hello World” of Storm topologies.
 However, it’s a very powerful topology because it can scale to virtually infinite size, and with some small modifications we could even use it to create a statistical system.
 For example, we could modify the project to find trending topics on Twitter.
 To create the topology, we’ll use a spout that will be responsible for reading words, a first bolt to normalize words, and a second bolt to count words, as we can see in Figure 2-1
@@ -96,7 +97,7 @@ Checking Java Installation The first step to set up the environment is to check 
 Open a terminal window and run the command java -version.
 Creating the Project To start the project, create a folder in which to place the application (as you would for any Java application)
 Next we need to download the Storm dependencies: a set of jars that we’ll add to the application classpath.
-Download the dependencies, unpack them, and add them to the classpath • Use Apache Maven.
+Download the dependencies, unpack them, and add them to the classpath.
 It can be used to manage several aspects of a project development cycle, from dependencies to the release build process.
 To check if maven is installed, run the command mvn.
 Although is not necessary to be a Maven expert to use Storm, it’s helpful to know the basics of how Maven works.
@@ -147,7 +148,7 @@ This is an example of a bolt that emits nothing.
 In this case, the data is added to a map, but in real life the bolt could store data to a database.
 The execute method uses a map to collect and count the words.
 When the topology terminates, the cleanup() method is called and prints out the counter map.
-This is just an example, but normally you should use the cleanup() method to close active connections and other resources when the topology shuts down.)
+This is just an example, but normally you should use the cleanup() method to close active connections and other resources when the topology shuts down.
 The Main Class In the main class, you’ll create the topology and a LocalCluster object, which enables you to test and debug the topology locally.
 In conjunction with the Config object, LocalCluster allows you to try out different cluster configurations.
 For example, if a global or class variable was accidentally used, you would find the error when testing your topology in configurations with a different number of workers.
@@ -215,6 +216,7 @@ The first is a DRPC server that runs as a connector between the client and the S
 Then for each piece of data on which the function operates, the server assigns a request ID used through the topology to identify the RPC request.
 When the topology executes the last bolt, it must emit the RPC request ID and the result, allowing the DRPC server to return the result to the correct client.
 The second tool that Storm provides (used in the example) is the LinearDRPCTopology Builder, an abstraction to help build DRPC topologies.
+The topology generated creates DRPCSpouts—which connect to DRPC servers and emit data to the rest of the topology —and wraps bolts so that a result is returned from the last bolt.
 As an example of this type of topology, you’ll create a process that adds numbers.
 This is a simple example, but the concept could be extended to perform complex distributed math operations.
 Because this is the only bolt in the topology, it must emit the RPC ID and the result.
@@ -261,6 +263,7 @@ The complete example can be found at Twitter Example github page.
 The spout gets the connection parameters from the configuration object (track, user, and password) and creates a connection to the API (in this case, using the DefaultHttpClient from Apache)
 It reads the connection one line at a time, parses the line from JSON format into a Java object, and emits it.
 Here you are locking the nextTuple method, so you never execute the ack and fail methods.
+In a real application, we recommend that you do the locking into a separate thread and use an internal queue to exchange information (you’ll learn how to do that in the next example, “Enqueued Messages” on page 34)
 This is great! You’re reading the Twitter stream with a single spout.
 If you parallelize the topology, you’ll have several spouts reading different partitions of the same stream, which doesn’t make sense.
 So how do you parallelize processing if you have several streams to read? One interesting feature of Storm is that you can access the TopologyContext from any component (spouts/bolts)
@@ -408,9 +411,11 @@ You’ll be able to receive only as much traffic as the Redis server can handle.
 The Redis layer can be scaled by using sharding, and its availability can be improved by using a Master/Slave configuration, which would require changes to the sources of both the topology and the web application.
 Another weakness is that the web application does not scale proportionately by adding servers in a round robin fashion.
 This is because it needs to be notified when some product statistic changes and to notify all interested browsers.
+This “notification to browser” bridge is implemented using Socket.io, but it requires that the listener and the notifier be hosted on the same web server.
 This is achievable only if you shard the GET /product/:id/stats traffic and the POST /news traffic, both with same criteria, ensuring that requests referencing the same product will end up on the same server.
 Sometimes you want to use languages that aren’t based on the JVM to implement a Storm project, either because you feel more comfortable with another language or you want to use a library written in that language.
 Storm is implemented in Java, and all the spouts and bolts that you’ve seen in this book were written in Java as well.
+So is it possible to use languages like Python, Ruby, or even JavaScript to write spouts and bolts? The answer is yes! It is possible using something called the multilang protocol.
 The multilang protocol is a special protocol implemented in Storm that uses standard input and standard output as a channel of communication with a process that does the job of a spout or a bolt.
 Messages are passed through this channel encoded as JSON or as lines of plain text.
 Let’s take a look at a simple example of a spout and a bolt in a non-JVM language.
@@ -464,6 +469,7 @@ It is important to put all these scripts in a special folder called multilang/ r
 This folder gets included in the jar file that is sent to the workers.
 If you don’t put the scripts in that folder, Storm won’t be able to run them and will report an error.
 With Storm, you can guarantee message processing by using an ack and fail strategy, as mentioned earlier in the book.
+But what happens if tuples are replayed? How do you make sure you won’t overcount? Transactional Topologies is a new feature, included in Storm 0.7.0, that enables messaging semantics to ensure you replay tuples in a secure way and process them only once.
 Without support for transactional topologies, you wouldn’t be able to count in a fully accurate, scalable, and fault-tolerant way.
 Transactional Topologies are an abstraction built on top of standard Storm spouts and bolts.
 The Design In a transactional topology, Storm uses a mix of parallel and sequential tuple processing.
@@ -471,12 +477,15 @@ The spout generates batches of tuples that are processed by the bolts in paralle
 Some of those bolts are known as committers, and they commit processed batches in a strictly ordered fashion.
 This means that if you have two batches with five tuples each, both tuples will be processed in parallel by the bolts, but the committer bolts won’t commit the second tuple until the first tuple is committed successfully.
 When dealing with transactional topologies, it is important to be able to replay batch of tuples from the source, and sometimes even several times.
+So make sure your source of data—the one that your spout will be connected to—has the ability to do that.
 This can be described as two different steps, or phases: The processing phase.
 A fully parallel phase, many batches are executed at the same time.
 A strongly ordered phase, batch two is not committed until batch one has committed successfully.
 By default the one used for the topology, will be used to store the metadata.
 Transactions in Action To see how transactions work, you’ll create a Twitter analytics tool.
+You’ll be reading tweets stored in a Redis database, process them through a few bolts, and store—in another Redis database—the list of all hashtags and their frequency among the tweets, the list of all users and amount of tweets they appear in, and a list of users with their hashtags and frequency.
 The topology you’ll build for this tool is described in Figure 8-1
+UserSplitterBolt will parse the tweet and look for users—words preceded by @—and will emit these words in a custom stream called users.
 The HashatagSplitter Bolt will also parse the tweet, looking for words preceded by #, and will emit these words in a custom stream called hashtags.
 In order to count and emit the result, this bolt will be a BaseBatchBolt (more on that later)
 It will count everything and once finished processing the batch of tuples, it will send everything to Redis, in one transaction.
@@ -563,12 +572,13 @@ For example, when you add nodes to a running cluster.
 The rebalance command will deactivate the topology for the duration of message timeout and redistribute the workers so Storm will re-activate the topology.
 If you want to use another deactivation duration, you could use the -w parameter to set it:
 You can see the complete list of Storm commands by running the Storm client without parameters.
+If you want to create a Storm cluster, there are two ways to do so:
 All of the following steps, the Java, Python and unzip commands will be required in Nimbus and the supervisor process.
 Once you have installed the native libraries, download the latest Storm stable version (Storm 0.7.1 at the time of this writing), and unzip it.
 Modify the configuration file to add your Storm cluster configuration (you can see all default configurations on defaults.yaml in the Storm repository)
 To modify the storm cluster configuration, you’ll need to edit the conf/storm.yaml file located in the Storm folder and set (at least) the following parameters:
 A local directory where the Storm process will store internal data.
-It’s very important that the user who runs the storm process has write access over this directory.)
+It’s very important that the user who runs the storm process has write access over this directory.
 When you’ve configured these parameters, you can run all the Storm processes.
 If you want to do a local test, you can configure nimbus.host to localhost.
 To start one process, run into the Storm folder: ./bin/storm process name.
@@ -583,9 +593,9 @@ Building and Testing In order to build the example, you should start the redis-s
 After that, run the mvn command to effectively compile and test the application.
 Running the Topology Once the redis-server is running and the build is successful, start the topology running in a LocalCluster.
 After the topology is started, you can start the Node.js Web Application by running the following:
+Playing with the Example Type http://localhost:3000/ and start playing with the example!
 About the Authors Jonathan Leibiusky, Head of Research and Development at MercadoLibre, has been working in software development for more than 10 years.
 He has developed and contributed to several new and existing open source projects, including “Jedis”, which is being used actively by VMware and SpringSource.
-Gabriel Eisbruch is a computer science student who has been working as a Software Architect in Mercadolibre (NASDAQ MELI) since 2007
 In the last year, he has specialized in big data analysis, implementing MercadoLibre’s Hadoop cluster.
 Dario Simonassi has been working in software development for more than 10 years.
 Since 2004, he has specialized in large website operations and performance.

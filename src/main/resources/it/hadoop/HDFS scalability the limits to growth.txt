@@ -3,6 +3,7 @@ He specializes in efficient data structures and algorithms for large-scale distr
 He discovered a new type of balanced trees, S-trees, for optimal indexing of unstructured data, and he was a primary developer of an S-tree-based Linux file system, treeFS, a prototype of reiserFS.
 Based on experience with the largest deployment of HDFS, I provide an analysis of how the amount of RAM of a single namespace server correlates with the storage capacity of Hadoop clusters, outline the advantages of the single-node namespace server architecture for linear performance scaling, and establish practical limits of growth for this architecture.
 This study may be applicable to issues with other distributed file systems.
+Its wide acceptance and growth started in 2006 when Yahoo! began investing in its development and committed to use Hadoop as its internal distributed platform.
 During the past several years Hadoop installations have grown from a handful of nodes to thousands.
 It is now used in many organizations around the world.
 What was clear then has now become a reality: the need for large distributed storage systems backed by distributed computational frameworks like Hadoop MapReduce is imminent.
@@ -98,6 +99,7 @@ Since MapReduce servers (task-trackers) share nodes with HDFS datanodes, map out
 This reduces the HDFS read throughput, but also decreases the load on the name-node.
 Thus, for the sake of this analysis we may assume that our tasks do not produce any output, because otherwise the load on the name-node would be lower.
 Figure 1 illustrates that client reads conceptually consist of two stages:
+We will estimate how much time it takes for a client to retrieve a block replica and, based on that, derive how many “get block location” requests the name-node should expect per second from 100,000 clients.
 The benchmark is a map-reduce job with multiple mappers and a single reducer.
 Each mapper writes (reads) bytes to (from) a distinct file.
 Mappers within the job either all write or all read, and each mapper transfers the same amount of data.
@@ -110,6 +112,7 @@ For writes we consider a different distcp-like job load, which produces a lot of
 As above, we assume that an average write size per client is 96MB.
 Furthermore, this does not yet take into account the 125,000 confirmations (three per block-create) sent by data-nodes to the name-node for each successfully received block replica.
 Although these confirmations are not as heavy as create-blocks, this is still a substantial additional load.
+Even at 100% processing capacity dedicated to external tasks (no internal load), the clients will not be able to run at “full speed” with writes.
 They will experience substantial idle cycles waiting for replies from the namenode.
 Distributed systems are designed with the expectation of linear performance scaling: more workers should be able to produce a proportionately larger amount of work.
 The estimates above (working the math backwards) show that 10,000 clients can saturate the name-node for write-dominated workloads.
@@ -123,7 +126,6 @@ Looking into the future, especially taking into account that the ratio of small 
 There are just a few distributed file systems that implement such an approach.
 Ceph [9] has a cluster of namespace servers (MDS) and uses a dynamic subtree partitioning algorithm in order to map the namespace tree to MDSes evenly.
 The new GFS can have hundreds of namespace servers (masters) with 100 million files per master.
-Each file is split into much smaller size than before (1 vs.
 The details of the design, the scalability, and performance facts are not yet known to the wider community.
 A file is assigned to a particular MDS using a hash function on the file name.
 I would like to thank Jakob Homan and Rik Farrow for their help with the article.

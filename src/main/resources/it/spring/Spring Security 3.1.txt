@@ -63,6 +63,7 @@ Chapter 8, Opening up To OpenID, covers OpenID-enabled login and user attribute 
 Chapter 9, Single Sign-on with Central Authentication Service, shows how integrating with Central Authentication Service (CAS) can provide single sign-on and single logout support to your Spring Security-enabled applications.
 It also demonstrates how you can use CAS proxy ticket support for use with stateless services.
 Chapter 10, Fine-grained Access Control, covers in-page authorization checking (partial page rendering), and business-layer security using Spring Security's method security capabilities.
+Chapter 11, Access Control Lists, teaches you the concepts and basic implementation of business object-level security using the Spring Security Access Control Lists module—a powerful module with very flexible applicability to challenging business security problems.
 Chapter 12, Custom Authorization, explains how Spring Security's authorization works by writing custom implementations of key parts of Spring Security's authorization infrastructure.
 Chapter 13, Session Management, discusses how Spring Security manages and secures user sessions.
 The chapter starts by explaining session fixation attacks and how Spring Security defends against them.
@@ -86,6 +87,7 @@ Customer support Now that you are the proud owner of a Packt book, we have a num
 Downloading the example code You can download the example code files for all Packt books you have purchased from your account at http://www.PacktPub.com.
 If you purchased this book elsewhere, you can visit http://www.PacktPub.com/support and register to have the files e-mailed directly to you.
 Errata Although we have taken every care to ensure the accuracy of our content, mistakes do happen.
+If you find a mistake in one of our books—maybe a mistake in the text or the code—we would be grateful if you would report this to us.
 By doing so, you can save other readers from frustration and help us improve subsequent versions of this book.
 If you find any errata, please report them by visiting http://www.packtpub.
 Once your errata are verified, your submission will be accepted and the errata will be uploaded on our website, or added to any list of existing errata, under the Errata section of that title.
@@ -98,8 +100,8 @@ Security is arguably one of the most critical architectural components of any we
 In an era where malware, criminals, and rogue employees are always present and actively testing software for exploits, smart and comprehensive use of security is a key element to any project for which you'll be responsible.
 We compliment this approach by providing sample code for each chapter in the form of complete web applications.
 Whether you're already using Spring Security or are interested in taking your basic use of the software to the next level of complexity, you'll find something to help you in this book.
-Discuss some common security problems of web-based applications • Learn several core software security terms and concepts.
 If you are already familiar with basic security terminology, you may skip to Chapter 2, Getting Started with Spring Security, where we start using the basic functionality of the framework.
+What? You didn't think a lot about security when you designed the application? In fact, at this point, you are not even sure what a security audit is.
 Sounds like you'll have a lot to learn from the security auditors! Later in this chapter, we will review what an audit is, along with the results of the audit.
 First, let's spend a bit of time examining the application that's under review.
 About the sample application Although we'll be working through a contrived scenario, as we progress through this book, the design of the application and the changes that we'll make to it are drawn from real-world usage of Spring-based applications.
@@ -218,16 +220,19 @@ While in the real world, it's unthinkable that an online application containing 
 In the HTTPS setup in Tomcat section in Appendix, Additional Reference Material, we'll review the basic options for using transport-level security as part of the definition of the secured structure of the application.
 In the coming chapters, we'll apply a combination of source code and application configuration changes to address all of the concerns raised by the security auditors (and more), and give ourselves the confidence that our calendar application is secure.
 With Spring Security 3.1, we'll be able to make the following changes to increase our application security:
+Apply authorization rules at all levels of the application architecture.
+Prevent common types of attacks intended to manipulate or steal a.
 Why Spring Security Spring Security exists to fill a gap in the universe of Java third-party libraries, much as the Spring Framework originally did when it was first introduced.
 Standards such as Java Authentication and Authorization Service (JAAS) or Java EE Security do offer some ways of performing some of the same authentication and authorization functions, but Spring Security is a winner because it packages up everything you need to implement a top-to-bottom application security solution in a concise and sensible way.
 Additionally, Spring Security appeals to many, because it offers out-of-the-box integration with many common enterprise authentication systems; so it's adaptable to most situations with little effort (beyond configuration) on the part of the developer.
 It's in wide use, because there's really no other mainstream framework quite like it!
+Reviewed common points of risk in an unsecured web application.
 In the next chapter, we'll explore how to get Spring Security set up quickly and get a basic understanding of how it works.
 We will then build on the basic configuration to provide a customized experience for our users.
 This chapter is intended to get you up and running with Spring Security and to provide a foundation for any other security-related tasks you will need to perform.
 Implement a basic level of security on the JBCP Calendar application, using Spring Security's automatic configuration option.
-Learn how to customize both the login and logout experience • Configure Spring Security to restrict access differently, depending.
-Spring Security's JSP library • Determine the user's default location after login, based upon role.
+Learn how to customize both the login and logout experience.
+Determine the user's default location after login, based upon role.
 Hello Spring Security Although Spring Security can be extremely difficult to configure, the creators of the product have been thoughtful and have provided us with a very simple mechanism to enable much of the software's functionality with a strong baseline.
 From this baseline, additional configuration will allow a fine level of detailed control over the security behavior of our application.
 We'll start with our unsecured calendar application from Chapter 1, Anatomy of an Unsafe Application, and turn it into a site that's secured with rudimentary username and password authentication.
@@ -341,6 +346,7 @@ The next step is to provide a link for the user to click that will log them out.
 We will update header.jsp, so that the Logout link appears on every page.
 The last step is to update login.jsp to display a message indicating logout was successful when the parameter logout is present.
 The page isn't redirecting properly If you have not already, restart the application and visit http://localhost:8080/ calendar/ in FireFox; you will see an error similar to the following:
+What went wrong? The problem is that, since Spring Security is no longer rendering the login page, we must allow everyone (not just ROLE_USER) access to the login page.
 Without granting access to the login page, the following happens:
 Fortunately for us, Firefox realizes that there are too many redirects occurring, stops performing the redirect, and displays a very informative error message.
 In the next section, we will learn how to fix this error by configuring URLs differently, depending on the access that they require.
@@ -366,6 +372,7 @@ The following line from the updates to our security.xml file is what allows anon
 We will cover more detail about access control options in the second half of the book.
 When defining <intercept-url> elements, there are a number of things to keep in mind:
 This means it is important to specify the most specific elements first.
+This is because security="none" states that Spring Security should ignore all requests that match this <http> tag.
 If you have not done so already, restart the application and visit http://localhost:8080/calendar/
 Experiment with the application to see all the updates you have made.
 Select a link that requires authentication and observe the new login page.
@@ -407,6 +414,7 @@ The first step is to configure the default-target-url attribute of the <form-log
 Go ahead and update security.xml to use /default instead of the context root.
 The next step is to create a controller that processes /default.
 In the following code, you will find a sample Spring MVC controller, DefaultController, which demonstrates how to redirect administrators to the All Events page and other users to the Welcome page.
+In Spring Tool Suite you can use Shift + CTRL + O to automatically add the missing imports.
 There are a few things to point out about DefaultController and how it works.
 The first is that Spring Security makes the HttpServletRequest parameter aware of the currently logged-in user.
 In this instance, we are able to inspect which role the user belongs to, without relying on any of Spring Security's APIs.
@@ -419,6 +427,9 @@ In the next chapter, we will discuss how authentication in Spring Security works
 Custom Authentication In Chapter 2, Getting Started with Spring Security, we demonstrated how to use an in-memory data store to authenticate the user.
 In this chapter, we'll explore how to solve some common, real-world problems by extending Spring Security's authentication support to use our existing set of APIs.
 Through this exploration, we'll get an understanding of each of the building blocks that Spring Security uses in order to authenticate users.
+Discover how to obtain the details of the currently logged-in user.
+Add the ability to log in after creating a new account.
+Learn the simplest method for indicating to Spring Security that a user.
 Add domain-based authentication to demonstrate how to authenticate with more than just a username and password.
 CalendarUser Our calendar application uses a domain object named CalendarUser, which contains information about our users.
 Event Our application has an Event object that contains information about each event.
@@ -535,6 +546,8 @@ In the next chapter, we will explore some of the built-in support for JDBC-based
 JDBC-based Authentication In the previous chapter, we saw how we can extend Spring Security to utilize our CalendarDao interface and our existing domain model to authenticate users.
 In this chapter, we will see how we can use Spring Security's built-in JDBC support.
 To keep things simple, this chapter's sample code is based on our Spring Security setup from Chapter 2, Getting Started with Spring Security.
+Configure Spring Security to utilize our existing CalendarUser schema to.
+Learn how we can secure passwords using Spring Security's new.
 Using Spring Security's default JDBC authentication If your application has not yet implemented security or your security infrastructure is using a database, Spring Security provides an out-of-the-box support that can simplify solving your security needs.
 Spring Security provides a default schema for users, authorities, and groups.
 If that does not meet your needs, it allows for the querying and managing the users to be customized.
@@ -596,6 +609,7 @@ This indirect technique of aggregating user privileges by group is commonly refe
 Group-based access control is an approach common to almost every secured operating system or software package in the market.
 Microsoft Active Directory (AD) is one of the most visible implementations of large-scale GBAC, due to its design of slotting AD users into groups and assignment of privileges to those groups.
 Management of privileges in large AD-based organizations is made exponentially simpler through the use of GBAC.
+Try to think of the security models of the software you use—how are the users, groups, and privileges managed? What are the pros and cons of the way the security model is written?
 Let's add a level of abstraction to the JBCP Calendar application and apply the concept of group-based authorization to the site.
 Our existing accounts will be associated to the appropriate groups through an additional SQL script.
 Therefore, we must instruct Spring Security to enable the use of groups.
@@ -628,7 +642,8 @@ Configuring secure passwords We recall from the security audit in Chapter 1, Ana
 In fact, in any secured system, password security is a critical aspect of trust and authoritativeness of an authenticated principal.
 Designers of a fully secured system must ensure that passwords are stored in a way in which malicious users would have an impractically difficult time compromising them.
 The following general rules should be applied to passwords stored in a database:
-Passwords must not be stored in cleartext (plain text) • Passwords supplied by the user must be compared to the recorded.
+Passwords supplied by the user must be compared to the recorded.
+A user's password should not be supplied to the user upon demand.
 For the purposes of most applications, the best fit for these requirements involves one-way encoding, known as hashing, of the passwords.
 Using a cryptographic hash provides properties such as security and uniqueness that are important to properly authenticate users with the added bonus that once it is hashed, the password cannot be extracted from the value that is stored.
 In most secure application designs, it is neither required nor desirable to ever retrieve the user's actual password upon request, as providing the user's password to them without proper additional credentials could present a major security risk.
@@ -640,6 +655,7 @@ Depending on the complexity of your application, this process can get very compl
 You'll be happy to learn that Spring Security ships with a number of implementations of PasswordEncoder, which are applicable for different needs and security requirements.
 The implementation used can be specified using the hash attribute of the <password-encoder> declaration.
 The following table provides a list of the out-of-the-box implementation classes and their benefits.
+MD4 is not a secure algorithm—use of this encoder is not recommended.
 We'll learn more about this algorithm in Chapter 5, LDAP Directory Services, where we cover LDAP.
 As with many other areas of Spring Security, it's also possible to reference a bean definition implementing PasswordEncoder to provide more precise configuration and allow PasswordEncoder to be wired into other beans through the dependency injection.
 For the JBCP Calendar application, we'll need to use this bean reference method in order to hash the passwords of the newly created users.
@@ -669,7 +685,7 @@ A salt is a second plaintext component, which is concatenated with the plaintext
 Properly selected salts can guarantee that no two passwords will ever have the same hashed value, thus preventing the scenario that concerned our auditor, and avoiding many common types of brute force password cracking techniques.
 Best practice salts generally fall into one of the two categories:
 They are algorithmically generated from some piece of data associated with the user; for example, the timestamp that the user created.
-They are randomly generated and stored in some form • They are plaintext or two-way encrypted along with the user's.
+They are plaintext or two-way encrypted along with the user's.
 Remember that because the salt is added to the plaintext password, it can't be one-way encrypted—the application needs to be able to look up or derive the appropriate salt value for a given user's record in order to calculate the hash of the password, to compare with the stored hash of the user when performing authentication.
 In fact, using this interface is the preferred method for encoding passwords, because it will salt passwords using a random salt.
 It supports salt and the ability to become slower to perform over time as technology improves.
@@ -685,12 +701,16 @@ To authenticate a user, salt and hash can be extracted from the stored password,
 Then, the extracted hash can be compared against a new hash, computed with extracted salt and the inputted password.
 Following is the pseudo code for validating a salted password:
 Summary In this chapter, we learned how to use Spring Security's built-in JDBC support.
-Learned that Spring Security provides a default schema for new applications • Learned how to implement group-based access control and how it can make.
+Learned that Spring Security provides a default schema for new applications.
+Learned how to implement group-based access control and how it can make.
+Demonstrated how to integrate Spring Security's JDBC support with an.
+Learned to secure our passwords by hashing them and using a.
 In the next chapter, we will explore Spring Security's built-in support for LDAP-based authentication.
 Learn some of the basic concepts related to the LDAP protocol and server implementations.
 We will also explore how to customize Spring Security for more flexibility when dealing with custom Active Directory deployments.
 Understanding LDAP LDAP has its roots in logical directory models dating back over thirty years—conceptually akin to a combination of an organizational chart and an address book.
 Today, LDAP is used more and more as a way to centralize corporate user information, partition thousands of users into logical groups, and allow unified sharing of user information between many disparate systems.
+This eases management for administrators, as user credentials—login ID, password, and other details—are stored in a single location in the LDAP directory.
 Additionally, organizational information, such as group or team assignments, geographic location, and corporate hierarchy membership, are defined based on the user's location in the directory.
 We'll illustrate a sample LDAP schema with a screenshot, from the Apache Directory Server 1.5 example directory.
 Starting at a particular user entry for Albert Einstein (highlighted in the screenshot), we can infer Mr.
@@ -712,6 +732,7 @@ In the previous section, we were introduced to the fact that each entry in an LD
 The DN is composed of a series of attributes, one (or more) of which is used to uniquely identify the path down the tree of the entry represented by the DN.
 As each segment of the path described by the DN represents an LDAP attribute, you could refer to the available, well-defined LDAP schemas and object classes to determine what each of the attributes in any given DN means.
 We've included some of the common attributes and their meanings in the following table.
+These attributes tend to be organizing attributes—meaning that they are typically used to define the organizational structure of the LDAP tree—and are ordered from top to bottom in the structure that you're likely to see in a typical LDAP install.
 For humans, this is usually the person's full name, while for other resources in LDAP (computers, and so on) it's typically the hostname.
 It is typically one-way hashed using SHA or something similar.
 Remember that there are hundreds of standard LDAP attributes—these represent a very small fraction of those you are likely to see when integrating with a fully-populated LDAP server.
@@ -827,6 +848,7 @@ Using LDAP as UserDetailsService One thing to note is that LDAP may also be used
 As we will discuss later in the book, UserDetailsService is required to enable various other bits of functionality in the Spring Security infrastructure, including the remember me and OpenID authentication features.
 Before doing this, make sure to remove the <passwordcompare> element, as shown in the following code snippet:
 Instead, the credentials supplied by the <ldap-server> reference itself are used to perform the user lookup.
+Can you figure out how to modify the controller to display an arbitrary user's information? Can you figure out how you should modify the security settings to restrict access to an administrator?
 Integrating with an external LDAP server It is likely that once you test the basic integration with the embedded LDAP server, you will want to interact with an external LDAP server.
 Fortunately, this is very straightforward and can be done using a slightly different syntax along with the same <ldap-server> instruction we provided to set up the embedded LDAP server.
 Update the Spring Security configuration to connect to an external LDAP server on port 33389, as follows:
@@ -875,6 +897,8 @@ Mapping user detail attributes from the LDAP directory to the UserDetails object
 Explicit bean configuration for LDAP, and the pros and cons of this approach.
 In the next chapter, we will discuss Spring Security's Remember Me feature, which allows a user's session to securely persist even after closing the browser.
 Remember-me Services In this chapter, we'll add the ability for an application to remember a user even after their session has expired and the browser is closed.
+Discuss how secure remember-me is, and various ways of making it.
+Learn how to create a custom remember-me implementation that is restricted.
 What is remember-me A convenient feature to offer frequent users of the website is the remember-me feature.
 This feature allows a user to elect to be remembered even after their browser is closed.
 In Spring Security, this is implemented through the use of a remember-me cookie that is stored in the user's browser.
@@ -904,6 +928,8 @@ If this appears to be happening to you, it means that your browser or a browser 
 One tip is to try closing the tab first and then close the browser.
 This can often save time and annoyance during the development and verification of this type of a feature on your site.
 How the token-based remember-me feature works The remember-me feature sets a cookie on the user's browser containing a Base64encoded string with the following pieces:
+An MD5 hash value of the expiration date/time, username, password, and.
+These bits are combined into a single cookie value that is stored on the.
 Cryptographic hash algorithms compute a compact and unique text representation of input data with arbitrary length, called a digest.
 This digest can be used to determine if an untrusted input should be trusted, by comparing the digest of the untrusted input to a known valid digest of the expected input.
 For example, many open source software sites allow mirrors to distribute their software to help increase download speeds.
@@ -916,6 +942,7 @@ Although it is impossible to obtain the original data from the hash value, MD5 i
 Rainbow tables typically contain the pre-computed hash values of millions of input values.
 This allows attackers to look for the hash value in the rainbow table and determine the actual (unhashed) value.
 Spring Security combats this by including the expiration date, the user's password, and the <remember-me> key in the hashed value.
+Remember-me signature We can see how MD5 can ensure that we have downloaded the correct file, but how does this apply to Spring Security's remember-me service? Much like the file we downloaded, the cookie is untrusted, but we can trust it if we can validate the signature that originated from our application.
 When a request comes in with the remember-me cookie, its contents are extracted and the expected signature is compared to the signature found in the cookie.
 The steps in calculating the expected signature are illustrated in the following diagram:
 The remember-me cookie contains the username, expiration, and a signature.
@@ -944,6 +971,7 @@ This will prevent remember-me cookies from inadvertently being used in the wrong
 An example key value in a production application might be similar to the following:
 The same attribute is also used to set the maximum lifetime of the remember-me cookie on the user's browser.
 The token will be valid (assuming the user doesn't close the browser) for a non-configurable length of two weeks.
+Don't confuse this with the cookie that stores your user's session ID—they're two different things with similar names!
 You may have noticed that we listed very few of the attributes.
 Don't worry, we will spend time covering some of the other configuration attributes throughout this chapter.
 The remember-me feature, in its default form, runs the risk of the user's cookie from being intercepted and re-used by a malicious user.
@@ -960,6 +988,7 @@ Keep in mind that every site is different, so don't blindly apply such rules to 
 For our sample application, we'll concentrate on protecting the H2 database console.
 We've added a rule that requires requests for account information to have the appropriate GrantedAuthority of ROLE_USER, and that the user is fully authenticated; that is, during this authenticated session, they have actually presented a username and password or other suitable credentials.
 Note the syntax of the SpEL logical operators here—and, or, and not are used for logical operators in SpEL.
+This was thoughtful of the SpEL designers, as the && operator would be awkward to represent in XML!
 Access the H2 database console and see that the access is granted.
 Now, delete the JSESSIONID cookie (or close the tab and then all the browser instances), and ensure that access is still granted to the All Events page.
 Now, navigate to the H2 console and observe that the access is denied.
@@ -1167,7 +1196,6 @@ As such, it doesn't make sense to retain the default behavior of redirection to 
 Go ahead and make the following updates in your security.xml file.
 Now, if a user tries to access a protected resource and is unable to provide a valid certificate, they will be presented with the following page:
 Other configuration or application flow adjustments that are commonly performed with client certificate authentication are as follows:
-Removal of the form-based login page altogether • Removal of the Log Out link (as there's no reason to log out because the.
 Removal of the functionality to rename the user account and change the password.
 Removal of the user registration functionality (unless you are able to tie it into the issuance of a new certificate)
 Supporting dual-mode authentication It is also possible that some environments may support both certificate-based and form-based authentication.
@@ -1231,7 +1259,6 @@ Additionally, the OpenID-enabled website can have confidence that the users prov
 Learn to set up your own OpenID in less than five minutes.
 Configure the JBCP Calendar application with a very rapid implementation of OpenID.
 Learn the conceptual architecture of OpenID and how it provides your site with a trustworthy user access.
-Implement OpenID-based user registration • Experiment with OpenID attribute exchange for user profile functionality.
 Demonstrate how we can trigger automatic authentication to the previous OpenID Provider.
 The promising world of OpenID The promise of OpenID as a technology is to allow users on the Web to centralize their personal data and information with a trusted provider, and then use the trusted provider as a delegate to establish trustworthiness with the other sites with whom the user wants to interact.
 In concept, this type of login through a trusted third party has been in existence for a long time, in many different forms (For example, Microsoft Passport became one of the more notable central login services on the Web for some time)
@@ -1304,6 +1331,7 @@ The first step is to attempt to lookup the user by the OpenID.
 If the user is not found, then we create a new one with mostly mock data and then return the newly created user.
 However, we choose to leave the conversion as an implementation detail and perform the lookup again.
 Go ahead and make the following updates to your security.xml:
+Keep in mind that OP-Local Identifiers can potentially be quite long—in fact, the OpenID 2.0 specification does not supply a maximum length for an OP-Local Identifier.
 The default Spring Security JDBC schema provides a relatively small username column (which you may recall that we already extended from the default to 100 characters)
 Depending on your needs, you may wish to extend the username column further to accommodate long identifiers.
 Remember that authentication isn't an issue at this point, merely being able to correctly identify the user in the database, based on their OpenID.
@@ -1388,6 +1416,7 @@ In this way, even a user attempting to re-issue the response URL would be foiled
 The most likely form of attack that could result in a compromised user interaction would be a man-in-the-middle attack, where a malicious user could intercept the user's interaction between their computer and the OpenID Provider.
 A hypothetical attacker in this situation could be in a position to record the conversation between the user's browser and the OpenID Provider, and record the secret key used when the request was initiated.
 The attacker in this case would need a very high level of sophistication and a reasonably complete implementation of the OpenID signature specification—in short, this is not likely to occur with any regularity.
+Do note that although the openid4java library does support the use of persistent nonce tracking using JDBC, Spring Security OpenID does not currently expose this as a configuration parameter on the namespace configuration—thus nonces are tracked only in memory.
 This means that a replay attack could occur after a server restart, or in a clustered environment, where the in-memory store would not be replicated between JVMs on different servers.
 Summary In this chapter, we reviewed OpenID, a relatively recent technology for user authentication and credentials management.
 OpenID has a very wide reach on the Web, and has made great strides in usability and acceptance within the past year or two.
@@ -1395,7 +1424,6 @@ Most public-facing sites on the modern web should plan on some form of OpenID su
 Learned about the OpenID authentication mechanism, and explored its highlevel architecture and key terminology.
 Implemented OpenID login and automatic user registration with the JBCP Calendar application.
 Explored the future of OpenID profile management through the use of Attribute Exchange (AX)
-Demonstrated automatic login with OpenID • Examined the security of OpenID login responses.
 We covered one of the simplest single sign on mechanisms to implement with Spring Security.
 One of the downsides is that it does not support a standard mechanism for single logout.
 In the next chapter, we will explore CAS, another standard single sign on protocol that also supports single logout.
@@ -1584,7 +1612,6 @@ Let's see how we can update the CAS Server to return additional attributes.
 Again, all the changes in this section are in the CAS Server and NOT in the Calendar application.
 Mapping LDAP attributes to CAS attributes The first step requires us to map LDAP attributes to attributes in the CAS assertion (including the role attribute in which we're expecting to contain the user's GrantedAuthority)
 This new bit of configuration is required to instruct CAS on how to map attributes from the CAS Principal object to the CAS IPersonAttributes object, which will ultimately be serialized as a part of ticket validation.
-Part of the complexity comes from the fact that a portion of this functionality is wrapped up in a separate project called Person Directory (http://www.ja-sig.
 The design of Person Directory is such that it is not directly tied to the CAS Server and can be re-used as part of other applications.
 The downside of this design choice is that it makes some aspects of CAS configuration more complex than it initially seems should be required.
 Troubleshooting LDAP attribute mapping in CAS We would love to set up the same type of query in LDAP as we used with Spring Security LDAP in Chapter 5, LDAP Directory Services to be able to map Principal to a full LDAP-distinguished name, and then to use that DN to look up group membership by matching on the basis of the uniqueMember attribute of a groupOfUniqueNames entry.
@@ -1594,7 +1621,7 @@ Note that we have switched back to modifying the Calendar application and NOT th
 Let's assume that there is an attribute entitled role that will be returned with the assertion.
 You will also want to remove the userDetailsService bean from our security.
 Alternative ticket authentication using SAML 1.1 Security Assertion Markup Language (SAML) is a standard, cross-platform protocol for identity verification through structured XML assertions.
-In fact, we will look at support for SAML within Spring Security itself in a later chapter.)
+In fact, we will look at support for SAML within Spring Security itself in a later chapter.
 While the standard CAS protocol can be extended to return attributes, the SAML security assertion XML dialect solves some of the issues with attribute passing, using the CAS response protocol that we previously described.
 Happily, switching between CAS ticket validation and SAML ticket validation is as simple as changing the TicketValidator implementation configured in security-cas.xml.
 You will notice that there is no longer a reference to the PGT URL.
@@ -1619,8 +1646,8 @@ Summary In this chapter, we learned about the Central Authentication System (CAS
 The CAS architecture and communication paths between actors in a CAS-enabled environment.
 The benefits of CAS-enabled applications for application developers and system administrators.
 Configuring JBCP Calendar to interact with a basic CAS installation.
-How to use CAS's Single Logout support • How proxy ticket authentication works and how to leverage it to authenticate.
-CAS-enabled application • Implementing attribute exchange with the industry standard SAML protocol.
+How proxy ticket authentication works and how to leverage it to authenticate.
+Updating CAS to interact with LDAP, and sharing LDAP data with our.
 We hope this chapter was an interesting introduction to the world of single sign-on.
 There are many other single sign-on systems in the marketplace, mostly commercial, but CAS is definitely one of the leaders of the open source SSO world and an excellent platform to build out SSO capability in any organization.
 In the next chapter, we'll learn more about Spring Security authorization.
@@ -1657,9 +1684,7 @@ Instead, we can define the following code, which would also match our IP address
 The question is, how is this calculated? The key is to understand how to calculate the network address and its mask.
 To learn how to do this, we can take a look at a concrete example.
 We launch ifconfig from our Linux terminal to view our network information (Windows users can use enter ipconfig /ALL into the command prompt)
-We see that the first three octets of our mask are 255
 This means that the first three octets of our IP address belong to the network address.
-In our calculation, this means the remaining octets are 0
 We can then calculate the mask by first transforming each octet into a binary number, and then count how many ones there are.
 A good site for additional information on netmasks is Cisco's documentation, available at http://www.cisco.
 Expression Description target Refers to "this" or the current object being secured.
@@ -1717,6 +1742,7 @@ The reality is that applications are usually much more complex than this, and re
 It's tempting to use the Spring Security tag library to declare bits of rendered pages off-limits based on security criteria in the other ways.
 However, there are a number of reasons why (in many cases) this isn't a great idea:
 Complex conditions beyond role membership are not supported by the tag library.
+For example, if our application incorporated customized attributes on the UserDetails implementation, IP filters, geo-location, and so on—none of these would be supported using the standard <authorize> tag.
 These could, however, conceivably be supported by a custom JSP tag or using SpEL expressions.
 Even in this case, the JSP is more likely to be directly tied to business logic rather than what is typically encouraged.
 The <authorize> tag must be referenced on every page that it's used in.
@@ -1742,6 +1768,7 @@ In short, there are often ways to bypass URL-based security.
 Let's see how adding a security layer to our business tier can help with our new security vulnerability.
 While many developers focus on web-tier security, business-tier security is arguably just as important, as a malicious user may be able to penetrate the security of your web tier or access services exposed through a non-UI frontend, such as a web service.
 Let's examine the following logical diagram to see where we're interested in applying a secondary layer of security:
+Preauthorization ensures that certain constraints are satisfied prior to the execution of a method that is being allowed—for example, if a user has a particular GrantedAuthority, such as ROLE_ADMIN.
 Failure to satisfy the declared constraints means that the method call will fail.
 Postauthorization ensures that the calling principal still satisfies declared constraints after the method returns.
 This is used rarely, but can provide an extra layer of security around some complex, interconnected business tier methods.
@@ -1755,6 +1782,7 @@ Instructing Spring Security to use method annotations We'll also need to make a 
 Simply add the following element right before the <http> declaration:
 If you look at the Tomcat console, you'll see a very long stack trace, starting with the following output:
 Based on the access denied page, and the stack trace clearly pointing to the getEvents method invocation, we can see that the user was appropriately denied access to the business method because it lacked GrantedAuthority of ROLE_ADMIN.
+Isn't it amazing that with a simple declaration in our interface, we're able to ensure that the method in question has been secured? How does AOP work?
 Interface-based proxies In the preceding example, Spring Security uses an interface-based proxy to secure our getEvents method.
 Let's take a look at simplified pseudo code of what is happening to understand how this works.
 You can see that Spring creates the original CalendarService just as it normally does.
@@ -1801,7 +1829,7 @@ It is not common to see this type of security declaration in new code, as more e
 This type of method security declaration can be especially useful in cases where adding annotations to relevant interfaces or classes is not an option, such as when you are dealing with securing components in third-party libraries.
 Method security rules incorporating method parameters Logically, writing rules that refer to method parameters in their constraints seems sensible for certain types of operations.
 For example, it might make sense for us to restrict the findForUser(int userId) method to meet the following constraints:
-The userId argument must be equal to the the current user's ID • The user must be an administrator (in this case, it is valid for the user to see.
+The userId argument must be equal to the the current user's ID.
 While it's easy to see how we could alter the rule to restrict the method invocation only to administrators, it's not clear how we would determine if the user is attempting to change their own password.
 Fortunately, the SpEL binding used by the Spring Security method annotations supports more sophisticated expressions, including expressions that incorporate method parameters.
 The fact that this powerful feature of method parameter binding is available should get your creative juices flowing and allow you to secure method invocations with a very precise set of logical rules.
@@ -1810,6 +1838,7 @@ This means that principal has all the properties that our CalendarUser has on it
 If we had not done this customization, only the properties on the UserDetails would be available.
 One important note is that in order for method argument names to be available at runtime, debugging symbol table information must be retained after compilation.
 If you are using the javac compiler, you will need to include the -g flag when building your classes.
+When using the <javac> task in ant, add the attribute debug="true"
 Consult your compiler, build tool, or IDE documentation for assistance on configuring this same setting in your environment.
 On the Welcome page, request the My Events (userId=0) link to see an Access denied page.
 Try again with the My Events (userId=1) to see it work.
@@ -1817,6 +1846,8 @@ Note that the displayed user on the My Events page matches the currently logged-
 We will be able to see both pages since we are logged in as a user with ROLE_ADMIN.
 Method security rules incorporating returned values Just as we were able to leverage the parameters to the method, we can also leverage the returned value of the method call.
 Let's update the getEvent method to meet the following constraints on the returned value:
+The attendee's ID must be the current user's ID or.
+The owner's ID must be the current user's ID or.
 Next, try accessing the Lunch event using the link on the Welcome page.
 This type of functionality is referred to as security trimming or security pruning, and involves using the security credentials of principal at runtime, to selectively remove members from a set of objects.
 As you might expect, this filtering is performed using the SpEL expression notation within the annotation declaration.
@@ -1884,7 +1915,9 @@ In the next chapter, we will discuss the access control list (domain object mode
 This will allow us to explicitly declare authorization rather than relying on existing data.
 Access Control Lists In this chapter, we will address the complex topic of Access Control Lists (ACL), which can provide a rich model of the domain object instance-level authorization.
 Spring Security ships with a robust, but complicated, access control list module that can serve the needs of small to medium-sized implementations reasonably well.
-Understand the conceptual model of access control lists • Review the terminology and application of access control list concepts in the.
+Review the terminology and application of access control list concepts in the.
+Build and review the database schema required to support Spring ACL.
+Configure JBCP Calendar to use ACL secured business methods via.
 ACL-enabled JSP tag checks and method security, mutable ACLs, and smart caching.
 Using access control lists for business object security The final piece of the non web tier security puzzle is security at the business object level, applied at or below the business tier.
 Security at this level is implemented using a technique known as access control lists, or ACLs.
@@ -1909,6 +1942,9 @@ If SIDs are used to define actors in the ACL system, the opposite half of the se
 The identification of individual secured objects is called (unsurprisingly) an object identity.
 The default Spring ACL implementation of an object identity requires ACL rules to be defined at the individual object instance level, which means, if desired, every object in the system can have an individual access rule.
 Individual access rules are known as Access Control Entries (ACEs)
+The SID for the actor to which the rule applies.
+The permission that should be applied to the given SID and the stated.
+Whether or not the stated permission should be allowed or denied for the.
 The purpose of the Spring ACL system as a whole is to evaluate each secured method invocation and determine whether the object or objects being acted on in the method should be allowed as per the applicable ACEs.
 Applicable ACEs are evaluated at runtime, based on the caller and the objects in play.
 Although the majority of this chapter details the out-of-the-box functionality of the Spring Security ACL module, keep in mind, however, that many of the rules indicated represent default implementations, which in many cases can be overridden based on more complex requirements.
@@ -1953,9 +1989,11 @@ Instead, the implementation of this interface is responsible for determining whe
 We'll explain more on this later when we cover mutable ACLs, as the logical flow is both somewhat complicated and not pertinent to getting our initial configuration complete.
 Last we need to update our web.xml file to load our security-acl.xml file as follows:
 We're finally done with basic configuration of an out-of-the-box Spring Security ACL implementation.
+The next and final step requires that we insert a simple ACL and ACE into the H2 database, and test it out!
 You may find it helpful to refer back several pages to the database schema diagram to follow which data we are inserting and why.
+All the SQL explained in this section will be from the file—you may feel free to experiment and add more test cases based on the sample SQL we've provided—in fact, we'd encourage that you experiment with sample data!
+First, we'll need to populate the ACL_CLASS table with any or all of the domain object classes, which may have ACL rules—in the case of our example, this is simply our Event class:
 This will help to make it easier to understand which data associates to which table.
-Note that our EVENTS table starts with a primary key of 100
 These conveniences are done for example purposes and are not suggested for production purposes.
 Next, the ACL_SID table is seeded with SIDs that will be associated to the ACEs.
 While the SID for roles is straightforward, the SID for a user is not quite as clear cut.
@@ -1992,6 +2030,7 @@ The Spring Security community is in debate about whether this is unintentional o
 Custom ACL permission declaration As stated in the earlier discussion on permission declarations, permissions are nothing but logical names for integer bit values.
 We'll cover a very straightforward scenario here, where we create a new ACL permission called ADMIN_READ.
 This is a permission that will be granted only to administrative users, and will be assigned to protect resources that only administrators could read.
+Although a contrived example for the JBCP Calendar application, this type of use of custom permissions occurs quite often in situations dealing with personally identifiable information (for example, social security number, and so on—recall that we covered PII in Chapter 1, Anatomy of an Unsafe Application)
 Let's get started making the changes required to support this.
 The role of the PermissionFactory is to resolve permission bitmasks into logical permission values (which can be referenced by constant value, or by name, such as ADMIN_READ, in other areas of the application)
 The PermissionFactory requires that any custom permissions be registered with it for proper lookup.
@@ -2005,6 +2044,7 @@ We can see that even with the use of our simple cases, we've now been able to ex
 The very same tag library can also interact with an ACL-enabled system right out of the box! From our simple experiments, we have configured a simple ACL authorization scenario around the first two categories in the list on the home page.
 First, we will need to remove our @PostFilter annotation from the getEvents() method in our CalendarService interface in order to give our JSP tag library a chance to filter out the events that are not allowed for display.
 Please refer to the table in the previous section as a refresher of the access rules we've configured up to this point!
+Think for a moment about what we want to occur here—we want the user to see only the items to which they actually have the READ or ADMIN_READ (our custom permission) access.
 So, the computation of access checking follows the same workflow as it does with ACL-enabled voting on method security.
 If you think about it, this symmetry makes sense, since securing methods and an HTTP request are protecting two very different resources.
 You can see how these steps are very similar to how we added support for permission handling to our method security.
@@ -2013,6 +2053,7 @@ You will find that the events that are not allowed for a user are now hidden usi
 We are still aware that accessing an event directly would allow a user to see it.
 However, this could easily be added by combining what we learned in this chapter with what we learned about the @PostAuthorize annotation in this chapter.
 Mutable ACLs and authorization Although the JBCP Calendar application doesn't implement full user administration functionality, it's likely that your application will have common features, such as new user registration and administrative user maintenance.
+To this point, lack of these features—which we have worked around using SQL inserts at application startup—hasn't stopped us from demonstrating many of the features of Spring Security and Spring ACL.
 However, the proper handling of runtime changes to declared ACLs, or the addition or removal of users in the system, is critical to maintaining the consistency and security of the ACL-based authorization environment.
 Extending the standard ACL interface, the MutableAcl interface, allows for runtime manipulation of ACL fields in order to change the in-memory representation of a particular ACL.
 This additional functionality includes the ability to create, update, or delete ACEs, change ACL ownership, and other useful functions.
@@ -2046,6 +2087,7 @@ One row is required per ACE; may require multiple rows for a single domain objec
 ACL_SID will scale linearly based on the number of users in the system.
 This is probably not a matter of concern because other user-related tables will scale in this fashion as well (user account, and so on)
 If we model the estimated rows required to model an order for an individual customer, we come up with the following estimates:
+ACL_ENTRY Three Rows—one row is required for read access by the owner (the user SID), two rows are required (one for read access, one for write access) for the administrative group SID.
 Four rows—one row is required for read access by the user group SID, one row is required for write access by the owner, two rows are required for the administrative group SID (as with events)
 We can then take the usage assumptions from the previous page and calculate the following ACL scalability matrix:
 From these projections based on only a subset of the business objects likely to be involved and secured in a typical ACL implementation, you can see that the number of database rows devoted to storing ACL information is likely to grow linearly (or faster) in relation to your actual business data.
@@ -2092,7 +2134,7 @@ Smart object-oriented design is pervasive within the Spring Security framework, 
 Specific types of exceptions can further dictate the action to be taken by the application to resolve authorization decisions.
 A voter is an actor in the authorization sequence whose job is to evaluate any or all of the following:
 The context of the request for a secured resource (such as a URL requesting an IP address)
-ConfigAttribute interface) of the resource being requested to the voter.
+The configuration parameters of the system, and the resource itself.
 In the case of web URLs, the voter will have information about the access declaration of the resource.
 If we look at our very basic configuration file's URL intercept declaration, we'll see ROLE_USER being declared as the access configuration for the resource the user is trying to access:
 Based on the voter's knowledge, it will decide whether the user should have access to the resource or not.
@@ -2105,7 +2147,6 @@ As you may have guessed from the design of access decision-related objects and i
 We'll encounter voters and access decision managers when we look at method-level security later in this chapter.
 When we put this all together, the overall flow of the "default authorization check for web requests" is similar to the following diagram:
 This separation of concerns provides a solid foundation for building new types of security declarations (such as the declarations we will see with method security) while utilizing the same access decision pattern.
-Class name Description AffirmativeBased If any voter grants access, access is immediately granted,
 ConsensusBased The majority vote (grant or deny) governs the decision of the.
 Tie-breaking and handling of empty votes (containing only abstentions) is configurable.
 UnanimousBased All voters must grant access, otherwise access is denied.
@@ -2156,6 +2197,7 @@ Please read the appropriate documentation before leveraging such an approach to 
 Fortunately, this can be done easily using the Spring Security namespace configuration support.
 Now, let's update our initialization SQL query to use the new expression.
 You will notice that we are able to write local instead of isLocal, since SpEL supports Java Bean conventions.
+How does method security work The access decision mechanism for method security—whether or not a given request is allowed—is conceptually the same as the access decision logic for web request access.
 Web request access decision making is less complicated, due to the fact that the availability of servlet filters makes interception (and summary rejection) of securable requests relatively straightforward.
 As method invocation can happen from anywhere, including areas of code that are not directly configured by Spring Security, Spring Security designers chose to use a Spring-managed AOP approach to recognize, evaluate, and secure method invocations.
 The following high-level flow illustrates the main players involved in authorization decisions for method invocation:
@@ -2197,6 +2239,8 @@ We will then discuss how concurrency control can be leveraged to restrict access
 We will also see how session management can be leveraged for administrative functions.
 Last, we will explore how HttpSession is used in Spring Security and how we can control its creation.
 The following is a list of topics that will be covered in the chapter:
+How HttpSession are used in Spring Security and how to control.
+How to use the DebugFilter class to discover where HttpSession.
 Configuring session fixation protection As we are using the security namespace style of configuration, session fixation protection is already configured on our behalf.
 If we wanted to explicitly configure it to mirror the default settings, we would do the following:
 Session fixation protection is a feature of the framework that you most likely won't even notice unless you try to act as a malicious user.
@@ -2231,7 +2275,6 @@ You'll see that, in this case, the JSESSIONID changes after the user logs in.
 Based on our understanding of how session-fixation attacks occur, this means that we have reduced the likelihood of an unsuspecting user falling victim to this type of attack.
 Cautious developers should take note that there are many methods of stealing session cookies, some of which, such as Cross-Site Scripting (XSS), may make even session fixation protected sites vulnerable.
 Please consult the OWASP site for additional resources on preventing these types of attacks.
-Attribute value Description None This option disables session fixation protection, and (unless other.
 In most cases, the default behavior of migrateSession will be appropriate for sites that wish to retain important attributes of the user's session (such as click interest and shopping carts) after the user has been authenticated.
 Restricting the number of concurrent sessions per user In the software industry, software is often times sold on a per user basis.
 This means that, as software developers, we have an interest in ensuring that only a single session per user exists, to combat sharing of accounts.
@@ -2250,6 +2293,7 @@ This is because it's obviously not a friendly method of being notified that only
 However, it does illustrate that the session has been forcibly expired by the software.
 Concurrent session control tends to be a very difficult concept for new Spring Security users to grasp.
 Many users try to implement it without truly understanding how it works, and what the benefits are.
+If you're trying to enable this powerful feature, and it doesn't seem to be working as you expect, make sure you have everything configured correctly; and then review the theoretical explanations in this section—hopefully they will help you understand what may be wrong!
 When this event occurs, we should probably redirect the user to the login page, and provide them a message to indicate what went wrong.
 Configuring expired session redirect Fortunately, there is a simple method for directing users to a friendly page (typically, the login page) when they are flagged by concurrent session control—simply specify the expired-url attribute, and set it to a valid page in your application.
 In the case of our application, this will redirect the user to the standard login form.
@@ -2310,7 +2354,6 @@ This ensures that if SecurityContext is updated at any point during the web requ
 Configuring how Spring Security uses HttpSession Spring Security has the ability to configure when the session is created by Spring Security.
 This can be done with the <http> element's create-session attribute.
 A summary of the options can be seen in the following table:
-Attribute value Description ifRequired Spring Security will create a session only if one is required (default.
 Attribute value Description never Spring Security will never create a session, but will make use of.
 This means if there is HttpSession, SecurityContext will be persisted or retrieved from it.
 In practice, controlling session creation can be more difficult than it first appears.
@@ -2321,6 +2364,7 @@ Debugging with Spring Security's DebugFilter Update your security.xml file to ha
 Also add the <debug> element so that we can track when the session is created.
 When you start up the application, you should see something similar to the following code written to standard out.
 If you do not, ensure that you have logging enabled for all levels on the Spring Security Debugger category.
+Now, clear out your cookies (this can be done in Firefox with Shift + Ctrl + Del), start up the application, and navigate directly to http://localhost:8080/ calendar/
 When we look at the cookies, as we did earlier in the chapter, we see that JSESSIONID is created even though we stated that Spring Security should never create HttpSession.
 Look at the logs again, and you will see a call stack of the code that created HttpSession:
 In this instance, our JSP page is responsible for creating the new HttpSession.
@@ -2482,6 +2526,8 @@ Summary We have covered integrating Spring Security in a number of different fra
 It is our belief that the concepts learned from this chapter combined with the rest of the book are a solid foundation for integrating with other frameworks.
 After reading this chapter, you should know how to do the following:
 At the end of the chapter, we will also highlight some of the new features that can be found in Spring Security 3.1
+Illustrate the overall movement of important classes and packages in.
+Highlight some of the new features found in Spring Security 3.1
 We'll try to address both of your concerns in this chapter.
 Second, we'll provide some guidance in mapping configuration or class name changes.
 Be aware that in many cases, migrating these other components may have a greater impact on your application than the upgrade of Spring Security!
@@ -2494,7 +2540,6 @@ Other more innocuous changes encompassed a general restructuring and cleaning up
 The authors of Spring Security have made efforts to add extensibility where none previously existed, especially in the areas of login and URL redirection.
 If you are already working in a Spring Security 2 environment, you may not find compelling reasons to upgrade if you aren't pushing the boundaries of the framework.
 However, if you have found limitations in the available extension points, code structure, or configurability of Spring Security 2, you'll welcome many of the minor changes that we discuss in detail in the remainder of this chapter.
-Although this chapter cannot cover all of the minor changes in detail, we'll try to cover those changes that will be most likely to affect you as you move to Spring Security 3
 Of course, the source code of our custom provider would change due to class relocations and renaming in Spring Security 3—look later in the chapter for basic guidelines.
 New configuration syntax for session management options In addition to continuing support for the session fixation and concurrency control features from prior versions of the framework, Spring Security 3 adds new configuration capabilities for customizing URLs and classes involved in session and concurrency control management, as described in detail in Chapter 14, Integrating with Other Frameworks.
 In Spring Security 2, these options would be configured as follows:
@@ -2506,7 +2551,6 @@ Contrast this with the same configuration from Spring Security 3, and you can se
 The custom filter is declared within the <http> element as follows:
 The bean declaration remains the same as in Spring Security 2, although, as you'd expect, the code for a custom filter is quite different.
 You can find a sample of a custom filter in Chapter 3, Custom Authentication.
-Also, the logical filter names for some of the filters have changed in Spring Security 3
 We present the list of changes in the following figure and a full table for reference is provided in Appendix, Additional Reference Material:
 You must make these changes in your configuration files in addition to relocating the <custom-filter> element.
 While using the auto-config attribute in Spring Security 3, remember-me services are no longer configured by default.
@@ -2524,6 +2568,7 @@ Unfortunately, we did not have space for discussing Spring Security's JAAS integ
 When looking at the JAAS reference documentation, you will notice that starting with Spring Security 3.1, there is added support for using JAAS login modules using arbitrary JAAS configuration implementations.
 Reviewed the significant enhancements to the framework that are likely to motivate an upgrade.
 Examined upgrade requirements, dependencies, and common types of code and configuration changes that will prevent applications from working post-upgrade.
+If this is the first chapter you've read, we hope that you return to the rest of the book, using this chapter as a guide, to allow your upgrade to Spring Security 3 to proceed as smoothly as possible!
 Additional Reference Material In this appendix, we will cover some reference material that we feel is helpful (and largely undocumented) but too comprehensive to insert into the text of the chapters.
 Getting started with the JBCP Calendar sample code As we described in Chapter 1, Anatomy of an Unsafe Application, we have made the assumption that you have installed a Java Development Kit (JDK)
 We also assume you have access to Spring Tool Suite (STS) 3.1.0
@@ -2645,6 +2690,7 @@ Not quite secure Would you like some salt with that password? Using salt in Spri
 Configuring basic password comparison LDAP password encoding and storage The drawbacks of a password comparison authenticator.
 Integrating with an external LDAP server Explicit LDAP bean configuration Configuring an external LDAP server reference.
 Persistent remember-me Using the persistent-based remember-me feature Adding SQL to create the remember-me schema Initializing the data source with the remember-me schema Configuring the persistent-based remember-me feature.
+How does the persistent-based remember-me feature work? Are database-backed persistent tokens more secure? Cleaning up the expired remember-me sessions.
 Restricting the remember-me feature to an IP address Custom cookie and HTTP parameter names.
 Chapter 7: Client Certificate Authentication How client certificate authentication works Setting up client certificate authentication infrastructure Understanding the purpose of a public key infrastructure Creating a client certificate key pair Configuring the Tomcat trust store Importing the certificate key pair into a browser Using Firefox Using Chrome Using Internet Explorer.
 Configuring client certificate authentication using Spring Beans Additional capabilities of bean-based configuration.

@@ -28,14 +28,14 @@ Such scenarios, common in scientific applications running on supercomputing clus
 More importantly, we recognize that distributed file system workloads are inherently dynamic, with significant variation in data and metadata access as active applications and data sets change over time.
 Ceph directly addresses the issue of scalability while simultaneously achieving high performance, reliability and availability through three fundamental design features: decoupled data and metadata, dynamic distributed metadata management, and reliable autonomic distributed object storage.
 Decoupled Data and Metadata—Ceph maximizes the separation of file metadata management from the storage of file data.
-Metadata operations (open, rename, etc.) are collectively managed by a metadata server cluster, while clients interact directly with OSDs to perform file I/O (reads and writes)
 Object-based storage has long promised to improve the scalability of file systems by.
 Instead, file data is striped onto predictably named objects, while a special-purpose data distribution function called CRUSH [29] assigns objects to storage devices.
 This allows any party to calculate (rather than look up) the name and location of objects comprising a file’s contents, eliminating the need to maintain and distribute object lists, simplifying the design of the system, and reducing the metadata cluster workload.
+Dynamic Distributed Metadata ManagementBecause file system metadata operations make up as much as half of typical file system workloads [22], effective metadata management is critical to overall system performance.
 Ceph utilizes a novel metadata cluster architecture based on Dynamic Subtree Partitioning [30] that adaptively and intelligently distributes responsibility for managing the file system directory hierarchy among tens or even hundreds of MDSs.
 A (dynamic) hierarchical partition preserves locality in each MDS’s workload, facilitating efficient updates and aggressive prefetching to improve performance for common workloads.
 Significantly, the workload distribution among metadata servers is based entirely on current access patterns, allowing Ceph to effectively utilize available MDS resources under any workload and achieve near-linear scaling in the number of MDSs.
-Reliable Autonomic Distributed Object Storage— Large systems composed of many thousands of devices are inherently dynamic: they are built incrementally, they grow and contract as new storage is deployed and old devices are decommissioned, device failures are frequent and expected, and large volumes of data are created, moved, and deleted.
+Reliable Autonomic Distributed Object StorageLarge systems composed of many thousands of devices are inherently dynamic: they are built incrementally, they grow and contract as new storage is deployed and old devices are decommissioned, device failures are frequent and expected, and large volumes of data are created, moved, and deleted.
 All of these factors require that the distribution of data evolve to effectively utilize available resources and maintain the desired level of data replication.
 Ceph delegates responsibility for data migration, replication, failure detection, and failure recovery to the cluster of OSDs that store the data, while at a high level, OSDs collectively provide a single logical object store to clients and metadata servers.
 This approach allows Ceph to more effectively leverage the intelligence (CPU and memory) present on each OSD to achieve reliable, highly available object storage with linear scaling.
@@ -71,7 +71,6 @@ Client interaction with the file system namespace is managed by the metadata ser
 For simplicity, no metadata locks or leases are issued to clients.
 For HPC workloads in particular, callbacks offer minimal upside at a high potential cost in complexity.
 Instead, Ceph optimizes for the most common metadata access scenarios.
-A readdir followed by a stat of each file (e.
 A readdir in Ceph requires only a single MDS request, which fetches the entire directory, including inode contents.
 By default, if a readdir is immediately followed by one or more stats, the briefly cached information is returned; otherwise it is discarded.
 Although this relaxes coherence slightly in that an intervening inode modification may go unnoticed, we gladly make this trade for vastly improved performance.
@@ -83,6 +82,7 @@ This choice is most clearly illustrated by a stat operation on a file currently 
 In order to return a correct file size and modification time, the MDS revokes any write capabilities to momentarily stop updates and collect up-todate size and mtime values from all writers.
 The highest values are returned with the stat reply, and capabilities are reissued to allow further progress.
 Although stopping multiple writers may seem drastic, it is necessary to ensure proper serializability.
+For a single writer, a correct value can be retrieved from the writing client without interrupting progress.
 Metadata operations often make up as much as half of file system workloads [22] and lie in the critical path, making the MDS cluster critical to overall performance.
 Metadata management also presents a critical scaling challenge in distributed file systems: although capacity and aggregate I/O rates can scale almost arbitrarily with the.
 File and directory metadata in Ceph is very small, consisting almost entirely of directory entries (file names) and inodes (80 bytes)
@@ -97,9 +97,11 @@ This strategy provides the best of both worlds: streaming updates to disk in an 
 In particular, inodes are embedded directly within directories, allowing the MDS to prefetch entire directories with a single OSD read request and exploit the high degree of directory locality present in most workloads [22]
 Each directory’s content is written to the OSD cluster using the same striping and distribution strategy as metadata journals and file data.
 Inode numbers are allocated in ranges to metadata servers and considered immutable in our prototype, although in the future they could be trivially reclaimed on file deletion.
+An auxiliary anchor table [28] keeps the rare inode with multiple hard links globally addressable by inode number—all without encumbering the overwhelmingly common case of singly-linked files with an enormous, sparsely populated and cumbersome inode table.
 Figure 2: Ceph dynamically maps subtrees of the directory hierarchy to metadata servers based on the current workload.
 Individual directories are hashed across multiple nodes only when they become hot spots.
 Our primary-copy caching strategy makes a single authoritative MDS responsible for managing cache coherence and serializing updates for any given piece of metadata.
+While most existing distributed file systems employ some form of static subtree-based partitioning to delegate this authority (usually forcing an administrator to carve the dataset into smaller static “volumes”), some recent and experimental file systems have used hash functions to distribute directory and file metadata [4], effectively sacrificing locality for load distribution.
 Both approaches have critical limitations: static subtree partitioning fails to cope with dynamic workloads and data sets, while hashing destroys metadata locality and critical opportunities for efficient metadata prefetching and storage.
 Each MDS measures the popularity of metadata within the directory hierarchy using counters with an exponential time decay.
 Any operation increments the counter on the affected inode and all of its ancestors up to the root directory, providing each MDS with a weighted tree describing the recent load distribution.
@@ -111,7 +113,6 @@ While immutable fields never change, security and file locks are governed by ind
 For example, owner and mode are required for the security check during path traversal but rarely change, requiring very few states, while the file lock reflects a wider range of client access modes as it controls an MDS’s ability to issue client capabilities.
 Partitioning the directory hierarchy across multiple nodes can balance a broad range of workloads, but cannot always cope with hot spots or flash crowds, where many clients access the same directory or file.
 Ceph uses its knowledge of metadata popularity to provide a wide distribution for hot spots only when needed and without incurring the associated overhead and loss of directory locality in the general case.
-Directories that are particularly large or experiencing a heavy write workload (e.
 This adaptive approach allows Ceph to encompass a broad spectrum of partition granularities, capturing the benefits of both coarse and fine partitions in the specific circumstances and portions of the file system where those strategies are most effective.
 Every MDS response provides the client with updated information about the authority and any replication of the relevant inode and its ancestors, allowing clients to learn the metadata partition for the parts of the file system with which they interact.
 Future metadata operations are directed at the authority (for updates) or a random replica (for reads) based on the deepest known prefix of a given path.
@@ -126,6 +127,7 @@ We choose a value that gives each OSD on the order of 100 PGs to balance varianc
 Placement groups are then assigned to OSDs using CRUSH (Controlled Replication Under Scalable Hashing) [29], a pseudo-random data distribution function that efficiently maps each PG to an ordered list of OSDs upon which to store object replicas.
 This differs from conventional approaches (including other object-based file systems) in that data placement does not rely on any block or object list metadata.
 To locate any object, CRUSH requires only the placement group and an OSD cluster map: a compact, hierarchical description of the devices comprising the storage cluster.
+In doing so, CRUSH simultaneously solves both the data distribution problem (“where should I store data”) and the data location problem (“where did I store data”)
 The cluster map hierarchy is structured to align with the clusters physical or logical composition and potential sources of failure.
 For instance, one might form a fourlevel hierarchy for an installation consisting of shelves full of OSDs, rack cabinets full of shelves, and rows of cabinets.
 Each OSD also has a weight value to control the relative amount of data it is assigned.
@@ -165,7 +167,6 @@ Because a wide variety of network anomalies may cause intermittent lapses in OSD
 Monitors (which are only partially implemented) use elections, active peer monitoring, short-term leases, and two-phase commits to collectively provide consistent and available access to the cluster map.
 When the map is updated to reflect any failures or recoveries, affected OSDs are provided incremental map updates, which then spread throughout the cluster by piggybacking on existing inter-OSD communication.
 Distributed detection allows fast detection without unduly burdening monitors, while resolving the occurrence of inconsistency with centralized arbitration.
-Most importantly, RADOS avoids initiating widespread data re-replication due to systemic problems by marking OSDs down but not out (e.
 The OSD cluster map will change due to OSD failures, recoveries, and explicit cluster changes such as the deployment of new storage.
 To facilitate fast recovery, OSDs maintain a version number for each object and a log of recent changes (names and versions of updated or deleted objects) for each PG (similar to the replication logs in Harp [14])
 When an active OSD receives an updated cluster map, it iterates over all locally stored placement groups and calculates the CRUSH mapping to determine which ones it is responsible for, either as a primary or replica.
@@ -182,13 +183,12 @@ Because failure recovery is driven entirely by individual OSDs, each PG affected
 This approach, based on the Fast Recovery Mechanism (FaRM) [37], decreases recovery times and improves overall data safety.
 The existing kernel interface limits our ability to understand when object updates are safely committed on disk.
 Synchronous writes or journaling provide the desired safety, but only with a heavy latency and performance penalty.
-More importantly, the POSIX interface fails to support atomic data and metadata (e.
 Implementing EBOFS entirely in user space and interacting directly with a raw block device allows us to define our own low-level object storage interface and update semantics, which separate update serialization (for synchronization) from on-disk commits (for safety)
 A user space approach, aside from providing greater flexibility and easier implementation, also avoids cumbersome interaction with the Linux VFS and page cache, both of which were designed for a different interface and workload.
 While most kernel file systems lazily flush updates to disk after some time interval, EBOFS aggressively schedules disk writes, and opts instead to cancel pending I/O operations when subsequent updates render them superfluous.
 This provides our low-level disk scheduler with longer I/O queues and a corresponding increase in scheduling efficiency.
-A user-space scheduler also makes it easier to eventually prioritize workloads (e.
 Central to the EBOFS design is a robust, flexible, and fully integrated B-tree service that is used to locate objects on disk, manage block allocation, and index collections (placement groups)
+Block allocation is conducted in terms of extents—start and length pairs—instead of block lists, keeping metadata compact.
 Free block extents on disk are binned by size and sorted by location, allowing EBOFS to quickly locate free space near the write position or related data on disk, while also limiting long-term fragmentation.
 With the exception of perobject block allocation information, all metadata is kept in memory for performance and simplicity (it is quite small, even for large volumes)
 Finally, EBOFS aggressively performs copy-on-write: with the exception of superblock updates, data is always written to unallocated regions of disk.

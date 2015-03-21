@@ -10,6 +10,7 @@ Understanding system behavior in this context requires observing related activit
 A web-search example will illustrate some of the challenges such a system needs to address.
 A front-end service may distribute a web query to many hundreds of query servers, each searching within its own piece of the index.
 The query may also be sent to a number of other sub-systems that may process advertisements, check spelling, or look for specialized results, including images, videos, news, and so on.
+Results from all of these services are selectively combined in the results page; we call this model “universal search” [6]
 In total, thousands of machines and many different services might be needed to process one universal search query.
 Moreover, web-search users are sensitive to delays, which can be caused by poor performance in any sub-system.
 An engineer looking only at the overall latency may know there is a problem, but may not be able to guess which service is at fault, nor why it is behaving poorly.
@@ -55,7 +56,6 @@ However, our core data model is not restricted to our particular RPC framework; 
 Formally, we model Dapper traces using trees, spans, and annotations.
 In a Dapper trace tree, the tree nodes are basic units of work which we refer to as spans.
 The edges indicate a casual relationship between a span and its parent span.
-We illustrate how spans form the structure of a larger trace in Figure 2
 Dapper records a human-readable span name for each span, as well as a span id and parent id.
 Figure 2: The causal and temporal relationships between five spans in a Dapper trace tree.
 Spans created without a parent id are known as root spans.
@@ -81,7 +81,6 @@ We plan to instrument nonRPC communication frameworks as they evolve and find a 
 In Section 3.2 we discuss the level of application transparency we were able to achieve in practice.
 The instrumentation points described above are sufficient to derive detailed traces of complex distributed systems, making the core Dapper functionality available to otherwise unmodified Google applications.
 However, Dapper also allows application developers to enrich Dapper traces with additional information that may be useful to.
-We allow users to define timestamped annotations through a simple API, the heart of which is shown in Figure 4
 In order to protect Dapper users from accidental overzealous logging, individual trace spans have a configurable upper-bound on their total annotation volume.
 Application-level annotations are not able to displace the structural span or RPC information regardless of application behavior.
 In addition to simple textual annotations, Dapper also supports a map of key-value annotations that give developers more tracing power, such as maintaining counters, logging binary messages, and transporting arbitrary userdefined data along with a traced request within a process.
@@ -94,10 +93,13 @@ The Dapper trace logging and collection pipeline is a three-stage process (see F
 First, span data is written (1) to local log files.
 A trace is laid out as a single Bigtable row, with each column corresponding to a span.
 Bigtable’s support for sparse table layouts is useful here since individual traces can have an arbitrary number of spans.
+The median latency for trace data collection – that is, the time it takes data to propagate from instrumented application binaries to the central repository – is less than 15 seconds.
 Dapper also provides an API to simplify access to the trace data in our repository.
 Section 5.1 contains more information about its usage thus far.
 The Dapper system as described performs trace logging and collection out-of-band with the request tree itself.
+First, an in-band collection scheme – where trace data is sent back within RPC response headers – can affect application network dynamics.
 In many of the larger systems at Google, it is not uncommon to find traces with thousands of spans.
+However, RPC responses – even near the root of such large distributed traces – can still be comparatively small: often less than ten kilobytes.
 In cases like these, the inband Dapper trace data would dwarf the application data and bias the results of subsequent analyses.
 Secondly, in-band collection schemes assume that all RPCs are perfectly nested.
 We find that there are many middleware systems which return a result to their caller before all.
@@ -129,6 +131,7 @@ The Dapper team performs occasional audits looking for changes to configurations
 Such changes are rare and usually stem from concerns about monitoring overhead.
 All of these changes to date have been reverted upon further investigation and measurement of the actual overhead, which has been immaterial.
 For example, all Bigtable requests are annotated with the name of the table being accessed.
+Java and 68 C++ applications have added custom application annotations in order to better understand intra-span activity in their services.
 It is worth noting that our Java developers who have adopted the annotation API have made more annotations per span than their C++ counterparts thus far.
 This may be because our Java workloads tend to be closer to the end user; these sorts of applications often handle a wider mix of requests and consequently have comparatively complex control paths.
 The cost of a tracing system is felt as performance degradation in the system being monitored due to both trace generation and collection overheads, and as the amount of resources needed to store and analyze trace data.
@@ -143,6 +146,7 @@ Writes to local disk are the most expensive operation in Dapper’s runtime libr
 Nevertheless, log write activity can have a perceptible impact on highthroughput application performance, especially if all requests are being traced.
 We quantify this overhead in a Web search workload in Section 4.3
 Table 1: CPU resource usage for the Dapper daemon during load testing.
+Table 2: The effect of different [non-adaptive] Dapper sampling frequencies on the latency and throughput of a Web search cluster.
 Reading out local trace data can also interfere with the foreground workload being monitored.
 Table 1 shows worst case CPU usage of the Dapper daemon process based on an unrealistically heavy load testing benchmark.
 The daemon never uses more than 0.3% of one core of a production machine during collection, and has a very small memory footprint (within the noise of heap fragmentation)
@@ -164,8 +168,10 @@ The solution for such systems is to override the default sampling rate, which re
 We are in the process of deploying an adaptive sampling scheme that is parameterized not by a uniform sampling probability, but by a desired rate of sampled traces per unit time.
 This way, workloads with low traffic automatically increase their sampling rate while those with very high traffic will lower it so that overheads remain under control.
 The actual sampling probability used is recorded along with the trace itself; this facilitates accurate accounting of trace frequencies in analytical tools built around Dapper data.
+New Dapper users often wonder if low sampling probabilities – often as low as 0.01% for high-traffic services – will interfere with their analyses.
 Google leads us to believe that, for high-throughput services, aggressive sampling does not hinder most important analyses.
 If a notable execution pattern surfaces once in such systems, it will surface thousands of times.
+Services with lower volume – perhaps dozens rather than tens of thousands of requests per second – can afford to trace every request; this is what motivated our decision to move towards adaptive sampling rates.
 The sampling mechanisms described above were designed to minimize perceptible overhead in applications which incorporate the Dapper runtime library.
 The Dapper team also needs to control the total size of data written to its central repositories, though, and thus we incorporate a second round of sampling for that purpose.
 Our production clusters presently generate more than 1 terabyte of sampled trace data per day.
@@ -178,6 +184,7 @@ Dapper pipeline maintenance is easier since we can augment or diminish our globa
 Several years ago while Dapper was still a prototype, it was only usable with the patient assistance of the Dapper developers.
 Since then, we have iteratively built up the collection infrastructure, programming interfaces, and an interactive web-based user interface to help Dapper users solve their problems independently.
 In this section, we summarize which approaches have worked and which haven’t, and we provide basic usage information about these general-purpose analytical tools.
+The Dapper “Depot API,” or DAPI, provides direct access to the distributed trace records in the regional Dapper repositories (or “Depots”)
 The DAPI and the Dapper trace repositories were designed in tandem, and the DAPI is meant to expose a clean and intuitive interface to the raw data contained within these Dapper repositories.
 Our use cases suggested the following three ways to access trace data:
 Access by trace id: The DAPI can load any trace on demand given its globally unique trace id.
@@ -198,7 +205,6 @@ When users were interested in individual machines, they were also interested in 
 There are three classes of DAPI usage at Google: persistent online web applications which make use of DAPI, well-maintained DAPI-based tools which can be run ondemand from the command line, and one-off analytical tools which are written, run, and mostly forgotten.
 It’s difficult to account for tools in this latter category since developers can build, run, and abandon these projects without the knowledge of the Dapper team.
 Most Dapper usage takes place within the interactive web-based user interface.
-Space considerations do not allow us to demonstrate every feature therein, but a typical user workflow is shown in Figure 6
 The user describes the service and time window they’re interested in, as well as whatever information they need to distinguish trace patterns (in this case, the span name)
 They also specify a cost metric most relevant to their investigation (in this case, service latency)
 A large table of performance summaries for all distributed execution patterns associated with the given service appears.
@@ -220,10 +226,12 @@ In that mode of operation, the data is available within seconds of real time.
 Those numbers are consistent from month to month modulo internal announcements of new features.
 It is common for users to send out links to specific traces of interest which will inevitably generate much one-time, short-duration traffic in the trace inspector.
 Dapper is used widely at Google, both directly through the Dapper user interface and indirectly through the programmatic APIs or applications built on top of those APIs.
+In this section we do not attempt to catalog every known use of Dapper, but instead attempt to cover the “basis vectors” of Dapper usage in an effort to illustrate what sorts of applications have been most successful.
 When it came time to re-engineer one of Ads Review’s services from the ground up, the team used Dapper iter9
 Figure 6: A typical user workflow in the general-purpose Dapper user interface.
 Dapper helped them improve their service in the following ways:
 Performance: Developers tracked progress against request latency targets and pinpointed easy optimization opportunities.
+Dapper was also used to identify unnecessary serial requests along the critical path – often originating in sub-systems the developers didn’t write themselves – and prompting the team to subsequently fix them.
 Correctness: The Ads Review service revolves around a large database system.
 That system has both read-only replicas (inexpensive access) and read-write masters (expensive access)
 Dapper was used to identify a number of cases where queries were needlessly issued to the master instead of the replicas.
@@ -279,7 +287,6 @@ Moreover, contention for such shared services can be similarly difficult to debu
 The Dapper user interface shown in Section 5.2 can group and aggregate trace performance information across the various clients of any shared service.
 This makes it easy for the owners of shared services to rank their users in terms of various metrics (e.g., inbound network load, outbound network load, or total time spent servicing requests)
 Dapper is useful for some but not all firefighting tasks.
-Firefighting” here refers to activities performed on behalf of a distributed system in peril.
 Typically, Dapper users who are firefighting need access to fresh data and do not have time to write new DAPI code or wait for periodic reports to run.
 For services which are experiencing high latencies or, worse still, timing out given a normal workload, the Dapper user interface can often isolate the location of the latency bottleneck.
 By communicating directly with the Dapper daemons, fresh data about specific high-latency traces can be gathered without difficulty.

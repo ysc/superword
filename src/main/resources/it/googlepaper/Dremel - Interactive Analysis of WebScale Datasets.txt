@@ -138,7 +138,6 @@ Each server has an internal execution tree, as depicted on the.
 The internal tree corresponds to a physical query execution plan, including evaluation of scalar expressions.
 Some Dremel queries, such as top-k and count-distinct, return approximate results using known one-pass algorithms (e.g., [4])
 In this section we evaluate Dremel’s performance on several datasets used at Google, and examine the effectiveness of columnar storage for nested data.
-The properties of the datasets used in our study are summarized in Figure 8
 In uncompressed, nonreplicated form the datasets occupy about a petabyte of space.
 We start by examining the basic data access characteristics on a single machine, then show how columnar storage benefits MR execution, and finally focus on Dremel’s performance.
 The experiments were conducted on system instances running in two data centers next to many other applications, during regular business operation.
@@ -178,7 +177,6 @@ Figure 11 shows the execution times for each query as a function of the server t
 In each topology, the number of leaf servers is kept constant at 2900 so that we can assume the same cumulative scan speed.
 In contrast, the execution time of Q3 is halved due to increased parallelism.
 This experiment illustrates how aggregations returning many groups benefit from multi-level serving trees.
-To drill deeper into what happens during query execution consider Figure 12
 The time is measured starting at the point when a tablet got scheduled for execution in an available slot, i.e., excludes the time spent waiting in the job queue.
 This measurement methodology factors out the effects of other queries that are executing simultaneously.
 The query illustrates within-record aggregation: it counts all records where the sum of a.b.c.d values occurring in the record are larger than the sum of a.b.p.q.r values.
@@ -198,6 +196,7 @@ Scan-based queries can be executed at interactive speeds on disk-resident datase
 In a multi-user environment, a larger system can benefit from.
 If trading speed against accuracy is acceptable, a query can.
 The bulk of a web-scale dataset can be scanned fast.
+Dremel’s codebase is dense; it comprises less than 100K lines of C++, Java, and Python code.
 The MapReduce (MR) [12] framework was designed to address the challenges of large-scale computing in the context of long-running batch jobs.
 Like MR, Dremel provides fault tolerant execution, a flexible data model, and in situ data processing capabilities.
 The success of MR led to a wide range of third-party implementations (notably open-source Hadoop [15]), and a number of hybrid systems that combine parallel DBMSs with MR, offered by vendors like Aster, Cloudera, Greenplum, and Vertica.
@@ -217,10 +216,8 @@ Dremel is a custom, scalable data management solution built from simpler compone
 We discussed its performance on trillion-record, multi-terabyte datasets of real data.
 We outlined the key aspects of Dremel, including its storage format, query language, and execution.
 In the future, we plan to cover in more depth such areas as formal algebraic specification, joins, extensibility mechanisms, etc.
-COLUMN-STRIPING ALGORITHM The algorithm for decomposing a record into columns is shown in Figure 16
 Procedure DissectRecord is passed an instance of a RecordDecoder, which is used to traverse binary-encoded records.
 FieldWriters form a tree hierarchy isomorphic to that of the input schema.
-The root FieldWriter is passed to the algorithm for each new record, with repetitionLevel set to 0
 The primary job of the DissectRecord procedure is to maintain the current repetitionLevel.
 The current definitionLevel is uniquely determined by the tree position of the current writer, as the sum of the number of optional and repeated fields in the field’s path.
 The while-loop of the algorithm (Line 5) iterates over all atomic and record-valued fields contained in a given record.
@@ -240,7 +237,6 @@ For a lossless encoding of empty (sub)records, non-atomic fields (such as Name.L
 In the following, writing opening tags is referred to as ‘starting’ the record, and writing closing tags is called ’ending’ it.
 AssembleRecord procedure takes as input a set of FieldReaders and (implicitly) the FSM with state transitions between the readers.
 Variable reader holds the current FieldReader in the main routine (Line 4)
-Variable lastReader holds the last reader whose value we appended to the record and is available to all three procedures shown in Figure 17
 If the value is not NULL, which is determined by looking at its definition level, we synchronize the record being assembled to the record structure of the current reader in the method MoveToLevel, and append the field value to the record.
 Otherwise, we merely adjust the record structure without appending any value—which needs to be done if empty records are present.
 Recall that the definition level factors out required fields (only repeated and optional fields are counted)
@@ -249,11 +245,9 @@ The method ends the nested record Links and starts new records Name and Language
 Procedure ReturnsToLevel (Line 30) is a counterpart of MoveToLevel that only ends current records without starting any new ones.
 The algorithm takes as input the fields that should be populated in the records, in the order in which they appear in the schema.
 The algorithm uses a concept of a ‘common repetition level’ of two fields, which is the repetition level of their lowest common ancestor.
-For example, the common repetition level of Links.Backward and Links.Forward equals 1
 The second concept is that of a ‘barrier’, which is the next field in the sequence after the current one.
 The intuition is that we try to process each field one by one until the barrier is hit and requires a jump to a previously seen field.
 For each repetition level we encounter, we pick the left-most field in the sequence—that is the one we need to transition to when that repetition level is returned by a FieldReader.
-The gaps arise because not all repetition levels are present in the common repetition levels computed at Line 8
 If a FieldReader produces such a level, we need to continue constructing the nested record and do not need to bounce off the barrier.
 The algorithm addresses a general case when a query may reference repeated fields; a simpler optimized version is used for flat-relational queries, i.e., those referencing only required and optional fields.
 The algorithm has two implicit inputs: a set of FieldReaders, one for each field appearing in the query, and a set of scalar expressions, including aggregate expressions, present in the query.

@@ -15,7 +15,6 @@ On the one hand, Kafka is distributed and scalable, and offers high throughput.
 On the other hand, Kafka provides an API similar to a messaging system and allows applications to consume log events in real time.
 Kafka has been open sourced and used successfully in production at LinkedIn for more than 6 months.
 It greatly simplifies our infrastructure, since we can exploit a single piece of software for both online and offline consumption of the log data of all types.
-We revisit traditional messaging systems and log aggregators in Section 2
 In Section 3, we describe the architecture of Kafka and its key design principles.
 Traditional enterprise messaging systems [1][7][15][17] have existed for a long time and often play a critical role as an event bus for processing asynchronous data flows.
 However, there are a few reasons why they tend not to be a good fit for log processing.
@@ -39,10 +38,11 @@ Each frontend machine can send log data to a set of Scribe machines over sockets
 Each Scribe machine aggregates the log entries and periodically dumps them to HDFS [9] or an NFS device.
 A set of machines aggregate events from the clients and roll out “minute” files, which are then added to HDFS.
 Flume is a relatively new log aggregator developed by Cloudera.
-However, most of those systems are built for consuming the log data offline, and often expose implementation details unnecessarily (e.g.
+It supports extensible “pipes” and “sinks”, and makes streaming log data very flexible.
 Additionally, most of them use a “push” model in which the broker forwards data to consumers.
 At LinkedIn, we find the “pull” model more suitable for our applications since each consumer can retrieve the messages at the maximum rate it can sustain and avoid being flooded by messages pushed faster than it can handle.
 The pull model also makes it easy to rewind a consumer and we discuss this benefit at the end of Section 3.2
+More recently, Yahoo! Research developed a new distributed pub/sub system called HedWig [13]
 HedWig is highly scalable and available, and offers strong durability guarantees.
 However, it is mainly intended for storing the commit log of a data store.
 Because of limitations in existing systems, we developed a new messaging-based log aggregator Kafka.
@@ -60,7 +60,6 @@ Each message stream provides an iterator interface over the continual stream of 
 The consumer then iterates over every message in the stream and processes the payload of the message.
 If there are currently no more messages to consume, the iterator blocks until new messages are published to the topic.
 We support both the point-topoint delivery model in which multiple consumers jointly consume a single copy of all messages in a topic, as well as the publish/subscribe model in which multiple consumers each retrieve its own copy of a topic.
-The overall architecture of Kafka is shown in Figure 1
 Since Kafka is distributed in nature, an Kafka cluster typically consists of multiple brokers.
 To balance load, a topic is divided into multiple partitions and each broker stores one or more of those partitions.
 Multiple producers and consumers can publish and retrieve messages at the same time.
@@ -86,7 +85,6 @@ Each pull request contains the offset of the message from which the consumption 
 Each broker keeps in memory a sorted list of offsets, including the offset of the first message in every segment file.
 The broker locates the segment file where the requested message resides by searching the offset list, and sends the data back to the consumer.
 After a consumer receives a message, it computes the offset of the next message to consume and uses it in the next pull request.
-The layout of an Kafka log and the in-memory index is depicted in Figure 2
 Efficient transfer: We are very careful about transferring data in and out of Kafka.
 Earlier, we have shown that the producer can submit a set of messages in a single send request.
 Although the end consumer API iterates one message at a time, under the covers, each pull request from a consumer also retrieves multiple messages up to a certain size, typically hundreds of kilobytes.
@@ -197,7 +195,6 @@ Whenever possible, we tried to use comparable settings in all systems.
 The two machines are connected with a 1Gb network link.
 One of the machines was used as the broker and the other machine was used as the producer or the consumer.
 Producer Test: We configured the broker in all systems to asynchronously flush messages to its persistence store.
-ActiveMQ and RabbitMQ don’t seem to have an easy way to batch messages and we assume that it used a batch size of 1
 The x-axis represents the amount of data sent to the broker over time in MB, and the y-axis corresponds to the producer throughput in messages per second.
 There are a few reasons why Kafka performed much better.
 First, the Kafka producer currently doesn’t wait for acknowledgements from the broker and sends messages as faster as the broker can handle.

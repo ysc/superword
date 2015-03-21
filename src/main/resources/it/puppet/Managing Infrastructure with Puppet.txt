@@ -75,7 +75,6 @@ This makes reproducing a particular configuration on an existing system easy whe
 Resource types are the building blocks of Puppet configurations and most of your time will be spent using them or writing new types to suit your needs.
 Let’s start with a simple declaration of a package resource.
 Files and Packages This first statement declares that the package ntp should be installed and that the file ntp.conf should be defined with the given contents and permissions at the path /etc/ ntp.conf, but only after the package ntp is installed.
-You can go ahead and test this out (on a test system!) by saving the above text to test.pp and executing puppet apply test.pp.
 When this manifest is run against a blank system, the agent will check for the existence of an ntp package and install it if necessary.
 Then the file at /etc/ntp.conf will be installed if it doesn’t exist or overwritten with the content specified if it differs:
 A few notes here about the syntax: The capitalization of type in resources is important.
@@ -87,6 +86,7 @@ The path, mode, and content parameters are fairly mundane, but the require param
 The Puppet agent doesn’t have any innate sense of order of execution when it is run on a manifest or set of manifests.
 Things will happen in random sequence unless constrained by some dependencies.
 The above statement specifies that the file definition ntp.conf requires that the package ntp be installed before it is created.
+Conversely, we could have specified in the package declaration for ntp that it be run before => File['ntp.conf']
 The most obvious change here is that we’ve moved the file content to an external source.
 We’ve told Puppet to go and look in /etc/nfs/configs for a file named ntp.conf and put it in /etc/ntp.conf.
 For the moment, we’ll use an NFS mount to distribute our configuration files.
@@ -153,7 +153,6 @@ The Puppet Master Running a central Puppet Master server will allow us to build 
 It can be a central repository for the configuration of all servers in your data center, allowing for the centralized deployment of updates and applications.
 Once the Puppet Master is installed, you’ll have an empty Puppet repository in /etc/ puppet.
 Generally this file will include a nodes.pp file as well as set some default parameters.
-The Puppet Master and agent communicate over tcp port 8140
 Make sure that any applicable firewall settings allow communication on that port between the two.
 Let’s step through how to set up a node definition and apply a class to it with a central Puppet Master rather than by manually applying the manifest.
 First, you’ll need to have both agent and master installed.
@@ -226,7 +225,6 @@ They can be scoped locally to a class or globally if declared outside a class.
 Class-scoped variables are also available publicly by qualifying their parent class:
 This can be useful in some circumstances, but it is somewhat difficult to ensure predictable behavior, as the values are dependent on the order of evaluation of the two classes.
 If you need to use a variable from one class in another, be sure that you can guarantee the order in which they are evaluated.
-Puppet also supports an extensive set of comparison and arithmetic operators (even Backus-Naur Form!) for expressions as variable values.
 See the Puppet language guide at http://docs.puppetlabs.com/guides/lan guage_guide.html for complete documentation.
 Templates Often you’ll want to maintain configuration files for applications that are different between servers.
 If you have a couple of configurations, it’s easy enough to maintain multiple files, but what if you have a very large number of differing configurations? We can manage this situation by writing ERB templates and populating the templates with node-specific information.
@@ -238,6 +236,7 @@ Injecting variables into config file templates like this will let us drastically
 I’ve tried to give you a few real-world examples of how to implement the various features of Puppet, but the applications are vast and varied.
 I suggest that you take a while to peruse the community repository of Puppet modules at http://forge.puppetlabs.com/
 There are plenty of great patterns of implementation and organization in these projects, and you may even come across an out-of-the-box solution to a problem of your own.
+For many years I struggled with this question: “How do I effectively manage access control to Linux servers?” There are many options, including LDAP, Kerberos KDC, and the like, but I disliked each of them for one reason or another.
 Centralized auth is prone to failure and proper redundancy is painful to manage.
 Often password auth is well managed, but key distribution is difficult, or vice versa.
 We can use Puppet to manage users and groups and distribute public keys.
@@ -275,6 +274,7 @@ We can put it in version control, write functional testing suites for it, and QA
 Configurations can have releases that relate to application code releases in meaningful ways, and bugs are easier to identify because we have explicit records of changes.
 So throw away the handwritten server log, and stop making cowboy changes to production servers.
 We can abstract even further if we begin to talk about pools of servers and virtual instances.
+What if we have a cluster of application nodes that need to be managed as groups or if we need reporting of Facter variables from all of the nodes that include a certain Puppet class? What do we do if Apache needs a kick on 25 instances out of 1000? MCollective can do these things and more.
 MCollective uses a publish/subscribe message bus to distribute commands to systems in parallel.
 It’s used to push requests or commands out to all of your systems at once, allowing the MCollective server to decide which of the messages it should execute, based on a set of filters in the message.
 A good analogue of this is an IRC chat service.

@@ -20,6 +20,7 @@ Fortunately, this is changing, making this an important and timely book.
 Spring Data is an important project, with the potential to help developers overcome new challenges.
 Many of the values that have made Spring the preferred platform for enterprise Java developers deliver particular benefit in a world of fragmented persistence solutions.
 Part of the value of Spring is how it brings consistency (without descending to a lowest common denominator) in its approach to different technologies with which it integrates.
+A distinct “Spring way” helps shorten the learning curve for developers and simplifies code maintenance.
 If you are already familiar with Spring, you will find that Spring Data eases your exploration and adoption of unfamiliar stores.
 If you aren’t already familiar with Spring, this is a good opportunity to see how Spring can simplify your code and make it more consistent.
 The authors are uniquely qualified to explain Spring Data, being the project leaders.
@@ -40,10 +41,12 @@ When you’ve finished this book, you will have a deeper understanding of why mo
 Most important, you’ll have a great start to your own exploration in code!
 Overview of the New Data Access Landscape The data access landscape over the past seven or so years has changed dramatically.
 Relational databases, the heart of storing and processing data in the enterprise for over 30 years, are no longer the only game in town.
+The past seven years have seen the birth —and in some cases the death—of many alternative data stores that are being used in mission-critical enterprise applications.
 These new data stores have been designed specifically to solve data access problems that relational database can’t handle as effectively.
 An example of a problem that pushes traditional relational databases to the breaking point is scale.
 While data that is stored in relational databases is still crucial to the enterprise, these new types of data are not being stored in relational databases.
 While general consumer demands drive the need to store large amounts of media files, enterprises are finding it important to store and analyze many of these new sources of data.
+For example, companies can better understand the behavior of their products if the products themselves are sending “phone home” messages about their health.
 To better understand their customers, companies can incorporate social media data into their decision-making processes.
 Big data generally refers to the process in which large quantities of data are stored, kept in raw form, and continually analyzed and combined with other data sources to provide a deeper understanding of a particular domain, be it commercial or scientific in nature.
 Many companies and scientific laboratories had been performing this process before the term big data came into fashion.
@@ -52,10 +55,12 @@ Aggregate data transfer rates for clusters of commodity hardware that use local 
 On the software side, the majority of the new data access technologies are open source.
 While open source does not mean zero cost, it certainly lowers the barrier for entry and overall cost of ownership versus the traditional commercial software offerings in this space.
 Another problem area that new data stores have identified with relational databases is the relational data model.
+If you are interested in analyzing the social graph of millions of people, doesn’t it sound quite natural to consider using a graph database so that the implementation more closely models the domain? What if requirements are continually driving you to change your relational database management system (RDBMS) schema and object-relational mapping (ORM) layer? Perhaps a “schema-less” document database will reduce the object mapping complexity and provide a more easily evolvable system as compared to the more rigid relational model.
 While each of the new databases is unique in its own way, you can provide a rough taxonomy across most of them based on their data models.
 Column family An extended key/value data model in which the value data type can also be a sequence of key/value pairs.
 Document Collections that contain semistructured data, such as XML or JSON.
 The data model has nodes and edges, each of which may have properties.
+The general name under which these new databases have become grouped is “NoSQL databases.” In retrospect, this name, while catchy, isn’t very accurate because it seems to imply that you can’t query the database, which isn’t true.
 It reflects the basic shift away from the relational data model as well as a general shift away from ACID (atomicity, consistency, isolation, durability) characteristics of relational databases.
 One of the driving factors for the shift away from ACID characteristics is the emergence of applications that place a higher priority on scaling writes and having a partially functioning system even when parts of the system have failed.
 While scaling reads in a relational database can be achieved through the use of in-memory caches that front the database, scaling writes is much harder.
@@ -187,6 +192,7 @@ The namespace element will now pick up the interface at container startup time a
 The infrastructure will inspect the methods declared inside the interface and try to determine a query to be executed on method invocation.
 If you don’t do anything more than declare the method, Spring Data will derive a query from its name.
 In Example 2-6, the query can be derived because we followed the naming convention of the domain object’s properties.
+The Email part of the query method name actually refers to the Customer class’s emailAddress property, and thus Spring Data will automatically derive select C from Customer c where c.emailAddress = ?1 for the method declaration if you were using the JPA module.
 It will also check that you have valid property references inside your method declaration, and cause the container to fail to start on bootstrap time if it finds any errors.
 Clients can now simply execute the method, causing the given method parameters to be bound to the query derived from the method name and the query to be executed (Example 2-7)
 Query Lookup Strategies The interface we just saw had a simple query method declared.
@@ -209,9 +215,9 @@ However, you can also define constraints by traversing nested properties.
 The resolution algorithm starts with interpreting the entire part (AddressZipCode) as a property and checks the domain class for a property with that name (with the first letter lowercased)
 If not, it starts splitting up the source at the camel case parts from the right side into a head and a tail and tries to find the corresponding property (e.g., AddressZip and Code)
 If it finds a property with that head, we take the tail and continue building the tree down from there.
+Because in our case the first split does not match, we move the split point further to the left (from “AddressZip, Code” to “Address, Zip Code”)
 Although this should work for most cases, there might be situations where the algorithm could select the wrong property.
 Suppose our Customer class has an addressZip property as well.
-Then our algorithm would match in the first split, essentially choosing the wrong property, and finally fail (as the type of addressZip probably has no code.
 To resolve this ambiguity, you can use an underscore ( _ ) inside your method name to manually define traversal points.
 Pagination and Sorting If the number of results returned from a query grows significantly, it might make sense to access the data in chunks.
 To achieve that, Spring Data provides a pagination API that can be used with the repositories.
@@ -226,7 +232,7 @@ If you don’t need pagination functionality, but plain sorting only, add a Sort
 The first method allows you to pass a Pageable instance to the query method to dynamically add paging to your statically defined query.
 Sorting options can either be handed into the method by the Sort parameter explicitly, or embedded in the PageRe quest value object, as you can see in Example 2-11
 Defining Repositories So far, we have seen repository interfaces with query methods derived from the method name or declared manually, depending on the means provided by the Spring Data module for the actual store.
-To derive these queries, we had to extend a Spring Data– specific marker interface: Repository.
+To derive these queries, we had to extend a Spring Dataspecific marker interface: Repository.
 Apart from queries, there is usually quite a bit of functionality that you need to have in your repositories: the ability to store objects, to delete them, look them up by ID, return all entities stored, or access them page by page.
 The easiest way to expose this kind of functionality through the repository interfaces is by using one of the more advanced repository interfaces that Spring Data provides:
 Repository A plain marker interface to let the Spring Data infrastructure pick up user-defined repositories.
@@ -267,6 +273,7 @@ As you can see in Figure 2-1, the IDE detects that Descrption is not valid, as t
 To discover these typos, it will analyze the Product domain class (something that bootstrapping the Spring Data repository infrastructure would do anyway) for properties and parse the method name into a property traversal tree.
 To avoid these kinds of typos as early as possible, STS’s Spring Data support offers code completion for property names, criteria keywords, and concatenators like And and Or (see Figure 2-2)
 The Order class has a few properties that you might want to refer to.
+Assuming we’d like to traverse the billingAddress property, another Cmd+Space (or Ctrl+Space on Windows) would trigger a nested property traversal that proposes nested properties, as well as keywords matching the type of the property traversed so far (Figure 2-3)
 To put some icing on the cake, the Spring Data STS will make the repositories firstclass citizens of your IDE navigator, marking them with the well-known Spring bean symbol.
 Beyond that, the Spring Elements node in the navigator will contain a dedicated Spring Data Repositories node to contain all repositories found in your application’s configuration (see Figure 2-4)
 As you can see, you can discover the repository interfaces at a quick glance and trace which configuration element they actually originate from.
@@ -308,7 +315,6 @@ These can be generated from the mapping information for a variety of stores as w
 Querydsl’s API and its support for various stores allows us to generate predicates to define queries.
 Plain Java collections can be filtered with the very same API.
 Generating the Query Metamodel As we’ve just seen, the core artifacts with Querydsl are the query metamodel classes.
-These classes are generated via the Annotation Processing Toolkit, part of the javac Java compiler in Java 6
 The APT provides an API to programmatically inspect existing Java source code for certain annotations, and then call functions that in turn generate Java code.
 Querydsl uses this mechanism to provide special APT processor implementation classes that inspect annotations.
 If we already have domain classes mapped to a store supported by Querydsl, then generating the metamodel classes will require no extra effort.
@@ -326,15 +332,16 @@ Integration with Spring Data Repositories As you just saw, the execution of quer
 Two of these steps can be considered boilerplate, as they will usually result in very similar code being written.
 On the other hand, the Spring Data repository tries to help users reduce the amount of unnecessary code; thus, it makes sense to integrate the repository extraction with Querydsl.
 To expose this API through your repository interfaces, let it extend QueryDsl PredicateExecutor in addition to Repository or any of the other available base interfaces (see Example 3-12)
+Extending the interface will have two important results: the first—and probably most obvious—is that it pulls in the API and thus exposes it to clients of CustomerReposi tory.
 If it does and Querydsl is present on the classpath, Spring Data will select a special base class to back the repository proxy that generically implements the API methods by creating a store-specific query instance, bind the given predicates, potentially apply pagination, and eventually execute the query.
 Manually Implementing Repositories The approach we have just seen solves the problem of generically executing queries for the domain class managed by the repository.
 However, you cannot execute updates or deletes through this mechanism or manipulate the store-specific query instance.
+This is actually a scenario that plays nicely into the feature of repository abstraction, which allows you to selectively implement methods that need hand-crafted code (see “Manually Implementing Repository Methods” on page 21 for general details on that topic)
 To ease the implementation of a custom repository extension, we provide store-specific base classes.
 The Java Persistence API (JPA) is the standard way of persisting Java objects into relational databases.
 The JPA consists of two parts: a mapping subsystem to map classes onto relational tables as well as an EntityManager API to access the objects, define and execute queries, and more.
 The Spring Framework has always offered sophisticated support for JPA to ease repository implementations.
 The Spring Data JPA module implements the Spring Data Commons repository abstraction to ease the repository implementations even more, making a manual implementation of a repository obsolete in most cases.
-For a general introduction to the repository abstraction, see Chapter 2
 This chapter will take you on a guided tour through the general setup and features of the module.
 The base package contains a Spring JavaConfig class to configure the Spring container using a plain Java class instead of XML.
 The two other packages contain our domain classes and repository interfaces.
@@ -361,6 +368,7 @@ In our case, it’s just a single column for which we define a custom name: emai
 As you can see, we need to provide an empty constructor for the JPA persistence provider to be able to instantiate EmailAddress objects via reflection (Example 5-4)
 This is a significant shortcoming because you effectively cannot make the emailAddress a final one or assert make sure it is not null.
 The Spring Data mapping subsystem used for the NoSQL store implementations does not impose that need onto the developer.
+Have a look at “The Mapping Subsystem” on page 83 to see how a stricter implementation of the value object can be modeled in MongoDB, for example.
 We use the @Column annotation on the email address to make sure a single email address cannot be used by multiple customers so that we are able to look up customers uniquely by their email address.
 Finally we declare the Customer having a set of Addresses.
 This property deserves deeper attention, as there are quite a few things we define here.
@@ -388,6 +396,7 @@ The Order will automatically cascade persistence operations to the LineItem inst
 Thus, we don’t have to manage the persistence life cycle of the LineItems separately.
 All other properties are many-to-one relationships to concepts already introduced.
 Note that we define a custom table name to be used for Orders because Order itself is a reserved keyword in most databases; thus, the generated SQL to create the table as well as all SQL generated for queries and data manipulation would cause exceptions when executing.
+ManyToOne(optional = false) private Customer customer; @ManyToOne private Address billingAddress;
 A final aspect worth noting is that the constructor of the Order class does a defensive copy of the shipping and billing address.
 This is to ensure that changes to the Address instance handed into the method do not propagate into already existing orders.
 If we didn’t create the copy, a customer changing her Address data later on would also change the Address on all of her Orders made to that Address as well.
@@ -436,6 +445,7 @@ As we haven’t manually declared any, the bootstrapping purpose of Spring Data 
 Because the method returns a single Customer, the query execution expects the query to return at most one resulting entity.
 First, we not only reference the description property of the product, but also qualify the predicate with the Containing keyword.
 That will eventually lead to the given description parameter being surrounded by % characters, and the resulting String being.
+Thus, the query is as follows: select p from Product p where p.description like ?1 with a given description of Apple bound as %Apple%
 The second interesting thing is that we’re using the pagination abstraction to retrieve only a subset of the products matching the criteria.
 We create a new PageRequest instance to ask for the very first page by specifying a page size of one with a descending order by the name of the Product.
 We then simply hand that Pageable into the method and make sure we’ve got the iPad back, that we’re the first page, and that there are further pages available.
@@ -446,9 +456,11 @@ To manually define the query to be executed, we use the @Query annotation.
 This also comes in handy if the queries get more complex in general.
 Even if they were derivable, they’d result in awfully verbose method names.
 Finally, let’s have a look at the OrderRepository (Example 4-19), which should already look remarkably familiar.
+The query method findByCustomer(…) will trigger query derivation (as shown before) and result in select o from Order o where o.customer = ? SortingRepository, which in turn extends CrudRepository.
 The main use case here is that we’d like to access all Orders page by page to avoid loading them all at once.
 Transactionality Some of the CRUD operations that will be executed against the JPA EntityManager require a transaction to be active.
 For a general introduction into Spring transactions, please consult the Spring reference documentation.
+Enabling read-only transactions for reading methods results in a few optimizations: first, the flag is handed to the underlying JDBC driver which will—depending on your database vendor—result in optimizations or the driver even preventing you from accidentally executing modifying queries.
 Beyond that, the Spring transaction infrastructure integrates with the life cycle of the EntityMan ager and can set the FlushMode for it to MANUAL, preventing it from checking each entity in the persistence context for changes (so-called dirty checking)
 Especially with a large set of objects loaded into the persistence context, this can lead to a significant improvement in performance.
 If you’d like to fine-tune the transaction configuration for some of the CRUD methods (e.g., to configure a particular timeout), you can do so by redeclaring the desired CRUD method and adding @Transactional with your setup of choice to the method declaration.
@@ -489,7 +501,6 @@ To use the database in standalone server mode, we need to download the distribut
 Once that is done, we can change to the hsqldb directory of the unzipped distribution and start the database using this command:
 Running this command starts up the server, which generates some log output and a message that the server has started.
 We are also told we can use Ctrl-C to stop the server.
-We can now open another command window, and from the same hsqldb directory we can start up a database client so we can interact with the database (creating tables and running queries, etc.)
 For OS X or Linux, we can run the following command:
 This should bring up the login dialog shown in Figure 5-1
 The SQL Module of Querydsl The SQL module of Querydsl provides a type-safe option for the Java developer to work with relational databases.
@@ -525,6 +536,7 @@ So far, we haven’t integrated with any Spring features, but the rest of the ch
 This first example is just intended to introduce the basics of the Querydsl SQL module.
 Build System Integration The code for the Querydsl part of this chapter is located in the jdbc module of the sample GitHub project.
 Before we can really start using Querydsl in our project, we need to configure our build system so that we can generate the query types.
+Querydsl provides both Maven and Ant integration, documented in the “Querying SQL” chapter of the Querydsl reference documentation.
 In our Maven pom.xml file, we add the plug-in configuration shown in Example 5-4
 You can set the plug-in to execute as part of the generate-sources life cycle phase by specifying an execution goal.
 We actually do this in the example project, and we also use a predefined HSQL database just to avoid forcing you to start up a live database when you build the example project.
@@ -554,7 +566,7 @@ In usual Spring fashion, the JDBC layer will manage any database resources like 
 It will also take care of providing the SQLTemplates instance based on database metadata from the managed connection.
 There are two query methods: query returning a List and queryForObject returning a single result.
 Both of these have three overloaded versions, each taking the following parameters:
-SQLQuery object obtained via the newSqlQuery factory method • One of the following combinations of a mapper and projection implementation:
+One of the following combinations of a mapper and projection implementation:
 They are responsible for extracting the data from the results returned by a query.
 The ResultSetExtractor extracts data for all rows returned, while the RowMapper handles only one row at the time and will be called repeatedly, once for each row.
 QBean and MappingProjection are Querydsl classes that also map one row at the time.
@@ -605,13 +617,14 @@ Updating with the SQLUpdateClause Performing an update operation is very similar
 After setting the values for the update and specifying the where clause, we call execute on the SQLUpdateClause, which returns an update count.
 This update count is also the value we need to return from this callback.
 Deleting Rows with the SQLDeleteClause Deleting is even simpler than updating.
-There’s no need to set any values here— just provide the where clause and call execute.
+There’s no need to set any values herejust provide the where clause and call execute.
 This chapter will introduce you to the Spring Data MongoDB project.
 We will take a brief look at MongoDB as a document store and explain you how to set it up and configure it to be usable with our sample project.
 A general overview of MongoDB concepts and the native Java driver API will round off the introduction.
 After that, we’ll discuss the Spring Data MongoDB module’s features, the Spring namespace, how we model the domain and map it to the store, and how to read and write data using the MongoTemplate, the core store interaction API.
 The chapter will conclude by discussing the implementation of a data access layer for our domain using the Spring Data repository abstraction.
 MongoDB in a Nutshell MongoDB is a document data store.
+Documents are structured data—basically mapsthat can have primitive values, collection values, or even nested documents as values for a given key.
 MongoDB stores these documents in BSON, a binary derivative of JSON.
 Thus, a sample document would look something like Example 6-1
 As you can see, we have primitive String values for firstname and lastname.
@@ -801,7 +814,6 @@ Also, we hand the plain EmailAddress object to the criteria to build the equalit
 It will also be transformed by the mapping subsystem before the query is actually applied.
 Thus, the DBObject representing the query will look something like Example 6-33
 Mongo Repositories As just described, the MongoOperations interface provides a decent API to implement a repository manually.
-However, we can simplify this process even further using the Spring Data repository abstraction, introduced in Chapter 2
 We’ll walk through the repository interface declarations of the sample project and see how invocations to the repository methods get handled.
 Infrastructure Setup We activate the repository mechanism by using either a JavaConfig annotation (Example 6-34) or an XML namespace element.
 It will set up the repository infrastructure to scan for repository interfaces in the package of the annotated configuration class by default.
@@ -815,6 +827,7 @@ The first thing to notice is that ProductRepository extends CrudRepository inste
 This causes the CRUD methods to be pulled into our repository definition.
 The difference from the former method is that this one additionally qualifies the.
 This will cause the description parameter handed into the method call to be massaged into a regular expression to match descriptions that contain the given String as a substring.
+The second thing worth noting here is the use of the pagination API (introduced in “Pagination and Sorting” on page 18)
 Clients can hand in a Pageable to the method to restrict the results returned to a certain page with a given number and page size, as shown in Example 6-38
 The returned Page then contains the results plus some metainformation, such as about how many pages there are in total.
 As expected, the iPod dock is returned from the method call.
@@ -825,9 +838,11 @@ The query method declared here is just a straightforward one using the query der
 What has changed compared to the previous repository interfaces is the base interface we extend from.
 Mongo Querydsl Integration Now that we’ve seen how to add query methods to repository interfaces, let’s have a look at how we can use Querydsl to dynamically create predicates for entities and execute them via the repository abstraction.
 Chapter 3 provides a general introduction to what Querydsl actually is and how it works.
+If you’ve read “Repository Querydsl Integration” on page 51, you’ll see how remarkably similar the setup and usage of the API is, although we query a totally different store.
 To generate the metamodel classes, we have configured the Querydsl Maven plug-in in our pom.xml file, as shown in Example 6-41
 The only difference from the JPA approach is that we configure a MongoAnnotationPro cessor.
 It will configure the APT processor to inspect the annotations provided by the Spring Data MongoDB mapping subsystem to generate the metamodel correctly.
+Beyond that, we provide integration to let Querydsl consider our mappings—and thus potentially registered custom converters—when creating the MongoDB queries.
 Again, the code is pretty much a 1:1 copy of the JPA code.
 Graph Databases This chapter introduces an interesting kind of NoSQL store: graph databases.
 Graph databases are clearly post-relational data stores, because they evolve several database concepts much further while keeping other attributes.
@@ -837,6 +852,7 @@ In property graphs, both nodes and relationships can hold arbitrary key/value pa
 Graphs form an intricate network of those elements and encourage us to model domain and real-world data close to the original structure.
 Unlike relational databases, which rely on fixed schemas to model data, graph databases are schema-free and put no constraints onto the data structure.
 Relationships can be added and changed easily, because they are not part of a schema but rather part of the actual data.
+We can attribute the high performance of graph databases to the fact that moving the cost of relating entities (joins) to the insertion time—by materializing the relationships as first-level citizens of the data structure—allows for constant time traversal from one entity (node) to another.
 So, regardless of the dataset size, the time for a given traversal across the graph is always determined by the number of hops in that traversal, not the number of nodes and relationships in the graph as a whole.
 In other database models, the cost of finding connections between two (or more) entities occurs on each query instead.
 Thanks to this, a single graph can store many different domains, creating interesting connections between entities from all of them.
@@ -851,6 +867,7 @@ With the declarative Cypher query language, Neo4j makes it easier to get started
 Developers as well as operations and business users can run ad-hoc queries on the graph for a variety of use cases.
 Cypher draws its inspiration from a variety of sources: SQL, SparQL, ASCIIArt, and functional programming.
 The core concept is that the user describes the patterns to be matched in the graph and supplies starting points.
+The database engine then efficiently matches the given patterns across the graph, enabling users to define sophisticated queries like “find me all the customers who have friends who have recently bought similar products.” Like other query languages, it supports filtering, grouping, and paging.
 The Cypher statement in Example 7-2 shows a typical use case.
 It starts by looking up a customer from an index and then following relationships via his orders to the products he ordered.
 Filtering out older orders, the query then calculates the top 20 largest volumes he purchased by product.
@@ -868,6 +885,7 @@ It was developed in close collaboration with VMware and Neo Technology and offer
 It intends to leverage the well-known annotation-based programming models with a tight integration in the Spring Framework ecosystem.
 As in JPA, a few annotations on POJO (plain old Java object) entities and their fields provide the necessary metainformation for Spring Data Neo4j to map Java objects into graph elements.
 Spring Data Neo4j allows us to store the type information (hierarchy) of the entities for performing advanced operations and type conversions.
+Like the other Spring Data projects, Spring Data Neo4j is configured via two XML namespace elements—for general setup and repository configuration.
 Two different mapping modes support the custom needs of developers.
 In the simple mapping mode, the graph data is copied into domain objects, being detached from the graph.
 The more advanced mapping mode leverages AspectJ to provide a live, connected representation of the graph elements bound to the domain objects.
@@ -882,6 +900,7 @@ Customers are stored as nodes; their unique key is the emailAddress.
 Here we meet the first references to other objects (in this case, Address), which are represented as relationships in the graph.
 So fields of single references or collections of references always cause relationships to be created when updated, or navigated when accessed.
 If we do not provide the type, it defaults to the field name.
+Example 7-7 shows how the country reference field doesn’t have to be annotated—it just uses the field name as the relationship type for the outgoing relationship.
 The customers connected to this address are not represented in the mapping because they are not necessary for our use case.
 The Product has a unique name and shows the use of a nonprimitive field; the price will be converted to a primitive representation by Springs’ converter facilities.
 You can register your own converters for custom types (e.g., value objects) in your application context.
@@ -918,13 +937,17 @@ Now that we have created the domain classes, it’s time to store their data in 
 Persisting Domain Objects with Spring Data Neo4j Before we can start storing domain objects in the graph, we should set up the project.
 The minimal Spring configuration is a single namespace config that also sets up the graph database (Example 7-13)
 This even allows you to use an in-memory Impermanent GraphDatabase for testing.
+Both the domain classes, as well as the dataset generation and integration tests documenting the use cases, can be found in the GitHub repository for the book (see “The Sample Code” on page 6 for details)
 That depends on mapped IDs and possibly unique field declarations, which would be used to identify existing entities in the graph with which we're merging.
 The entities shown here use some convenience methods for construction to provide a more readable setup (Figure 7-4)
 It adds the usual benefits, like transaction handling and exception translation, but more importantly, automatic mapping from and to domain entities.
 Most of the other mechanisms deal with more advanced ways to look up interesting things in the graph—by issuing index queries with lookup, executing Cypher statements with query(), or running a traversal with tra verse()
+Combining Graph and Repository Power With all that set up, we can now look into how repositories integrate with Spring Data Neo4j and how they are used in a “graphy” way.
 Spring Data Commons repositories (see Chapter 2) make it easy to keep persistence access related code (or rather noncode) in one place and allow us to write as little of it as possible to satisfy the specific use cases.
 The basic setup for repositories is just another line of the namespace configuration, as shown in Example 7-16
 Each domain class will be bound to an individual, concrete repository interface (see Example 7-17)
+To understand how this mapping works, you need to be aware of the expressive syntax of Cypher, which is explained in the next sidebar, “Cypher Query Language”
+But often data operations are better expressed declaratively by asking “what” than by specifying “how.” That’s why the Cypher query language was developed.
 It builds upon matching patterns in a graph that are bound to specified nodes and relationships and allows further filtering and paging of the results.
 Cypher has data manipulation features that allow us to modify the graph.
 Cypher query parts can be chained (piped) to enable more advanced and powerful graph operations.
@@ -953,6 +976,7 @@ They leverage the existing mapping information about the targeted domain entity 
 Each of the property expressions either points to a property name of the current type or to another, related domain entity type and one of its properties.
 If that is not the case, the repository creation fails early during ApplicationContext startup.
 For all valid finder methods, the repository constructs an appropriate query by using the mapping information about domain entities.
+Many aspects—like in-graph type representation, indexing information, field types, relationship types, and directionsare taken into account during the query construction.
 This is also the point at which appropriate escaping takes place.
 This example demonstrates the use of index lookups for indexed attributes and the simple property comparison.
 If the method name refers to properties on other, related entities, then the query builder examines those entities for inclusion in the generated query.
@@ -986,6 +1010,7 @@ The Category forms a nested composite structure with parent-child relationships.
 Each category has a unique name and a set of children.
 The category objects are used for creating the structure and relating products to categories.
 For leveraging the connectedness of the products, a custom (annotated) query navigates from a start (or root) category, via the next zero through five relationships, to the products connected to this subtree.
+Leverage Similar Interests (Collaborative Filtering) Collaborative filtering, demonstrated in Example 7-23, relies on the assumption that we can find other “people” who are very similar/comparable to the current user in their interests or behavior.
 The more information the algorithm gets, the better the results.
 In the next step, the products that those similar people also bought or liked are taken into consideration (measured by the number of their mentions and/or their rating scores) optionally excluding the items that the user has already bought, owns, or is not interested in.
 Recommendations Generally in all domains, but particularly in the ecommerce domain, making recommendations of interesting products for customers is key to leveraging the collected information on product reviews and buying behavior.
@@ -1017,7 +1042,6 @@ Due to the immediate live reads from the graph database, the advanced mapping mo
 You can easily use the highperformance, embeddable Java database with any JVM language, preferably with that language's individual idiomatic APIs/drivers.
 Integrating the embedded database is as simple as adding the Neo4j libraries to your dependencies.
 The Neo4j server module is a simple download or operating system package that is intended to be run as an independent service.
-Access to the server is provided via a web interface for monitoring, operations,
 A comprehensive REST API offers programmatic access to the database functionality.
 Please note that with the current implementation, not all calls are optimally transferred over the network API, so the server interaction for individual operations will be affected by network latency and bandwidth.
 It is recommended to use remotely executed queries as much as possible to reduce that impact.
@@ -1043,6 +1067,8 @@ Setting Up Redis To start working with Redis, you’ll want to have a local inst
 Depending on your platform, the installation process ranges from easy to literally one command.
 The easiest installation process, shown in Example 8-1, is on Mac OS X using Homebrew.
 Other Unix systems are natively supported if you build the server from source.
+Build instructions are on the Redis website, though they are identical to most other *NIX packages we’ve built—namely, unzip it, cd into that directory, and type make.
+The download page for Redis also lists a couple of unofficial efforts to port Redis to the Win32/64 platform, though those are not considered production quality.
 For the purposes of this chapter, we’ll stick to the *NIX version, where Redis is most at home.
 Just so we can get a server running quickly and see some results, let’s run the server in a terminal, in the foreground.
 This is good for debugging because it logs directly to the console to let you know what the server is doing internally.
@@ -1071,6 +1097,7 @@ To influence how keys and values are serialized and deserialized, Spring Data Re
 There is already a built-in RedisSerializer for Strings, so to use Strings for keys and Longs for values, you would create a simple serializer for Longs, as shown in Example 8-7
 To use these serializers to make it easy to do type conversion when working with Redis, set the keySerializer and valueSerializer properties of the template like in the snippet of JavaConfig code shown in Example 8-8
 You’re now ready to start storing counts in Redis without worrying about byte[]-toLong conversion.
+Since Redis supports such a large number of operations—which makes for a lot of methods on the helper classes—the methods for getting and setting values are defined in the various RedisOperations interfaces.
 You can access each of these interfaces by calling the appropriate opsForX method on the RedisTemplate.
 Since we’re only storing discrete values in this example, we’ll be using the ValueOperations template (Example 8-9)
 Object Mapping It’s great to be able to store simple values like counters and strings in Redis, but it’s often necessary to store richer sets of related information.
@@ -1138,7 +1165,6 @@ It also was opinionated in terms of the data access layer.
 Roo prescribed an active record data access style where each entity provides its finder, save, and delete methods.
 Roo now allows you to choose between the default active record style and a repository-based persistence layer.
 If you choose the repository approach, you have a choice between JPA and MongoDB as the persistence providers.
-The actual repository support that Roo uses is the one provided by Spring Data, which we have already seen in Chapter 2
 In addition to an optional repository layer, Roo now also lets you define a service layer on top of either the active record style or repository style persistence layer.
 Quick Start You can use Roo either as a command-line tool or within an IDE, like the free Spring Tool Suite, that has built-in Roo support.
 Another IDE that has support for Roo is IntelliJ IDEA, but we won’t be covering the support here.
@@ -1157,6 +1183,8 @@ Once your project is created, type 'hint' and ENTER for the next suggestion.
 We are now ready to create a project and start developing our application.
 At any time, you can enter hint, and Roo will respond with some instruction on what to do next based on the current state of your application development.
 To cut down on typing, Roo will attempt to complete the commands you enter whenever you hit the Tab key.
+This opens a “Create a new Roo Project” dialog screen, as shown in Figure 9-3
+Just fill in the “Project name” and “Top level package name,” and then select WAR as the packaging.
 Click Next, and then click Finish on the next screen.
 The project should now be created, and you should also see the Roo shell window, as shown in Figure 9-4
 We will start with a customer service application based on the same domain model that we have seen in earlier chapters.
@@ -1164,6 +1192,7 @@ We will create a Customer class and an associated Address class, link them toget
 Since Roo’s repository support supports both JPA and MongoDB, using the Spring Data repository support, we will create one of each kind of application.
 As you will see, they are almost identical, but there are a couple of differences that we will highlight.
 Creating the Project If you are using Spring Tool Suite, then just follow the aforementioned instructions to create a new Spring Roo project.
+On the “Create a new Roo Project” dialog screen, provide the following settings:
 You now have created a new project, and we are ready to start developing the application.
 From here on, the actions will be the same whether you are using the Roo shell from the command line or inside the Spring Tool Suite.
 Setting Up JPA Persistence Setting up the JPA persistence configuration consists of selecting a JPA provider and a database.
@@ -1189,6 +1218,7 @@ Our application is now complete, and we can add some addresses and then a custom
 We just won’t have the option of using the active record style for the persistence layer; we can only use the repositories.
 Other than this difference, the process is very much the same as for a JPA solution.
 Creating the Project If you are using Spring Tool Suite, then just follow the aforementioned instructions to create a new Spring Roo project.
+On the “Create a new Roo Project” dialog screen, provide the following settings:
 Change to this new directory and then start the Roo Shell as previously explained.
 If you wish, you can provide a host, port, username, and password, but for a default local MongoDB installation the defaults work well.
 Creating the Entities When creating the entities, we don’t have the option of using the active record style, so there is no need to provide an --activeRecord parameter to opt out of it.
@@ -1208,6 +1238,7 @@ Our second example application is now complete, and we can add some addresses an
 When you are working with the Spring Data repository abstraction (see Chapter 2 for details), the repository interface managing an entity becomes the central point of access for it.
 Using the Spring Data REST repository exporter project, you can now export (as the name suggests) these managed entities via a REST web service to easily interact with the data.
 The exporter mechanism will transparently expose a resource per repository, map CRUD operations onto HTTP methods for that resource, and provide a means to execute query methods exposed on the repository interface.
+What Is REST? Representational State Transfer (REST) is an architectural style initially described by Roy Fielding in his dissertation analyzing styles of network-based software architectures [Fielding00]
 It is a generalization of the principles behind the HTTP protocol, from which it derives the following core concepts:
 Resources Systems expose resources to other systems: an order, a customer, and so on.
 Verbs Each resource can be accessed and manipulated though a well-defined set of verbs.
@@ -1270,9 +1301,9 @@ The server returns a 204 No Content to indicate that the request was successful.
 Triggering another GET request to the product’s URI returns the updated content, as shown in Example 10-7
 The JSON representation of the collection resource also contained a links attribute, which points us to a generic resource that will allow us to explore the query methods exposed by the repository.
 The convention is using the relation type of the collection resource (in our case, product) extended by .search.
+Let’s follow this link and see what searches we can actually execute—see Example 10-8
 As you can see, the repository exporter exposes a resource for each of the query methods declared in the ProductRepository interface.
 The relation type pattern is again based on the relation type of the resource extended by the query method name, but we can customize it using @RestResource on the query method.
-Since the JVM unfortunately doesn’t support deriving the parameter names from interface methods, we have to annotate the method parameters of our query methods with @Param and use named parameters in our manual query method definition for findByAttributeAnd Value(...)
 Let’s search for products that have a connector plug, as shown in Example 10-10
 Accessing Customers Now that we’ve seen how to navigate through the products available and how to execute the finder methods exposed by the repository interface, let’s switch gears and have a look at the customers registered in the system.
 Let’s follow that link in Example 10-11 and see what customers we find.
@@ -1330,6 +1361,7 @@ Hadoop MapReduce is responsible for providing the programming model and runtime 
 The colocation of code and data on the same physical node is one of the key techniques used to minimize the time required to process large amounts (up to petabytes) of data.
 While Apache Hadoop originated out of a need to implement a web search engine, it is a general-purpose platform that can be used for a wide variety of large-scale data processing tasks.
 The combination of open source software, low cost of commodity servers, and the real-world benefits that result from analyzing large amounts of new unstructured data sources (e.g., tweets, logfiles, telemetry) has positioned Hadoop to be a de facto standard for enterprises looking to implement big data solutions.
+In this chapter, we start by introducing the “Hello world” application of Hadoop, wordcount.
 The wordcount application is written using the Hadoop MapReduce API.
 It reads text files as input and creates an output file with the total count of each word it has read.
 We will first show how a Hadoop application is traditionally developed and executed using command-line tools and then show how this application can be developed as a standard Java application and configured using dependency injection.
@@ -1340,7 +1372,6 @@ While outside the scope of this book, creating and managing a Hadoop cluster tak
 The good news is that many companies are actively working on this front, and offerings such as Amazon’s Elastic Map Reduce let you get your feet wet using Hadoop without significant upfront costs.
 The second challenge is that, very often, developing a Hadoop application does not consist solely of writing a single MapReduce, Pig, or Hive job, but rather it requires you to develop a complete data processing pipeline.
 Collecting the raw data from many remote machines or devices.
-Loading data into HDFS, often a continuous process from diverse sources (e.g.,
 Data cleansing and transformation of the raw data in order to prepare it for analysis.
 Selecting a framework and programming model to write data analysis jobs.
 Coordinating the execution of many data analysis jobs (e.g., workflow)
@@ -1376,6 +1407,7 @@ The Hadoop command-line argument dfs lets you work with HDFS and in turn is foll
 The command to copy files from the local filesystem into HDFS is copyFromLocal, as shown in Example 11-2
 To check if the files were stored in HDFS, use the ls command, as shown in Example 11-3
 To run the wordcount application, we use the example jar file that ships as part of the Hadoop distribution.
+The arguments for the application is the name of the application to run—in this case, wordcount—followed by the HDFS input directory and output directory, as shown in Example 11-4
 You can view the output in HDFS using the command in Example 11-5
 Depending on how many input files you have, there may be more than one output file.
 By default, output filenames follow the scheme shown in Example 11-5 with the last set of numbers incrementing for each additional file that is output.
@@ -1406,9 +1438,11 @@ This is required because the Hadoop command line sets environment variables reco
 The webhdfs scheme is very useful because it provides an HTTPbased protocol to communicate with HDFS that does not require the client (our application) and the HDFS server to use the exact same version (down to the minor point release) of the HDFS libraries.
 Hello World Using Spring for Apache Hadoop If you have been reading straight through this chapter, you may well be wondering, what does all this have to do with Spring? In this section, we start to show the features that Spring for Apache Hadoop provides to help you structure, configure, and run Hadoop applications.
 The first feature we will examine is how to use Spring to configure and run Hadoop jobs so that you can externalize application parameters in separate configuration files.
+This lets your application easily adapt to running in different environments—such as development, QA, and production—without requiring any code changes.
 Using Spring to configure and run Hadoop jobs lets you take advantage of Spring’s rich application configuration features, such as property placeholders, in the same way you use Spring to configure and run other applications.
 The additional effort to set up a Spring application context might not seem worth it for such a simple application as wordcount, but it is rare that you’ll build such simple applications.
 Applications will typically involve chaining together several HDFS operations and MapReduce jobs (or equivalent Pig and Hive scripts)
+Also, as mentioned in “Challenges Developing with Hadoop” on page 176, there are many other development activities that you need to consider in creating a complete data pipeline solution.
 Using Spring for Apache Hadoop as a basis for developing Hadoop applications gives us a foundation to build upon and to reuse components as our application complexity grows.
 Let’s start by running the version of WordCount developed in the previous section inside of the Spring container.
 We use the XML namespace for Hadoop to declare the location.
@@ -1426,7 +1460,6 @@ Be sure to remove the output files in HDFS that were created from running wordco
 Now that the Hadoop job is a Spring-managed object, it can be injected into any other object managed by Spring.
 For example, if we want to have the wordcount job launched in a web application, we can inject it into a Spring MVC controller, as shown in Example 11-17
 This file is located in the src/main/resources directory so that it is made available on the classpath by the build script.
-To run the example on the same machine, we change only the name of the output path, as shown in Chapter 11
 In a real QA environment, the location of the HDFS cluster, as well as the HDFS input and output paths, would be different.
 To run the application from the command line for the QA environment, run the commands in Example 11-22
 Notice how the shell environment variable (ENV) is set to qa.
@@ -1466,6 +1499,7 @@ In this section, we will show how you can use Quartz and Spring’s TaskSchedule
 Scheduling MapReduce Jobs with a TaskScheduler In this example, we will add task scheduling functionality to the application developed in the previous section, which executed an HDFS script and the wordcount MapReduce job.
 Spring’s TaskScheduler and Trigger interfaces provides the basis for scheduling tasks that will run at some point in the future.
 We can use an XML namespace, in addition to an annotation-based programming model, to configure tasks to be scheduled with a trigger.
+In the configuration shown in Example 11-32, we show the use of an XML namespace that will invoke a method on any Spring-managed object—in this case, the call method on the JobRunner instance.
 The trigger is a cron expression that will fire every 30 seconds starting on the third second of the minute.
 The default value of JobRunner's run-at-startup element is false so in this configuration the HDFS scripts and Hadoop jobs will not execute when the application starts.
 Using this configuration allows the scheduler to be the only component in the system that is responsible for executing the scripts and jobs.
@@ -1508,7 +1542,6 @@ You can also put the HiveQL commands in a file and execute that from the command
 If you want to run a standalone server for use in the sample application, start Hive using the command line:
 Another alternative, useful for development or to avoid having to run another server, is to bootstrap the Hive server in the same Java process that will run Hive client applications.
 The Hadoop namespace makes embedding the Hive server a one-line configuration task, as shown in Example 12-3
-By default, the hostname is localhost and the port is 10000
 You can change those values using the host and port attributes.
 When the Applica tionContext is created, the Hive server is started automatically.
 If you wish to override this behavior, set the auto-startup element to false.
@@ -1554,6 +1587,7 @@ Hadoop also lets us cheaply store the raw data so that we can redo the analysis 
 Using Pig Pig provides an alternative to writing MapReduce applications to analyze data stored in HDFS.
 Pig applications are written in the Pig Latin language, a high-level data processing language that is more in the spirit of using sed or awk than the SQL-like language that Hive provides.
 A Pig Latin script describes a sequence of steps, where each step performs a transformation on items of data in a collection.
+A simple sequence of steps would be to load, filter, and save data, but more complex operation—such as joining two data items based on common values—are also available.
 Pig can be extended by user-defined functions (UDFs) that encapsulate commonly used functionality such as algorithms or support for reading and writing well-known data formats such as Apache HTTPD logfiles.
 A PigServer is responsible for translating Pig Latin scripts into multiple jobs based on the MapReduce API and executing them.
 A common way to start developing a Pig Latin script is to use the interactive console that ships with Pig, called Grunt.
@@ -1590,7 +1624,6 @@ To run this script in the interactive console, use the run command, as shown in 
 Or, to run the script directly in the command line, see Example 12-22
 Running a PigServer Now we’ll shift to using a more structured and programmatic way of running Pig scripts.
 Spring for Apache Hadoop makes it easy to declaratively configure and create a PigServer in a Java application, much like the Grunt shell does under the covers.
-Running a PigServer inside the Spring container will let you parameterize and externalize properties that control what Hadoop cluster to execute your scripts against,
 Spring’s XML namespace for Hadoop makes it very easy to create and configure a PigServer.
 As Example 12-23 demonstrates, this configuration is done in the same way as the rest of your application configuration.
 The location of the optional Pig initialization script can be any Spring resource URL, located on the filesystem, classpath, HDFS, or HTTP.
@@ -1620,6 +1653,7 @@ The service activator class, PasswordSer vice, is shown in Example 12-33
 The process method’s argument will be taken from the header of the Spring Integration message.
 The value of the method argument is the value associated with the key hdfs_path in the message header.
 The examples in this section show that there is a steady progression from creating a simple Pig-based application that runs a script, to executing scripts with runtime parameter substitution, to executing scripts within a Spring Integration data pipeline.
+The section “Hadoop Workflows” on page 238 will show you how to orchestrate the execution of a Pig script inside a larger collection of steps using Spring Batch.
 Apache Logfile Analysis Using Pig Next, we will perform a simple analysis on an Apache HTTPD logfile and show the use of a custom loader for Apache logfiles.
 As you can see in Example 12-34, the structure of the configuration to run this analysis is similar to the one used previously to analyze the password file.
 The Pig script generates a file that contains the cumulative number of hits for each URL and is intended to be a starting point for a more comprehensive analysis.
@@ -1630,7 +1664,6 @@ To parse the Apache HTTPD logfiles, we will use a custom loader provided as part
 It is distributed as source code as part of the Piggybank project.
 The compiled Piggybank jar file is provided in the sample application’s lib directory.
 It models data as tables, which are then stored in HDFS and can scale to support tables with billions of rows and millions of columns.
-In the case of HBase, it is Google’s BigTable technology, which was described in a research paper in 2006
 Unlike MapReduce, HBase provides near real-time key-based access to data, and therefore can be used in interactive, non-batchbased applications.
 The HBase data model consists of a table identified by a unique key with associated columns.
 These columns are grouped together into column families so that data that is often accessed together can be stored together on disk to increase I/O performance.
@@ -1647,6 +1680,7 @@ Example 12-37 demonstrates creating a user table with two column families, inser
 The two column families created are named cfInfo and cfStatus.
 The key names, called qualifiers in HBase, that are stored in the cfInfo column family are the username, email, and password.
 The cfStatus column family stores other information that we do not frequently need to access, along with the data stored in the cfInfo column family.
+As an example, we place the status of the email address validation process in the cfSta tus column family, but other data—such as whether the user has participated in any online surveys—is also a candidate for inclusion.
 The deleteall command deletes all data for the specified table and row.
 The Java client is what we will use in this section but REST, Thrift, and Avro clients are also available.
 The HTable class is the main way in Java to interact with HBase.
@@ -1660,6 +1694,8 @@ Similar to JdbcTem plate, it provides several callback interfaces, such as Table
 The TableCallback callback interface provides the foundation for the functionality of HBaseTemplate.
 It performs the table lookup, applies configuration settings (such as when to flush data), closes the table, and translates any thrown exceptions into Spring’s DAO exception hierarchy.
 The RowMapper callback interface is used to map one row from the HBase query ResultScanner into a POJO.
+HBaseTemplate has several overloaded find methods that take additional criteria and that automatically loop over HBase’s ResultScanner “result set” object, converting each row to a POJO, and return a list of mapped objects.
+For more control over the mapping process—for example, when one row does not directly map onto one POJO—the ResultsExtractor interface hands you the ResultScanner object so you can perform the iterative result set processing yourself.
 To create and configure the HBaseTemplate, create a HBaseConfiguration object and pass it to HBaseTemplate.
 Configuring a HBaseTemplate using Spring’s Hadoop XML namespace is demonstrated in Example 12-39, but it is also easy to achieve programmatically in pure Java code.
 In this example, we used an anonymous inner class to implement the TableCallback and RowMapper interfaces, but creating standalone classes is a common implementation strategy that lets you reuse mapping logic across various parts of your application.
@@ -1701,6 +1737,7 @@ The filter selects only high-value trades that are subsequently placed into a Ge
 We can define this processing pipeline declaratively using XML or Scala, but while most of the application can be declaratively configured, any components that you may need to write are POJOs that can be easily unit-tested.
 In addition to endpoints, channels, and messages, another key component of Spring Integration is its management functionality.
 You can easily expose all components in a data pipeline via JMX, where you can perform operations such as stopping and starting adapters.
+The control bus component allows you to send in small fragments of code—for example, using Groovy—that can take complex actions to modify the state.
 The control bus is then connected to a middleware adapter so it can receive code to execute; HTTP and message-oriented middleware adapters are common choices.
 We will not be able to dive into the inner workings of Spring Integration in great depth, nor cover every feature of the adapters that are used, but you should end up with a good feel for how you can use Spring Integration in conjunction with Spring for Apache Hadoop to create very rich data pipeline solutions.
 The example applications developed here contain some custom code for working with HDFS that is planned to be incorporated into the Spring Integration project.
@@ -1739,7 +1776,6 @@ Next, we will use the TCP (Transmission Control Protocol) and UDP (User Datagram
 The configuration that sets up a TCP-syslog-to-HDFS processing chain is shown in Example 13-8
 The relevant configuration parameters for the pipeline are externalized in the stream ing.properties file, as shown in Example 13-9
 The diagram for this data pipeline is shown in Figure 13-5
-This configuration will create a connection factory that listens for an incoming TCP connection on port 1514
 The serializer segments the incoming byte stream based on the newline character in order to break up the incoming syslog stream into events.
 Note that this lower-level serializer configuration will be encapsulated in a syslog XML namespace in the future so as to simplify the configuration.
 The inbound channel adapter takes the syslog message off the TCP data stream and parses it into a byte array, which is set as the payload of the incoming message.
@@ -1792,8 +1828,10 @@ The Spring Framework provides basic scheduling functionality as well as integrat
 Other options to launch a job are through a RESTful administration API, a web application, or programmatically in response to an external event.
 In the latter case, using the Spring Integration project and its many channel adapters for communicating with external systems is a common choice.
 You can read more about combining Spring Integration and Spring Batch in the book Spring Integration in Action [Fisher12].For additional information on Spring Batch, consult the project website, which contains links to extensive reference documentation, sample applications, and links to several books.
+The processing performed in a step is broken down into three stages—an ItemReader, ItemProcessor, and ItemWriter—as shown in Figure 13-8
 One of the primary use cases for Spring Batch is to process the contents of large files and load the data into a relational database.
 In this case, a FlatFileItemReader and a JdbcItemWriter are used along with custom logic either configured declaratively or coded directly in an ItemProcessor.
+To increase the performance, the Step is “chunked,” meaning that chunks of data, say 100 rows, are aggregated together and then passed to the ItemWriter.
 This allows us to efficiently process a group of records by using the batch APIs available in many databases to insert data.
 A snippet of configuration using the Spring Batch XML namespace that reads from a file and writes to a database is shown in Example 13-19
 In subsequent sections, we will dive into the configuration of readers, writers, and processors.
@@ -1806,6 +1844,7 @@ Another execution model that will be developed in the future is to run a Spring 
 Both models have their advantages, and performance isn’t the only criteria to decide which execution model to use.
 Executing a batch job outside of the Hadoop cluster often enables easier data movement between different systems and multiple Hadoop clusters.
 In the following sections, we will use the Spring Batch framework to process and load data into HDFS from a relational database.
+In the section “Exporting Data from HDFS” on page 243, we will export data from HDFS into a relational database and the MongoDB document database.
 Processing and Loading Data from a Database To process and load data from a relational database to HDFS, we need to configure a Spring Batch tasklet with a JdbcItemReader and a HdfsTextItemWriter.
 The domain for the sample application is an online store that needs to maintain a catalog of the products it sells.
 We have modified the example only slightly to write to HDFS instead of a flat file system.
@@ -1835,8 +1874,10 @@ Analysis logic is usually broken up into several steps that are composed togethe
 In the previous MapReduce and Apache weblog examples, we used JobRunners, HiveRunners, and PigRunners to execute HDFS operations and MapReduce, Hive, or Pig jobs, but that is not a completely satisfactory solution.
 As the number of steps in an analysis chain increases, the flow of execution is hard to visualize and not naturally structured as a graph structure in the XML namespace.
 There is also no tracking of the execution steps in the analysis chain when we’re using the various Runner classes.
+This means that if one step in the chain fails, we must restart it (manually) from the beginning, making the overall “wall clock” time for the analysis task significantly larger as well as inefficient.
 In this section, we will introduce extensions to the Spring Batch project that will provide structure for chaining together multiple Hadoop operations into what are loosely called workflows.
 Spring Batch Support for Hadoop Because Hadoop is a batch-oriented system, Spring Batch’s domain concepts and workflow provide a strong foundation to structure Hadoop-based analysis tasks.
+To make Spring Batch “Hadoop aware,” we take advantage of the fact that the processing actions that compose a Spring Batch Step are pluggable.
 The plug-in point for a Step is known as a Tasklet.
 This allows for creating workflows as shown in Figure 13-9
 There is support in the Eclipse-based Spring Tool Suite (STS) to support the visual authoring of Spring Batch jobs.
@@ -1934,6 +1975,7 @@ The data is written to the Splunk source named twitter and uses the default inde
 You can also set the index attribute to specify that data should be written to the nondefault index.
 To run the example and see who is the most popular candidate (or pseudo-candidate), follow the directions in the directory splunk/tweets.
 GemFire in a Nutshell GemFire provides an in-memory data grid that offers extremely high throughput, low latency data access, and scalability.
+Tools to aid system administrators in managing and configuring the GemFire distributed system.
 GemFire may be configured to support a number of distributed system topologies and is completely integrated with the Spring Framework.
 Figure 14-1 shows a typical client server configuration for a production LAN.
 The locator acts as a broker for the distributed system to support discovery of new member nodes.
@@ -1944,6 +1986,7 @@ Since a locator is a single point of failure, two instances are required for red
 Note that the book’s code samples are configured very simply as a single process with an embedded cache, suitable for development and integration testing.
 In a client server scenario, the application process uses a connection pool (Figure 14-2) to manage connections between the client cache and the servers.
 The connection pool manages network connections, allocates threads, and provides a number of tuning options to balance resource usage and performance.
+The pool is typically configured with the address of the locator(s) [not shown in Figure 14-2]
 Once the locator provides a server connection, the client communicates directly with the server.
 If the primary server becomes unavailable, the pool will acquire a connection to an alternate server if one is available.
 Caches and Regions Conceptually, a cache is a singleton object that provides access to a GemFire member and offers a number of configuration options for memory tuning, network communications, and other features.
@@ -2020,8 +2063,9 @@ For example, you can configure all regions to back up data to a local disk store
 Additionally, you may configure regions to synchronize selected entries over a WAN gateway to distribute data over a wide geographic area.
 You may also register Cache Listeners, CacheLoaders, and CacheWriters to handle region events.
 Each of these interfaces is used to implement a callback that gets invoked accordingly.
-A CacheLis tener is a generic event handler invoked whenever an entry is created, updated,
 For example, you can write a simple CacheListener to log cache events, which is particularly useful in a distributed environment (see Example 14-5)
+A Cache Loader is invoked whenever there is a cache miss (i.e., the requested entry does not exist), allowing you to “read through” to a database or other system resource.
+A Cache Writer is invoked whenever an entry is updated or created to provide “write through” or “write behind” capabilities.
 Other options include expiration, the maximum time a region or an entry is held in the cache, and eviction, policies that determine which items are removed from the cache when the defined memory limit or the maximum number of entries is reached.
 Evicted entries may optionally be stored in a disk overflow.
 You can configure partitioned regions to limit the amount of local memory allocated to each partition node, define the number of buckets used, and more.
@@ -2061,7 +2105,6 @@ Spring Data GemFire is planning a concurrent release that will support all new f
 Disk Store Configuration GemFire allows you to configure disk stores for persistent backup of regions, disk overflow for evicted cache entries, WAN gateways, and more.
 Because a disk store may serve multiple purposes, it is defined as a top-level element in the namespace and may be referenced by components that use it.
 For asynchronous writes, entries are held in a queue, which is also configurable.
-Other options control scheduling (e.g., the maximum time that can elapse before a disk write.
 In Example 14-10, an overflow disk store is configured to store evicted entries.
 The region is configured for eviction to occur if the total memory size exceeds 2 GB.
 A custom ObjectSizer is used to estimate memory allocated per entry.
@@ -2069,13 +2112,14 @@ Data Access with GemfireTemplate Spring Data GemFire provides a template class f
 The GemfireTemplate wraps a single region and provides simple data access and query methods as well as a callback interface to access region operations.
 Example 14-11 is a simple demonstration of a data access object wired with the Gem fireTemplate.
 This method requires only a boolean predicate defining the query criteria.
-The template also implements find(...) and findU nique(...) methods, which accept parameterized query strings and associated parameters and hide GemFire’s underlying QueryService API.
+The body of the query, SELECT * from [region name] WHERE..., is assumed.
 We can configure the GemfireTemplate as a normal Spring bean, as shown in Example 14-12
 All the core repository features described in Chapter 2 are supported, with the exception of paging and sorting.
 By convention, the region name is the same as the simple class name; however, we can override this by setting the annotation value to the desired region name.
 This must correspond to the region name—that is, the value of id attribute or the name attribute, if provided, of the region element.
 Creating a Repository GemFire repositories support basic CRUD and query operations, which we define using Spring Data’s common method name query mapping mechanism.
 You can enable repository discovery using a dedicated gfe-data namespace, which is separate from the core gfe namespace.
+It is highly efficient, configurable, interoperable with GemFire client applications written in C# or C++, and supports object versioning.
 In general, objects must be serialized for operations requiring network transport and disk persistence.
 Cache entries, if already serialized, are stored in serialized form.
 A standalone cache with no persistent backup generally does not perform serialization.

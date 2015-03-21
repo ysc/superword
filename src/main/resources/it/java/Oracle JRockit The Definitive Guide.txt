@@ -19,6 +19,7 @@ It was natural, therefore, that he should lead the nascent tooling effort that w
 This was an extension of an early observation we had, that in order to scale the JRockit engineering team, we would have to invest in tooling to make support and debugging easier.
 I have the distinct pleasure of again welcoming the JRockit team into a new company as they joined my team at Oracle.
 The core of the JRockit team is still the same and they now have a place among the small group of the world's experts in virtual machines.
+Lagergren is still working on internals—now on JRockit Virtual Edition—and is as productive as ever.
 Under Hirt's leadership, Mission Control has evolved from an internal developer's tool into one of the JRockit features most appreciated by customers.
 With this combination of long experience and expertise in all layers of JRockit, it is difficult for me to imagine a better combination of authors to write this book.
 Therefore, as has been the case many times before, I'm proud to be associated in some small way with the JRockit team.
@@ -27,7 +28,6 @@ In his spare time he enjoys coding on his many pet projects, composing music, an
 Marcus has contributed JRockit related articles, whitepapers, tutorials, and webinars to the JRockit community, and has been an appreciated speaker at Oracle Open World, eWorld, BEAWorld, EclipseCon, Nordev, and Expert Zone Developer Summit.
 Marcus Hirt lives in Stockholm with his wife and two children.
 He majored in theoretical computer science and complexity theory since it was way more manly than, for example, database systems.
-He has a background in computer security but has worked with runtimes since 1999
 Marcus was one of the founding members of Appeal Virtual Machines, the company that developed the JRockit JVM.
 Marcus has been Team Lead and Architect for the JRockit code generators and has been involved in pretty much every other aspect of the JRockit JVM internals over the years.
 He has presented at various conferences, such as JavaOne, BEAWorld, and eWorld and holds several patents on runtime technology.
@@ -47,14 +47,13 @@ In high school, back in the pre-Internet era, the authors used to hang out at th
 Bulletin board friendship led to friendship in real life, as well as several collaborative software projects.
 Eventually, both authors went on to study at the Royal Institute of Technology (KTH) in Stockholm.
 More friends were made at KTH, and a course in database systems in our third year brought enough people with a similar mindset together to achieve critical mass.
-The decision was made to form a consulting business named Appeal Software Solutions (the acronym A.S.S.
 Several of us started to work alongside our studies and a certain percentage of our earnings was put away so that the business could be bootstrapped into a full-time occupation when everyone was out of university.
 Our long-term goal was always to work with product development, not consulting.
 However, at the time we did not know what the products would turn out to be.
 HotSpot, it seemed at the time, was the answer to the Java performance problem.
 Java back then was mostly an interpreted language and several static compilers for Java were on the market, producing code that ran faster than bytecode, but that usually violated the language semantics in some fundamental way.
 As this book will stress again and again, the potential power of an adaptive runtime approach exceeds, by far, that of any ahead-of-time solution, but is harder to achieve.
-The problem domain was indeed a lot smaller in 1998
+Since there were no news about HotSpot in 1998, youthful hubris caused us to ask ourselves "How hard can it be? Let's make a better adaptive VM, and faster!" We had the right academic backgrounds and thought we knew in which direction to go.
 The original plan was to have a proof of concept implementation of our own JVM finished in a year, while running the consulting business at the same time to finance the JVM development.
 The JVM was originally christened "RockIT", being both rock 'n' roll, rock solid and IT.
 Naturally, after a few false starts, we needed to bring in venture capital.
@@ -159,6 +158,7 @@ Reader feedback is important for us to develop titles that you really get the mo
 Customer support Now that you are the proud owner of a Packt book, we have a number of things to help you to get the most from your purchase.
 The downloadable files contain instructions on how to use them.
 Errata Although we have taken every care to ensure the accuracy of our content, mistakes do happen.
+If you find a mistake in one of our books—maybe a mistake in the text or the code—we would be grateful if you would report this to us.
 By doing so, you can save other readers from frustration and help us improve subsequent versions of this book.
 If you find any errata, please report them by visiting http://www.
 Once your errata are verified, your submission will be accepted and the errata will be uploaded on our website, or added to any list of existing errata, under the Errata section of that title.
@@ -261,9 +261,11 @@ The different categories of command-line flags that JRockit supports were explai
 Adaptive Code Generation This chapter covers code generation and code optimization in a JVM runtime environment, both as a general concept as well as taking a closer look at the JRockit code generation internals.
 We start by discussing the Java bytecode format, and how a JIT compiler works, making a case for the power of adaptive runtimes.
 Finally, the reader learns how to control code generation and optimization in JRockit.
+Where should optimizations be done—by the Java programmer, by the JVM, or at the bytecode level?
 Platform independence The main selling point for Java when it first came out, and the main contributor to its success as a mainstream language, was the write once/run everywhere concept.
 There is no need to recompile a Java application for different architectures, since all Java programs run on a platform-specific Java Virtual Machine that takes care of the final transition to native code.
 An application, such as a C++ program, that compiles to a platform-dependent format, has a lot less flexibility.
+The C++ compiler may compile and heavily optimize the program, for example for the x86 architecture.
 Then x86 will be the only architecture on which the program can run.
 We can't readily move the program, optimizations and all, to SPARC.
 It has to be recompiled, perhaps by a weaker compiler that doesn't optimize as well as for x86
@@ -457,6 +459,7 @@ If we assume that relatively rare events will occur frequently, in order to avoi
 However, if very frequent events are assumed to be rare, we will instead have to pay the penalty in increased code generation time for reoptimizations or invalidations.
 There is a fine area of middle ground here of what kinds of assumptions can be made.
 There is a significant art to finding this middle ground, and this is where a high performance runtime can make its impact.
+Given that we find this area—and JRockit is based on runtime information feedback in all relevant areas to make the best decisions—an adaptive runtime has the potential to outperform a static environment every time.
 Inside the JIT compiler While it is one thing to compile bytecodes to native code and have it executed within the JVM, getting it to run as efficiently as possible is a different story.
 This is where 40 years of research into compilers is useful, along with some insight into the Java language.
 This section discusses how a JIT compiler can turn bytecode into efficient native code.
@@ -477,6 +480,7 @@ Mapping a language that uses local variables to native registers is straightforw
 Java also defines plenty of virtual registers, local variables, but uses an evaluation stack anyway.
 It is the authors' opinion that this is less than optimal.
 One might argue that it is strange that the virtual stack is there at all, when we have plenty of virtual registers.
+Why isn't an add operation implemented simply as "x = y+z" instead of "push y, push z, add, pop x"
 Clearly the former is simpler, given that we have an ample supply of registers.
 It turns out that as one needs to compile bytecodes to a native code, the stack metaphor often adds extra complexity.
 In order to reconstruct an expression, such as add, the contents of the execution stack must be emulated at any given point in the program.
@@ -651,7 +655,6 @@ Even though the code for a more optimal version of the method may have been gene
 Our research has shown that in the real world, this matters little for achieving performance.
 The only places we have encountered performance penalties because of not doing on-stack replacement is in badly written micro benchmarks, such as when the main function contains all the computations in a very long loop.
 Moving the bulk of the benchmark into a separate function and calling this repeatedly from main will resolve this problem.
-We will thoroughly discuss the most important aspects of benchmarking in Chapter 5
 Bookkeeping The code generator in the JVM has to perform a number of necessary bookkeeping tasks for the runtime system.
 Object information for GC For various reasons, a garbage collector needs to keep track of which registers and stack frame locations contain Java objects at any given point in the program.
 This information is generated by the JIT compiler and is stored in a database in the runtime system.
@@ -695,7 +698,7 @@ A word about exceptions A small complication is the presence of exceptions, whic
 This would quickly turn into a combinatorial explosion of edges in the flow graph (and consequently of basic blocks), severely handicapping any O(|V||E|) (nodes x edges) graph traversal algorithm that needs to work on the code.
 Therefore, exceptions are treated specially on a per-basic block basis instead.
 This figure shows the basic block graph of a slightly larger example.
-Even though the only instruction that can trigger an exception is the div in Block 2 (on division by zero),
+Method entry is at Block 0 that has three exits—two normal ones, as it contains a conditional branch, and an exception edge.
 Generating HIR The first module in the code generator, BC2HIR, is the frontend against the bytecode and its purpose is to quickly translate bytecodes into IR.
 For the md5_F method, where no control flow in the form of conditional or unconditional jumps is present, we get just one basic block.
 The following code snippet shows the md5_F method in bytecode form:
@@ -717,10 +720,10 @@ Then the sub-expression can be folded into a temporary variable, saving it from 
 Emulating the bytecode stack to form HIR is not without problems though.
 Since at compile time, we only know what expression is on the stack, and not its value, we run into various problems.
 One example would be in situations where the stack is used as memory.
+Take for example the construct result = x ? a : b.
 The BC2HIR module that turns bytecodes into a control flow graph with expressions is not computationally complex.
 However, it contains several other little special cases, similar to the earlier one, which are beyond the scope of this book.
 Most of them have to do with the lack of structure in byte code and with the evaluation stack metaphor.
-Another example would be the need to associate monitorenter bytecodes with their corresponding monitorexit(s), the need for which is explained in great detail in Chapter 4
 This is because most optimizations work best with three address code or rather instructions that only contain atomic operands, not other instructions.
 Transforming HIR to MIR is simply an in-order traversal of the expression trees mentioned earlier and the creation of temporary variables.
 As no hardware deals with expression trees, it is natural that code turns into progressively simpler operations on the path through the code pipeline.
@@ -806,9 +809,9 @@ Multiple loads and stores that access the same memory location can, under certai
 Surprisingly enough, the size of the total code mass after inlining and then optimizing the inlined code is often less than the original code mass of a method before anything was inlined.
 The runtime system can perform relatively large simplifications, given relatively little input.
 Consider the following program that implements the representation of a circle by its radius and allows for area computation:
+Running the previous program with JRockit with the command-line flag –Xverbose:opt,gc, to make JRockit dump all garbage collection and code optimization events, produces the following output: hastur:material marcus$ java –Xverbose:opt,gc Circle.
 No more output is produced until the program is finished.
 The various log formats for the code generator will be discussed in more detail at the end of this chapter.
-Log formats for the memory manager are covered in Chapter 3
 It can be noticed here, except for optimization being performed on the four hottest methods in the code (where two are JRockit internal), that the garbage collections stop after the optimizations have completed.
 This is because the optimizer was able to prove that the Circle objects created in the getAreaFromRadius method aren't escaping from the scope of the method.
 Once the call to c.getArea is inlined, it becomes clear that the entire lifecycle of the Circle objects is spent in the getAreaFromRadius method.
@@ -835,6 +838,7 @@ Command-line flags and directive files In the rare case that the code generator 
 Naturally, if you know what you are doing, code generation can be controlled for other purposes as well.
 Command-line flags JRockit has several command-lines flags that control code generation behavior in a coarse grained way.
 For the purpose of this text, we will only mention a few.
+Logging The –Xverbose:codegen (and –Xverbose:opt) options make JRockit output two lines of information per JIT compiled (or optimized) method to stderr.
 Every code generation event produces two lines in the log, one when it starts and one when it finishes.
 The first log line of a code generation request (event start) contains the following information from left to right:
 The second line of a code generation request (event end) contains the following information from left to right:
@@ -1260,7 +1264,6 @@ Whenever a new operator in Java is compiled and the JIT set to a sufficiently hi
 The pseudocode just seen presents a somewhat simplified view of the world, in order to illustrate the point.
 Objects that are larger than a certain threshold value or that are too big to fit in any available TLA are still allocated directly on the heap.
 As of JRockit R28, a measurement used to better optimize TLA usage, called the TLA waste limit, has been introduced.
-This is discussed to a greater extent in Chapter 5
 In certain architectures where registers are plentiful, further performance gains can be achieved by always keeping the nextTLAOffset, and possibly the pointer to the TLA itself, in registers for the thread that is currently executing Java code.
 On x86 with its limited register set, however, this is a luxury we can't afford.
 Larger heaps As the complexity of a well written GC is mostly a function of the size of the live data set, and not the heap size, it is not too costly to support larger heaps for the same amount of live data.
@@ -1345,7 +1348,6 @@ If this works correctly, there are substantial performance gains to be had.
 The main problem is keeping objects from being moved back and forth, "ping ponging", between memory sections that are the responsibilities of different NUMA nodes.
 Theoretically, an adaptive runtime could be very good at this.
 This is another example of an optimization that can work well in an adaptive runtime, but perhaps not so much in a static environment.
-Command-line flags that modify memory allocation behavior in the JVM and change NUMA node affinity for the JVM process will be discussed in greater detail in Chapter 5
 However, research on JRockit shows that it is still possible to get pretty good performance without specific NUMA optimizations as long as prefetching and cache behavior is intelligent enough in the JVM.
 Large pages At the base of all memory allocations lies the operating system and its page table.
 An OS divides the physical memory into pages, a page typically being the smallest possible memory allocation unit.
@@ -1380,6 +1382,7 @@ No matter how well a garbage collector performs, we still have a non-determinist
 Even if the latencies introduced by the GC are few and stopping the world completely is a rare event, a certain degree of non-determinism cannot be avoided.
 So what do we mean by real-time? The terminology suffers from a certain degree of misuse.
 To avoid some of the confusion associated with real-time, we will divide the concept into hard real-time and soft real-time.
+Hard and soft real-time Hard real-time should be understood as the more traditional real-time system—perhaps a synthesizer or a pacemaker, a system where 100 percent determinism is an absolute requirement.
 There are few runtimes with automatic memory management that can work for this kind of environment, at least not without extensive modifications to the application and some kind of program language constructs for controlling the garbage collection.
 A typical example is the Java real-time effort as specified in Java Specification Request (JSR) 1, which specifies an API (javax.realtime) for interacting with the runtime and for controlling the occurrence of garbage collection at certain program points.
 When using Java to develop a new application, this might be a feasible way to go ahead, but porting an existing Java production system to use a new API with new semantics is often very challenging or downright impossible.
@@ -1411,12 +1414,14 @@ For example, it is common that a lock in the Java code is so contended that it i
 JRockit Mission Control contains a set of diagnostic tools that can fairly easily point out problems like this from a runtime recording.
 We often hear success stories from the field, such as when a trading system started making tens of thousands of dollars more per day because of lower latencies and consequently faster response times.
 The system could complete a significant number of more trades per day on the same hardware.
+The following graph shows the same benchmark run as before, with JRockit Real Time enabled and a maximum latency service level set to 10 milliseconds using the –XpauseTarget flag.
 Note that after the initial warm-up spikes, there is virtually no unpredictability left in the latencies.
 One might easily theorize that the spikes in the beginning of the run are caused by the VM aggressively trying to reach a steady state, for example through large amounts of code optimization.
 This can be true, and indeed this kind of pattern can show up.
 For this particular benchmark run, however, the initial latencies were actually caused by a bug in the Java application, unrelated to GC or adaptive optimization.
 We also note that JRockit Real Time has no trouble fulfilling the 10 millisecond guarantee it was given.
 All of this comes at the affordable price of a slightly longer total time spent in garbage collection.
+How does it work? So how can JRockit deliver this kind of garbage collection performance? There are three key issues at work here:
 There are several concurrent garbage collectors in existing literature, and there are few conceptual changes or technological leaps in how JRockit Real Time handles concurrency.
 The key to low latency is still to let the Java program run as much as possible, and keep heap usage and fragmentation at a decent level.
 We can think of JRockit Real Time as a greedy strategy for keeping Java programs running.
@@ -1501,12 +1506,13 @@ Another example is wishing for ways to get at and modify objects as native point
 Both these strategies would be extremely dangerous if introduced in Java, and successful usage would, in the authors' opinion, be very hard or impossible.
 There are several advantages of automatic memory management, and some disadvantages, chief of which is non-determinism.
 JRockit Real Time has tried to provide good enough ways around this without the need for modifying an application or interfacing with the GC.
-We still recall with horror the "Java should have a free operator" discussion that swamped the entire HotSpot session at JavaOne 1999
+The guy who started it raised his hand and opened up with the now classic line "Many of my friends are C++ programmers…"
 If a program has real-time needs that require further manipulation, maybe it shouldn't have been written in Java to begin with, but rather in a static language where the programmer's control over the memory system is more absolute.
 Automatic memory management, while being a helpful tool that shortens development cycles and reduces program complexity, isn't a golden hammer that can be applied to all programmatic problems.
 Controlling JRockit memory management This section covers the most fundamental command-line switches that control garbage collection in JRockit.
 For more advanced manipulation of the memory system, for example tuning compaction, please refer to Chapter 5, Benchmarking and Tuning.
 Basic switches Following are the most fundamental command-line switches for interacting with the JRockit memory system.
+Outputting GC data Running JRockit with –Xverbose:gc will, similar to –Xverbose:codegen, output plenty of verbose information on what the JVM memory management system is doing.
 This information includes garbage collections, where they take place (nurseries or old space), changes of GC strategy, and the time a particular garbage collection takes.
 Xverbose:gc (or -Xverbose:memory) is, except for JRockit Mission Control, the main information provider when it comes to studying garbage collector behavior for an application.
 Here is an example of the output generated by –Xverbose:gc:
@@ -1517,6 +1523,7 @@ We can see that the GC chooses to gradually grow the heap in this particular exa
 Finally, the sum of pauses, that is for how long the world was stopped during the last garbage collection, is reported along with the longest individual pause.
 For advanced users, as has been covered, each garbage collection consists of several phases, and if you want more granularity on them, a flag called –Xverbose:gcpause will provide it.
 It should be noted, however, that JRockit Mission Control with its graphic illustration of garbage collection behavior probably provides more insight into application behavior.
+Set initial and maximum heap size The –Xms and –Xmx flags are standard and variants are available in all JVMs.
 They specify initial and maximum heap size to be allocated to the JVM.
 If no arguments are given, the heap will grow and shrink heuristically during runtime.
 If enough heap to accommodate the demands isn't available, an OutOfMemoryError will be thrown.
@@ -1529,7 +1536,7 @@ Specifying a garbage collection strategy For even further control over GC behavi
 This fixes a garbage collection strategy for the JVM and prevents it from being changed at runtime.
 The strategy can be made more fine grained than with one of the three -XgcPrio choices.
 Again, we use the terms concurrent and parallel to describe if we are optimizing for low latencies or throughput.
-Generational", as opposed to "single generational", means that a nursery is used.
+The possible options are –Xgc:singlecon (single generational concurrent), -Xgc:gencon (generational concurrent), -Xgc:singlepar (single generational parallel) and –Xgc:genpar (generational parallel)
 Compressed references As already mentioned, given a maximum heap size smaller than 64 GB, JRockit will use some form of compressed references by default.
 But the usage of compressed references can also be explicitly controlled with the –XXcompressedRefs flag.
 The flag takes two arguments—whether compressed references should be enabled at all and in that case the maximum size of the heap that they should support.
@@ -1540,7 +1547,6 @@ If memory performance is believed to be an application bottleneck, it is recomme
 Chapters in the second part of this book will explain how to do a runtime recording with JRockit and how to analyze it.
 Collecting as much information as possible about an application before starting to modify non-standard parameters is strongly recommended.
 Almost any aspect of the garbage collector can be tuned from the command line —everything from the size of the thread local buffers used for allocation to the strategies used for heap compaction.
-Some less fundamental switches that control memory management are covered in Chapter 5
 Please study the JRockit documentation for a more in-depth description of all memory management options.
 Summary This chapter covered automatic memory management in detail, concentrating on adaptive memory management, where feedback from the runtime system is continuously used to optimize GC performance.
 We explained the mark and sweep as well as the stop and copy strategies for garbage collection and discussed how more advanced variants of these can work in a modern runtime, especially JRockit.
@@ -1570,7 +1576,6 @@ As every object is allowed to be a monitor, every object also needs to carry syn
 Typically, to enable quick access, this information is stored in a lock word that exists in the header of every object.
 For more than the simplest form of automatic memory management, similar performance concerns also exist.
 Therefore, fundamental GC info, such as what GC state an object is in, must also be available for quick access.
-Recollect, for example, the discussion about mark bits from the section on tracing garbage collection in Chapter 3
 Thus, both locking and GC need certain kinds of information to be quickly available on a per-object basis.
 Consequently, JRockit also uses a few bits in the lock word to store garbage collection state information.
 However, we will still refer to this word as the "lock word" for convenience throughout this text.
@@ -1709,7 +1714,11 @@ Memory models can also be weak (such as IA-64), where there is virtually no guar
 Subtle differences handling read-after-write, write-after-read and write-afterwrite dependencies of the same data exist on different hardware platforms.
 Java, being a hardware agnostic language, needs to define strict semantics for how these dependencies should be interpreted for threads in the JVM.
 This is a complication not present in a static language like C++ that compiles to hardware specific code and lacks a memory model per se.
+Although there is a volatile keyword in C++ as well as in Java, parts of the C++ program behavior are still impossible to decouple from that of the hardware architecture for which it is compiled.
+Parts of the "de facto" memory model in a C++ program also reside outside the language itself—in thread libraries and in the semantics of operating system calls.
+On architectures with weak memory models such as Intel IA-64, the programmer may even have to explicitly put calls to memory barrier functions in the C++ program.
 Anyway, once compiled, the behavior of the native code generated from the C++ will remain the same within the chosen architecture.
+But how can the programmer make sure that the same behavior applies to a compiled Java program, no matter if it is running on x86, Itanium, PowerPC, or SPARC? There are no explicit memory barriers in Java, and probably shouldn't be either, because of its platform independence.
 Early problems and ambiguities The need for a unified memory model for Java that guarantees identical behavior across different hardware architectures was acknowledged from the start.
 However, the first Java Memory Model contained several surprising issues that were counter-intuitive and even made standard compiler optimizations invalid.
 The original memory model allowed volatile and non-volatile writes to be reordered interchangeably.
@@ -1766,6 +1775,7 @@ They continue to be blocked until the instruction has completed.
 A fence instruction on modern x86 hardware may take a large amount of CPU cycles to complete if it interrupts sufficiently complex multi-CPU execution.
 From this it can be concluded that not only are too many critical sections in a program bad for performance, but the lock implementation of the platform also matters—especially if locks are frequently taken and released, even for small critical sections.
 Locks While any lock may be implemented as a simple OS call to whatever appropriate synchronization mechanism the native platform provides, including one that puts threads to sleep and handles wait queues of monitor objects competing for the lock, one quickly realizes that this one-size-fits-all approach is suboptimal.
+What if a lock is never contended and is acquired only a small number of times? Or what if a lock is severely contended and many threads compete for the resource that the particular lock protects? It is once more time to bring the power of the adaptive runtime into play.
 Thin locks are usually used for fast uncontended locks that are held for a short time only.
 The runtime should be able to turn one kind of lock into the other, depending on the current level of contention.
 Thin locks The simplest implementation of a thin lock is the spinlock.
@@ -1787,6 +1797,7 @@ The lock queue may be rearranged by the runtime as the scheduler sees fit or bas
 For objects used in wait / notify constructs, the JVM may also keep a wait queue for each monitor resource where the threads that are to be notified upon its release are queued.
 A word on fairness In scheduling, the term fairness is often used to describe a scheduling policy where each thread gets an equally sized time quantum to execute.
 If a thread has used its quantum, another thread gets an opportunity to run.
+If fairness is not an issue—such as when we don't need a certain level of even thread spread over CPUs and threads perform the same kind of work—it is, in general, faster to allow whatever thread that gets a chance to run to keep running.
 Simply put, if we are just concerned about maximizing Java execution cycles, it can be a good idea to let a thread that just released a lock reacquire it again.
 This avoids expensive context switching and doesn't ruin the caches.
 Surprisingly enough, unfair behavior like this from the scheduler can, in several cases, improve runtime performance.
@@ -1927,6 +1938,7 @@ Naturally, it might not be beneficial just to fuse every block of code we see, b
 And if enough sampling information is available for the short snippet of code, we can make clever adaptive guesses to whether a lock fusion would be beneficial or not.
 To summarize, this code optimization all boils down to not releasing a lock unnecessarily.
 The thread system itself can, by making its state machine a little bit more complicated, implement a similar optimization, independent of the code generator, known as lazy unlocking.
+Lazy unlocking So what does the previous observation really mean, if it can be showed that there are many instances of thread local unlocks and re-locks that simply slow down execution? Perhaps this is the case almost all the time? Perhaps the runtime should start assuming that each individual unlock operation is actually not needed?
 This gamble will succeed each time the lock is reacquired by the same thread, almost immediately after release.
 It will fail as soon as another thread tries to acquire the seemingly unlocked object, which semantics must allow it to do.
 Then the original thread will need to have the lock forcefully unlocked in order to make it seem as if "nothing has happened"
@@ -1981,7 +1993,6 @@ Pitfalls and false optimizations As in previous chapters, we will finish up with
 This section discusses things to be aware of when working with threads and synchronization in Java.
 They were included in Java 1.0, but immediately found unsafe and deprecated.
 This however, was a bit too late, and, even today, they are widely used both in legacy code and new applications, despite the deprecation warnings.
-We are sad to report that we've come across them in commercial code that was developed as late as 2008
 The stop method (meant to halt the execution of a thread) is unsafe.
 This is because stopping the execution of a thread that is modifying global data would possibly leave the global data in an inconsistent, broken state.
 A thread that receives a stop signal will unlock all of the locks that it was holding, thus making the data under modification by these locks briefly visible to the rest of the world, which violates the Java sandbox model.
@@ -2108,6 +2119,7 @@ Let us, for a moment, disregard large and complex tests in the QA infrastructure
 While a unit test for functionality usually takes the form of a small program that either works or doesn't, a unit test for performance is a micro benchmark.
 A micro benchmark should be fairly simple to set up, it should run only for a short time, and it can be used to quickly determine if a performance requirement is reached.
 We will extensively discuss techniques for implementing micro benchmarks as well as more complex benchmarks later in this chapter.
+Easier problem domains to optimize Another reason for keeping a collection of relevant benchmarks around is that performance is a difficult thing to quantify—are we talking about high throughput or low latency? Surely we can't have both at the same time, or can we? If so, how can we ensure that our application is good enough in both these problem domains?
 While running an application with a large set of inputs and workloads is a good idea for the general QA perspective, it might provide too complex a picture to illustrate where the application performs well and where it requires improvements.
 A lot of trouble can be avoided if a program can be broken down into sub-programs that can be treated as individual benchmarks and if it can be made sure that all of them perform well.
 Not only is it easier to understand the different aspects of the performance of the program, it is also easier to work on improving these aspects on a simpler problem domain that only measures one thing at a time.
@@ -2133,6 +2145,7 @@ Once enough data about an application has been collected, suitable subsets of th
 However, before creating a benchmark, we need to determine if it is relevant, and whether the benchmark and the application are subject to the same kind of performance issues or not.
 When normalizing a benchmark against an application, warm-up time is an important factor to consider.
 If an application requires warm-up time to reach a steady state, as most server-side applications do, the benchmark might require this as well.
+Can the application be turned into a small self-contained benchmark with lower startup time, for the sake of simplicity? Is it still a case of comparing apples with apples if the benchmarking time is shrunk to five minutes from an application runtime of an hour, including warm-up, or does this kind of scaledown not work? Has the benchmark turned into an application with a completely different kind of behavior?
 An example of a complex application that needs to be broken down into benchmark domains is an application server, which typically is a collection of a vast number of subcomponents with varying functions.
 The ideal benchmark is a small self-contained program that emulates a relevant part of an application.
 If this isn't easy to implement, maybe individual subsystems of the application can still be broken out as "black boxes" that can be fed with limited subsets of the input data.
@@ -2172,6 +2185,7 @@ The code optimizer in JRockit should be able to detect that the newly allocated 
 If, for some reason, this code optimization starts to fail, this benchmark will take longer to complete, and the QA infrastructure will trigger a warning while examining the result database.
 For example for an XML parser, it makes sense to create a small benchmark that operates on a set of auto-generated XML files of different sizes.
 Creating micro benchmarks that aren't valid or that don't produce useful results for the problem set is not just a waste of time and effort, but it is also potentially harmful if the benchmark is believed to accurately measure all important aspects of a problem.
+How long does rehashing take? Extracting elements? What about collisions in HashMaps of different sizes?
 What if there is a fatal performance flaw in the division algorithm?
 When creating a micro benchmark, the main rule is always to understand what you are measuring.
 Verify that the benchmark is valid and that the result is useful.
@@ -2383,6 +2397,7 @@ Flags and options presented here are specific to the R28 versions of the JRockit
 Earlier versions may have different flags for doing the same thing, or lack the functionality altogether.
 Please consult the JRockit Documentation to find out what is supported for a particular JRockit version.
 Tuning memory management This section covers command-line parameters specific to the memory management system and garbage collector.
+Heap sizes Recollect from Chapter 3 that the most fundamental way to tune the memory system is to specify initial heap size using the –Xms flag and maximum heap size using the –Xmx flag.
 While tuning for real time, it is usually helpful to set both values to a fixed maximum size that the system has enough resources to allocate.
 Thus, unnecessary heap resizing, a somewhat costly process, will be prevented from occurring during run time.
 The GC algorithm Furthermore, pick a GC algorithm that makes sense for the current application.
@@ -2417,7 +2432,7 @@ The default in throughput GC is not to allow this, in the interest of battling f
 There are several additional ways to tune compaction that are beyond the scope of this chapter.
 Please refer to the JRockit Diagnostics Guide for in-depth guidance.
 Finally, note that playing around with compaction parameters when tuning for realtime, might result in larger performance deviations and in less deterministic pause times.
-Use up to two percent of the heap per external compaction and up to 1.5 percent of the heap per internal compaction)
+Example: java –XXcompaction:full <application> (compact as much as possible, optimizing for throughput)
 Tweaking System.gc The flag –XX:AllowSystemGC may be used to turn calls to System.gc into no-ops.
 This can be a quick fix for applications that frequently call System.gc in ways detrimental to their performance.
 Please see Chapter 3, Adaptive Memory Management, and the section Common bottlenecks and how to avoid them at the end of this chapter for more information.
@@ -2435,6 +2450,7 @@ Large objects can be a problem for an application, and, sometimes, if something 
 In JRockit versions earlier than R28, large objects were allocated immediately on the heap and never in a TLA.
 JRockit post R28 uses a waste limit for TLA space instead.
 This constrains the amount of TLA space that can be thrown away for each TLA when large objects are allocated and is a more flexible solution.
+The R28 allocation algorithm now works like this—JRockit tries to allocate every object regardless of its size in the current TLA.
 If it doesn't fit and the waste limit is less than the space left in the TLA, the object goes directly on the heap.
 Otherwise, JRockit will "waste" the rest of this TLA and try to allocate the object in a new TLA or directly on the heap, depending on the size of the object.
 Tuning for large objects will be covered in further detail in the "Common Bottlenecks" section of this chapter.
@@ -2506,6 +2522,7 @@ The JRockit Mission Control suite, on the other hand, can plug in at runtime and
 A benchmark or instrumentation result can provide great insights into why an application contains performance bottlenecks.
 Over the years, the authors of this book have examined many applications to determine why they aren't running as fast as they should.
 Some findings keep recurring, and the following section provides information on several common areas that cause performance problems and what practices should be avoided or used with caution when programming Java.
+The –XXaggressive flag From one time to another we discover customers using the undocumented and experimental –XXaggressive flag for JRockit.
 This flag is a wrapper for other flags that tell JRockit to perform at high speed and try to reach a stable state as soon as possible.
 The cost of this is more resource use at startup.
 The parameters that this option modifies are subject to change from release to release.
@@ -2559,7 +2576,6 @@ Misuse of System.gc There is no guarantee from the Java language specification t
 But if it does, it probably does more than you want or doesn't do the same thing every time you call it.
 To reiterate, don't confuse the garbage collector by trying to tell it what to do.
 Too many threads While it is a good thing to be able to break up a problem into many computational threads with little inter-thread communication, context switches always incur overhead anyway.
-We have been over the different thread implementations, from green threads to OS threads in Chapter 4
 However, true for all thread implementation is that some kind of context switch, during which no useful program execution can be performed, takes place while shifting execution from one thread to another.
 The number of context switches grows proportionally to the number of fairly scheduled threads, and there may also be hidden overhead here.
 A worst-case example from real life is the Intel IA-64 processor, with its massive amount of registers, where a native thread context is on the order of several KB.
@@ -2596,6 +2612,7 @@ The real world examples are typically database query results or very large array
 Do whatever it takes to keep them off the heap, even implement a native layer for them, but do not let your Java Virtual Machine juggle a large number of humongous objects.
 Native memory versus heap memory To the JVM, all memory that exists is system memory, available from the underlying operating system.
 Some of this system memory is used by the JVM to allocate the Java heap.
+The amount of memory used for the heap can be controlled by the –Xms (initial heap size) and –Xmx (maximum heap size) flags.
 The JVM will throw OutOfMemoryError both from inside the JVM, when there is not enough memory available to complete some internal operation, and from Java, when a program tries to allocate more objects than will fit on the current heap.
 A JVM is a native application that also consumes system memory for its own purposes, for example, to allocate data structures used for code optimization.
 Internal JVM memory management is, to a large extent, kept off the Java heap and allocated natively in the operating system, through system calls like malloc.
@@ -2707,6 +2724,7 @@ Some people use JRockit Mission Control to track down application problems.
 The authors also find it enlightening to turn JRockit Mission Control on itself during the development phase to find both performance issues and bugs.
 There are also the ultra nerds, the authors included, who use the JRockit Mission Control tools suite to squeeze out that extra percentage of performance from JRockit by doing benchmarking and by tuning the JVM for a very specific application.
 Here are a few typical JRockit Mission Control use cases:
+George, why does your ticker quote cache contain a HashMap holding on to 96 percent of the heap? It is still growing by the way, and I expect the server will throw an OutOfMemoryError in two hours at this rate.
 Mission Control consists of two major parts—a set of APIs, agents and protocols built into the JRockit JVM and the JRockit Mission Control client.
 The different tools rely on different sets of APIs, but they all initiate communication with the JRockit JVM using JMX.
 A full discussion on JMX is beyond the scope of this book, but we'll briefly discuss the basic concepts.
@@ -2742,6 +2760,7 @@ Views, such as the JVM Browser, cannot be docked into the editor area.
 They can, however, be docked to any side of the editor area.
 To the left in the Management Console (in the editor area) is the tab group toolbar that selects tabs that are currently visible in the tab container at the bottom of the editor.
 A tab group toolbar is available in other JRockit Mission Control tools as well.
+In JRockit Mission Control 3.1, the General tab group, which is automatically selected when a Management Console is started, contains only a single tab—the Overview tab.
 Running the standalone version of Mission Control JRockit Mission Control exists both as a standalone executable and as a plug-in for the Eclipse IDE.
 The version of JRockit Mission Control included in the JRockit JDK is the standalone version.
 Just run the executable named jrmc (or jrmc.exe on Windows) in the bin directory of the JRockit distribution.
@@ -2787,7 +2806,6 @@ Once the Mission Control perspective has been opened, things will look pretty mu
 As mentioned, one benefit of running JRockit Mission Control from within Eclipse is the ability to open up the corresponding application source code from most places where JRockit Mission Control shows a class or method, as shown in the following screenshot:
 Starting JRockit for remote management To enable a JRockit JVM for remote management, the external management agent must be started.
 It can either be started with the –Xmanagement command-line switch, or JRCMD can be used.
-The following example starts up a JRockit JVM with a simple test program and enables it for remote monitoring on port 4712
 Authentication and SSL support for the connection are turned off.
 For now, let's ignore the security flags and focus on the port.
 Examples of how to set up JRockit Mission Control with security turned on will be shown in the section Running in a Secure Environment, later in this chapter.
@@ -2804,6 +2822,7 @@ Result: The name of the connection when it appears in the browser will be MyJVM.
 Result: The connection will appear under a MyJVMs folder in the browser, and the name will be MyJVM.
 Result: The connection will appear under MyJVMs, the name will be the result of a reverse DNS lookup of the host reported by the JDP packet.
 For the R28.0.0 version, no such extra properties are actually used by the client.
+For reference, the following table lists the various –Xmanagement arguments in JRockit R28:
 Also note that SSL communication with the registry will not be enabled by default.
 Binds the RMI connector stub to an RMI registry protected by SSL.
 If this is set to false, JMX does not use passwords or access files—all users are allowed full access.
@@ -2814,7 +2833,6 @@ However, if the RMI server is using SSL and the registry is not, an arbitrary fr
 Specifies a file from which to load additional management configuration properties.
 There are also system properties available in JRockit R28 for controlling specific settings.
 The following table lists the relevant system properties with their default values:
-The connector is published on a private interface used by local JMX clients through the Attach API (see the Java Documentation for com.sun.
 Clients can use this connector if it is started by the same user as the one that started the agent.
 No password or access files are checked for requests coming through this connector.
 If explicitly set to false, no local connector is started even if jmxremote.port is specified.
@@ -2862,7 +2880,6 @@ To connect to a locally executing 1.4 version of the JRockit JVM, create a conne
 Then start the management agent explicitly on the JRockit JVM that you want to monitor.
 This is because 1.4 versions of the JVM really do not have a platform MBean server.
 JRockit 1.4 versions did, however, implement a proprietary management protocol called RMP that is translated to JMX on the client.
-Starting the agent can either be done by using the command-line options as described earlier, or by using the JRCMD tool, described in Chapter 11
 If you are having problems connecting to an external management agent (usually, but not necessarily, one running on a remote machine) you should check:
 While troubleshooting connections to the remote management agent, first make sure that the connection works with SSL and that authentication is turned off.
 If the Management Console tells you that a certain MBean, for instance the Profiling MBean, cannot be found, it may be due to a misconfigured jmxremote.access file.
@@ -2927,6 +2944,7 @@ The rest of this chapter is dedicated to discussing the JRockit Mission Control 
 The chapter is divided into sections corresponding to the different tabs in the Management Console, so that it can also be used as a reference to quickly check on details for a specific tab.
 Using the console Starting a JRockit Management Console is quite easy—simply select the JVM to connect to from the JVM Browser and either click on the Management Console button from the toolbar, or click on Start Console from the context menu.
 The default action for dragging a connection to the editor area is to open up the Console on the connection.
+Recollect from Chapter 6 , JRockit Mission Control, that connections are either remote or local—the difference being that the local connections are automatically discovered JVMs running on the local machine.
 This particular trick does not work with local connections, as they cannot be used as sources in drag-and-drop operations.
 For more information on the different types of connections and how to establish remote connections, see the previous chapter.
 General The tabs in the Management Console are grouped into different tab groups, the first one being the General tab-group.
@@ -2987,7 +3005,6 @@ In the following screenshot, the Total Loaded Class Count attribute has been add
 To configure the Y-axis range to automatically select the correct range, select one of the auto range alternatives, for instance Y-axis Range | Auto, always show zero, from the context menu.
 None of the range choices will alter the input data in any way.
 The Percent range will simply set the range to 0-100% and add a percent sign to the Y-axis title.
-Both CPU usage attributes have a pre-multiplier setting of 100
 To change the pre-multiplier, right click on the attribute and then, click on Edit Pre-multiplier as shown in the following screenshot:
 The charts are quite useful and there are more options available for charts than described here.
 A tip (certainly valid for most components in JRockit Mission Control) is to examine the choices available in the context menus for a component.
@@ -3087,9 +3104,10 @@ The rules for changing GC heuristic in R28 are quite versatile.
 Heuristics can be changed freely with one exception—it is not possible to change another heuristic to deterministic.
 This is because a lot of special data structures and configuration settings are created at JVM startup when starting with the deterministic garbage collector (JRockit Real Time)
 The garbage collection strategy is defined by nursery, mark strategy and sweep strategy.
-The mark and sweep phases can either be concurrent or parallel, using the terms as defined in Chapter 3
+The strategy can also be changed freely in R28, with one exception—if JRockit was started explicitly with the singlepar strategy (-Xgc:singlepar), the strategy cannot be changed at all.
 However, if starting with any other strategy, it is possible to change back and forth from singlepar.
 The names are unfortunately quite long and also a bit redundant.
+As was mentioned in Chapter 3, when explicitly setting the same strategy with the –Xgc command-line option, the same strategy is simply named singlecon.
 The best way to get the input value right when attempting to change these attributes is to first look it up in the oracle.
 There is one attribute for strategies and and one for heuristics.
 Each contains an array of CompositeData, and each CompositeData entry contains a name and description.
@@ -3144,7 +3162,6 @@ The functionality is somewhat limited, as it will not show the stack traces for 
 If you not only want to know how many exceptions are thrown, but also where they are thrown, you should instead use JRockit Flight Recorder or enable verbose logging for exceptions.
 Diagnostic Commands The Mission Control Console also provides a tab that facilitates access to the diagnostic commands in JRockit.
 The diagnostic commands is a set of commands that can be sent to JRockit through the JRockit Management APIs and the command-line tool JRCMD.
-For more information on individual diagnostic commands and on JRCMD, see Chapter 11
 The list in the upper left corner of the Diagnostic Commands tab shows the available commands classified in three different groups—normal, advanced, and internal.
 The ones in the "normal" class are usually the easiest to understand.
 They are also the ones that can be executed without any risk of affecting the runtime in adverse ways.
@@ -3204,7 +3221,6 @@ Each time a new value is retrieved, the valueChanged method is called with an ev
 Note that there are no guarantees as to which thread is delivering the event.
 In the current implementation, it will either be the subscription thread (most events) or the JMX subsystem (notification based events)
 Creating an extension for a trigger action is done in the same way.
-Simply select the Mission Control Trigger Action Wizard template from the plug-in project wizard in step 6
 Summary This chapter has demonstrated how to use the Management Console to monitor any application running on JRockit.
 The information and functionality available in the different tabs of the JRockit Management Console was described together with examples and various use cases.
 We have also shown how the Management Console can easily be extended with custom tabs with specialized user interfaces as well as custom actions to be used with the trigger rules.
@@ -3369,6 +3385,7 @@ A dual-core CPU has two hardware threads, and a hyperthreaded core also counts a
 That is, a dual-core CPU with hyperthreading will be displayed as having four hardware threads.
 A high amount of context switches per second may not be a real problem, but better synchronization behavior may lead to better total throughput in the system.
 There is a CPU graph showing both the total CPU load on the system, as well as the CPU load generated by the JVM.
+A saturated CPU is usually a good thing—you are fully utilizing the hardware on which you spent a lot of money! As previously mentioned, in some CPU-bound applications, for example batch jobs, it is normally a good thing for the system to be completely saturated during the run.
 However, for a standard server-side application it is probably more beneficial if the system is able to handle some extra load in addition to the expected one.
 The hardware provisioning problem is not simple, but normally server-side systems should have some spare computational power for when things get hairy.
 This is usually referred to as overprovisioning, and has traditionally just involved buying faster hardware.
@@ -3388,7 +3405,6 @@ This is because lock profiling may cause anything from a small to a considerable
 With recent changes to the JRockit thread and locking model, it would be possible to dynamically enable lock profiling.
 This is unfortunately not the case yet, not even in JRockit Flight Recorder.
 This is normally useful for the JRockit JVM developers and for JRockit support.
-Native locks were discussed to some extent in Chapter 4
 An example of a native lock would be the code buffer lock that the JVM acquires in order to emit compiled methods into a native code buffer.
 This is done to ensure that no other code generation threads interfere with that particular code emission.
 Thread Dumps The JRA recordings normally contain thread dumps from the beginning and the end of the recording.
@@ -3442,7 +3458,6 @@ The worker threads that are there to execute parts of the work in parallel, rely
 This actually causes the entire application to execute the work in a sequential fashion instead.
 If you see an event that you want to get more information on, you can either select it in the graph and study it in the properties view, hover the mouse pointer over it and read the tooltip that pops up, or add it to the operative set for closer examination in one of the other views.
 To summarize, the Graph view is good for providing an overview of the latency and thread behavior of the application.
-Threads The Threads tab is basically a table containing the threads in the system, much like the threads tab in the Management Console, as described in Chapter 7
 The most useful properties in this table tend to be the event Count and the Allocation Rate per thread.
 This view is mainly used to select a specific thread, either based on an attribute, such as the one with the highest allocation rate, or for finding a specific thread by name.
 The operative set is then used to select the events for that particular thread, so that the events can be studied in the other views.
@@ -3863,6 +3878,7 @@ Clicking on the little plus sign (  ) to the left of the class name will help us
 Every click will expand another five classes, starting with the ones that leak the most memory first.
 In the Type Graph, just like in the trend table, types that are growing over time will be colored red—the redder, the higher the leak rate.
 As we, in this example, want to find out what is ultimately holding on to references to the character arrays, we expand the char[] node.
+Expanding the char[] node reveals that there is only one other type (or rather instances of that type) that also seem to be leaking and have references to char arrays—the inner class DemoObject of the conspicuously named Leak class.
 Expanding the Leak$DemoObject node until we don't seem to be finding any more leaking types reveals that the application seems to be abusing some sort of Hashtable, as shown in the next screenshot:
 The next step would be to find the particular instance of Hashtable that is being misused.
 In this example, it would seem that the leaking of the char arrays is due to the leaking of the Leak$DemoObjects.
@@ -3885,7 +3901,6 @@ The complete examples for this chapter can be found in the code bundle that come
 To summarize, the text book recipe for hunting down memory leaks is:
 Find a path to the root referrer from the leaking instance.
 Eliminate whatever is causing the reference to be kept alive.
-If there still is a leak, start over from 1
 Of course, finding an instance that is unnecessarily kept alive can be quite tricky.
 One way to home in on unwanted instances is to only look at instances participating in a certain reference relationship.
 In the previous example, we chose to look at char arrays that were only being pointed to by DemoObjects.
@@ -3992,6 +4007,7 @@ The commands that JRCMD can execute are commonly referred to as the JRockit Diag
 The diagnostic commands can be invoked in several different ways.
 Overriding SIGQUIT Diagnostic commands can also be invoked by overriding the default behavior of the SIGQUIT process signal.
 Recollect from Chapter 4 that the default behavior of a JVM receiving a SIGQUIT is to write a thread dump containing the current state of all the threads to the console.
+One way of sending a SIGQUIT signal to the JVM process is to press Ctrl + Break (Windows), or Ctrl + \ (Linux), in the shell where the Java process was started.
 To override the SIGQUIT behavior of JRockit with a custom command sequence; put the list of commands to be executed in a plain text file and name it ctrlhandler.
 The file needs to be placed into the lib folder of JRockit distribution or the current directory of the JVM process.
 The presence of a crtlhandler.act file overrides the behavior of the SIGQUIT signal and makes it execute your diagnostic commands instead of producing the normal thread stack dump.
@@ -4021,13 +4037,13 @@ The continuously running recording, where available, can for example be referred
 If the verbose argument is set to false, the listing simply consists of one line per recording, with recording id, name, and duration.
 The verbose listing, as shown in this example, lists all the active event producers, and for each producer the status for each event type.
 The listing starts with the recording name and the status for the recording.
-In the previous example, it can be seen that the continuous recording is active and that its ID is 0
 We can see that for the http://www.oracle.com/ jrockit/jvm/ producer, there are quite a few event types available, and that only some of them are enabled.
 It is used for checking if there is already an active ongoing recording in a JRockit instance.
 If a JRA recording is currently in progress, the options used when that recording was initiated will be shown.
 The following example shows the result of running the checkjrarecording command nine seconds into a JRA recording.
 The JRA recording was started using the command line from the startjrarecording example, given later in this chapter.
 Perhaps a JVM subsystem, like the garbage collector, is behaving peculiarly because a parameter was set to a suboptimal value at startup.
+Or maybe we want to find out how the management agent was initialized on the command line—for example, was SSL really enabled, and if so, was the keystore really the right one?
 The command_line command shows the parameters a JVM was started with.
 Note that the command line is reconstructed from what was actually supplied to the JVM from the launcher, and may include parameters that were not explicitly passed to the JVM by the user.
 Following is an example of what can be shown if the command is executed on an instance of JRockit running JRockit Mission Control, with some additional parameters set:
@@ -4166,11 +4182,9 @@ For more information on how to do this, please see Chapter 8, The Runtime Analyz
 Sometimes, however, using the JRockit Mission Control client may not be an option.
 The environment may not allow JMX connections, or perhaps  a JDK 1.4 based version of JRockit is used.
 In those cases, the startjrarecording diagnostic command is very useful.
-The following example starts a JRA-recording on the JRockit process with PID 5516
 The duration of the recording will be two minutes and it will start after an initial delay of 30 seconds.
 When sampling an application that utilizes a large framework or runs in an enterprise container, such as WebLogic Server, call stack depths can be quite large.
 In such cases, increasing the trace depth is usually a good idea.
-The trace depth in the following example has been increased to 64
 The sampletime option denotes how often the threads should be sampled.
 As this is a relatively short recording, the sample time has been compressed to every five milliseconds.
 The latency recording has been turned on to provide latency events.
@@ -4183,7 +4197,6 @@ The command can be used to change the logging level for a specific module, to re
 Running the verbosity command without arguments will list all the available logging modules with their current status.
 The first word on a line is the module name.
 The word in parenthesis after the module name, if there is one, is an alias that can also be used to refer to the module.
-The following example shows how to enable verbose logging for the code generator in a similar fashion as described at the end of Chapter 2
 This is equivalent to the output generated by starting the JVM with the flag -Xverbose:codegen.
 As can be seen from the previous example, verbosity responds by listing the new log status.
 The verbosity command can also be used to do exception profiling.
@@ -4217,6 +4230,7 @@ This requires no special configuration, as the necessary classes are available i
 The examples can also be compiled by including jmapi.jar, that contains all the interface declarations, in your class path.
 The jmapi.jar is not part of the JDK, but is distributed by Oracle on request.
 From the JVM interface a number of different subsystems can be reached.
+For readers who reacted on the com.bea part in the package name—JMAPI predates the 2008 Oracle acquisition of BEA Systems, and is used in other Oracle products as well as in third-party products.
 As JMAPI was supported in JRockit R27 and earlier releases, the package name cannot be changed without breaking existing products utilizing JMAPI.
 Let us begin with a simple example that writes the current CPU load on the console ten times with a one second delay between each printout:
 Access permissions to JMAPI are very coarse-grained; access is either permitted or not allowed at all.
@@ -4263,6 +4277,7 @@ The total number of bytes that all YCs have promoted.
 Many of these counters are excellent choices for attributes to plot in the Management Console.
 To find out which counters are in ticks, enable the Description column in the MBean Browser by editing the table properties as shown in the following screenshot:
 The unit will be listed at the end of the description, as can be seen (you may need a magnifier) in the rightmost column in the attribute table behind the Table Settings dialog in the screenshot.
+An example—building a remote version of JRCMD JMXMAPI is accessed through standard JMX mechanisms (as described in Chapter 7)
 Consequently, the API is easily accessed remotely through the platform MBean server and the standard remote JMX agent.
 As described in Chapter 11, a limitation of JRCMD is that it can only attach to JRockit instances running locally on the same machine as where JRCMD is executed.
 It can also only access JRockit instances running as the same user as the one invoking JRCMD.
@@ -4361,7 +4376,6 @@ Typically, a native hypervisor is much more efficient than a hosted hypervisor.
 Oracle VM and the VMware ESX product suite are two examples of native hypervisors, who, although their approaches to virtualization are different, both fulfill the criterion that they install directly on physical hardware.
 Hypervisors in the market There are several mature hypervisors available in the quickly-changing market.
 Xen is an open source hypervisor, originally developed at the University of Cambridge.
-Xen later turned into the company XenSource Inc., and was acquired by Citrix Corporation in 2007
 Citrix release their own commercial server-grade Xen systems with extra APIs, along with several management tools.
 The Xen hypervisor itself continues to be available for free, under public open source license.
 Xen has, because of its free nature, been widely used in several virtualization frameworks, and has been turned into native hypervisors, Oracle VM being one of them.
@@ -4409,8 +4423,11 @@ So, what is the role of a general purpose operating system? The OS abstracts the
 We can hardly expect a C++ application developer to implement his own synchronization for a particular chipset using atomic assembly instructions or to write his own thread representation.
 Instead, the OS provides library calls for these kinds of tasks.
 Thus, the OS forms a second level of abstraction under the JVM.
+And finally, in a virtualized world, the hypervisor—while making it possible to run multiple sandboxed operating systems on the same machine—forms a third abstraction layer before we get to the actual hardware.
 All these abstraction layers need to communicate with each other.
 There is overhead here, especially as talking to a lower layer usually requires some kind of privileged action that takes time, destroys caches, and preempts other tasks.
+However, if the sole responsibility of the virtualized operating system is to run the JVM, whose sole responsibility in turn is to run the Java application server, don't the various levels of abstraction seem unnecessary and quite wasteful? Why would we need a full-fledged OS such as Microsoft Windows in the middle of our stack, when all we do is run a Java program? The Java program, assuming that it is 100 percent pure Java, doesn't know anything about Microsoft Windows and doesn't use any OS-specific mechanisms.
+If the Java program is an application server with no GUI, do we even need the functionality to display graphics on screen? If all users and access controls necessary to interact with the system are handled by a model inside the application server, do we even need an OS?
 We can make the observation that a JVM is not so far removed from an OS as one might think.
 It implements JDK library calls to support threads and synchronization.
 Without stretching the metaphor too tightly, a JVM is just like a special-purpose virtual operating system.
@@ -4483,6 +4500,7 @@ A JRockit VE virtual machine image consists of a complete virtual machine specif
 We can think of distributing a virtual machine image containing, for example, WebLogic Server to a customer, as shipping the customer a physical machine.
 On its hard disk is a preinstalled version of WebLogic Server good to go, and all the user needs to do is plug the machine into a power outlet, attach a network cable, and start it up.
 The main difference in the case of the virtual machine image is that we don't ship the physical machine along with the installed software.
+We only ship the specification of the machine—how much memory does it have, how many CPUs—and a cloned image of its hard disk.
 The cloud will provide the resources necessary for emulating the machine in order to run the application.
 Thus, virtual machine images also remove the need for installing software.
 This is one of the reasons that virtualization can help reduce IT costs in an organization.
@@ -4548,7 +4566,6 @@ By replacing the operating system layer, JRockit VE can significantly reduce tha
 Memory footprint The JRockit VE kernel is a self-contained boot image that is just a few megabytes in size.
 This small amount of storage, except for a few configuration files and the JRE, is all the space in a JRockit VE-based virtual machine image not taken up by user code.
 A modern operating system, even a JeOS (Just enough OS) implementation, is on the order of several hundred megabytes in its simplest install.
-The small size of a JRockit VE system and its kernel ensures that the amount of system memory in the virtual machine that can be used for running the actual Java application (i.e.
 This is most important on 32-bit setups, which still is a fairly common virtual machine representation in a cloud configuration.
 Manageability Manageability comes in two flavors—offline manageability, on the virtual machine image level, and online manageability, the ability to deploy and control a running virtual machine image in a cloud computing environment.
 For an undeployed JRockit VE virtual machine image, all interaction with its "outside world" is handled by the Image Tool that is shipped with the JRockit VE product and its derived products, such as WLS on JRockit VE.
@@ -4565,6 +4582,7 @@ It needs to be, as it contains a jungle of system daemons and user applications 
 It also has to provide a generic multi-tasking environment and enable multiple processes to co-exist.
 There are usually several entry points to a remote workstation running a standard OS, such as open ports for network services, login protocols, and so on.
 As the kernel layer in JRockit VE provides only the bare necessities required to run a JVM, the inherent complexity of the system is orders of magnitude smaller.
+As mentioned, there is only one preinstalled service, sitting on top of the kernel, allowing remote access—a 100 percent pure Java SSH daemon.
 It needs to be explicitly enabled by the creator of a JRockit VE.
 With the low number of entry points from the outside world, no native code allowed, and the JVM handling verification of all potentially malicious Java code, security is by design much better than that which can be provided in a more complex environment.
 Also, as previously mentioned, the "OS" itself, the JRockit VE kernel, can only run one process—the JVM.
@@ -4592,6 +4610,7 @@ While we still execute native code in the form of libraries that the JVM may nee
 JRockit VE can currently only export information through its console, not through a GUI.
 Console output can also be redirected to log files in the local file systems or to NFS shares on the network.
 Again, for the server side this turns out not to be much of a problem.
+A look ahead—can virtual be faster than real? Performance potential doesn't just end with successfully removing or slimming down unnecessary layers.
 If we control the operating system layer and the JVM knows how to talk to it, several previously unavailable pieces of information can be propagated to the JVM, vastly extending the power of an adaptive runtime.
 This section is more speculative in nature than the rest of the chapter.
 While not all of the techniques described herein have been proven feasible in the real world, they still form part of the basis of our belief that high performance virtualization has a bright future indeed.
@@ -4599,7 +4618,6 @@ Quality of hot code samples One example of where performance potential can be ha
 Recall from Chapter 2, Adaptive Code Generation that the more samples; the better the quality of code optimizations.
 When we run our own scheduler and completely control all threads in the system, such as is the case in the.
 There is no longer a need to use expensive OS calls (and ring transitions) to halt all threads in order to find out where in Java their instruction pointers are.
-Compare this to using green threads for the thread implementation in the JVM, as introduced in Chapter 4
 Starting and stopping green threads carries very little overhead as OS threads are not part of the equation.
 That way, the JRockit VE thread implementation has a lot in common with a green thread approach.
 The quality of samples for JRockit VE is potentially comparable to hardware-based sampling, also discussed in the chapter on code generation.
@@ -5134,6 +5152,7 @@ If your book idea is still at an early stage and you would like to discuss it fi
 We're not just looking for published authors; if you have strong technical skills but no writing experience, our experienced editors can help you develop a writing career, or simply get some additional reward for your expertise.
 Oracle SOA Suite in the delivery of real-world SOA applications.
 Master the best way to combine / use each of these different components in the implementation of a SOA solution.
+Fast track your SOA adoption – Build a serviceoriented composite application in just hours!
 Offers an accelerated learning path for the much anticipated Oracle SOA Suite 11g release.
 Beginning with a discussion of the evolution of SOA, this book sets the stage for your SOA learning experience.
 A J2EE developer's guide to using Oracle JDeveloper's integrated database features to build data-driven applications.
@@ -5144,6 +5163,7 @@ Fundamental heap management Allocating and releasing objects Fragmentation and c
 Garbage collection algorithms Reference counting Tracing techniques Mark and sweep Stop and copy.
 Throughput versus low latency Optimizing for throughput Optimizing for low latency.
 Speeding it up and making it scale Thread local allocation Larger heaps The 64-bit world.
+Near-real-time garbage collection Hard and soft real-time JRockit Real Time Does the soft real-time approach work? How does it work?
 Controlling JRockit memory management Basic switches Outputting GC data Set initial and maximum heap size Controlling what to optimize for Specifying a garbage collection strategy.
 Chapter 5: Benchmarking and Tuning Reasons for benchmarking Performance goals Performance regression testing Easier problem domains to optimize Commercial success.
 What to think of when creating a benchmark Measuring outside the system Measuring several times Micro benchmarks Micro benchmarks and on-stack replacement Micro benchmarks and startup time.
@@ -5154,3 +5174,4 @@ Misuse of System.gc Too many threads One contended lock is the global bottleneck
 Wait/notify and fat locks Wrong heap size Too much live data Java is not a silver bullet.
 Running in a secure environment Troubleshooting connections Hostname resolution issues.
 The virtual machine image concept and management frameworks Benefits of JRockit VE Performance and better resource utilization Manageability Simplicity and security.
+A look ahead—can virtual be faster than real? Quality of hot code samples Adaptive heap resizing Inter-thread page protection Improved garbage collection Concurrent compaction.

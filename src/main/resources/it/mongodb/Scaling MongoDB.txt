@@ -32,6 +32,7 @@ This is the dream of most ops people—not to destroy humanity, but to build a d
 Skynet is still a pipe dream, unfortunately, because distributed systems are very difficult, both to design well and to keep running.
 A single database server has a couple of basic states: it’s either up or down.
 If you add another machine and divide your data between the two, you now have some sort of dependency between the servers.
+How does it affect one machine if the other goes down? Can your application handle either (or both) machines going down? What if the two machines are up, but can’t communicate? What if they can communicate, but only very, very, slowly? As you add more nodes, these problems just become more numerous and complex: what happens if entire parts of your cluster can’t communicate with other parts? What happens if one subset of machines crashes? What happens if you lose an entire data center? Suddenly, even taking a backup becomes difficult: how do you take a consistent snapshot of many terabytes of data across dozens of machines without freezing out the application trying to use the data? If you can get away with a single server, it is much simpler.
 However, if you want to store a large volume of data or access it at a rate higher than a single server can handle, you’ll need to set up a cluster.
 On the plus side, MongoDB tries to take care of a lot of the issues listed above.
 Keep in mind that this isn’t as simple as setting up a single mongod (then again, what is?)
@@ -53,8 +54,8 @@ There is also the question of what to do when data is being migrated from one ma
 However, under the covers, MongoDB is doing some pretty nifty tricks.
 Let the cluster grow easily As your system needs more space or resources, you should be able to add them.
 MongoDB allows you to add as much capacity as you need as you need it.
-Adding (and removing) capacity is covered further in Chapter 3
 These goals have some consequences: a cluster should be easy to use (as easy to use as a single node) and easy to administrate (otherwise adding a new shard would not be easy)
+MongoDB lets your application grow—easily, robustly, and naturally—as far as it needs to.
 To set up, administrate, or debug a cluster, you have to understand the basic scheme of how sharding works.
 This chapter covers the basics so that you can reason about what’s going on.
 Splitting Up Data A shard is one or more servers in a cluster that are responsible for some subset of the data.
@@ -69,6 +70,8 @@ Thus, the four possible ranges are: x is in (a, b)
 This is a nice, easy-to-understand system for sharding, but it becomes inconvenient in a large or busy system.
 It’s easiest to see why by working through what would happen.
 That’s a lot of extra data moved considering that all movement has to cascade across the cluster.
+How about adding a new shard? Let’s say this cluster keeps working and eventually we end up having 500GB per shard and we add a new shard.
+Using a single range per shard creates a cascade effect: data has to be moved to the server “next to” it, even if that does not improve the balance.
 This cascade situation just gets worse and worse as the number of shards and amount of data grows.
 This time, we’ll allow each shard to contain multiple chunk ranges.
 When we split a chunk’s range into two ranges, it becomes two chunks.
@@ -78,7 +81,6 @@ As a chunk gets bigger, MongoDB will automatically split it into two smaller chu
 If the shards become unbalanced, chunks will be migrated to correct the imbalance.
 How Chunks Are Created When you decide to distribute data, you have to choose a key to use for chunk ranges (we’ve been using username above)
 This key is called a shard key and can be any field or combination of fields.
-We’ll go over how to choose the shard key and the actual commands to shard a collection in Chapter 3.)
 As you can see, all of the documents in this chunk have their age value in the chunk’s range.
 If you shard a collection containing a lot of data, MongoDB will immediately split this initial chunk into smaller chunks.
 In the first example given, chunks are hundreds of gigabytes in size, but in a real system, chunks are only 200MB by default.
@@ -103,6 +105,7 @@ For a balancing round to occur, a shard must have at least nine more chunks than
 At that point, chunks will be migrated off of the crowded shard until it is even with the rest of the shards.
 The reason the balancer isn’t very aggressive is that MongoDB wants to avoid sending the same data back and forth.
 By waiting for a more severe imbalance, MongoDB can minimize pointless data transfers.
+Keep in mind that nine chunks is not even that much of an imbalance—it is less than 2GB of data.
 If every slight imbalance is corrected, a lot of data will end up moving unnecessarily.
 The Psychopathology of Everyday Balancing Most users want to prove to themselves that sharding works by watching their data move, which creates a problem: the amount of data it takes to trigger a balancing round is larger than most people realize.
 Let’s say I’m just playing with sharding, so I write a shell script to insert half a million documents into a sharded collection.
@@ -119,13 +122,13 @@ Once you have a bunch of chunks, it ramps the chunk size back up to 200MB automa
 Chunk size can be changed by starting with --chunkSize N or modifying the config.settings collection and restarting everything.
 However, unless you’re trying out the 1MB chunk size for fun, don’t mess with the chunk size.
 I guarantee that, whatever you’re trying to fix, fiddling with chunk size is not going to solve the root problem.
-Leave chunk size alone unless you want to play around with --chunkSize 1
 Routing a request to a shard with the corresponding chunk.
 The Config Servers mongos processes don’t actually store any data persistently, so the configuration of a cluster is held on special mongods called config servers.
 Config servers hold the definitive information about the cluster for everyone’s access (shards, mongos processes, and system administrators)
 For a chunk migration to succeed, all of the configuration servers have to be up.
 If one of them goes down, all currently occurring migrations will revert themselves and stop until you get a full set of config servers up again.
 If any config servers go down, your cluster’s configuration cannot change.
+Each of the components above is not “a machine.” mongos processes are usually run on appservers.
 Config servers, for all their importance, are pretty lightweight and can basically be run on any machine available.
 Each shard usually consists of multiple machines, as that’s where the data actually lives.
 Choosing a Shard Key Choosing a good shard key is absolutely critical.
@@ -136,6 +139,7 @@ Thus, you want a shard key that distributes reads and writes, but that also keep
 These can seem like contradictory goals, but it can often be accomplished.
 First we’ll go over a couple of bad shard key choices and find out why they’re bad, then we’ll come up with a couple of better ones.
 There is also a good page on the MongoDB wiki on choosing a shard key.
+Now what? MongoDB can’t split these chunks any further! The chunks will just keep getting bigger and bigger.
 This is fine for a while, but what happens when you start running out of space on your servers? There’s nothing you can do, aside from getting a bigger hard disk.
 This choice of shard key is called a low-cardinality shard key, because there are a limited number of shard key values.
 If you choose a shard key with low cardinality, you will end up with large, unmovable, unsplittable chunks that will make your life miserable.
@@ -153,6 +157,8 @@ What happens if your application is big in Japan? Now you want to add a second s
 How are you going to migrate data over? You can’t move a chunk once it’s more than a few gigabytes in size, and you can’t split the chunk because there is only one shard key value in the whole chunk.
 You can’t just update all of the documents to use a more unique value because you can’t update a shard key value.
 You could remove each document, change the shard key’s value, and resave it, but that is not a swift operation for a large database.
+The best you can do is start inserting “Asia, Japan” instead of just “Asia”
+Then you will have old documents that should be “Asia, Japan” but are just “Asia” and then your application logic will have to support both.
 Also, once you start having finer-grained chunks, there’s no guarantee MongoDB will put them where you want (unless you turn off the balancer and do everything manually)
 Data-center awareness is very important for large applications and it’s a high priority for MongoDB developers.
 Choosing a low-cardinality shard key is not a good solution for the interim.
@@ -169,7 +175,6 @@ Let’s say we’re storing thumbnail photos in a sharded collection.
 Each document contains the binary data for the photo, an MD5 hash of the binary data, a description, the date it was taken, and who took it.
 As our collection grows, we end up with a pretty even number of chunks evenly distributed across our shards.
 Now, let’s say we’re pretty busy and a chunk on Shard 2 fills up and splits.
-MongoDB now has to load a random five chunks’ worth of data into memory and send it to Shard 1
 This is data that wouldn’t have been in memory ordinarily, because it’s a completely random order of data.
 So, now MongoDB is going to be putting a lot more pressure on RAM and there’s going to be a lot of disk IO going on (which is always slow)
 You must have an index on the key you shard by, so if you choose a randomly-valued key that you don’t query by, you’re basically “wasting” an index.
@@ -182,6 +187,11 @@ It should be a fairly randomly distributed non-ascending key with decent cardina
 This key is not the only possible shard key and it won’t work well for everything.
 However, it’s a good way to start thinking about how to choose a shard key, even if you do not ultimately use it.
 Before you choose one, think about the answers to these questions:
+What do writes look like? What is the shape and size of the documents you’re inserting?
+How much data is the system writing per hour? Per day? Peak?
+What do reads look like? What data are people accessing?
+How much data is the system reading per hour? Per day? Peak?
+There may be other patterns that you find in your data—use them! Before you shard, you should get to know your data very well.
 Sharding a New or Existing Collection Once you have selected a shard key, you are ready to shard your data.
 Quick Start If you’re looking to set up a cluster to play around with as fast as possible, you can set one up in a minute or two using the mongo-snippets repository on Github.
 It’s a little lacking in documentation, but this repository is basically a collection of useful scripts for users.
@@ -192,7 +202,6 @@ Once Pymongo is installed, download the mongo-snippets repository and run the fo
 If you are interested in setting up a serious-business cluster, read on.
 Config Servers You can run either one or three configuration servers.
 We’ll be using three config servers, as that’s what you should do whenever you’re in production.
-One or three” is a weird and somewhat arbitrary restriction, but the rationale is that one is good for testing, and three is good for production.
 Two is more than people would want to test with and not enough for production.
 You can’t run an arbitrary number because their interactions are complex, and the programming and logic of what to do if N out of M config servers are down is difficult.
 MongoDB probably will support any number of config servers in the future, but it’s not an immediate priority.
@@ -204,6 +213,7 @@ These servers, which are supposed to be intimately connected to each other, have
 This is fine—we’re going to hook them up in a moment.
 Sometimes, people assume that they have to set up replication on config servers.
 Configuration servers do not use the same replication mechanism as “normal” mongod replication and should not be started as replica sets or master-slave setups.
+When you start up your config servers, feel free to use any of the options listed under “General Options” when you run mongod --help, except for --keyFile and --auth.
 Sharding does not support authentication at the moment, although this should change midway-through 1.9
 It’s not a particularly good idea to run it with --quiet because you want to be able to figure out what’s going on if something goes wrong.
 Instead of --quiet, use --logpath <file> and --logappend to send the logs somewhere so you’ll have them if you run into problems.
@@ -222,9 +232,10 @@ Setting up sharding requires commands to be run from the admin database.
 There are two ways to add a shard, depending on whether the shard is a single server or a replica set.
 Let’s say we have a single server, sf-02, that we’ve been using for data.
 We can make it the first shard by running the addShard command:
-MongoDB will give you an error if you attempt to store data before you have any shards to put it on, for obvious reasons.) In general, you should use a replica set, not a single server, for each shard.
+MongoDB will give you an error if you attempt to store data before you have any shards to put it on, for obvious reasons.
+In general, you should use a replica set, not a single server, for each shard.
 That is, you must give the set name and at least one member of the set (mongos can derive the other members as long as it can connect to someone)
-Notice that we ended up with a much nicer name this time! (I was the one who programmed it to pick up on the replica set name, so I’m particularly proud of it.) If you add a replica set, its name will become the shard name.
+If you add a replica set, its name will become the shard name.
 If you don’t want the default, use the name option when you add a shard.
 You’ll have to refer to shards by name occasionally (see Chapter 5), so don’t make the name too crazy or long.
 This is useful if you’re using a bunch of commodity servers, but you can run into problems if you have one gargantuan machine with 10 terabytes and one ho-hum machine with a few hundred gigabytes.
@@ -256,12 +267,14 @@ As queries start taking longer, requests begin to pile up, exacerbating the prob
 The lesson? Add shards while you still have room to maneuver.
 If you no longer have that room, add shards in the middle of the night (or at another non-busy time)
 If you don’t have a non-busy time and you waited too long, there are a couple of ways to hack around it, but they are neither fun nor easy.
-You can manually create a Frankenstein shard from backups of your existing shard, manually change the config.chunks collection, and restart your whole cluster—this is obviously not recommended.) Add shards early and often.
+You can manually create a Frankenstein shard from backups of your existing shard, manually change the config.chunks collection, and restart your whole cluster—this is obviously not recommended.
+So! How do you add shards? The same way that you added the first shard above, with the addShard command.
 One interesting thing about adding subsequent shards is that they don’t have to be empty.
 They cannot have databases that already exist in the cluster, but if your cluster has a foo database and you add a shard with a bar database, that’s fine, as the config servers will pick up on it and it’ll pop up in cluster info.
 Therefore, if you want, you can bring together a couple different systems into one large, sharded cluster.
 Someone might shard too early or they realize that they chose the wrong shard key, so they want to get everything back onto one shard, dump, restore, and try again.
 The removeShard command lets you take a shard out of the cluster.
+Note that the message says “started successfully.” It has to move all of the information that was on this shard to other shards before it can remove this shard.
 As mentioned above, moving data from shard to shard is pretty slow.
 The removeShard command returns immediately, and you must poll it to find out if it has finished.
 Moving chunks can force data out of RAM, making more requests hit disk and slowing everything down.
@@ -273,10 +286,10 @@ Querying a MongoDB cluster is usually identical to querying a single mongod.
 However, there are some exceptions that are worth knowing about.
 Querying If you are using replica sets as shards and a mongos version 1.7.4 or more recent, you can distribute reads to slaves in a cluster.
 This can be handy for handling read load, although the usual caveats on querying slaves apply: you must be willing to get older data.
+To query a slave through mongos, you must set the “slave okay” option (basically checking off that you’re okay with getting possibly out-of-date data) with whatever driver you’re using.
 Counting When you do a count on a sharded collection, you may not get the results you expect.
 You may get quite a few more documents than actually exist.
 The way a count works is the mongos forwards the count command to every shard in the cluster.
-Then, each shard does a count and sends its results back to the mongos,
 If there is a migration occurring, many documents can be present (and thus counted) on more than one shard.
 When MongoDB migrates a chunk, it starts copying it from one shard to another.
 It still routes all reads and writes to that chunk to the old shard, but it is gradually being populated on the other shard.
@@ -287,12 +300,15 @@ Thus, when data is counted, it ends up getting counted twice.
 MongoDB may hack around this in the future, but for now, keep in mind that counts may overshoot the actual number of documents.
 Unique Indexes Suppose we were sharding on email and wanted to have a unique index on username.
 One application server adds a new user document with the following fields:
+The only way to check that “andrew” is the only “andrew” in the cluster is to go through every username entry on every machine.
+Let’s say MongoDB goes through all the shards and no one else has an “andrew” username, so it’s just about to write the document on Shard 3 when the second appserver sends this document to be inserted:
 This means that they run into the same problem unique indexes do: there’s no good way of guaranteeing that something happens once across multiple shards.
 If you’re doing a single-document update, it must use the shard key in the criteria (update’s first argument)
 If you run across an odd error message, consider whether the operation you’re trying to perform would have to atomically look at the entire cluster.
 MapReduce When you run a MapReduce on a cluster, each shard performs its own map and reduce.
 Once the data is reduced to its final form, it will be output in whatever method you’ve specified.
 As sharding splits the job across multiple machines, it can perform MapReduces faster than a single server.
+Temporary Collections In 1.6, MapReduce created temporary collections unless you specified the “out” option.
 These temporary collections were dropped when the connection that created them was closed.
 This worked well on a single server, but mongos keeps its own connection pools and never closes connections to shards.
 Thus, temporary collections were never cleaned up (because the connection that created them never closed), and they would just hang around forever, growing more and more numerous.
@@ -310,7 +326,6 @@ Assuming you have a cluster set up, you should see these collections:
 Many of the collections are just accounting for what’s in the cluster: config.mongos.
 If you bring up a mongos, even if it’s just for a few seconds, it will be added to this list and will never disappear.
 It doesn’t really matter, it’s not like you’re going to be bringing up millions of mongos servers, but it’s something to be aware of so you don’t get confused if you look at the list.
-Currently, config.settings allows you to change the chunk size (but don’t!) and turn off the balancer, which you usually shouldn’t need to do.
 If it’s in the middle of a balancing round, it won’t turn off until the current balancing has finished.
 The only other collection that might be of interest is the config.changelog collection.
 It is a very detailed log of every split and migrate that happens.
@@ -395,6 +410,7 @@ If one goes down, your application can handle the exception (in whatever languag
 You can also just try restarting a crashed mongos if the machine is okay, as they are stateless and store no data.
 Other Considerations Each of the points above is handled in isolation from anything else that could go wrong.
 Sometimes, if you have a network partition, you might lose entire shards, parts of other shards, config servers, and mongos processes.
+You should think carefully about how to handle various scenarios from both user-facing (will users still be able to do anything?) and application-design (will the application still do something sensible?) perspectives.
 Finally, MongoDB tries to let a lot go wrong before exposing a loss of functionality.
 If you have the perfect storm (and you will), you’ll lose functionality, but day-to-day server crashes, power outages, and network partitions shouldn’t cause huge problems.
 If you follow the advice in the preceding chapters, you should be well on your way to an efficient and predictable distributed system that can grow as you need.

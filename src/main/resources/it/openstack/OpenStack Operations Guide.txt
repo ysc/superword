@@ -8,6 +8,7 @@ The authors are all members of the OpenStack Foundation, which you can join.
 We want to acknowledge our excellent host Rackers at Rackspace in Austin:
 Emma Richards of Rackspace Guest Relations took excellent care of our lunch orders and even set aside a pile of sticky notes that had fallen off the walls.
 Betsy Hagemeier, a Fanatical Executive Assistant, took care of a room reshuffle and helped us settle in for the week.
+The Real Estate team at Rackspace in Austin, also known as “The Victors,” were super responsive.
 Adam Powell in Racker IT supplied us with bandwidth each day and second monitors for those of us needing more screens.
 On Wednesday night we had a fun happy hour with the Austin OpenStack Meetup group and Racker Katie Schmidt took great care of our group.
 Inside the book sprint room with us each day was our book sprint facilitator Adam Hyde.
@@ -133,6 +134,7 @@ You want to maintain consistency in your deployments so you can have the same cl
 Proper use of automatic configuration management tools ensures that components of the cloud systems are in particular states, in addition to simplifying deployment, and configuration change propagation.
 These tools also make it possible to test and roll back changes, as they are fully repeatable.
 Conveniently, a large body of work has been done by the OpenStack community in this space.
+Puppet – a configuration management tool – even provides official modules for OpenStack.
 An integral part of a configuration management system is the items that it controls.
 You should carefully consider all of the items that you want, or do not want, to be automatically managed.
 Remote Management In our experience, most operators don’t sit right next to the servers running the cloud, and many don’t necessarily enjoy visiting the data center.
@@ -142,7 +144,6 @@ The IPMI protocol is the de-facto standard here, and acquiring hardware that sup
 While IPMI usually controls the server’s power state, having remote access to the PDU that the server is plugged into can really be useful for situations when everything seems wedged.
 OpenStack is designed to be massively horizontally scalable, which allows all services to be distributed widely.
 However, to simplify this guide we have decided to discuss services of a more central nature using the concept of a single cloud controller.
-For more details about the overall architecture, see the Chapter 7
 As described in this guide, the cloud controller is a single node that hosts the databases, message queue service, authentication and authorization service, image management service, user dashboard, and API endpoints.
 The cloud controller provides the central management system for multi-node OpenStack deployments.
 Typically the cloud controller manages authentication and sends messaging to all the systems through a message queue.
@@ -152,7 +153,8 @@ Hardware Considerations A cloud controller’s hardware can be the same as a com
 It’s also possible to use virtual machines for all or some of the services that the cloud controller manages, such as the message queuing.
 In this guide, we assume that all services are running directly on the cloud controller.
 To size the server correctly, and determine whether to virtualize any part of it, you should estimate:
-Directory) • How long you expect single instances to run.
+The number of users who will access the compute or storage services.
+Whether users interact with your cloud through the REST API or the dashboard.
 Size your database server accordingly, and scale out beyond one cloud controller if many instances will report status at the same time and scheduling where a new instance starts up needs computing power.
 Ensure that your messaging queue handles requests successfully and size accordingly.
 If many users will make multiple requests, make sure that the CPU load for the cloud controller can handle it.
@@ -176,6 +178,7 @@ Some services, such as nova-compute, swift-proxy and swift-object servers, shoul
 However, control servers can often be happily virtualized - the performance penalty can usually be offset by simply running more of the service.
 Database Most OpenStack Compute central services, and currently also the nova-compute nodes, use the database for stateful information.
 As a result, we recommend that you cluster your databases in some way to make them failure tolerant.
+In general, if the message queue fails or becomes inaccessible, the cluster grinds to a halt and ends up in a “read only” state, with information stuck at the point.
 Accordingly, we recommend that you cluster the message queue - and RabbitMQ has in-build abilities to do this.
 Application Programming Interface (API) All public access, whether direct, through a command line client, or through the webbased dashboard, uses the API service.
 You must choose whether you want to support the Amazon EC2 compatibility APIs, or just the OpenStack APIs.
@@ -210,7 +213,6 @@ Users have credentials they can use to authenticate, and they can be a member of
 For example, a cloud administrator might be able to list all instances in the cloud, whereas a user can only see those in their current group.
 Resources quotas, such as the number of cores that can be used, disk space, and so on, are associated with a project.
 The OpenStack Identity Service (Keystone) is the point that provides the authentication decisions and user attribute information, which is then used by the other OpenStack services to perform authorization.
-For information on how to configure these, see Chapter 9
 The Identity Service supports different plugins for back-end authentication decisions, and storing information.
 These range from pure storage choices to external systems and currently include:
 Many deployments use the SQL database, however LDAP is also a popular choice for those with existing authentication infrastructure that needs to be integrated.
@@ -232,15 +234,17 @@ In the former, the heavy work of creating a VM happens only every few months, wh
 You must consider your average VM lifetime, as a larger number generally means less load on the cloud controller.
 Aside from the creation and termination of VMs, you must consider the impact of users accessing the service — particularly on nova-api and its associated database.
 Listing instances garners a great deal of information and, given the frequency with which users run this operation, a cloud with a large number of users can increase the load significantly.
+This can even occur without their knowledge — leaving the OpenStack Dashboard instances tab open in the browser refreshes the list of VMs every 30 seconds.
 After you consider these factors, you can determine how many cloud controller cores you require.
 You must also consider key hardware specifications for the performance of user VMs.
-For which metrics to track to determine how to scale your cloud, see Chapter 13
 Adding Controller Nodes You can facilitate the horizontal expansion of your cloud by adding nodes.
 Adding compute nodes is straightforward — they are easily picked up by the existing installation.
 However, you must consider some important points when you design your cluster to be highly available.
 Recall that a cloud controller node runs several different services.
+You can install services that communicate only using the message queue internally — novascheduler and nova-console — on a new server for expansion.
 You should load balance user-facing services such as Dashboard, nova-api or the Object Storage proxy.
 Use any standard HTTP load balancing method (DNS round robin, hardware load balancer, software like Pound or HAProxy)
+One caveat with Dashboard is the VNC proxy, which uses the WebSocket protocol — something that a L7 load balancer might struggle with.
 You can configure some services, such as nova-api and glance-api, to use multiple processes by changing a flag in their configuration file — allowing them to share work between multiple cores on the one machine.
 Several options are available for MySQL load balancing, and RabbitMQ has in-built clustering support.
 Information on how to configure these and many of the other services can be found in the Operations Section.
@@ -255,6 +259,7 @@ A single site cloud with equipment fed by separate power supplies.
 This array of options can be best divided into two — those which result in running separate nova deployments (cells and regions), and those which merely divide a single deployment (availability zones and host aggregates)
 Cells and Regions OpenStack Compute cells are designed to allow running the cloud in a distributed fashion without having to use more complicated technologies, or being invasive to existing nova installations.
 Hosts in a cloud are partitioned into groups called cells.
+The top-level cell (“API cell”) has a host that runs the nova-api service, but no nova-compute services.
 Each child cell runs all of the other typical nova-* services found in a regular installation, except for the nova-api service.
 Each cell has its own message queue and database service, and also runs novacells — which manages the communication between the API cell and child cells.
 This allows for a single API server being used to control access to multiple cloud installations.
@@ -283,13 +288,16 @@ Currently, only the nova-compute service has its own availability zone.
 Services such as nova-scheduler, nova-network, nova-conductor have always spanned all availability zones.
 Scalable Hardware While several resources already exist to help with deploying and installing OpenStack, it’s very important to make sure you have your deployment planned out ahead of time.
 This guide expects at least a rack has been set aside for the OpenStack cloud but also offers suggestions for when and what to scale.
+Hardware Procurement “The Cloud” has been described as a volatile environment where servers can be created and terminated at will.
 While this may be true, it does not mean that your servers must be volatile.
 Ensuring your cloud’s hardware is stable and configured correctly means your cloud environment remains up and running.
 Basically, put effort into creating a stable hardware environment so you can host a cloud that users may treat as unstable and volatile.
 Hardware does not have to be consistent, but should at least have the same type of CPU to support instance migration.
 The typical hardware recommended for use with OpenStack is the standard valuefor-money offerings that most hardware vendors stock.
+It should be straightforward to divide your procurement into building blocks such as “compute,” “object storage,” and “cloud controller,” and request as many of these as desired.
 Alternately should you be unable to spend more, if you have existing servers, provided they meet your performance requirements and virtualization technology, these are quite likely to be able to support OpenStack.
 Capacity Planning OpenStack is designed to increase in size in a straightforward manner.
+Taking into account the considerations in the Scalability chapter — particularly on the sizing of the cloud controller — it should be possible to procure additional compute or object storage nodes as needed.
 New nodes do not need to be the same specification, or even vendor, as existing nodes.
 For compute nodes, nova-scheduler will take care of differences in sizing to do with core count and RAM amounts, however you should consider the user experience changes with differing CPU speeds.
 When adding object storage nodes, a weight should be specified that reflects the capability of the node.
@@ -313,6 +321,8 @@ However, an individual compute node can only run a single hypervisor at a time.
 Instance Storage Solutions As part of the procurement for a compute cluster, you must specify some storage for the disk on which the instantiated instance runs.
 There are three main approaches to providing this temporary-style storage, and it is important to understand the implications of the choice.
 In general, the questions you should be asking when selecting the storage are as follows:
+Do more spindles result in better I/O despite network access?
+Which one results in the best cost-performance scenario you’re aiming for?
 Compute services and storage services have different requirements, compute hosts typically require more CPU and RAM than storage hosts.
 Therefore, for a fixed budget, it makes sense to have different configurations for your compute nodes and your storage nodes with compute nodes invested in CPU and RAM, and storage nodes invested in block storage.
 Also, if you use separate compute and storage hosts then you can treat your compute hosts as “stateless”
@@ -375,13 +385,17 @@ In the Unix world, the most common form of this is NFS.
 In the Windows world, the most common form is called CIFS (previously, SMB)
 OpenStack clouds do not present file-level storage to end users.
 Choosing Storage Back-ends In general, when you select storage back-ends, ask the following questions:
+Should my persistent storage drives be contained in my compute nodes, or.
+What is the platter count I can achieve? Do more spindles result in better I/O despite network access?
+Which one results in the best cost-performance scenario I’m aiming for?
+How redundant and distributed is the storage? What happens if a storage node.
 To deploy your storage by using entirely commodity hardware, you can use a number of open-source packages, as shown in the following table:
 This list of open-source file-level shared storage solutions is not exhaustive, other open source solutions exist (MooseFS)
 Your organization may already have deployed a file-level shared storage solution which you can use.
 In addition to the open-source technologies, there are a number of proprietary solutions that are officially supported by OpenStack Block Storage.
 Also, you need to decide whether you want to support object storage in your cloud.
 The two common use cases for providing object storage in a compute cloud are:
-To provide users with a persistent storage mechanism • As a scalable, reliable data store for virtual machine images.
+As a scalable, reliable data store for virtual machine images.
 Commodity Storage Back-end Technologies This section provides a high-level overview of the differences among the different commodity storage back-end technologies.
 It is a mature technology that has been used for several years in production by Rackspace as the technology behind Rackspace Cloud Files.
 As it is highly scalable, it is well-suited to managing petabytes of storage.
@@ -419,11 +433,12 @@ Once you have understood the architecture, you should know what a proxy server d
 However, some there important points that are often missed at first glance.
 When designing your cluster, you must consider durability and availability.
 Understand that the predominant source of these is the spread and placement of your data, rather than the reliability of the hardware.
-Consider the default value of the number of replicas, which is 3
 This means that when before an object is marked as having being written at least two copies exists - in case a single server fails to write, the third copy may or may not yet exist when the write operation initially returns.
 Altering this number increases the robustness of your data, but reduces the amount of storage you have available.
 Consider spreading them widely throughout your data centre’s network and power failure zones.
 Is a zone a rack, a server or a disk?
+Object Storage is very ‘chatty’ among servers hosting data - even a small cluster does megabytes/second of traffic, which is predominantly “Do you have the object?"/"Yes I have the object!.” Of course, if the answer to the aforementioned question is negative or times out, replication of the object begins.
+Consider the scenario where an entire server fails, and 24 TB of data needs to be transferred “immediately” to remain at three copies - this can put significant load on the network.
 Another oft forgotten fact is that when a new file is being uploaded, the proxy server must write out as many streams as there are replicas - giving a multiple of network.
 Combining this with the previous high bandwidth demands of replication is what results in the recommendation that your private network is of significantly higher bandwidth than your public need be.
 Oh, and OpenStack Object Storage communicates internally with unencrypted, unauthenticated rsync for performance - you do want the private network to be private.
@@ -522,6 +537,7 @@ To support this, the cloud controller and the compute nodes have two network car
 The OpenStack Block Storage and NFS storage servers only need to access the private network and therefore only need one network card, but multiple cards run in a bonded configuration are recommended if possible.
 Floating IP access is direct to the internet, whereas Flat IP access goes through a NAT.
 Optional Extensions You can extend this reference architecture as follows:
+What’s Next? Congratulations! By now, you should have a solid design for your cloud.
 While it is important for an operator to be familiar with the steps involved in deploying OpenStack, we also strongly encourage you to evaluate configuration management tools such as Puppet or Chef that can help automate this deployment process.
 In the remainder of the guide, we assume that you have successfully deployed an OpenStack cloud and are able to perform basic operations such as adding images, booting instances, and attaching volumes.
 As your focus turns to stable operations, we recommend you do an initial skim of the remainder of the book to get a sense of the content.
@@ -532,6 +548,7 @@ This section helps you set up your working environment and use it to take a look
 Client Command Line Tools We recommend using a combination of the OpenStack command line interface (CLI) client tools and the OpenStack Dashboard.
 Some users with a background in other cloud technologies may be using the EC2 Compatibility API, which uses somewhat different naming conventions from the native API.
 The clients are under heavy development and it is very likely at any given time the version of the packages distributed by your operating system vendor are out of date.
+The “pip” utility is used to manage package installation from the PyPI archive and is available in the “python-pip” package in most Linux distributions.
 Each OpenStack project has its own client, so depending on which services your site runs, install some or all of the following packages:
 Installing the Tools To install (or upgrade) a package from the PyPI archive with pip, as root:
 If you need even newer versions of the clients, pip can install directly from the upstream git repository using the -e flag.
@@ -581,8 +598,6 @@ Servers and Services As an administrator, there are a few ways to discover what 
 This section gives you an idea of how to get an overview of your cloud, its shape, size, and current state.
 First, you can discover what servers belong to your OpenStack cloud by running:
 The output shows that there are five compute nodes and one cloud controller.
-You see a smiley face like :-) which indicates that the services are up and running and functional.
-If a service is no longer available, the :-) changes to an XXX.
 This is an indication that you should troubleshoot why the service is down.
 If you are using Cinder, run the following command to see a similar listing:
 With these two tables, you now have a good overview of what servers and services make up your cloud.
@@ -618,10 +633,12 @@ This guide uses the term project, unless an example shows interaction with a too
 Managing Projects Users must be associated with at least one project, though they may belong to many.
 Therefore, you should add at least one project before adding users.
 Select the “Projects” link in the left hand navigation bar.
+Click on the “Create Project” button at the top right.
 You are prompted for a project name and an optional, but recommended, description.
 Select the check box at the bottom of the form to enable this project.
 It is also possible to add project members and adjust the project quotas.
 We’ll discuss those later, but in practice it can be quite convenient to deal with all these operations at one time.
+To add a project through the command line, you must use the keystone utility, which uses “tenant” in place of “project”:
 Optionally, you can add a description string by appending --description tenant-description which can be very useful.
 You can also create a group in a disabled state by appending --enabled false to the command.
 Quotas To prevent system capacities from being exhausted without notification, you can set up quotas.
@@ -653,6 +670,7 @@ As of the Folsom release, users cannot change their own passwords.
 This is a large driver for creating local custom tools, and must be kept in mind when assigning and distributing passwords.
 Out of the box, OpenStack comes with two roles defined:
 It is possible to define other roles, but doing so is uncommon.
+Once you’ve gathered this information, creating the user in the Dashboard is just another web form similar to what we’ve seen before and can be found on the “Users” link in the “Admin” navigation bar and then clicking the “Create User” button at the top right.
 If you have a large number of users, this page can get quite crowded.
 The “Filter” search box at the top of the page can be used to limit the users listing.
 A form very similar to the user creation dialog can be pulled up by selecting “Edit” from the actions drop down menu at the end of the line for the user you are modifying.
@@ -662,10 +680,13 @@ Administratively if a user reports a problem with an instance or quota it is obv
 Users needn’t worry about what project they are acting in if they are only in one project.
 However, note that, by default, any user can affect the resources of any other user within their project.
 It is also possible to associate users with multiple projects if that makes sense for your organization.
+Associating existing users with an additional project or removing them from an older project is done from the “Projects” page of the Dashboard by selecting the “Modify Users” from the “Actions” column:
 From this view you can do a number of useful and a few dangerous things.
+The first column of this form, titled “All Users”, will include a list of all the users in your cloud who are not already associated with this project and the second all the users who are.
 These can be quite long, but can be limited by typing a substring of the user name you are looking for in the filter field at the top of the column.
 From here, click the + icon to add users to the project.
 The dangerous possibility comes in the ability to change member roles.
+This is the drop down list after the user name in the “Project Members” list.
 In virtually all cases this value should be set to “Member”
 This example purposefully show and administrative user where this value is “admin”
 The “admin” is global not per project so granting a user the admin role in any project gives the administrative rights across the whole cloud.
@@ -711,6 +732,7 @@ Work with them to understand what they’re trying to accomplish and see how you
 This guide is for OpenStack operators and does not seek to be an exhaustive reference for users, but as an operator it is important that you have a basic understanding of how to use the cloud facilities.
 This chapter looks at OpenStack from a basic user perspective, which helps you understand your users’ needs and determine when you get a trouble ticket whether it is a user issue or a service issue.
 The main concepts covered are images, flavors, security groups, blocks storage and instances.
+Images OpenStack images can often be thought of as “virtual machine templates”
 Images can also be standard installation mediums like ISO images.
 Essentially, they contain bootable file systems which are used to launch instances.
 Adding Images Several pre-made images exist and can easily be imported into the Image Service.
@@ -753,7 +775,9 @@ All projects have a “default” security group which is applied to instances w
 When set to true, hosts on the same subnet are not filtered and are allowed to pass all types of traffic between them.
 On a flat network, this allows all instances from all projects unfiltered communication.
 With VLAN networking, this allows access between instances within the same project.
+Security groups for the current project can be found on the Horizon dashboard under “Access & Security” to see details of an existing group select the “edit” action for that security group.
 Obviously modifying existing groups can be done from this “edit” interface.
+There is a “Create Security Group” button on the main Access & Security page for creating new groups.
 We discuss the terms used in these fields when we explain the command line equivalents.
 From the command line you can get a list of security groups for the project you’re acting in using the nova command:
 These rules are all “allow” type rules as the default is deny.
@@ -765,6 +789,7 @@ This name shows up in brief descriptions of the instances that use it where the 
 As an example, let’s create a security group that allows web traffic anywhere on the internet.
 We’ll call this “global_http” which is clear and reasonably concise, encapsulating what is allowed and from where.
 This creates the empty security group to make it do what we want we need to add some rules.
+Note that the arguments are positional and the “from-port” and “to-port” arguments specify the local port range connections are allowed to not source and destination ports of the connection.
 More complex rule sets can be built up through multiple invocations of nova secgroup-add-rule.
 For example if you want to pass both http and https traffic:
 Despite only outputting the newly added rule this operation is additive:
@@ -772,6 +797,7 @@ To create security group rules for a cluster of instances:
 SourceGroups are a special dynamic way of defining the CIDR of allowed sources.
 The user specifies a SourceGroup (Security Group name), all the users’ other Instances using the specified SourceGroup are selected dynamically.
 This alleviates the need for a individual rules to allow each new member of the cluster.usage:
+The “cluster” rule allows ssh access from any other instance that uses the “global-http” group.
 Block Storage OpenStack volumes are persistent block storage devices which may be attached and detached from instances, but can only be attached to one instance at a time, similar to an external hard drive they do not proved shared storage in the way a network file system or object store does.
 It is left to the operating system in the instance to put a file system on the block device and mount it, or not.
 Similar to other removable disk technology it is important the operating system is not trying to make use of the disk before removing it.
@@ -781,17 +807,22 @@ If a user tells the volume service to detach a volume from an instance while it 
 There is nothing OpenStack specific in being aware of the steps needed from with in the instance operating system to access block devices, potentially formatting them for first use and being cautious when removing devices.
 What is specific is how to create new volumes and attach and detach them from instances.
 These operations can all be done from the “Volumes” page of the Dashboard or using the cinder command line client.
+To add new volumes you only need a name and a volume size in gigabytes, ether put these into the “create volume” web form or using the command line:
+This creates a 10 GB volume named “test-volume.” To list existing volumes and the instances they are connected to if any:
 The Block Storage service also allows for creating snapshots of volumes.
 Remember this is a block level snapshot which is crash consistent so it is best if the volume is not connected to an instance when the snapshot is taken and second best if the volume is not in use on the instance it is attached to.
 If the volume is under heavy use, the snapshot may have an inconsistent file system.
 In fact, by default, the volume service does not take a snapshot of a volume that is attached to an image, though it can be forced.
+To take a volume snapshot either select “Create Snapshot” from the actions column next to the volume name in the dashboard volume page, or from the command line:
 Block Storage Creation Failures If a user tries to create a volume and it immediately goes into an error state, the best way to troubleshoot is to grep the Cinder log files for the volume’s UUID.
 Instances Instances are the running virtual machines within an OpenStack cloud.
 This section deals with how to work with them and their underlying images, their network properties and how they are represented in the database.
 Starting Instances To launch an instance you need to select an image, a flavor, and a name.
 The name needn’t be unique but your life is simpler if it is because many tools will use the name in place of UUID so long as the name is unique.
+This can be done from the dashboard either from the “Launch Instance” button on the “Instances” page or by selecting the “Launch” action next to an image or snapshot on the “Images & Snapshots” page.
 There are a number of optional items that can be specified.
 You should read the rest of this instances section before trying to start one, but this is the base command that later details are layered upon.
+To delete instances from the dashboard select the “Terminate instance” action next to the instance on the “Instances” page, from the command line:
 It is important to note that powering off an instance does not terminate it in the OpenStack sense.
 Instance Boot Failures If an instance fails to start and immediately moves to “Error” state there are a few different ways to track down what has gone wrong.
 Some of these can be done with normal user access while others require access to your log server or compute nodes.
@@ -819,10 +850,13 @@ When viewing the server information, you can see the metadata included on the me
 User Data is a special key in the metadata service which holds a file that cloud aware applications within the guest instance can access.
 This user-data can be put in a file on your local system and then passed in at instance creation with the flag --user-data <user-data-file> for example:
 Associating Security Groups Security groups as discussed earlier are typically required to allow network traffic to an instance, unless the default security group for a project has been modified to be more permissive.
+When launching from the dashboard this is on the “Access & Security” tab of the “Launch Instance” dialog.
 When launching from the command line append --security-groups with a comma separated list of security groups.
 It is also possible to add and remove security groups when an instance is running.
 Currently this is only available through the command line tools.
 Floating IPs Projects have a quota controlled number of Floating IPs, however these need to be allocated by a user before they are available for use.
+Once allocated, Floating IP can be assigned to running instances from the Dashboard either by selecting the “Associate Floating IP” from the actions drop down next to the IP on the “Access & Security” page or the same action next to the instance you wish to associate it with on the “Instances” page.
+The inverse action, “Dissociate Floating IP”, is only available from the “Access & Security” page and not from the Instances page.
 From the command line, enter the following command to complete these tasks:
 Attaching Block Storage You can attach block storage to instances from the dashboard on the Volumes page.
 Click the Edit Attachments action next to the volume you wish to attach.
@@ -842,6 +876,7 @@ The only difference between an image that you upload directly to glance and an i
 These properties are found in the image_properties table, and include:
 A snapshot captures the state of the file system, but not the state of the memory.
 Therefore, to ensure your snapshot contains the data that you want, before your snapshot you need to ensure that:
+The file system does not have any “dirty” buffers: where programs have issued the.
 To ensure that important services have written their contents to disk (such as, databases), we recommend you read the documentation for those applications to determine what commands to issue to have them sync their contents to disk.
 If you are unsure how to do this, the safest approach is to simply stop these running services normally.
 To deal with the “dirty” buffer issue, we recommend using the sync command before snapshotting:
@@ -853,6 +888,7 @@ If your operating system doesn’t have a version of fsfreeze available, you can
 Consider the example where you want to take a snapshot of a persistent block storage volume, detected by the guest operating system as /dev/vdb and mounted on /mnt.
 To freeze the volume in preparation for snapshotting, you would do, as root, inside of the instance:
 You must mount the file system before you run the fsfreeze command.
+When the “fsfreeze -f ” command is issued, all ongoing transactions in the file system are allowed to complete, new write system calls are halted, and other calls which modify the file system are halted.
 Most importantly, all dirty data, metadata, and log information are written to disk.
 Once the volume has been frozen, do not attempt to read from or write to the volume, as these operations hang.
 The operating system stops every I/O operation and any I/O attempts is delayed until the file system has been unfrozen.
@@ -865,6 +901,7 @@ Instances in the Database While instance information is stored in a number of da
 The instances table carries all most of the information related to both running and deleted instances.
 It has a bewildering array of fields, for an exhaustive list look at the database.
 These are the most useful fields for operators looking to form queries.
+The “deleted” field is set to “1” if the instance has been deleted and NULL if it has not been deleted this important for excluding deleted instances from your queries.
 The “uuid” field is the UUID of the instance and is used through out other tables in the database as a foreign key.
 This id is also reported in logs, the dashboard and command line tools to uniquely identify an instance.
 A collection of foreign keys are available to find relations to the instance.
@@ -989,10 +1026,9 @@ Performance and Optimizing As your cloud grows, MySQL is utilized more and more.
 If you suspect that MySQL might be becoming a bottleneck, you should start researching MySQL optimization.
 The MySQL manual has an entire section dedicated to this topic Optimization Overview (http://dev.mysql.com/doc/refman/5.5/en/optimize-overview.html)
 Please note these tasks are neither required nor definitive, but helpful ideas:
-Hourly • Check your monitoring system for alerts and act on them.
-Daily • Check for instances in a failed or weird state and investigate why.
-Monthly • Check usage and trends over the past month.
-Quarterly • Review usage and trends over the past quarter.
+Check your monitoring system for alerts and act on them.
+Check for instances in a failed or weird state and investigate why.
+User quotas — Disk space — Image usage — Large instances — Network usage (bandwidth and IP usage)
 Clean up after OpenStack upgrade (any unused or new services to be aware of?)
 Determining which Component Is Broken OpenStack’s collection of different components interact with each other strongly.
 For example, uploading an image requires interaction from nova-api, glance-api, glance-registry, Keystone, and potentially swift-proxy.
@@ -1036,6 +1072,7 @@ Network troubleshooting can unfortunately be a very difficult and confusing proc
 A network issue can cause a problem at several points in the cloud.
 Using a logical troubleshooting procedure can help mitigate the confusion and more quickly isolate where exactly the network issue is.
 This chapter aims to give you the information you need to make yours.
+Using “ip a” to Check Interface States On compute nodes and nodes running nova-network, use the following command to see information about interfaces, including information about IPs, VLANs, and whether your interfaces are up.
 If you’re encountering any sort of networking difficulty, one good initial sanity check is to make sure that your interfaces are up.
 You can safely ignore the state of virbr0, which is a default bridge created by libvirt and not used by OpenStack.
 Network Traffic in the Cloud If you are logged in to an instance and ping an external host, for example google.com, the ping packet takes the following route:
@@ -1093,7 +1130,6 @@ If dnsmasq is seeing the request properly and handing out an IP, the output look
 If you do not see the DHCPDISCOVER, a problem exists with the packet getting from the instance to the machine running dnsmasq.
 If you see all of above output and your instances are still not able to obtain IP addresses then the packet is able to get from the instance to the host running dnsmasq, but it is not able to make the return trip.
 Then this may be a dnsmasq and/or nova-network related issue.
-For the example above, the problem happened to be that dnsmasq did not have any more IP addresses to give away because there were no more Fixed IPs available in the OpenStack Compute database)
 If there’s a suspicious-looking dnsmasq log message, take a look at the command-line arguments to the dnsmasq processes to see if they look correct.
 If the problem does not seem to be related to dnsmasq itself, at this point, use tcpdump on the interfaces to determine where the packets are getting lost.
 Try to boot a new instance and then systematically listen on the NICs until you identify the one that isn’t seeing the traffic.
@@ -1150,7 +1186,6 @@ This makes it easier to split the logs into individual components on the central
 This instructs rsyslog to send all logs to the IP listed.
 In this example, the IP points to the Cloud Controller.
 The best practice is to choose a server that is solely dedicated to this purpose.
-It first configures rsyslog to act as a server that runs on port 514
 So you have an individual log file for each compute node as well as an aggregated log that contains nova logs from all nodes.
 StackTach StackTach is a tool created by Rackspace to collect and report the notifications sent by nova.
 Notifications are essentially the same as logs, but can be much more detailed.
@@ -1181,7 +1216,7 @@ By combining the resources used with the tenant’s quota, you can figure out a 
 You can take this procedure and turn it into a formatted report:
 This script is specific to a certain OpenStack installation and must be modified to fit your environment.
 Intelligent Alerting Intelligent alerting can be thought of as a form of continuous integration for operations.
-For example, you can easily check to see if Glance is up and running by ensuring that the glance-api and glance-registry processes are running or by seeing if glace-api is responding on port 9292
+But how can you tell if images are being successfully uploaded to the Image Service? Maybe the disk that Image Service is storing the images on is full or the S3 back-end is down.
 You could naturally check this by doing a quick image upload:
 By taking this script and rolling it into an alert for your monitoring system (such as Nagios), you now have an automated way of ensuring image uploads to the Image Catalog are working.
 Even better, test whether you can successfully delete an image from the Image Service.
@@ -1250,6 +1285,7 @@ Now login as the stack user and set up DevStack.
 At the prompt, enter the password that you created for the stack user.
 For Swift only, used in the Middleware Example, see the example [1] Swift only localrc below.
 For all other projects, used in the Nova Scheduler Example, see the example [2] All other projects localrc below.
+When you run stack.sh, you might see an error message that reads “ERROR: at least one RPC back-end must be enabled”
 Don’t worry about it; swift and keystone do not need an RPC (AMQP) back-end.
 Screen is a useful program for viewing many related services at once.
 Now that you have an OpenStack development environment, you’re free to hack around without worrying about damaging your production deployment.
@@ -1268,6 +1304,7 @@ There is a lot of useful information in env and conf that you can use to decide 
 To find out more about what properties are available, you can insert the following log statement into the __init__ method.
 To plug this middleware into the Swift pipeline you’ll need to edit one configuration file.
 Find the [filter:ratelimit] section and copy in the following configuration section.
+Find the [pipeline:main] section and add ip_whitelist to the list like so.
 Restart the Swift Proxy service to make Swift use your middleware.
 The first three statements basically have to do with the fact that middleware doesn’t need to re-authenticate when it interacts with other Swift services.
 The last 2 statements are produced by our middleware and show that the request was sent from our DevStack instance and was allowed.
@@ -1330,8 +1367,6 @@ Once you have a Launchpad account, reporting a bug is as simple as identifying t
 Sometimes this is more difficult than expected, but those working on the bug triage are happy to help relocate issues if their not in the right place initially.
 To write a good bug report, the following process is essential.
 First, search for the bug to make sure there is no bug already filed for the same issue.
-If you find one, be sure to click on “This bug affects X people.
-Does this bug affect you?” If you can’t find the issue then enter the details of your report.
 The release, or milestone, or commit ID corresponding to the software that you are running.
 The operating system and version where you’ve identified the bug.
 Description of the expected results instead of what you saw.
@@ -1352,7 +1387,6 @@ During that time, to avoid duplicating the work, they should set:
 When the fix is ready, they propose and get the change reviewed.
 After the Change is Accepted After the change is reviewed, accepted, and lands in master, it automatically moves to:
 When the fix makes it into a milestone or release branch, it automatically moves to:
-Milestone: Milestone the bug was fixed in • Status: Fix released.
 The OpenStack Foundation is an independent body providing shared resources to help achieve the OpenStack mission by protecting, empowering, and promoting OpenStack software and the community around it, including users, developers and the entire ecosystem.
 We all share the responsibility to make this community the best it can possibly be and signing up to be a member is the first step to participating.
 Like the software, individual membership within the OpenStack Foundation is free and accessible to anyone.
@@ -1441,7 +1475,6 @@ There are future plans to move the instances off of the NetApp appliance and ont
 All servers have two bonded 10gb NICs that are connected to two redundant switches.
 Internal OpenStack traffic (for example, storage traffic) does not go through the cloud controller.
 Deployment The environment is largely based on Scientific Linux 6, which is Red Hat compatible.
-We use KVM as our primary hypervisor although tests are ongoing with Hyper-V on Windows Server 2008
 Puppet is used widely for instance configuration and Foreman as a GUI for reporting and instance provisioning.
 CLIs are available for Nova and Euca2ools to do this.
 Herein lies a selection of tales from OpenStack cloud operators.
@@ -1457,10 +1490,14 @@ I logged into the new instance and ran ps aux again.
 After reproducing the problem several times, I came to the unfortunate conclusion that this cloud did indeed have a problem.
 Even worse, my time was up in Kelowna and I had to return back to Calgary.
 Where do you even begin troubleshooting something like this? An instance just randomly locks when a command is issued.
+Is it the image? Nope — it happens on all images.
+Is the instance locked up? No! New SSH connections work just fine!
+Great! MTU! Something to go on! What’s MTU and why would it cause a problem?
 It specifies the maximum number of bytes that the interface accepts for each packet.
 If two interfaces have two different MTUs, bytes might get chopped off and weird things happen -- such as random session lockups.
 Running the ls command over SSH might only create a single packets less than 1500 bytes.
 However, running a command with heavy output, such as ps aux requires several packets of 1500 bytes.
+OK, so where is the MTU issue coming from? Why haven’t we seen this in any other deployment? What’s new in this situation? Well, new data center, new uplink, new switches, new model of switches, new servers, first time using this model of servers… so, basically everything was new.
 We toyed around with raising the MTU at various areas: the switches, the NICs on the compute nodes, the virtual NICs in the instances, we even had the data center raise the MTU for our uplink interface.
 We shouldn’t have to be changing the MTU in these areas.
 As a last resort, our network admin (Alvaro) and myself sat down with four terminal windows, a pencil, and a piece of paper.
@@ -1477,7 +1514,6 @@ When the ping reply was sent from the instance, it should be in a VLAN.
 When it came back to the cloud controller and on its way out to the public internet, it should no longer have a VLAN.
 It looked as though the VLAN part of the packet was not being removed.
 While bouncing this idea around in our heads, I was randomly typing commands on the compute node:
-Hey Alvaro, can you run a VLAN on top of a VLAN?”
 In nova.conf, vlan_interface specifies what interface OpenStack should attach all VLANs to.
 It’s a correct VLAN and is also attached to bond0
 As luck would have it, within the first day or two of it running, one of their servers just disappeared from the network.
@@ -1498,11 +1534,13 @@ We decided to have tcpdump run on this instance and see if we could catch it in 
 In short, it looked as though network communication stopped before the instance tried to renew its IP.
 Since there is so much DHCP chatter from a one minute lease, it’s very hard to confirm it, but even with only milliseconds difference between packets, if one packet arrives first, it arrived first, and if that packet reported network issues, then it had to have happened before DHCP.
 Additionally, this instance in question was responsible for a very, very large backup job each night.
+While “The Issue” (as we were now calling it) didn’t happen exactly.
 Further days go by and we catch The Issue in action more and more.
 We find that dhclient is not running after The Issue happens.
 Ever have one of those days where all of the sudden you get the Google results you were looking for? Well, that’s what happened here.
 I was looking for information on dhclient and why it dies when it can’t renew its lease and all of the sudden I found a bunch of OpenStack and dnsmasq discussions that were identical to the problem we were seeing!
 It was full of people who had some strange network problem but didn’t quite explain it in the same way.
+At the same time of finding the bug report, a co-worker was able to successfully reproduce The Issue! How? He used iperf to spew a ton of bandwidth at an instance.
 Within 30 minutes, the instance just disappeared from the network.
 Armed with a patched qemu and a way to reproduce, we set out to see if we’ve finally solved The Issue.
 After 48 hours straight of hammering the instance with bandwidth, we were confident.
@@ -1536,10 +1574,13 @@ Since all compute nodes have access to this directory, all compute nodes periodi
 If there is only one instance using an image, and the node that the instance is on is down for a few minutes, it won’t be able to mark the image as still in use.
 Therefore, the image seems like it’s not in use and is deleted.
 When the compute node comes back online, the instance hosted on that node is unable to start.
-This past Valentine’s Day, I received an alert that a compute node was no longer available in the cloud — meaning,
+The Valentine’s Day Compute Node Massacre Although the title of this story is much more dramatic than the actual event, I don’t think, or hope, that I’ll have the opportunity to use “Valentine’s Day Massacre” again in a title.
 I logged into the cloud controller and was able to both ping and SSH into the problematic compute node which seemed very odd.
 Usually if I receive this type of alert, the compute node has totally locked up and would be inaccessible.
 After a few minutes of troubleshooting, I saw the following details:
+A user recently tried launching a CentOS instance on that node.
+This user was the only user on the node (new node)
+The load shot up to 8 right before I received the alert.
 I looked at the status of both NICs in the bonded pair and saw that neither was able to communicate with the switch port.
 Seeing as how each NIC in the bond is connected to a separate switch, I thought that the chance of a switch port dying on each switch at the same time was quite improbable.
 I concluded that the 10gb dual port NIC had died and needed replaced.
@@ -1581,7 +1622,6 @@ Auditors is the collective term for the swift account auditor, container auditor
 Must be provided by the user or process in subsequent requests to the API endpoint.
 Examples include a SQL database, LDAP database, or KVS back-end.
 Bexar A grouped release of projects related to OpenStack that came out in February of Object Storage (swift) only.
-Cactus An OpenStack grouped release of projects that came out in the spring of 2011
 Can apply to the specific services within a cell or a whole cell.
 Requests are passed from parent cells to child cells if the parent cannot provide the requested resource.
 Ceph Massively scalable distributed storage system that consists of an object store, block store, and POSIX-compatible distributed file system.

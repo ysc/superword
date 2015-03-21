@@ -55,14 +55,18 @@ As mentioned before, both vertical and horizontal scaling each have their own li
 Given these limitations, a combination of scalability and capacity planning is often warranted.
 Put another way, define a maximum capacity to which you need to scale and test so that your system can scale to meet that capacity—there is no such thing as infinite scalability, and attempting to create such a system would be prohibitively expensive.
 In Chapter 6, we will take a look at testing the capacity of your system through distributed load testing.
+The CAP Theorem CouchDB, like any database, balances three different concerns: consistency, availability, and partition tolerance (see Chapter 2 in CouchDB: The Definitive Guide [O’Reilly])
 By design, CouchDB focuses on availability and partition tolerance and gives up consistency in exchange.
 Consistency Consistency is a database property whereby all clients will always see a consistent view of the data in your database.
 Once you have more than one CouchDB node, you will typically give up consistency in exchange for eventual consistency.
 Through replication, all CouchDB nodes can eventually be made to have a consistent view of the data.
+How quickly do you need your data replicated? Do some nodes need to be consistent immediately?
 Availability Through load balancing, CouchDB can achieve a high level of availability.
 This means that a large number of requests can be served concurrently while still providing all clients with access to create, read, update, and delete data.
+How many requests per second does your system need to be capable of handling? What will be the ratio of read requests (GET) to write requests (POST, PUT, DELETE)?
 Partition Tolerance CouchDB takes a peer-to-peer approach to replication giving it the property of partition tolerance.
 CouchDB nodes can operate in a “split-brain” scenario where the nodes are disconnected from each other and thus cannot be replicated, but will be replicated once a connection is re-established.
+How often and for how long will your CouchDB nodes be disconnected from each other? For example, will you have CouchDB instances on mobile devices that are occasionally connected? Will you be hosting CouchDB nodes in separate data centers? Are you dealing with a Big Data problem where you need to store a dataset that is too big for a single node?
 In this chapter, we will take a look at some performance tips that you can apply when tuning your database.
 While not directly related to scalability, increasing performance can increase the overall capacity of your system.
 There are many options available when tuning CouchDB to meet your needs.
@@ -163,7 +167,6 @@ Replicate back from catalog-b to catalog-a (so that the conflict will exist in b
 Querying the conflicts view from catalog-a or from catalog-b should return the same results:
 CouchDB uses a deterministic algorithm to pick the winner when there is a conflict.
 Every CouchDB node will always pick the same winner of any given conflict.
-First, CouchDB looks at the incrementing part of the revision number (the part before the "-“) and the document with the highest number wins.
 If both documents have the same number of revisions, then CouchDB simply does an ASCII comparison of the revision number and the document with the highest sort order wins.
 It is always a good idea to handle conflicts within your application by automatically merging documents in a way that makes sense to your application, or by presenting the conflict to an end user to resolve.
 If you’d like, you can verify this by querying the conflicted document on catalog-a, setting the conflicts query parameter to true:
@@ -182,6 +185,7 @@ Let’s take a look at our conflicts view to make sure that the conflict has, in
 Let’s verify that the document has not been deleted: curl -X GET http://localhost:5984/catalog-a/978-0-596-80579-1
 Let’s double-check that the conflict has also been resolved in the catalog-b database: curl -X GET http://localhost:5984/catalog-b/_design/default/_view/conflicts.
 Merging Revisions In this scenario, we will create a new revision, merging properties of both documents, and then delete the conflicting document.
+First, let’s update the document, merging our changes (our “merge” involves leaving out the comma but using an ampersand instead of “and”):
 Let’s take a look at our conflicts view to make sure that the conflict has been resolved: curl -X GET http://localhost:5984/catalog-a/_design/default/_view/conflicts.
 Let’s verify that the document has not been deleted: curl -X GET http://localhost:5984/catalog-a/978-0-596-80579-1
 Let’s double-check that the conflict has also been resolved in the catalog-b database: curl -X GET http://localhost:5984/catalog-b/_design/default/_view/conflicts.
@@ -189,9 +193,9 @@ Load balancing allows you to distribute the workload evenly across multiple Couc
 Since CouchDB uses an HTTP API, standard HTTP load balancing software or hardware can be used.
 With simple load balancing, each CouchDB node will maintain a full copy of your database through replication.
 Each document will eventually need to be written to every node, which is a limitation of this approach since the sustained write throughput of your entire system will be limited to that of the slowest node.
-You could replicate only certain documents using filter functions or by specifying document IDs, as discussed in Chapter 3
 See Chapter 5 for details on an alternative way to distribute your data across multiple CouchDB nodes.
 In this scenario, we will set up a write-only master node and three read-only slave nodes.
+We will send all “unsafe” HTTP write requests (POST, PUT, DELETE, MOVE, and COPY) to the master node and load balance all “safe” HTTP read requests (GET, HEAD, and OPTIONS) across the three slave nodes.
 We will set up continuous replication from the write-only master to each of the read-only slave nodes.
 See Figure 4-1 for a diagram of the configuration we will be creating in this chapter.
 The MOVE HTTP method was removed from CouchDB since it was really just a COPY followed by a DELETE, but implied that there was a transaction across these two operations (which there was not)
@@ -225,12 +229,14 @@ This allows for sticky sessions meaning that, once a client has been routed to a
 The path=/api part indicates to the client the URL path for which the cookie is valid.
 A later configuration directive will define what requests should be sent to this load balancer.
 The three BalancerMember lines each add a member to the load balancer.
+The route= parameters (e.g., route=couch-a) give each route a name.
 The max=4 parameters indicate the maximum number of connections that the proxy will allow to the backend server.
 The ProxySet stickysession=NODE directive indicates to the load balancer the cookie name to use (in this case NODE) when determining which route to use.
 Keep the maximum number of connections to each CouchDB node low (e.g., max=4)
 While 4 may seem like a very low number, CouchDB will respond to each request very quickly and allow for a high level of throughput.
 If the proxy server has enough memory and is configured to allow enough concurrent clients itself, then it can effectively queue requests for the backend servers.
 If we didn’t need to proxy requests based on the HTTP method, we could have used the ProxyPass directive.
+However, for this added flexible we need to use mod_rewrite with the proxy ([P]) flag.
 The next line sets up a rewrite condition that says to only run the subsequent rewrite rule if the request HTTP method is POST, PUT, DELETE, MOVE, or COPY:
 The subsequent rewrite rule then proxies all requests to URIs starting with /api to the equivalent URI on http://couch-master.example.com:5984 (again, only if the previous rewrite condition has been met):
 This one says to only run the subsequent rewrite rule if the request HTTP method is GET, HEAD, or OPTIONS:
@@ -244,7 +250,7 @@ Let’s try and POST a new document to the load balancer, treating it as if it�
 Let’s try and GET the newly created document from the load balancer, again treating it as if it’s a CouchDB node:
 If the document did not replicate from one CouchDB node to the other, then make sure that continuous replication is running.
 See Chapter 6 for information about how to perform distributed load testing.
-To increase, please see the ServerLimit directive.” As mentioned before, Apache limits the MaxClients to the ServerLimit multiplied by the ThreadsPerChild.
+When load testing, watch Apache’s error log for errors such as “server reached MaxClients setting, consider raising the MaxClients setting” or “server is within MinSpareThreads of MaxClients, consider raising the MaxClients setting,” and adjust Apache’s settings as described earlier.
 Load balancing is very useful, but it alone may not provide you with the scale you need.
 Sometimes it is necessary to partition your data across multiple shards.
 Each shard lives on a CouchDB node and contains a subset of your data.
@@ -310,6 +316,9 @@ In order to stress test a distributed system, you will need a distributed load t
 Tsung is a distributed load and stress testing tool that we will use for the example this chapter.
 We will be using Tsung on Ubuntu, but these steps can be easily adapted to other platforms.
 Tsung can generate GET and POST HTTP requests and, as of version 1.2.1, PUT and DELETE HTTP requests.
+Monitoring of client operating systems’ CPU, memory, and network traffic.
+Simulation of dynamic sessions, described in an XML configuration file.
+Recording of HTTP sessions for later playback during a test.
 Depending on the number of testing servers used, Tsung can simulate hundreds of thousands of concurrent users.
 Given enough servers, you could even simulate millions of concurrent users.
 We will do this using public key authentication, but you could instead use ssh-agent or rsh.
@@ -340,12 +349,10 @@ The duration attribute defines how long the arrival phase should last and the un
 Possible values for the unit element are second, minute, or hour.
 The arrivalrate attribute of the users element defines the number of arrivals within the timeframe defined by the unit element.
 Possible values for the unit element are second, minute, or hour.
-You can define multiple sessions and each can have its own probability, but the total probability of all sessions must add up to 100
 The session element with the name attribute value of post_get:
 This session element contains a name attribute with the value of post_get.
 This name will be used in reports to identify the session.
 The session element’s probability attribute indicates the percent probability of this session being used for any given user.
-Remember, the total probability of all sessions must add up to 100
 The thinktime element defines an amount of time to wait, or “think”, before continuing.
 This is helpful when trying to more realistically simulate load.
 The thinktime element’s value attribute is the amount of time, in seconds, to wait.
@@ -421,8 +428,6 @@ It looks like none of the nodes ever run out of memory, so excessive swapping sh
 The server load averages on the read-only slave nodes and the write-only master node are reasonable.
 The server load average on the proxy server is quite high.
 Based on this analysis, we might conclude that the proxy server is a potential bottleneck in our system.
-If you look back at the counter statistics, you’ll see that the maximum number of connections reached was 2797
-However, the maximum number of connections allowed to each read-only node was 4
 With three read-only nodes, this gives us a total of 12 maximum connections to the backend CouchDB nodes.
 The write-only node did not have a limit, but our test scenarios were read-heavy.
 It appears that the proxy server is effectively queuing requests for the backend CouchDB nodes, which could account for the high server load.

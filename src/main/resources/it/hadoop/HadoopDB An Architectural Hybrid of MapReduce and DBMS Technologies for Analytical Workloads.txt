@@ -38,6 +38,7 @@ Since it is our goal to combine all of the advantages of both data analysis appr
 Hence, we use PostgreSQL as the database layer and Hadoop as the communication layer, Hive as the translation layer, and all code we add we release as open source [2]
 One side effect of such a design is a shared-nothing version of PostgreSQL.
 We are optimistic that our approach has the potential to help transform any single-node DBMS into a shared-nothing parallel database.
+Given our focus on cheap, large scale data analysis, our target platform is virtualized public or private “cloud computing” deployments, such as Amazon’s Elastic Compute Cloud (EC2) or VMware’s private VDC-OS offering.
 Such deployments significantly reduce up-front capital costs, in addition to lowering operational, facilities, and hardware costs (through maximizing current hardware utilization)
 All experiments we run in this paper are on Amazon’s EC2 cloud offering; however our techniques are applicable to non-virtualized cluster computing grid deployments as well.
 We extend previous work [23] that showed the superior performance of parallel databases relative to Hadoop.
@@ -81,6 +82,7 @@ In this section, we give an overview of the parallel database and MapReduce appr
 These systems all support standard relational tables and SQL, and implement many of the performance enhancing techniques developed by the research community over the past few decades, including indexing, compression (and direct operation on compressed data), materialized views, result caching, and I/O sharing.
 Most (or even all) tables are partitioned over multiple nodes in a sharednothing cluster; however, the mechanism by which data is partitioned is transparent to the end-user.
 Parallel databases use an optimizer tailored for distributed workloads that turn SQL commands into a query plan whose execution is divided equally among multiple nodes.
+Of the desired properties of large scale data analysis workloads described in Section 3, parallel databases best meet the “performance property” due to the performance push required to compete on the open market, and the ability to incorporate decades worth of performance tricks published in the database research community.
 Parallel databases can achieve especially high performance when administered by a highly skilled DBA who can carefully design, deploy, tune, and maintain the system, but recent advances in automating these tasks and bundling the software into appliance (pre-tuned and pre-configured) offerings have given many parallel databases high performance out of the box.
 Parallel databases also score well on the flexible query interface property.
 Implementation of SQL and ODBC is generally a given, and many parallel databases allow UDFs (although the ability for the query planner and optimizer to parallelize UDFs well over a shared-nothing cluster varies across different implementations)
@@ -97,7 +99,6 @@ Finally, a set of Reduce tasks are executed in parallel by each node on the part
 MapReduce does not create a detailed query execution plan that specifies which nodes will run which tasks in advance; instead, this is determined at runtime.
 This allows MapReduce to adjust to node failures and slow nodes on the fly by assigning more tasks to faster nodes and reassigning tasks from failed nodes.
 MapReduce also checkpoints the output of each Map task to local disk in order to minimize the amount of work that has to be redone upon a failure.
-Of the desired properties of large scale data analysis workloads,
 MapReduce best meets the fault tolerance and ability to operate in heterogeneous environment properties.
 It achieves fault tolerance by detecting and reassigning Map tasks of failed nodes to other nodes in the cluster (preferably nodes with replicas of the input Map data)
 It achieves the ability to operate in a heterogeneous environment via redundant task execution.
@@ -166,7 +167,6 @@ The HadoopDB catalog, Section 5.2.2, provides information about the table schema
 In the first pass, we retrieve data fields that are actually processed by the plan and we determine the partitioning keys used by the Reduce Sink (Repartition) operators.
 In the second pass, we traverse the DAG bottom-up from table scan operators to the output or File Sink operator.
 All operators until the first repartition operator with a partitioning key different from the database’s key are converted into one or more SQL queries and pushed into the database layer.
-The query processing logic that could be pushed into the database layer ranges from none (each.
 Given the above GroupBy query, SMS produces one of two different plans.
 If the sales table is partitioned by YEAR(saleDate), it produces the query plan in Fig.
 Only a Map task is required to output results into an HDFS file.
@@ -193,11 +193,9 @@ In this section, we only report results using trials where all nodes are availab
 We deployed the system with several changes to the default configuration settings.
 Each MR executor ran with a maximum heap size of 1024MB.
 We allowed two Map instances and a single Reduce instance to execute concurrently on each node.
-Additionally, we modified the number of parallel transfers run by Reduce during the shuffle phase and the number of worker threads for each TaskTracker’s http server to be 50
 These adjustments follow the guidelines on high-performance Hadoop clusters [13]
 For each benchmark trial, we stored all input and output data in HDFS with no replication (we add replication in Section 7)
 After benchmarking a particular cluster size, we deleted the data directories on each node, reformatted and reloaded HDFS to ensure uniform data distribution across all nodes.
-We present results of both hand-coded Hadoop and Hive-coded Hadoop (i.e.
 These separate results for Hadoop are displayed as split bars in the graphs.
 The bottom, colored segment of the bars represent the time taken by Hadoop when hand-coded and the rest of the bar indicates the additional overhead as a result of the automatic plan-generation by Hive, and operator function-call and dynamic data type resolution through Java’s Reflection API for each tuple processed in Hive-coded jobs.
 The Hadoop part of HadoopDB was configured identically to the.
@@ -207,12 +205,12 @@ However, we found that while simple table scans are up to 30% faster, more compl
 Analogous to what we did for Hadoop, we present results of.
 These separate results for HadoopDB are displayed as split bars in the graphs.
 The bottom, colored segment of the bars represents the time taken by HadoopDB when hand-coded and the rest of the bar indicates the additional overhead as a result of the SMS planner (e.g., SMS jobs need to serialize tuples retrieved from the underlying database and deserialize them before further processing in Hadoop)
-Vertica is a relatively new parallel database system (founded in.
 Vertica is a column-store, which means that each attribute of each table is stored (and accessed) separately, a technique that has proven to improve performance for read-mostly workloads.
 Vertica offers a “cloud” edition, which we used for the experiments in this paper.
 The Vertica configuration is therefore as follows: All data is compressed.
 Vertica implements primary indexes by sorting the table by the indexed attribute.
 Since at the time of our VLDB submission this DBMS did not offer a cloud edition, we did not run experiments for it on EC2
+The first benchmark task (the “Grep task”) requires each system to scan through a data set of 100-byte records looking for a three character pattern.
 To explore more complex uses of the benchmarked systems, the benchmark includes four more analytical tasks related to log-file analysis and HTML document processing.
 Three of these tasks operate on structured data; the final task operates on both structured and unstructured data.
 The datasets used by these four tasks include a UserVisits table meant to model log files of HTTP server traffic, a Documents table containing 600,000 randomly generated HTML documents, and a Rankings table that contains some metadata calculated over the data in the Documents table.
@@ -245,6 +243,7 @@ Since the speed of loading is limited by the slowest disk-write speed in the clu
 The total number of records processed for each cluster size is 5.6 million times the number of nodes.
 None of the benchmarked systems contained an index on the field attribute.
 Hence, for all systems, this query requires a full table scan and is mostly limited by disk speed.
+Hadoop (hand-coded) was executed identically to [23] (a simple Map function that performs a sub-string match on “XYZ”)
 No Reduce function is needed for this task, so the output of the Map function is written directly to HDFS.
 HadoopDB’s SMS planner pushes the WHERE clause into the PostgreSQL instances.
 HadoopDB slightly outperforms Hadoop as it handles I/O more efficiently than Hadoop due to the lack of runtime parsing of data.
@@ -270,7 +269,6 @@ The output is then sent to Reduce jobs inside of Hadoop that perform the final a
 The performance numbers for each benchmarked system is displayed in Fig.
 Similar to the Grep task, this query is limited by reading data off disk.
 Thus, both commercial systems benefit from compression and outperform HadoopDB and Hadoop.
-We observe a reversal of the general rule that Hive adds an overhead cost to hand-coded Hadoop in the “small” (substring) aggregation task (the time taken by Hive is represented by the lower part of the Hadoop bar in Fig.
 Hive performs much better than Hadoop because it uses a hash aggregation execution strategy (it maintains an internal hash-aggregate map in the Map phase of the job), which proves to be optimal when there is a small number of groups.
 In the large aggregation task, Hive switches to sort-based aggregation upon detecting that the number of groups is more than half the number of input rows per block.
 In contrast, in our hand-coded Hadoop plan we (and the authors of [23]) failed to take advantage of hash aggregation for the smaller query because sort-based aggregation (using Combiners) is a MapReduce standard practice.
@@ -304,6 +302,7 @@ DBMS-X processed each HTML document file separately, as described below.
 The parallel databases should theoretically be able to use a userdefined function, F, to parse the contents of each document and.
 A temporary table would then be populated with this list of URLs and then a simple count/group-by query would be executed that finds the number of instances of each unique URL.
 Unfortunately, [23] found that in practice, it was difficult to implement such a UDF inside the parallel databases.
+In DBMS-X, it was impossible to store each document as a character BLOB inside the DBMS and have the UDF operate on it directly, due to “a known bug in [the] version of the system”
 Hence, the UDF was implemented inside the DBMS, but the data was stored in separate HTML documents on the raw file system and the UDF made external calls accordingly.
 Vertica does not currently support UDFs, so a simple document parser had to be written in Java externally to the DBMS.
 This parser is executed on each node in parallel, parsing the concatenated documents file and writing the found URLs into a file on the local disk.
@@ -364,7 +363,7 @@ Failures are still reasonably rare at fewer than 100 nodes.
 First, data production continues to grow faster than Moore’s law (see Section 1)
 Second, it is becoming clear that from both a price/performance and (an increasingly important) power/performance perspective, many low-cost, low-power servers are far better than fewer heavy-weight servers [14]
 Hence, awaiting us in the future are heavy-weight analytic database jobs, requiring more time and more nodes.
-The probability of failure in these next generation applications will be far larger than it is today, and restarting entire jobs upon a failure will be unacceptable (failures might be common enough that long-running jobs never finish!) Thus, although Hadoop and HadoopDB pay a performance penalty for runtime scheduling, block-level restart, and frequent checkpointing, such an overhead to achieve robust fault tolerance will become necessary in the future.
+Thus, although Hadoop and HadoopDB pay a performance penalty for runtime scheduling, block-level restart, and frequent checkpointing, such an overhead to achieve robust fault tolerance will become necessary in the future.
 One feature of HadoopDB is that it can elegantly transition between both ends of the spectrum.
 Our experiments show that HadoopDB is able to approach the.
 Although the performance of HadoopDB does not in general match the performance of parallel database systems, much of this was due to the fact that PostgreSQL is not a column-store and we did not use data compression in PostgreSQL.

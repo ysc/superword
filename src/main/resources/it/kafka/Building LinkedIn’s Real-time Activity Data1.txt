@@ -34,11 +34,11 @@ The first was to be able to share data easily between these different types of f
 For a large-scale consumer website, operational system metrics about server and service performance are business metrics.
 They are of concern to everyone from the individual engineers and operations staff to our executive team.
 Artificially separating these from more traditional business metrics lead to difficulties correlating problems that appeared at the system level with impacts in business metrics.
-Many types of system problems and bugs go undetected in system metrics but have negative business impact (e.g.
 Since our business metrics were not available in real-time we were dependent on a data warehouse ETL pipeline that ran with several hours of delay to detect many types of problems.
 This lag lead to long detection times for certain problems as well as ever-increasing pressure on the latency of the data warehouse ETL processes.
 Likewise, because our operational metrics were only captured in a real-time monitoring system they were not easily accessible for deeper longitudinal queries for capacity analysis or system debugging.
 Both systems suffered due to the sheer number of feeds that were maintained by hand, and both had similar backlogs of missing data that needed to be added by the central teams responsible for the systems.
+One goal was to ensure that any system—Hadoop, monitoring tools, etc—could integrate with the data pipeline and produce or consume any of these data sources with minimal additional integration work.
 We had a broader motivation based in our conception of the role of the data warehouse for an internet company such as LinkedIn.
 The traditional role of the data warehouse is to curate and maintain a cleansed, structured copy of all data.
 Access to clean, complete data is of the utmost importance to a data-centric company, however having the data warehouse be the sole location of the cleansed and structured data is problematic.
@@ -59,6 +59,7 @@ Consumer processes balanced themselves at random over ActiveMQ instances so ther
 We did not want to maintain static assignment of consumer to brokers as this would be unmanageable, and downtime in a consumer would then cause backup.
 We also encountered a number of bugs that came out under production load that caused brokers to hang, leak connections, or run out of memory.
 Worse, the back-pressure mechanism would cause a hung broker to effectively block the client, which in some cases could block the web server from serving the pages for which the data was sent.
+The “virtual topic” feature we used to support clustered consumers required duplicating the data for each consumer in a separate queue.
 This leads to some inefficiencies since all topics would have at least two copies of the data, one for the real-time consumer and one for the batch log aggregation service.
 Further we had difficulties with ActiveMQ’s built in persistence mechanism that lead to very long restart times.
 We believe some of these issues have since been addressed in subsequent ActiveMQ releases, but the fundamental limitations remain.
@@ -84,7 +85,6 @@ Kafka is a publish/subscribe system, but our notion of a subscriber is generaliz
 We deliver each message in the topic to one machine in each of these subscriber groups.
 Both broker and consumer group membership is fully dynamic, which allows us to dynamically add nodes to the groups and have load automatically rebalanced without any static cluster configuration.
 We use Zookeeper [9] to manage this group membership and assign partition consumers.
-Each consumer process announces itself as part of a named group (e.g.
 From the time of this assignment to the next reassignment, each process is the only member of the group allowed to consume from its set of partitions.
 As a result the partition is the unit of parallelism of the topic and controls the maximum parallelism of the subscriber.
 This arrangement allows the metadata concerning what has been consumed from a particular partition by a given consumer group to be a simple eight-byte monotonically increasing message id recording the last message in that partition that has been acknowledged.
@@ -125,6 +125,7 @@ Disabling these in performance experiments gives end-to-end round trips of only 
 Figure 2: A simplified view of how the data pipeline fits into LinkedIn’s data center topology.
 Our configuration always sends live traffic to a local Kafka cluster and these live clusters are replicated to an aggregate cluster which contains a full view of all data for processing or loading into Hadoop.
 Data is also sent back from these applications and from Hadoop processing as new Kafka streams.
+The “live data centers” are where the real-time application serving happens and the “offline data centers” house Hadoop and other offline analytical infrastructure.
 The primary design criteria for a pipeline such as this is maximizing the end-to-end throughput while providing low-latency and reasonable semantics to the system users.
 It is also important that throughput and latency remain constant with respect to the volume of unconsumed data as we often have slow or batch-oriented consumers.
 We will describe some of the optimizations that are essential for achieving high and consistent throughput.
@@ -134,6 +135,7 @@ Partial messages can occur in the event of a crash and can not automatically be 
 The unit of consumption is usually the file as there is no logical identifier at the message level.
 This introduces the log file (which should be an implementation detail) as a first-class concept; clients need to remember which files have been processed and restart correctly in the event of a failure.
 Likewise, the file must be complete before it can be aggregated for processing, which introduces artificial latency.
+This latency can be mitigated by rolling over files more often (for example, some companies use “minute files”) but this comes at a cost of exploding the number of files maintained.
 One of our design goals was to maintain the simple I/O model of logging systems while providing the cleaner, more granular model of messaging systems.
 Kafka uses three primary techniques to improve the effective throughput.
 The first is partitioning up data so that production, brokering, and consumption of data are all handled by clusters of machines that can be scaled incrementally as load increases.
@@ -158,6 +160,7 @@ Instead we simply rely on the filesystem pagecache to buffer writes and delay th
 This ability to delay physical write activity allows the operating system I/O scheduler to coalesce small random appends to hundreds of topics into a larger linear write pattern.
 Putting all data immediately into the filesystem has the benefit that no data is lost during application crashes that leave the operating system intact.
 This flush batching is also governed by a configurable policy that is triggered by an elapsed time or the number of accumulated messages in that partition.
+A similar delayed flush policy is implemented in Linux’s “pdflush” daemon [10]; but.
 Without this technique, our strategy of always persisting messages would be extremely inefficient: we see an improvement of 51.7x over immediately flushing each write due to the large number of topics and partitions and resulting random I/O incurred.
 Data consumption occurs with the client requesting messages from the broker by specifying a given starting message id and some user-specified maximum buffer size (say one megabyte) to fill with message data.
 This batching improves performance in our tests by a factor of 20.1
@@ -187,6 +190,7 @@ The buffering of writes naturally populates this cache when a message is added t
 The log file itself is written in a persistent, checksummed, and versioned format that can be directly included when responding to client fetch requests.
 As a result we are able to take advantage of Linux’s sendfile system call [10]
 This allows the transmission of file chunks directly from pagecache with no buffering or copying back and forth between user and kernel space to perform the network transfer.
+These three features—the high cache hit ratio of reads, the sendfile optimization, and the low bookkeeping overhead of the consumers—make adding consumers exceptionally low impact.
 Some of the most difficult problems we have encountered have to do with the variety of data, use cases, users, and environments that a centralized data pipeline must support.
 These problems tend to be the least glamorous and hardest to design for ahead of time because they can’t be predicted by extrapolating forward current usage.
 They are also among the most important as efficiency problems can often be resolved by simply adding machines, while “integration” problems may fundamentally limit the usefulness of the system.
@@ -247,11 +251,13 @@ This meant that although certain errors were seen in the old system, there was n
 To address this we added deep monitoring capabilities, in addition to the normal application metrics we would capture for any system.
 We built a complete end-to-end audit trail that attempts to detect any data loss.
 This is implemented as a special Kafka topic that holds audit messages recording the number of messages for a given topic in a given time period.
+Each logical tier—a producer or consumer in some data center—send a periodic report of the number of messages it has processed for each topic in a given ten minute time window.
 The sum of the counts for each topic should be the same for all tiers for a ten-minute window if no data is lost.
 The count is always with respect to the time stamp in the message not the time on the machine at the time of processing to ensure the consumption of delayed messages count towards the completeness of the time bucket in which they originated not the current time bucket.
 This allows exact reconciliation even in the face of delays.
 We also use this system to measure the time it takes to achieve completeness in each tier as a percentage of the data the producer sent.
 We phrase our SLA as the time to reach 99.9% completeness at each tier below the producer.
+This audit monitoring measures each step the data takes throughout the pipeline—across data centers, to each consumer, and into Hadoop—to ensure data is properly delivered in a complete and timely fashion everywhere.
 We have a standalone monitoring application that consumes the audit data topic and performs an exact reconciliation between all tiers to compute loss or duplication rates as well as to perform graphing and alerting on top of this data.
 This detailed audit helped discover numerous errors including bugs, misconfigurations, and dozens of corner cases that would otherwise have gone undetected.
 This general methodology of building a self-proving verification system into the system (especially one that relies on the fewest possible assumptions about the correctness of the system code) is something we found invaluable and intend to replicate as part of future systems.

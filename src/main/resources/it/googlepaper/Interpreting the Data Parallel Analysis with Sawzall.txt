@@ -6,6 +6,7 @@ A filtering phase, in which a query is expressed using a new procedural programm
 Both phases are distributed over hundreds or even thousands of computers.
 The results are then collated and saved to a file.
 Many data sets are too large, too dynamic, or just too unwieldy to be housed productively in a relational database.
+One common scenario is a set of many plain files—sometimes amounting to petabytes of data—distributed across many disks on many computers (Figure 1)
 The files in turn comprise many records, organized along some obvious axes such as time or geography.
 Examples might include a web page repository used to construct the index for an internet search engine, the system health records from thousands of on-line server machines, telephone call records or other business transaction logs, network packet traces, web server query logs, or even higher-level data such as satellite imagery.
 Quite often the analyses applied to these data sets can be expressed simply, using operations much less sophisticated than a general SQL query.
@@ -41,12 +42,12 @@ Second, if the aggregation operations are commutative, the order in which the in
 Moreover, if they are also associative, the intermediate values can be grouped arbitrarily or even aggregated in stages.
 As an example, counting involves addition, which is guaranteed to be the same independent of the order in which the values are added and independent of any intermediate subtotals that are formed to coalesce intermediate values.
 The constraints of commutativity and associativity are not too restrictive; they permit a wide range of valuable analyses, including: counting, filtering, sampling, generating histograms, finding the most frequent items, and many more.
-The set of aggregations is limited but the query phase can involve more general computations, which we express in a new interpreted, procedural programming language called Sawzall.1 (An interpreted language is fast enough: most of the programs are small and on large data sets the calculation tends to be I/O bound, as is discussed in the section on performance.)
 First the input is divided into pieces to be processed separately, perhaps individual files or groups of records, which are located on multiple storage nodes.
 Next, a Sawzall interpreter is instantiated for each piece of data.
 This will involve many machines, perhaps the same machines that store the data or perhaps a different, nearby set.
 There will often be more data pieces than computers, in which case scheduling and load balancing software will dispatch the pieces to machines as they complete the processing of prior pieces.
 Not related to the portable reciprocating power saw trademark of the Milwaukee Electric Tool Corporation.
+The output of the program is, for each record, zero or more intermediate values—integers, strings, key-value pairs, tuples, etc.—to be combined with values from other records.
 These intermediate values are sent to further computation nodes running the aggregators, which collate and reduce the intermediate values to create the final results.
 In a typical run, the majority of machines will run Sawzall and a smaller fraction will run the aggregators, reflecting not only computational overhead but also network load balancing issues; at each stage, the amount of data flowing is less than at the stage before (see Figure 2)
 Once all the processing is complete, the results will be spread across multiple files, one per aggregation machine.
@@ -104,6 +105,7 @@ The Sawzall program executes once for each record of the data set.
 The output of this map phase is a set of data items to be accumulated in the aggregators.
 The aggregators run in the reduce phase to condense the results to the final output.
 The query language, Sawzall, operates at about the level of a type-safe scripting language.
+For problems that can be solved in Sawzall, the resulting code is much simpler and shorter—by a factor of ten or more—than the corresponding C++ code in MapReduce.
 The syntax of statements and expressions is borrowed largely from C; for loops, while loops, if statements and so on take their familiar form.
 The time type has microsecond resolution and the libraries include convenient functions for decomposing and manipulating these values.
 As another example, one might use the fingerprint of a URL or of its HTML contents to do efficient comparison or fair selection among a set of documents.
@@ -129,10 +131,9 @@ A Sawzall program defines the operations to be performed on a single record of t
 There is nothing in the language to enable examining multiple input records simultaneously, or even to have the contents of one input record influence the processing of another.
 The only output primitive in the language is the emit statement, which sends data to an external aggregator that gathers the results from each record and correlates and processes the result.
 Thus the usual behavior of a Sawzall program is to take the input variable, parse it into a data structure by a conversion operation, examine the data, and emit some values.
-We saw this pattern in the simple example of Section 3
 Given a set of logs of the submissions to our source code management system, this program will show how the rate of submission varies through the week, at one-minute resolution:
 The program begins by importing the protocol buffer description from the file p4stat.proto.
-The programmer must know the type that will arise from the proto directive, but this is an accepted property of the protocol buffer DDL.)
+The programmer must know the type that will arise from the proto directive, but this is an accepted property of the protocol buffer DDL.
 It defines a table of sum values, indexed by the integer minute.
 Note that the index value in the declaration of the table is given an optional name (minute)
 This name serves no semantic purpose, but makes the declaration easier to understand and provides a label for the field in the aggregated output.
@@ -141,6 +142,7 @@ Then we pull out the time value and, for brevity, store it in the variable t.
 The next declaration has a more complicated initialization expression that uses some built-in functions to extract the cardinal number of the minute of the week from the time value.
 Finally, the emit statement counts the submission represented in this record by adding its contribution to the particular minute of the week in which it appeared.
 To summarize, this program, for each record, extracts the time stamp, bins the time to a minute within the week, and adds one to the count for that minute.
+When we run this program over all the submission logs—which span many months—and plot the result, we see an aggregated view of how activity tends to vary through the week, minute by minute.
 The salient point is not the data itself, of course, but the simplicity of the program that extracts it.
 Figure 3: Frequency of submits to the source code repository through the week.
 Aggregation is done outside the language for a couple of reasons.
@@ -157,8 +159,9 @@ The values are tagged with the weight, and the value with the highest weight is 
 The parameter (10 in the example) specifies the number of values to keep.
 The weight, introduced by the obvious keyword, has its type (here int) provided in the declaration and its value in the emit statement.
 Use the set of emitted values to construct a cumulative probability distribution represented by the quantile values for each increment of probability.
-The algorithm is a distributed variant of that of Greenwald and Khanna [10].) The example could be used to see how system response varies.
-By contrast, the maximum table finds the items with the highest weight, not the highest frequency of occurrence.)
+The algorithm is a distributed variant of that of Greenwald and Khanna [10]
+The example could be used to see how system response varies.
+By contrast, the maximum table finds the items with the highest weight, not the highest frequency of occurrence.
 For large data sets, it can be prohibitively expensive to find the precise ordering of frequency of occurrence, but there are efficient estimators.
 The top table uses a distributed variant of the algorithm by Charikar, Chen, and Farach-Colton [5]
 The algorithm is approximate: with high probability it returns approximately the correct top elements.
@@ -217,7 +220,8 @@ Values stored by the aggregation machines are not in final form, but instead in 
 In fact, this same intermediate form is used to pass the intermediate values from the execution machines to the aggregation machines.
 By leaving the values in an intermediate form, they can be merged with the values from another job.
 Large Sawzall jobs can be broken into pieces to be run separately, with final results constructed by merging the elements in a final phase.
-This is one advantage of this system over plain MapReduce; even MapReduce can have problems with jobs that run for days or weeks of real time.)
+This is one advantage of this system over plain MapReduce; even MapReduce can have problems with jobs that run for days or weeks of real time.
+This multi-stage merge—at execution machines, aggregations machines, and perhaps across jobsis the reason the aggregators must be associative to work well.
 They must also be commutative, since the order in which the input records are processed is undefined, as is the order of merging of the intermediate values.
 Typically, the data resulting from an analysis is much smaller than the input, but there are important examples where this is not the case.
 For instance, a program could use an indexed collection table to organize the input along some relevant axis, in which case the output would be as large as the input.
@@ -227,10 +231,12 @@ Each aggregation engine sorts its portion of the output data using a disk-based 
 The resulting data can then be combined efficiently to produce the final output using a merge sort.
 The Sawzall language is implemented as a conventional compiler, written in C++, whose target language is an interpreted instruction set, or byte-code.
 The compiler and the byte-code interpreter are part of the same binary, so the user presents source code to Sawzall and the system runs it.
+This is a common but not universal design; Java for instance splits its compiler and interpreter into separate programs.
 Those aggregators are implemented by saw, which is a program that links to the Sawzall compiler and interpreter library and is in turn implemented above MapReduce, running Sawzall in the map phase and the aggregators in the reduce phase.
 MapReduce manages the distribution of execution and aggregation machines, locates the computation near the GFS machines holding the data to minimize network traffic and thereby improve throughput, and handles machine failure and other faults.
+The system is therefore a “MapReduction” [8], but an unusual one.
 The first, quick job runs in parallel on the Workqueue to evaluate the size of the input and set up the main job.
-There may be many thousands of input files and it’s worth checking their size in parallel.) The second job then runs Sawzall.
+There may be many thousands of input files and it’s worth checking their size in parallel.
 Saw thus acts in part as a convenient wrapper for MapReduce, setting up the job automatically based on the input rather than the usual method involving a number of user-specified flags.
 More important is the convenience of Sawzall and its aggregators.
 Leaving aside the comfort afforded by its simple programming model, Sawzall is implemented within a single binary that runs whatever code is presented to it; by contrast, other MapReductions must be written in C++ and compiled separately.
@@ -242,10 +248,12 @@ One common use of the output of a Sawzall job is to inject the resulting data in
 This is usually done by a separate custom program, perhaps written in Python, that transforms the data into the SQL code to create the table.
 We might one day provide a more direct way to achieve this injection.
 Sometimes the result of a Sawzall job is provided as input to another, by a process called chaining.
+A simple example is to calculate the exact “top 10” list for some input.
 If the exact results are important, they can be derived by a two-step process.
 The first step creates an indexed sum table to count the frequency of input values; the second uses a maximum table to select the most popular.
 The steps are separate Sawzall jobs and the first step must run to completion before the second step can commence.
 Here is another complete example that illustrates how Sawzall is used in practice.
+It processes a web document repository to answer the question: for each web domain, which page has the highest PageRank [14]? Roughly speaking, which is the most linked-to page?
 The protocol buffer format is defined in the file "document.proto"
 The table is called max pagerank url and will record the highest-weighted value emitted for each index.
 The index is the domain, the value is the URL, and the weight is the document’s Page Rank.
@@ -259,7 +267,6 @@ We import the DDL for the query logs, declare a table indexed by integer latitud
 Then we use a built-in function that looks up the incoming IP address in a database to recover the location of the requesting machine (probably its ISP), and then count 1 for the appropriate latitude/longitude bucket.
 The expression int(loc.lat) converts loc.lat, a float, to an integer, thereby truncating it to the degree and making it suitable as an index value.
 For a higher-resolution map, a more sophisticated calculation would be required.
-The output of this program is an array of values suitable for creating a map, as in Figure 4
 At the statement level, Sawzall is an ordinary-looking language, but from a higher perspective it has several unusual properties, all serving the goal of enabling parallelism.
 The most important, of course, is that it runs on one record at a time.
 It is routine for a Sawzall job to be executing on a thousand machines simultaneously, yet the system requires no explicit communication between those machines.
@@ -275,9 +282,12 @@ For instance, one might want to create a large array or map to be queried when a
 To avoid doing such initialization for every record, Sawzall has a declaration keyword static that asserts that the variable is to be initialized once (per runtime instance) and considered part of the initial runtime state for processing each record.
 The CJK variable will be created during initialization and its value stored permanently as part of the initial state for processing each record.
 The language has no reference types; it has pure value semantics.
+The implementation uses copy-on-write using reference counting to make this efficient in most cases.
+Although in general this can lead to some awkwardness—to modify an array in a function, the function must return the array—for the typical Sawzall program the issue doesn’t arise.
 In return, there is the possibility to parallelize the processing within a given record without.
 Sawzall has a number of properties selected specifically for the problem domain in which it operates.
 Some have already been discussed; this section examines a few others.
+First, atypical of most such “little languages” [2], Sawzall is statically typed.
 Sawzall programs can consume hours, even months, of CPU time in a single run, and a late-arising dynamic type error can be expensive.
 It helps the implementation of the aggregators to have their type fixed when they are created.
 A similar argument applies to the parsing of the input protocol buffers; it helps to know the expected input type precisely.
@@ -296,6 +306,7 @@ Let’s extend the query-mapping program by adding a time axis to the data.
 The original program used the function locationinfo() to discover the location of an IP address using an external database.
 That program was unsafe because it would fail if the IP address could not be found in the database.
 In that case, locationinfo() would return an undefined value, but we can protect against that using a def() predicate.
+Notice that we just disregard the record if it has no known location; this seems a fine way to handle it.
 Given query log records spanning an extended period, this program will extract data suitable for constructing a movie showing how activity changes over time.2
 A careful programmer will use def() to guard against the usual errors that can arise, but sometimes the error syndrome can be so bizarre that a programmer would never think of it.
 If a program is processing a terabyte of data, there may be some records that contain surprises; often the quality of the data set may be outside the control of the person doing the analysis, or contain occasional.
@@ -309,12 +320,14 @@ If a loop’s condition becomes undefined while the loop is active, the loop is 
 For the corrupted record, it’s as though the elements of the calculation that depended on the bad value were temporarily removed from the program.
 Any time such an elision occurs, the run-time will record the circumstances in a special pre-defined collection table that serves as a log of these errors.
 When the run completes the user may check whether the error rate was low enough to accept the results that remain.
+One way to use the flag is to debug with it off—otherwise bugs will vanish—but when it comes time to run in production on a large data set, turn the flag on so that the program won’t be broken by crazy data.
 This is an unusual way to treat errors, but it is very convenient in practice.
 The idea is related to some independent work by Rinard et al.
 For example, if a program indexes off the end of an array, the generated code will make up values and the program can continue obliviously.
 This peculiar behavior has the empirical property of making programs like web servers much more robust against failure, even in the face of malicious attacks.
 The handling of undefined values in Sawzall adds a similar level of robustness.
 Although Sawzall operates on individual records, those records sometimes contain arrays or other structures that must be analyzed as a unit to discover some property.
+Is there an array element with this value? Do all the values satisfy some condition? To make these ideas easy to express, Sawzall provides logical quantifiers, a special notation analogous to the “for each”, “for any”, and “for all” quantifiers of mathematics.
 Within a special construct, called a when statement, one defines a quantifier, a variable, and a boolean condition using the variable.
 If the condition is satisfied, the associated statement is executed.
 Quantifier variables are declared like regular variables, but the base type (usually int) is prefixed by a keyword specifying the form of quantifier.
@@ -323,7 +336,7 @@ Sawzall analyzes the conditional expression to discover how to limit the range o
 It is a compile-time error if the condition does not provide enough information to construct a reasonable evaluator for the quantifier.
 In the example above, the quantifier variable i is used as an index in an array expression a[i], which is sufficient to define the range.
 For more complex conditions, the system uses the def() operator internally to explore the bounds safely if necessary.
-Indexing beyond the bounds of an array results in an undefined value.) Consider for example scanning a sparse multidimensional array a[i][j]
+Indexing beyond the bounds of an array results in an undefined value.
 In such an expression, the two quantifier variables i and jmust pairwise define a valid entry and the implementation can use def to explore the matrix safely.
 When statements may contain multiple quantifier variables, which in general can introduce ambiguities of logic programming [6]
 Sawzall defines that if multiple variables exist, they will be bound and evaluated in the order declared.
@@ -339,11 +352,13 @@ Nevertheless, to compare the single-CPU speed of the Sawzall interpreter with th
 The first computes pixel values for displaying the Mandelbrot set, to measure basic arithmetic and loop performance.
 The second measures function invocation using a recursive function to calculate the first 35 Fibonacci numbers.
 The results, shown in Table 1, demonstrate Sawzall is significantly faster than Python, Ruby, or Perl, at least for these microbenchmarks.
+We are somewhat surprised by this; the other languages are older and we would expect them to have finely tuned implementations.
 The key performance metric for the system is not the single-machine speed but how the speed scales as we add machines when processing a large data set.
 We took a 450GB sample of compressed query log data and ran a Sawzall program over it to count the occurrences of certain words.
 If scaling were perfect, performance would be proportional to the number of machines, that is, adding one machine would contribute one machine’s worth of throughput.
 In our test, the effect is to contribute 0.98 machines.
 The solid line is elapsed time; the dashed line is the product of machines and elapsed time.
+Why put a language above MapReduce? MapReduce is very effective; what’s missing? And why a new language? Why not just attach an existing language such as Python to MapReduce?
 The usual reasons for creating a special-purpose language apply here.
 Notation customized to a particular problem domain can make programs clearer, more compact, and more expressive.
 Capturing the aggregators in the language (and its environment) means that the programmer never has to provide one, unlike when using MapReduce.
@@ -403,6 +418,7 @@ To make effective use of large computing clusters in the analysis of large data 
 The trick is to do so without unduly limiting the expressiveness of the model.
 The language helps capture the programming model by forcing the programmer to think one record at a time, while providing an expressive interface to a novel set of aggregators that capture many common data processing and data reduction problems.
 In return for learning a new language, the user is rewarded by the ability to write short, clear programs that are guaranteed to work well on thousands of machines in parallel.
+Ironically—but vitally—the user needs to know nothing about parallel programming; the language and the underlying system take care of all the details.
 It may seem paradoxical to use an interpreted language in a high-throughput environment, but we have found that the CPU time is rarely the limiting factor; the expressibility of the language means that most programs are small and spend most of their time in I/O and native run-time code.
 Moreover, the flexibility of an interpreted implementation has been helpful, both in ease of experimentation at the linguistic level and in allowing us to explore ways to distribute the calculation across many machines.
 We find linear growth in performance as we add machines, with a slope near unity.

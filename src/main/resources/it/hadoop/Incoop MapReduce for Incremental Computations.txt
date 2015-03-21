@@ -71,7 +71,6 @@ One possible solution to this problem would be to compute the differences betwee
 This would, however, require running a polynomial-time algorithm (e.g., an edit-distance algorithm) to find the difference.
 We use a stable partitioning technique that enables maximal overlap between the set of data chunks created with similar inputs.
 Maximizing the overlap between data-chunks in turn enables maximizing the number of matched Map tasks.
-To support stable partitioning we propose a file system, called Inc-HDFS, that we describe in Section 3
 We maximize the overlap between Map tasks by using a stable partitioning technique for creating the input data chunks.
 The input to the Reduce tasks, however, is directly determined by the outputs of the Map tasks, because the key-value pairs with the same key are processed together by the same Reduce task.
 This raises a problem if, for example, a single new key-value pair is added to a Reduce task that processes a large number of values, which forces the entire task to be re-computed.
@@ -178,7 +177,6 @@ We generate this data synthetically by uniformly randomly selecting points from 
 To ensure reasonable running times, we chose all the input sizes such that the running time of each job would be around one hour.
 For comparing different runs, we consider two types of measures, work and time, which are.
 Work refers to the total amount of computation performed by all tasks and measured as the total running time of all tasks.
-Parallel) Time refers to the amount of (end-to-end) time that it takes to complete a parallel computation.
 It is well-known that under certain assumptions a computation with W work can be executed on P processors in W.
 Improvements in total work often directly lead to improvements in time but also in the consumption of other resources, e.g., processors, power, etc.
 As we describe in our experiments, our approach reduces work by avoiding unnecessary computations, which translates to improvements in run-time (and use of other resources)
@@ -188,8 +186,8 @@ Such a run executes all tasks and populates the memoization server by storing th
 The dynamic update refers to a run of the same job with a modified input, but that happens after the initial run, avoiding re-computation when possible.
 To assess the effectiveness of dynamic updates, we measure the work and time after modifying varying percentages of the input data and comparing them to those for performing the same computation with Hadoop.
 We refer to the ratio of the Hadoop run to the incremental run (Incoop dynamic update) as speedup (in work and in time)
+When modifying p% of the input data, we randomly chose p% of the input chunks and replaced them with new chunks of equal size and newly generated content.
 We configured the task trackers to use two Map and two Reduce slots per worker machine.
-In HDFS the chunk size is fixed at 64 MB, while in Inc-HDFS,
 The uploading client machine was co-located with the name node of the cluster, and we configured the parallel chunking code in Inc-HDFS to use 12 threads, i.e., one thread per core.
 The results of the experiments, shown in Table 2, illustrate the effectiveness of our performance optimizations.
 Compared to plain HDFS, Inc-HDFS introduces only a minor throughput reduction due to the fingerprint computation that is required for content-based chunking.
@@ -212,7 +210,6 @@ The Incoop scheduler avoids unnecessary data movement by scheduling tasks on the
 Also, the scheduler employs a work stealing algorithm that allows some task scheduling flexibility to prevent nodes from running idle when runnable tasks are waiting.
 We show the performance comparison of the Hadoop scheduler with the Incoop scheduler in Figure 9, where the Y-axis shows runtime relative to the Hadoop scheduler.
 Also, memoizing intermediate task results imposes an additional space usage.
-We measured both types, performance and space overhead, for each application and present the results in Figure 10
 We measure the worst-case performance overhead by capturing the runtime for the initial run.
 We measure the space overhead by quantifying the space used for remembering the intermediate computation results.
 Figure 10(b) illustrates the space overhead as a factor of the input size with Task- and Contractionlevel memoization.
@@ -224,7 +221,6 @@ In the algorithms community, researchers designed dynamic algorithms that permit
 Several surveys discuss the vast literature on dynamic algorithms [9] This research shows that dynamic algorithms can be asymptotically, often by a near-linear factor, more efficient than their conventional counterparts.
 In large-scale systems, this asymptotic difference can yield significant speedups.
 Dynamic algorithms can, however, be difficult to develop and implement even for simple problems; some problems took years of research to solve and many remain open.
-In the programming languages community, researchers developed incremental computation techniques to achieve automatic incrementalization (e.g.
 Our work uses ideas and techniques from self-adjusting computation to ensure efficiency, e.g., the ideas of stable input partitions and stable contraction trees and the techniques for achieving these.
 Algorithms for parallel self-adjusting computation have also been proposed [11] but they have not been implemented; most work on self-adjusting computation assumes sequential execution.
 There is substantial work from the database community on incrementally updating a database view (i.e., a predetermined query on the database) as the database contents evolve.
@@ -268,6 +264,7 @@ In this case, Incoop will also transparently benefit programs written for these 
 In this section, we showcase two workflows where we use.
 Incoop to transparently benefit systems from efficient incremental processing in their context, namely incremental log processing and incremental query processing.
 For example, in the area of click log analysis, traces collected from various web server logs are aggregated in a single repository and then processed for.
+To perform incremental log processing, we integrated Incoop with Apache Flume 2 – a distributed and reliable service for efficiently collecting, aggregating, and moving large amounts of log data.
 In our setup, Flume aggregates the data and dumps it into the Inc-HDFS repository.
 Then, Incoop performs the analytic processing incrementally, leveraging previously computed intermediate results.
 We evaluate the performance of using Flume in conjunction with Incoop for incremental log processing by comparing its runtime with the corresponding runtime when using Hadoop.
@@ -281,6 +278,7 @@ Pig provides Pig Latin, an easy-to-use high-level query language similar to SQL.
 The ease of programming and scalability of Pig made the system very popular for very large data analysis tasks, which are conducted by major Internet companies today.
 MapReduce jobs, the integration of Incoop with Pig was seamless, just by using Incoop as the underlying execution engine for incrementally executing the multi-staged MapReduce jobs.
 We evaluate two Pig applications, word count and the PigMix3 scalability benchmark, to measure the effectiveness of Incoop.
+Total storage space for performing an Incoop computation with an input of size ni, where nmkey-value pairs are emitted by the Map phase, and where Combine is monotonic is O(ni + nm + nO)
 In addition to the input and the output, Incremental MapReduce requires additionally storing the output of the map, contraction, and reduce tasks.
 The output size of the map tasks is bounded by nm.
 With monotonic Combine functions, the size of the output of Combine tasks is bounded by O(nm)
@@ -295,3 +293,4 @@ In many cases, however, small changes to the input lead only to small changes in
 As a specific case, assume that the Map function generates k key-value pairs from a single input record, and that the Combine function monotonically reduces the number of key-value pairs.
 If the Map function generates k key-value pairs from a single input record, and the Combine function is monotonic, then the number of fresh tasks is at most O(k log nm + k)
 At most k contraction tasks at each level of the contraction tree will be fresh, and k fresh reduce tasks will be needed.
+Since the depth of the contraction tree is nm, the total number of fresh tasks will therefore be O(k log nm + k) = O(k log nm)

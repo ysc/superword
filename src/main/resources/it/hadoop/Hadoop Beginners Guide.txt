@@ -27,8 +27,12 @@ Thank you, Packt Publishing for selecting me as one of the technical reviewers f
 It is my honor to be a part of it.
 Do you need instant solutions to your IT questions? PacktLib is Packt's online digital book library.
 Here, you can access, read and search across Packt's entire library of books.
+Time for action – handling dirty data by using skip mode 197 To skip or not to skip...
+Time for action – making a partitioned UFO sighting table 260 Bucketing, clustering, and sorting...
+Time for action – adding a new User Defined Function (UDF) 265 To preprocess or not to preprocess...
 Preface This book is here to help you make sense of Hadoop and use it to solve your big data problems.
 It's a really exciting time to work with data processing technologies such as Hadoop.
+The ability to apply complex analytics to large data sets—once the monopoly of large corporations and government agencies—is now possible through free open source software (OSS)
 But because of the seeming complexity and pace of change in this area, getting a grip on the basics can be somewhat intimidating.
 That's where this book comes in, giving you an understanding of just what Hadoop is, how it works, and how you can use it to extract value from your data now.
 In addition to an explanation of core Hadoop, we also spend several chapters exploring other technologies that either use Hadoop or integrate with it.
@@ -78,6 +82,7 @@ Customer support Now that you are the proud owner of a Packt book, we have a num
 Downloading the example code You can download the example code files for all Packt books you have purchased from your account at http://www.packtpub.com.
 If you purchased this book elsewhere, you can visit http://www.packtpub.com/support and register to have the files e-mailed directly to you.
 Errata Although we have taken every care to ensure the accuracy of our content, mistakes do happen.
+If you find a mistake in one of our books—maybe a mistake in the text or the code—we would be grateful if you would report this to us.
 By doing so, you can save other readers from frustration and help us improve subsequent versions of this book.
 If you find any errata, please report them by visiting http://www.packtpub.com/submit-errata, selecting your book, clicking on the errata submission form link, and entering the details of your errata.
 Once your errata are verified, your submission will be accepted and the errata will be uploaded to our website, or added to any list of existing errata, under the Errata section of that title.
@@ -120,11 +125,13 @@ Historically for the few and not the many The examples discussed in the previous
 This is a continuation of a much older trend wherein processing large data sets was an expensive and complex undertaking, out of the reach of small- or medium-sized organizations.
 Similarly, the broader approach of data mining has been around for a very long time but has never really been a practical tool outside the largest corporations and government agencies.
 This situation may have been regrettable but most smaller organizations were not at a disadvantage as they rarely had access to the volume of data requiring such an investment.
+The increase in data is not limited to the big players anymore, however; many small and medium companies—not to mention some individuals—find themselves gathering larger and larger amounts of data that they suspect may have some value they want to unlock.
 Before understanding how this can be achieved, it is important to appreciate some of these broader historical trends that have laid the foundations for systems such as Hadoop today.
 Classic data processing systems The fundamental reason that big data mining systems were rare and expensive is that scaling a system to process large data sets is very difficult; as we will see, it has traditionally been limited to the processing power that can be built into a single computer.
 There are however two broad approaches to scaling a system as the size of the data increases, generally referred to as scale-up and scale-out.
 Scale-up In most enterprises, data processing has typically been performed on impressively large computers with impressively larger price tags.
 As the size of the data grows, the approach is to move to a bigger server or storage array.
+Through an effective architecture—even today, as we'll describe later in this chapter—the cost of such hardware could easily be measured in hundreds of thousands or in millions of dollars.
 The advantage of simple scale-up is that the architecture does not significantly change through the growth.
 Though larger components are used, the basic relationship (for example, database server and storage array) stays the same.
 For applications such as commercial database engines, the software handles the complexities of utilizing the available hardware, but in theory, increased scale is achieved by migrating the same software onto larger and larger servers.
@@ -142,12 +149,14 @@ These factors alone put them out of the reach of many smaller businesses.
 In addition, the approaches themselves have had several weaknesses that have become apparent over time:
 As scale-out systems get large, or as scale-up systems deal with multiple CPUs, the difficulties caused by the complexity of the concurrency in the systems have become significant.
 Effectively utilizing multiple hosts or CPUs is a very difficult task, and implementing the necessary strategy to maintain efficiency throughout execution of the desired workloads can entail enormous effort.
+Hardware advances—often couched in terms of Moore's law—have begun to highlight discrepancies in system capability.
 Whereas a modern CPU may be able to execute millions of times as many operations as a CPU 20 years ago would, memory and hard disk speeds have only increased by factors of thousands or even hundreds.
 It is quite easy to build a modern system with so much CPU power that the storage system simply cannot feed it data fast enough to keep the CPUs busy.
 A different approach From the preceding scenarios there are a number of techniques that have been used successfully to ease the pain in scaling data processing systems to the large scales required by big data.
 All roads lead to scale-out As just hinted, taking a scale-up approach to scaling is not an open-ended tactic.
 There is a limit to the size of individual servers that can be purchased from mainstream hardware suppliers, and even more niche players can't offer an arbitrarily large server.
 At some point, the workload will increase beyond the capacity of the single, monolithic scale-up server, so then what? The unfortunate answer is that the best approach is to have two large servers instead of one.
+Or, in other words, the natural tendency of scale-up architecture is—in extreme cases—to add a scale-out strategy to the mix.
 Though this gives some of the benefits of both approaches, it also compounds the costs and weaknesses; instead of very expensive hardware or the need to manually develop the cross-cluster logic, this hybrid architecture requires both.
 As a consequence of this end-game tendency and the general cost profile of scale-up architectures, they are rarely used in the big data processing field and scale-out architectures are the de facto standard.
 If your problem space involves data workloads with strong internal cross-references and a need for transactional integrity, big iron scale-up relational databases are still likely to be a great option.
@@ -193,6 +202,7 @@ But, anyone who has ever built such a system will know that less obvious element
 If we had to implement the mechanisms for determining where to execute processing, performing the processing, and combining all the subresults into the overall result, we wouldn't have gained much from the older model.
 There, we needed to explicitly manage data partitioning; we'd just be exchanging one difficult problem with another.
 This touches on the most recent trend, which we'll highlight here: a system that handles most of the cluster mechanics transparently and allows the developer to think in terms of the business problem.
+Frameworks that provide well-defined interfaces that abstract all this complexity—smart software—upon which business domain-specific applications can be built give the best combination of developer and system efficiency.
 Hadoop The thoughtful (or perhaps suspicious) reader will not be surprised to learn that the preceding approaches are all key aspects of Hadoop.
 But we still haven't actually answered the question about exactly what Hadoop is.
 The two together provided a platform for processing data on a very large scale in a highly efficient manner.
@@ -274,6 +284,7 @@ But haven't Google and Yahoo both been among the strongest proponents of this me
 Cloud computing with Amazon Web Services The other technology area we'll explore in this book is cloud computing, in the form of several offerings from Amazon Web Services.
 But first, we need to cut through some hype and buzzwords that surround this thing called cloud computing.
 Too many clouds Cloud computing has become an overused term, arguably to the point that its overuse risks it being rendered meaningless.
+In this book, therefore, let's be clear what we mean—and care about—when using the term.
 There are two main aspects to this: a new architecture option and a different approach to cost.
 A third way We've talked about scale-up and scale-out as the options for scaling data processing systems.
 But our discussion thus far has taken for granted that the physical hardware that makes either option a reality will be purchased, owned, hosted, and managed by the organization doing the system development.
@@ -289,12 +300,14 @@ Many companies' financial groups run end-of-month workloads to generate tax and 
 If you were tasked with designing such a system, how much hardware would you buy? If you only buy enough to handle the day-to-day workload, the system may struggle at month end and may likely be in real trouble when the end-of-year processing rolls around.
 If you scale for the end-of-month workloads, the system will have idle capacity for most of the year and possibly still be in trouble performing the end-of-year processing.
 If you size for the end-of-year workload, the system will have significant capacity sitting idle for the rest of the year.
+And considering the purchase cost of hardware in addition to the hosting and running costs—a server's electricity usage may account for a large majority of its lifetime costs—you are basically wasting huge amounts of money.
 The service-on-demand aspects of cloud computing allow you to start your application on a small hardware footprint and then scale it up and down as the year progresses.
 With a pay-for-use model, your costs follow your utilization and you have the capacity to process your workloads without having to buy enough hardware to handle the peaks.
 A more subtle aspect of this model is that this greatly reduces the costs of entry for an organization to launch an online service.
 We all know that a new hot service that fails to meet demand and suffers performance problems will find it hard to recover momentum and user interest.
 For example, say in the year 2000, an organization wanting to have a successful launch needed to put in place, on launch day, enough capacity to meet the massive surge of user traffic they hoped for but did n't know for sure to expect.
 When taking costs of physical location into consideration, it would have been easy to spend millions on a product launch.
+Today, with cloud computing, the initial infrastructure cost could literally be as low as a few tens or hundreds of dollars a month and that would only increase when—and if—the traffic demanded.
 We will be using several of these services in this book.
 After registering with AWS and EC2, credit card details are all that's required to gain access to a dedicated virtual machine, it's easy to run a variety of operating systems including Windows and many variants of Linux on our server.
 Need more powerful servers? Change to one of the higher specification (and cost) types offered.
@@ -400,7 +413,6 @@ What just happened? The first thing to note is the general format of these confi
 They are obviously XML and contain multiple property specifications within a single configuration element.
 The property specifications always contain name and value elements with the possibility for optional comments not shown in the preceding code.
 The dfs.replication variable specifies how many times each HDFS block should be replicated.
-As we only have a single host and one DataNode in the pseudodistributed mode, we change this value to 1
 Because only MapReduce components need know this location, it is in mapred-site.xml.
 The network addresses for the NameNode and the JobTracker specify the ports on which the actual system requests should be directed.
 These are not user-facing locations, so don't bother pointing your web browser at them.
@@ -432,6 +444,7 @@ What just happened? The start-dfs.sh command, as the name suggests, starts the c
 This is the NameNode to manage the filesystem and a single DataNode to hold data.
 The SecondaryNameNode is an availability aid that we'll discuss in a later chapter.
 After starting these components, we use the JDK's jps utility to see which Java processes are running, and, as the output looks good, we then use Hadoop's dfs utility to list the root of the HDFS filesystem.
+After this, we use start-mapred.sh to start the MapReduce components—this time the JobTracker and a single TaskTracker—and then use jps again to verify the result.
 There is also a combined start-all.sh file that we'll use at a later stage, but in the early days it's useful to do a two-stage start up to more easily verify the cluster configuration.
 Time for action – using HDFS As the preceding example shows, there is a familiar-looking interface to HDFS that allows us to use commands similar to those in Unix to manipulate files and directories on the filesystem.
 What just happened? This example shows the use of the fs subcommand to the Hadoop utility.
@@ -462,6 +475,7 @@ Here is how to get a list of them all.
 Have a go hero – WordCount on a larger body of text Running a complex framework like Hadoop utilizing five discrete Java processes to count the words in a single-line text file is not terribly impressive.
 The power comes from the fact that we can use exactly the same program to run WordCount on a larger file, or even a massive corpus of text spread across a multinode Hadoop cluster.
 If we had such a setup, we would execute exactly the same commands as we just did by running the program and simply specifying the location of the directories for the source and output data.
+Find a large online text file—Project Gutenberg at http://www.gutenberg.org is a good starting point—and run WordCount on it by copying it onto the HDFS and executing the WordCount example.
 The output may not be as you expect because, in a large body of text, issues of dirty data, punctuation, and formatting will need to be addressed.
 Think about how WordCount could be improved; we'll study how to expand it into a more complex processing chain in the next chapter.
 Monitoring Hadoop from the browser So far, we have been relying on command-line tools and direct command output to see what our system is doing.
@@ -513,6 +527,7 @@ Starting, changes to Complete; then click its checkbox to see details of the job
 Click the S3 tab and select the bucket you created for the output location.
 You will see it has a single entry called wordcount, which is a directory.
 Then do the same until you see a list of actual files following the familiar Hadoop part-nnnnn naming scheme, as shown in the following screenshot:
+What just happened? The first step deals with S3, and not EMR.
 S3 is a scalable storage service that allows you to store files (called objects) within containers called buckets, and to access objects by their bucket and object key (that is, name)
 The model is analogous to the usage of a filesystem, and though there are underlying differences, they are unlikely to be important within this book.
 S3 is where you will place the MapReduce programs and source data you want to process in EMR, and where the output and logs of EMR Hadoop jobs will be stored.
@@ -539,6 +554,7 @@ Currently, by default, the total number of hosts in a job flow must be 20 or les
 After confirming, all is as expected—we launch the job flow and monitor it on the console until the status changes to COMPLETED.
 At this point, we go back to S3, look inside the bucket we specified as the output destination, and examine the output of our WordCount job, which should look very similar to the output of a local Hadoop WordCount.
 An obvious question is where did the source data come from? This was one of the prepopulated fields in the job flow specification we saw during the creation process.
+That is it! The AWS management console allows fine-grained control of services such as S3 and EMR from the browser.
 Armed with nothing more than a browser and a credit card, we can launch Hadoop jobs to crunch data without ever having to worry about any of the mechanics around installing, running, or managing Hadoop.
 Have a go hero – other EMR sample applications EMR provides several other sample applications.
 Other ways of using EMR Although a powerful and impressive tool, the AWS management console is not always how we want to access S3 and run EMR jobs.
@@ -672,6 +688,7 @@ Time for action – setting up the classpath To compile any Hadoop-related code,
 Once again, it would be good to put this in your shell startup file or a standalone file to be sourced.
 We will later need to also have many of the supplied third-party libraries that come with Hadoop on our classpath, and there is a shortcut to do this.
 For now, the explicit addition of the core JAR file will suffice.
+Time for action – implementing WordCount We have seen the use of the WordCount example program in Chapter 2, Getting Hadoop Up and Running.
 Now we will explore our own Java implementation by performing the following steps:
 What just happened? This is our first complete MapReduce job.
 Look at the structure and you should recognize the elements we have previously discussed: the overall Job class with the driver configuration in its main method and the Mapper and Reducer implementations defined as inner classes.
@@ -705,6 +722,7 @@ Open the bucket where you will store the job file, click on Upload, and add the 
 Return to the main console home page, and then go to the EMR portion of the console by selecting Elastic MapReduce.
 Click on the Create a New Job Flow button and you'll see a familiar screen as shown in the following screenshot:
 Previously, we used a sample application; to run our code, we need to perform different steps.
+Within our uploaded JAR file, our codeparticularly the driver class—specifies aspects such as the Mapper and Reducer classes.
 What we need to provide is the path to the JAR file and the input and output paths for the job.
 In the JAR Location field, put the location where you uploaded the JAR file.
 In the JAR Arguments field, you need to enter the name of the main class and the input and output locations for the job.
@@ -745,6 +763,7 @@ Splitting the input The first of these interactions happens when the JobTracker 
 Recall that HDFS files are usually split into blocks of at least 64 MB and the JobTracker will assign each block to one map task.
 Our WordCount example, of course, used a trivial amount of data that was well within a single block.
 Picture a much larger input file measured in terabytes, and the split model makes more sense.
+Each segment of the file—or split, in MapReduce terminology—is processed uniquely by one map task.
 Once it has computed the splits, the JobTracker places them and the JAR file containing the Mapper and Reducer classes into a job-specific directory on HDFS, whose path will be passed to each task as it starts.
 Task assignment Once the JobTracker has determined how many map tasks will be needed, it looks at the number of hosts in the cluster, how many TaskTrackers are working, and how many map tasks each can concurrently execute (a user-definable configuration variable)
 The JobTracker also looks to see where the various input data blocks are located across the cluster and attempts to define an execution plan that maximizes the cases when a TaskTracker processes a split/block located on the same physical host, or, failing that, it processes at least one in the same hardware rack.
@@ -766,7 +785,6 @@ The two invocations of the mapper will therefore be given the following input:
 Mapper execution The key/value pairs received by the mapper are the offset in the file of the line and the line contents respectively because of how the job is configured.
 Our implementation of the map method in WordCountMapper discards the key as we do not care where each line occurred in the file and splits the provided value into words using the split method on the standard Java String class.
 Note that better tokenization could be provided by use of regular expressions or the StringTokenizer class, but for our purposes this simple approach will suffice.
-For each individual word, the mapper then emits a key comprised of the actual word itself, and a value of 1
 We add a few optimizations that we'll mention here, but don't worry too much about them at this point.
 You will see that we don't create the IntWritable object containing the value 1 each time, instead we create it as a static variable and re-use it in each invocation.
 Similarly, we use a single Text object and reset its contents for each execution of the method.
@@ -889,6 +907,7 @@ As binary files, they are intrinsically more compact than text files.
 They additionally support optional compression, which can also be applied at different levels, that is, compress each record or an entire split.
 Using such files as input to a MapReduce job means that a single mapper will be used to process the entire file, causing a potentially large performance hit.
 In such a situation, it is preferable to either use a splitable format such as SequenceFile, or, if you cannot avoid receiving the file in the other format, do a preprocessing step that converts it into a splitable format.
+This will be a trade-off, as the conversion will take time; but in many cases—especially with complex map tasks—this will be outweighed by the time saved.
 Summary We have covered a lot of ground in this chapter and we now have the foundation to explore MapReduce in more detail.
 Specifically, we learned how key/value pairs is a broadly applicable data model that is well suited to MapReduce processing.
 We also learned how to write mapper and reducer implementations using the 0.20 and above versions of the Java API.
@@ -923,6 +942,8 @@ Consequently, we favor use of Streaming for up-front analysis and Java for the i
 We will use Ruby for Streaming examples in this chapter, but that is a personal preference.
 If you prefer shell scripting or another language, such as Python, then take the opportunity to convert the scripts used here into the language of your choice.
 Time for action – implementing WordCount using Streaming Let's flog the dead horse of WordCount one more time and implement it using Streaming by performing the following steps:
+Make the file executable by executing the following command: $ chmod +x wcmapper.rb.
+Make the file executable by executing the following command: $ chmod +x wcreducer.rb.
 If you don't know the language, it isn't important here.
 Firstly, we created the script that will be our mapper.
 It uses the gets function to read a line from standard input, splits this into words, and uses the puts function to write the word and the value 1 to the standard output.
@@ -965,7 +986,9 @@ Once downloaded, you will find the data in a few formats.
 Getting a feel for the dataset When faced with a new dataset it is often difficult to get a feel for the nature, breadth, and quality of the data involved.
 There are several questions, the answers to which will affect how you approach the follow-on analysis, in particular:
 The first is a simple question of scale; are we talking hundreds, thousands, millions, or more records? The second question asks how complete the records are.
+If you expect each record to have 10 fields (if this is structured or semi-structured data), how many have key fields populated with data? The last question expands on this point, how well do the records match your expectations of format and representation?
 Time for action – summarizing the UFO data Now we have the data, let's get an initial summarization of its size and how many records may be incomplete:
+Make the file executable by executing the following command: $ chmod +x summarymapper.rb.
 What just happened? Remember that our UFO sightings should have six fields as described previously.
 The mapper examines the file and counts the total number of records in addition to identifying potentially incomplete records.
 We produce the overall count by simply recording how many distinct records are encountered while processing the file.
@@ -1030,6 +1053,7 @@ It may not be immediately obvious how to do this sort of local command-line anal
 With the UFO datafile on the local filesystem, execute the following command:
 What just happened? With a single Unixcommand line, we produced output identical to our previous full MapReduce job.
 If you look at what the command line does, this makes sense.
+Firstly, the input file is sent—a line at a time—to the mapper.
 The output of this is passed through the Unix sort utility and this sorted output is passed a line at a time to the reducer.
 This is of course a very simplified representation of our general MapReduce job workflow.
 Then the obvious question is why should we bother with Hadoop if we can do equivalent analysis at the command line.
@@ -1179,6 +1203,7 @@ Map-side versus reduce-side joins That caveat out of the way, there are two basi
 In either case, we need to bring multiple data streams together and perform the join through some logic.
 The basic difference between these two approaches is whether the multiple data streams are combined within the mapper or reducer functions.
 Map-side joins, as the name implies, read the data streams into the mapper and uses logic within the mapper function to perform the join.
+The great advantage of a map-side join is that by performing all joining—and more critically data volume reduction—within the mapper, the amount of data transferred to the reduce stage is greatly minimized.
 The drawback of map-side joins is that you either need to find a way of ensuring one of the data sources is very small or you need to define the job input to follow very specific criteria.
 Often, the only way to do that is to preprocess the data with another MapReduce job whose sole purpose is to make the data ready for a map-side join.
 In contrast, a reduce-side join has the multiple data streams processed through the map stage without performing any join logic and does the joining in the reduce stage.
@@ -1189,6 +1214,7 @@ Matching account and sales information A common situation in many companies is t
 There is, of course, a relationship between the two; usually a sales record contains the unique ID of the user account through which the sale was performed.
 In the Hadoop world, these would be represented by two types of data files: one containing records of the user IDs and information for sales, and the other would contain the full data for each user account.
 Frequent tasks require reporting that uses data from both these sources; say, for example, we wanted to see the total number of sales and total value for each user but do not want to associate it with an anonymous ID number, but rather with a name.
+This may be valuable when customer service representatives wish to call the most frequent customers—data from the sales records—but want to be able to refer to the person by name and not just a number.
 Time for action – reduce-side join using MultipleInputs We can perform the report explained in the previous section using a reduce-side join by performing the following steps:
 Create the following file and name it ReduceJoin.java: import java.io.* ;
 Compile the file and add it to a JAR file.
@@ -1205,6 +1231,7 @@ Notice that both mappers actually emit more than the required values.
 If we look at the reducer, we can see why this is so.
 The reducer retrieves each record for a given key, but without these explicit tags we would not know if a given value came from the sales or account mapper and hence would not understand how to treat the data value.
 The ReduceJoinReducer class therefore treats the values in the Iterator object differently, depending on which mapper they came from.
+For each sales record—likely to be multiple, as most clients buy more than a single item—the total number of orders is counted as is the overall combined value.
 The output from the reducer is therefore a key of the account holder name and a value string containing the number of orders and the total order value.
 We compile and execute the class; notice how we provide three arguments representing the two input directories as well as the single output source.
 Because of how the MultipleInputs class is configured, we must also ensure we specify the directories in the right order; there is no dynamic mechanism to determine which type of file is in which location.
@@ -1280,6 +1307,7 @@ Graph algorithms tend to use notions of the global state to make determinations 
 In particular, most of the well-known algorithms often execute in an incremental or reentrant fashion, building up structures representing processed and pending nodes, and working through the latter while reducing the former.
 MapReduce problems, on the other hand, are conceptually stateless and typically based upon a divide-and-conquer approach where each Hadoop worker host processes a small subset of the data, writing out a portion of the final result where the total job output is viewed as the simple collection of these smaller outputs.
 Therefore, when implementing graph algorithms in Hadoop, we need to express algorithms that are fundamentally stateful and conceptually single-threaded in a stateless parallel and distributed framework.
+Most of the well-known graph algorithms are based upon search or traversal of the graph, often to find routes—frequently ranked by some notion of cost—between nodes.
 The most fundamental graph traversal algorithms are depth-first search (DFS) and breadth-first search (BFS).The difference between the algorithms is the ordering in which a node is processed in relationship to its neighbors.
 We will look at representing an algorithm that implements a specialized form of such a traversal; for a given starting node in the graph, determine the distance between it and every other node in the graph.
 As can be seen, the field of graph algorithms and theory is a huge one that we barely scratch the surface of here.
@@ -1315,6 +1343,7 @@ Because the code is lengthy, we'll break it into multiple steps; obviously they 
 Create the following as GraphPath.java with these imports: import java.io.* ;
 As with the mapper, this reads in a representation of a node and gives as output a different value depending on the state of the node.
 The basic approach is to collect from the input the largest value for the state and distance columns, and through this converge to the final solution.
+Select the largest distance if (n.getDistance() > distance) distance = n.getDistance() ;
 What just happened? The job here implements the previously described algorithm that we'll execute in the following sections.
 The job setup is pretty standard, and apart from the algorithm definition the only new thing here is the use of an inner class to represent nodes.
 The input to a mapper or reducer is often a flattened representation of a more complex structure or object.
@@ -1565,6 +1594,7 @@ As we can see, this is exactly the result; the remaining single node cluster sho
 Talking of blocks is a little abstract, so we then try to retrieve our test file which, as we know, effectively has 33 holes in it.
 The attempt to access the file fails as Hadoop could not find the missing blocks required to deliver the file.
 We then restarted all the nodes and tried to retrieve the file again.
+This time it was successful, but we took an added precaution of performing an MD5 cryptographic check on the file to confirm that it was bitwise identical to the original one — which it is.
 This is an important point: though node failure may result in data becoming unavailable, there may not be a permanent data loss if the node recovers.
 When data may be lost Do not assume from this example that it's impossible to lose data in a Hadoop cluster.
 For general use it is very hard, but disaster often has a habit of striking in just the wrong way.
@@ -1575,6 +1605,7 @@ Conversely, the impact also decreases but rapid multiple failures will always ca
 Another more insidious problem is recurring or partial failures, for example, when power issues across the cluster cause nodes to crash and restart.
 It is possible for Hadoop to end up chasing replication targets, constantly asking the recovering hosts to replicate under-replicated blocks, and also seeing them fail mid-way through the task.
 Such a sequence of events can also raise the potential of data loss.
+Having a replication factor equal to the size of the cluster—ensuring every block is on every node—won't help you when a user accidentally deletes a file or directory.
 The summary is that data loss through system failure is pretty unlikely but is possible through almost inevitable human action.
 Replication is not a full alternative to backups; ensure that you understand the importance of the data you process and the impact of the types of loss discussed here.
 The most catastrophic losses in a Hadoop cluster are actually caused by NameNode failure and filesystem corruption; we'll discuss this topic in some detail in the next chapter.
@@ -1608,6 +1639,7 @@ Comparing the DataNode and TaskTracker failures We'll not perform similar two or
 Because the TaskTracker processes are under the control and coordination of JobTracker, their individual failures have no direct effect other than to reduce the cluster execution capacity.
 If a TaskTracker instance fails, the JobTracker will simply schedule the failed tasks on a healthy TaskTracker process in the cluster.
 The JobTracker is free to reschedule tasks around the cluster because TaskTracker is conceptually stateless; a single failure does not affect other parts of the job.
+In contrast, loss of a DataNode—which is intrinsically stateful—can affect the persistent data held on HDFS, potentially making it unavailable.
 This highlights the nature of the various nodes and their relationship to the overall Hadoop framework.
 The DataNode manages data, and the TaskTracker reads and writes that data.
 Catastrophic failure of every TaskTracker would still leave us with a completely functional HDFS; a similar failure of the NameNode process would leave a live MapReduce cluster that is effectively useless (unless it was configured to use a different storage system)
@@ -1631,6 +1663,8 @@ Starting a replacement JobTracker The recovery of the MapReduce cluster is also 
 Once the JobTracker process is restarted, all the subsequent MapReduce jobs are successfully processed.
 Note that when the JobTracker was killed, any jobs that were in flight are lost and need to be restarted.
 Watch out for temporary files and directories on HDFS; many MapReduce jobs write temporary data to HDFS that is usually cleaned up on job completion.
+Failed jobsespecially the ones failed due to a JobTracker failure—are likely to leave such data behind and this may require a manual clean-up.
+Have a go hero – moving the JobTracker to a new host But what happens if the host on which the JobTracker process was running has a fatal hardware failure and cannot be recovered? In such situations you will need to start a new JobTracker process on a different host.
 Try this! We'll talk about it more in the next chapter.
 Time for action – killing the NameNode process Let's now kill the NameNode process, which we should expect to directly stop us from accessing HDFS and by extension, prevent the MapReduce jobs from executing:
 Though the impact will be short-lived, it effectively kills the entire cluster for a period of time.
@@ -1679,10 +1713,10 @@ Is it perhaps, as the name suggests, a second copy of the NameNode process runni
 SecondaryNameNode has a very specific role; it periodically reads in the state of the fsimage file and the edits log and writes out an updated fsimage file with the changes in the log applied.
 This is a major time saver in terms of NameNode startup.
 If the NameNode process has been running for a significant period of time, the edits log will be huge and it will take a very long time (easily several hours) to apply all the changes to the old fsimage file's state stored on the disk.
+So what to do when the NameNode process has a critical failure? Would it help to say don't panic? There are approaches to NameNode failure and this is such an important topic that we have an entire section on it in the next chapter.
 But for now, the main point is that you can configure the NameNode process to write its fsimage file and edits log to multiple locations.
 Typically, a network filesystem is added as a second location to ensure a copy of the fsimage file outside the NameNode host.
 But the process of moving to a new NameNode process on a new host requires manual effort and your Hadoop cluster is dead in the water until you do.
-This is something you want to have a process for and that you have tried (successfully!) in a test scenario.
 You really don't want to be learning how to do this when your operational cluster is down, your CEO is shouting at you, and the company is losing money.
 The latter of these is effectively a renamed SecondaryNameNode; it is responsible for updating the fsimage file at regular checkpoints to decrease the NameNode startup time.
 The BackupNode, however, is a step closer to the goal of a fully functional hot-backup for the NameNode.
@@ -1691,6 +1725,7 @@ If the NameNode dies, the BackupNode is much more capable of being brought into 
 The process isn't automatic and requires manual intervention and a cluster restart, but it takes some of the pain out of a NameNode failure.
 Hadoop 2.0 will take these extensions to the next logical step: a fully automatic NameNode failover from the current master NameNode to an up-to-date backup NameNode.
 This NameNode High Availability (HA) is one of the most long-requested changes to the Hadoop architecture and will be a welcome addition when complete.
+Hardware failure When we killed the various Hadoop components earlier, we were—in most cases—using termination of the Hadoop processes as a proxy for the failure of the hosting physical hardware.
 From experience, it is quite rare to see the Hadoop processes fail without some underlying host issue causing the problem.
 Host failure Actual failure of the host is the simplest case to consider.
 A machine could fail due to a critical hardware issue (failed CPU, blown power supply, stuck fans, and so on), causing sudden failure of the Hadoop processes running on the host.
@@ -1747,6 +1782,7 @@ Handling dirty data through code One approach to dirty data is to write mappers 
 So, for example, if the value received by the mapper should be a comma-separated list of values, first validate the number of items before processing the data.
 If the first value should be a string representation of an integer, ensure that the conversion into a numerical type has solid error handling and default behavior.
 The problem with this approach is that there will always be some type of weird data input that was not considered, no matter how careful you were.
+Did you consider receiving values in a different unicode character set? What about multiple character sets, null values, badly terminated strings, wrongly encoded escape characters, and so on?
 If the data input to your jobs is something you generate and/or control, these possibilities are less of a concern.
 However, if you are processing data received from external sources, there will always be grounds for surprise.
 Using Hadoop's skip mode The alternative is to configure Hadoop to approach task failures differently.
@@ -1775,7 +1811,6 @@ The map progress counter will increase but when a task fails, the progress will 
 Every time a key/value pair is passed to the mapper, Hadoop by default increments a counter that allows it to keep track of which record caused a failure.
 If your map or reduce tasks process their input through mechanisms other than directly receiving all data via the arguments to the map or reduce method (for example, from asynchronous processes or caches) you will need to ensure you explicitly update this counter manually.
 When a task fails, Hadoop retries it on the same block but attempts to work around the invalid records.
-Through a binary search approach, the framework performs retries across the data until the number of skipped records is no greater than the maximum value we configured earlier, that is 5
 This process does require multiple task retries and failures as the framework seeks the optimal batch to skip, which is why we had to ensure the framework was configured to be tolerant of a higher-than-usual number of repeated task failures.
 We watched the job continue following this back and forth process and on completion checked the contents of the output file.
 This showed 2,000,000 processed records, that is the correct number of valid records in our input file.
@@ -1816,6 +1851,7 @@ Hadoop configuration properties Before we look at running the cluster, let's tal
 We have been introducing many of these along the way, and there are a few additional points worth considering.
 Default values One of the most mystifying things to a new Hadoop user is the large number of configuration properties.
 Where do they come from, what do they mean, and what are their default values?
+If you have the full Hadoop distribution—that is, not just the binary distribution—the following XML files will answer your questions:
 Time for action – browsing default properties Fortunately, the XML documents are not the only way of looking at the default values; there are also more readable HTML versions, which we'll now take a quick look at.
 These files are not included in the Hadoop binary-only distribution; if you are using that, you can also find these files on the Hadoop website.
 What just happened? As you can see, each property has a name, default value, and a brief description.
@@ -1869,15 +1905,18 @@ Instead, you have to consider the amount of processing power, memory, storage ty
 Much has been written about selecting hardware for a Hadoop cluster, and once again there is no single answer that will work for all cases.
 The big variable is the types of MapReduce tasks that will be executed on the data and, in particular, if they are bounded by CPU, memory, I/O, or something else.
 Processor / memory / storage ratio A good way of thinking of this is to look at potential hardware in terms of the CPU / memory / storage ratio.
+Then look at the types of MapReduce jobs you will be running, does that ratio seem appropriate? In other words, does your workload require proportionally more of one of these resources or will a more balanced configuration be sufficient?
 This is, of course, best assessed by prototyping and gathering metrics, but that isn't always possible.
 If not, consider what part of the job is the most expensive.
 For example, some of the jobs we have seen are I/O bound and read data from the disk, perform simple transformations, and then write results back to the disk.
+If this was typical of our workload, we could likely use hardware with more storage—especially if it was delivered by multiple disks to increase I/O—and use less CPU and memory.
 Conversely, jobs that perform very heavy number crunching would need more CPU, and those that create or use large data structures would benefit from memory.
 If your job was running, would it be CPU-bound (processors at full capacity; memory and I/O to spare), memory-bound (physical memory full and swapping to disk; CPU and I/O to spare), or I/O-bound (CPU and memory to spare, but data being read/written to/from disk at maximum possible speed)? Can you get hardware that eases that bound?
 This is of course a limitless process, as once you ease one bound another will manifest itself.
 So always remember that the idea is to get a performance profile that makes sense in the context of your likely usage scenario.
 What if you really don't know the performance characteristics of your jobs? Ideally, try to find out, do some prototyping on any hardware you have and use that to inform your decision.
 However, if even that is not possible, you will have to go for a configuration and try it out.
+Remember that Hadoop supports heterogeneous hardware—though having uniform specifications makes your life easier in the end—so build the cluster to the minimum possible size and assess the hardware.
 Use this knowledge to inform future decisions regarding additional host purchases or upgrades of the existing fleet.
 If you plan to run your jobs on EMR, you have a built-in capability to tweak this configuration to find the best combination of hardware specifications to price and execution speed.
 However, even if you do not plan to use EMR full-time, it can be a valuable prototyping platform.
@@ -1936,7 +1975,6 @@ Note that the property needs to be set and the script needs to exist only on the
 The NameNode will pass to the script the IP address of each node it discovers, so the script is responsible for a mapping from node IP address to rack name.
 If no script is specified, each node will be reported as a member of a single default rack.
 Time for action – examining the default rack configuration Let's take a look at how the default rack configuration is set up in our cluster.
-The result should include output similar to the following: Default replication factor:    3
 What just happened? Both the tool used and its output are of interest here.
 The tool is hadoop fsck, which can be used to examine and fix filesystem problems.
 As can be seen, this includes some information not dissimilar to our old friend hadoop dfsadmin, though that tool is focused more on the state of each node in detail while hadoop fsck reports on the internals of the filesystem as a whole.
@@ -1971,6 +2009,7 @@ You will be processing 10 TB of data on your cluster.
 Your main MapReduce job processes financial transactions, using them to produce statistical models of behavior and future forecasts.
 Which of the following hardware choices would be your first choice for the cluster?
 Cluster access control Once you have the shiny new cluster up and running, you need to consider questions of access and security.
+Who can access the data on the cluster—is there sensitive data that you really don't want the whole user base to see?
 The Hadoop security model Until very recently, Hadoop had a security model that could, at best, be described as "marking only"
 It associated an owner and group with each file but, as we'll see, did very little validation of a given client connection.
 Strong security would manage not only the markings given to a file but also the identities of all connecting users.
@@ -1989,6 +2028,7 @@ What just happened? We firstly used our Hadoop user to create a test file in its
 We used the -chmod option to hadoop fs, which we have not seen before.
 This is very similar to the standard Unix chmod tool that gives various levels of read/write/execute access to the file owner, group members, and all users.
 We then went to another host and tried to access the file, again as the Hadoop user.
+But why? What did Hadoop know about the Hadoop user that allowed it to give access to the file?
 To explore this, we then created another home directory on HDFS (you can use any other account on the host you have access to), and gave it ownership by using the -chown option to hadoop fs.
 This should once again look similar to standard Unix -chown.
 Then we switched to this user and attempted to read the file stored in the Hadoop user's home directory.
@@ -2050,6 +2090,7 @@ Make a copy of the core-site.xml and hdfs-site.xml files, place them (ideally) o
 Any time you modify the current configuration files, remember to make the same changes to these copies.
 Copy the slaves file from the NameNode onto either the new host or the NFS share.
 Know how you will handle a subsequent failure in the new host.
+How quickly can you likely repair or replace the original failed host? Which host will be the location of the NameNode (and SecondaryNameNode) in the interim?
 Time for action – swapping to a new NameNode host In the following steps we keep the new configuration files on an NFS share mounted to / share/backup and change the paths to match where you have the new files.
 Also use a different string to grep; we use a portion of the IP address we know isn't shared with any other host in the cluster.
 Log on to the current NameNode host and shut down the cluster.
@@ -2070,6 +2111,7 @@ You decided in advance how to handle the SecondaryNameNode and which host would 
 To be ready for that, you will need to run through the "Be prepared" checklist mentioned before once more and act appropriately.
 Do not forget to consider the chance of correlated failures.
 Investigate the cause of the NameNode host failure in case it is the start of a bigger problem.
+What about MapReduce? We did not mention moving the JobTracker as that is a much less painful process as shown in Chapter 6, When Things Break.
 If your NameNode and JobTracker are running on the same host, you will need to modify the preceding approach by also keeping a new copy of mapred-site.xml, which has the location of the new host in the mapred.job.
 Have a go hero – swapping to a new NameNode host Perform a migration of both the NameNode and JobTracker from one host to another.
 Managing HDFS As we saw when killing and restarting nodes in Chapter 6, When Things Break, Hadoop automatically manages many of the availability concerns that would consume a lot of effort on a more traditional filesystem.
@@ -2182,6 +2224,7 @@ How to efficiently use Hive across very large data sets.
 How Hive allows the incorporation of user-defined functions into its queries.
 Overview of Hive Hive is a data warehouse that uses MapReduce to analyze data stored on HDFS.
 In particular, it provides a query language called HiveQL that closely resembles the common Structured Query Language (SQL) standard.
+Why use Hive? In Chapter 4, Developing MapReduce Programs, we introduced Hadoop Streaming and explained that one large benefit of Streaming is how it allows faster turn-around in the development of MapReduce jobs.
 Instead of providing a way of more quickly developing map and reduce tasks, it offers a query language based on the industry standard SQL.
 Hive takes these HiveQL statements and immediately and automatically translates the queries into one or more MapReduce jobs.
 It then executes the overall MapReduce program and returns the results to the user.
@@ -2191,6 +2234,7 @@ The combination of these attributes is that Hive is often used as a tool for bus
 Direct use of MapReduce requires map and reduce tasks to be written before the job can be executed which means a necessary delay from the idea of a possible query to its execution.
 With Hive, the data analyst can work on refining HiveQL queries without the ongoing involvement of a software developer.
 There are of course operational and practical limitations (a badly written query will be inefficient regardless of technology) but the broad principle is compelling.
+Thanks, Facebook! Just as we earlier thanked Google, Yahoo!, and Doug Cutting for their contributions to Hadoop and the technologies that inspired it, it is to Facebook that we must now direct thanks.
 Hive was developed by the Facebook Data team and, after being used internally, it was contributed to the Apache Software Foundation and made freely available as open source software.
 Setting up Hive In this section, we will walk through the act of downloading, installing, and configuring Hive.
 Prerequisites Unlike Hadoop, there are no Hive masters, slaves, or nodes.
@@ -2225,6 +2269,7 @@ For the UFO data, we use STRING as the data type; HiveQL, as with SQL, supports 
 After creating the table, we use the SHOW TABLES statement to verify that the table has been created.
 This command lists all tables and in this case, our new UFO table is the only one in the system.
 We then use a variant on SHOW TABLES that takes an optional Java regular expression to match against the table name.
+In this case, the output is identical to the previous command, but in systems with a large number of tables—especially when you do not know the exact name—this variant can be very useful.
 We have seen the table exists but we have not validated whether it was created properly.
 We next do this by using the DESCRIBE TABLE command to display the specification of the named table.
 We see that all is as specified (though note the table comment is not shown by this command) and then use the DESCRIBE TABLE EXTENDED variant to get much more information about the table.
@@ -2238,6 +2283,7 @@ Time for action – inserting the UFO data Now that we have created a table, let
 Confirm that the file was copied: $ hadoop fs -ls /tmp.
 Load the data from the previously copied file into the ufodata table: hive> LOAD DATA INPATH '/tmp/ufo.tsv' OVERWRITE INTO TABLE ufodata;
 Check the location from which we copied the data file: $ hadoop fs -ls /tmp.
+What just happened? We first copied onto HDFS the tab-separated file of UFO sightings used previously in Chapter 4, Developing MapReduce Programs.
 After validating the file's presence on HDFS, we started the Hive interactive shell and used the LOAD DATA command to load the file into the ufodata table.
 Because we are using a file already on HDFS, the path was specified by INPATH alone.
 We could have loaded directly from a file on the local filesystem (obviating the need for the prior explicit HDFS copy) by using LOCAL INPATH.
@@ -2272,8 +2318,10 @@ The main differences with the table specification are the ROW FORMAT and FIELDS 
 We need both these commands as the first tells Hive that the row contains multiple delimited fields, while the second specifies the actual separator.
 As can be seen here, we can use both explicit ASCII codes as well as common tokens such as \t for tab.
 Be careful with the separator specification as it must be precise and is case sensitive.
+Before running the script, we copy the data file onto HDFS again—the previous copy was removed by the DELETE statement—and then use hive -f to execute the HiveQL file.
 As before, we then execute two simple SELECT statements to first count the rows in the table and then extract the specific values from a named column for a small number of rows.
 The overall row count is, as should be expected, the same as before, but the second statement now produces what looks like correct data, showing that the rows are now correctly being split into their constituent fields.
+Hive tables – real or not? If you look closely at the time taken by the various commands in the preceding example, you'll see a pattern which may at first seem strange.
 Loading data into a table takes about as long as creating the table specification, but even the simple count of all row statements takes significantly longer.
 The output also shows that table creation and the loading of data do not actually cause MapReduce jobs to be executed, which explains the very short execution times.
 When loading data into a Hive table, the process is different from what may be expected with a traditional relational database.
@@ -2309,6 +2357,7 @@ This is also an indication that HiveQL is most similar to SQL dialects such as t
 This example shows an inner join; Hive also supports left and right outer joins as well as left semi joins.
 There are a number of subtleties around the use of joins in Hive (such as the aforementioned equijoin restriction) and you should really read through the documentation on the Hive homepage if you are likely to use joins, especially when using very large tables.
 This is not a criticism of Hive alone; joins are incredibly powerful tools but it is probably fair to say that badly written joins or those created in ignorance of critical constraints have brought more relational databases to a grinding halt than any other type of SQL query.
+Have a go hero – improve the join to use regular expressions As well as the string functions we used previously, Hive also has functions such as RLIKE and REGEXP_EXTRACT that provide direct support for Java-like regular expression manipulation.
 Rewrite the preceding join specification using regular expressions to make a more accurate and elegant join statement.
 Hive and SQL views Another powerful SQL feature supported by Hive is views.
 These are useful when instead of a static table the contents of a logical table are specified by a SELECT statement and subsequent queries can then be executed against this dynamic view (hence the name) of the underlying data.
@@ -2339,10 +2388,12 @@ Then while processing the data, we used more precise regular expressions to extr
 However, in Hive, we did no such pre-processing and relied on quite crude mechanisms to extract the abbreviation.
 On the latter, we could use some of Hive's previously mentioned functions that support regular expressions but for the former, we'd at best be forced to add complex validation WHERE clauses to many of our queries.
 A frequent pattern is to instead preprocess data before it is imported into Hive, so for example, in this case, we could run a MapReduce job to remove all malformed records in the input file and another to do the normalization of the location field in advance.
+Have a go hero – do it! Write MapReduce jobs (it could be one or two) to do this pre-processing of the input data and generate a cleaned-up file more suited for direct importation into Hive.
 Then write a script to execute the jobs, create a Hive table, and import the new file into the table.
 This will also show how easily and powerfully scriptable Hadoop and Hive can be together.
 Time for action – exporting query output We have previously either loaded large quantities of data into Hive or extracted very small quantities as query results.
 We can also export large result sets; let us look at an example.
+Create the following file as export.hql: INSERT OVERWRITE DIRECTORY '/tmp/out' SELECT reported, shape, state FROM usa_sightings WHERE state = 'California' ;
 Look in the specified output directory: $ hadoop fs -ls /tmp/out.
 What just happened? After reusing the previous view, we created our HiveQL script using the INSERT OVERWRITE DIRECTORY command.
 This, as the name suggests, places the results of the subsequent statement into the specified location.
@@ -2368,6 +2419,7 @@ Through the use of multiple partition columns, it is possible to create a rich h
 For our UFO data set, we will use the year of the sighting as the partition value but we have to use a few less common features to make it happen.
 Hence, after this introduction, let us now make some partitions!
 Time for action – making a partitioned UFO sighting table We will create a new table for the UFO data to demonstrate the usefulness of partitioning.
+Ended Job = 994255701, job is filtered out (removed at runtime)
 What just happened? We created two HiveQL scripts for this example.
 As we can see, it looks very much like the previous CREATE TABLE statements; the difference is in the additional PARTITIONED BY clause.
 After we execute this script, we describe the table and see that from a HiveQL perspective the table appears just like the previous ufodata table but with the addition of an extra column for the year.
@@ -2460,7 +2512,6 @@ Then fill in the name of the directory for the logs, as shown in the following s
 Then do the same through the rest of the job creation process as there are no other default options that need to be changed for this example.
 Finally start the job flow and monitor its progress from the management console.
 Once the job has completed successfully, go back to S3 and double-click on the ufoout directory.
-Within that should be a directory called states and within that, a file named something like 0000000
 Double-click to download the file and verify that its contents look something like the following:
 What just happened? Before we actually execute our EMR job flow, we needed to do a bit of setup in the preceding example.
 Firstly, we used the S3 web interface to prepare the directory structure for our job.
@@ -2587,6 +2638,7 @@ Yes, this has bit ten me several times in the past!
 The previous change tells MySQL to bind to all available interfaces and thus be accessible from remote clients.
 After making the change, we need to restart the server.
 In Ubuntu 11.10, many of the service scripts have been ported to the Upstart framework, and we can use the handy restart command directly.
+If you are using a distribution other than Ubuntu—or potentially even a different version of Ubuntu—the global MySQL configuration file may be in a different location; /etc/my.cnf, for example, on CentOS and Red Hat Enterprise Linux.
 Don't do this in production! Or at least not without thinking about the consequences.
 In the earlier example, we gave a really bad password to the new user; do not do that.
 However, especially don't do something like that if you then make the database available across the network.
@@ -2615,6 +2667,7 @@ You then need to determine how each mapper is to have its segment parameters pas
 If the retrieved segments are large, there is a chance that you will end up with long-running tasks that get terminated by the Hadoop framework unless you explicitly report progress.
 That is actually quite a lot of work for a conceptually simple task.
 Wouldn't it be much better to use an existing tool for the purpose? There is indeed such a tool that we will use throughout the rest of this chapter, Sqoop.
+A better way – introducing Sqoop Sqoop was created by Cloudera (http://www.cloudera.com), a company that provides numerous services related to Hadoop in addition to producing its own packaging of the Hadoop distribution, something we will discuss in Chapter 11, Where to Go Next.
 As well as providing this packaged Hadoop product, the company has also created a number of tools that have been made available to the community, and one of these is Sqoop.
 Its job is to do exactly what we need, to copy data between Hadoop and relational databases.
 Though originally developed by Cloudera, it has been contributed to the Apache Software Foundation, and its homepage is http://sqoop.apache.org.
@@ -2624,6 +2677,7 @@ Download the JDBC driver for your database; for MySQL, we find it at http://dev.
 You will see the following output: usage: sqoop COMMAND [ARGS]
 See 'sqoop help COMMAND' for information on a specific command.
 What just happened? Sqoop is a pretty straightforward tool to install.
+After downloading the required version from the Sqoop homepage—being careful to pick the one that matches our Hadoop version—we copied and unpacked the file.
 Once again, we needed to set an environment variable and added the Sqoop bin directory to our path so we can either set these directly in our shell, or as before, add these steps to a configuration file we can source prior to a development session.
 Sqoop needs access to the JDBC driver for your database; for us, we downloaded the MySQL Connector and copied it into the Sqoop lib directory.
 For the most popular databases, this is as much configuration as Sqoop requires; if you want to use something exotic, consult the Sqoop documentation.
@@ -2671,6 +2725,7 @@ In several ways, Sqoop interacts with Hadoop in much the same way that Hive does
 Sqoop does not have any server processes; the command-line client we run is all there is to it.
 However, because it can tailor its generated MapReduce code to the specific tasks at hand, it tends to utilize Hadoop quite efficiently.
 The preceding example of splitting a source RDBMS table on a primary key is a good example of this.
+Sqoop knows the number of mappers that will be configured in the MapReduce job—the default is four, as previously mentioned—and from this, it can do smart partitioning of the source table.
 If we assume a table with 1 million records and four mappers, then each will process SQL statements to retrieve the data that each use the desired primary key column range as caveats.
 We will see the reverse behavior when exporting data from Hadoop as Sqoop again parallelizes data retrieval across multiple mappers and works to optimize the insertion of this data into the relational database.
 However, all these smarts are pushed into the MapReduce jobs executed on Hadoop; the Sqoop command-line client's job is to generate this code as efficiently as possible and then get out of the way as the processing occurs.
@@ -2716,11 +2771,11 @@ We then tried to retrieve the data from the table and could not do so, receiving
 Though we specified the desired column type was to be TIMESTAMP, the actual data being imported from MySQL was of type DATE, which does not contain the time component required in a timestamp.
 Ensuring that the type mappings are correct is only one part of the puzzle; we must also ensure the data is valid for the specified column type.
 Time for action – importing data from a raw query Let's see an example of an import where a raw SQL statement is used to select the data to be imported.
+Delete any existing output directory: $ hadoop fs –rmr employees.
 Drop any existing Hive employee table: $ hive -e 'drop table employees'
 What just happened? To achieve our goal, we used a very different form of the Sqoop import.
 Instead of specifying the desired table and then either letting Sqoop import all columns or a specified subset, here we use the --query option to define an explicit SQL statement.
 In the statement, we select all the columns from the source table but apply the timestamp() function to convert the start_date column to the correct type.
-Note that this function simply adds a 00:00 time element to the date)
 We alias the result of this function, which allows us to name it in the type mapping option.
 Because we have no --table option, we have to add --target-dir to tell Sqoop the name of the directory it should create on HDFS.
 The WHERE clause in the SQL is required by Sqoop even though we are not actually using it.
@@ -2757,6 +2812,7 @@ Writing SQL import files from the reducer Often, a superior approach is not to w
 All relational databases have the ability to ingest data from source files, either through custom tools or through the use of the LOAD DATA statement.
 Within the reducer, therefore, we can modify the data output to make it more easily ingested into our relational destination.
 This obviates the need to consider issues such as reducers placing load on the database or how to handle long-running tasks, but it does require a second step external to our MapReduce job.
+A better way – Sqoop again It probably won't come as a surprise—certainly not if you've looked at the output of Sqoop's inbuilt help or its online documentation—to learn that Sqoop can also be our tool of choice for data export from Hadoop.
 Time for action – importing data from Hadoop into MySQL Let's demonstrate this by importing data into a MySQL table from an HDFS file.
 Create a new directory on HDFS and copy the file into it: $hadoop fs -mkdir edata.
 Check the number of records in the table after the export: Echo "select count(*) from employees"
@@ -2802,6 +2858,8 @@ We are now hitting the reverse of the problem we encountered earlier; the origin
 When exporting data back again, however, we are now trying to create a DATE using a TIMESTAMP value, which is not possible without some conversion.
 The lesson here is that our earlier approach of doing a one-way conversion only worked for as long as we only had data flowing in one direction.
 As soon as we need bi-directional data transfer, mismatched types between Hive and the relational store add complexity and require the insertion of conversion routines.
+Time for action – fixing the mapping and re-running the export In this case, however, let us do what probably makes more sense—modifying the definition of the employee table to make it consistent in both data sources.
+What just happened? Before trying the same Sqoop export as last time, we used the mysql tool to connect to the database and modify the type of the start_date column.
 Note, of course, that such changes should never be made casually on a production system, but given that we have a currently empty test table, there are no issues here.
 After making the change, we re-ran the Sqoop export and this time it succeeded.
 Other Sqoop features Sqoop has a number of other features that we won't discuss in detail, but we'll highlight them so the interested reader can look them up in the Sqoop documentation.
@@ -2833,6 +2891,9 @@ In particular, we explored the most common use cases and saw that Hadoop and rel
 We considered ways of exporting data from a relational database onto HDFS files and realized that issues such as primary key column partitioning and long-running tasks make it harder than it first seems.
 We then introduced Sqoop, a Cloudera tool now donated to the Apache Software Foundation and that provides a framework for such data migration.
 We used Sqoop to import data from MySQL into HDFS and then Hive, highlighting how we must consider aspects of datatype compatibility in such tasks.
+We also used Sqoop to do the reverse—copying data from HDFS into a MySQL database—and found out that this path has more subtle considerations than the other direction, briefly discussed issues of file formats and update versus insert tasks, and introduced additional Sqoop capabilities, such as code generation and incremental merging.
+Relational databases are an important—often critical—part of most IT infrastructures.
+One that has been growing in importance—often with little fanfare—is the vast quantities of log files generated by web servers and other applications.
 The next chapter will show how Hadoop is ideally suited to process and store such data.
 In the previous two chapters, we've seen how Hive and Sqoop give a relational database interface to Hadoop and allow it to exchange data with "real" databases.
 Although this is a very common use case, there are, of course, many different types of data sources that we may want to get into Hadoop.
@@ -2860,6 +2921,7 @@ Copy the file to HDFS: $ hadoop fs -put web.txt web.txt.
 What just happened? There shouldn't be anything that is surprising here.
 We use the curl utility to retrieve a web page from the embedded web server hosting the NameNode web interface and save it to a local file.
 We check the file size, copy it to HDFS, and verify the file has been transferred successfully.
+The point of note here is not the series of actions—it is after all just another use of the hadoop fs command we have used since Chapter 2, Getting Up and Running—rather the pattern used is what we should discuss.
 Though the data we wanted was in a web server and accessible via the HTTP protocol, the out of the box Hadoop tools are very file-based and do not have any intrinsic support for such remote information sources.
 This is why we need to copy our network data into a file before transferring it to HDFS.
 We can, of course, write data directly to HDFS through the programmatic interface mentioned back in Chapter 3, Writing MapReduce Jobs, and this would work well.
@@ -2871,6 +2933,7 @@ There is little else to discuss here, as it is a topic we have dealt with throug
 Hidden issues Though the preceding approaches are good as far as they go, there are several reasons why they may be unsuitable for production use.
 Keeping network data on the network Our model of copying network-accessed data to a file before placing it on HDFS will have an impact on performance.
 There is added latency due to the round-trip to disk, the slowest part of a system.
+This may not be an issue for large amounts of data retrieved in one call—though disk space potentially becomes a concern—but for small amounts of data retrieved at high speed, it may become a real problem.
 Hadoop dependencies For the file-based approach, it is implicit in the model mentioned before that the point at which we can access the file must have access to the Hadoop installation and be configured to know the location of the cluster.
 This potentially adds additional dependencies in the system; this could force us to add Hadoop to hosts that really need to know nothing about it.
 We can mitigate this by using tools like SFTP to retrieve the files to a Hadoop-aware machine and from there, copy onto HDFS.
@@ -2923,7 +2986,7 @@ Note that we give a few options to this command:
 The agent argument tells Flume to start an agent, which is the generic name for a running Flume process involved in data movement.
 The particular configuration file for the process we are going to launch.
 The agent will start and no further output will appear on that screen.
-Obviously, we would run the process in the background in a production setting.)
+Obviously, we would run the process in the background in a production setting.
 In another window, we open a telnet connection to port 3000 on the local machine using the curl utility.
 The traditional way of opening such sessions is of course the telnet program itself, but many Linux distributions have curl installed by default; almost none use the older telnet utility.
 We type a word on each line and hit Enter then kill the session with a Ctrl + C command.
@@ -3005,6 +3068,7 @@ These first lines name the agent and define the sources, sinks, and channels ass
 We can have multiple values on each line; the values are space separated:
 Since we are using the Netcat source, the configuration values specify how it should bind to the network.
 This specifies the sink to be used is the logger sink which is further configured via the command line or the log4j property file.
+In this case we are using the memory channel and we specify its capacity but – since it is non-persistent no external storage mechanism.
 These last lines configure the channel to be used for the source and sink.
 Though we used different configuration files for our different agents, we could just as easily place all the elements in a single configuration file as the respective agent names provide the necessary separation.
 This can, however, produce a pretty verbose file which can be a little intimidating when you are just learning Flume.
@@ -3106,6 +3170,7 @@ Let's briefly look at some things to consider, ideally before you have the data 
 Data lifecycle The main question to be asked in terms of data lifecycle is for how long will the value you gain from data storage be greater than the storage costs.
 Keeping data forever may seem attractive but the costs of holding more and more data will increase over time.
 These costs are not just financial; many systems see their performance degrade as volumes increase.
+This question isn't—or at least rarely should be—decided by technical factors.
 Instead, you need the value and costs to the business to be the driving factors.
 Sometimes data becomes worthless very quickly, other times the business cannot delete it for either competitive or legal reasons.
 Remember of course that it is not a binary decision between keeping or deleting data; you can also migrate data across tiers of storage that decrease in cost and performance as they age.
@@ -3115,6 +3180,7 @@ As we saw earlier, Flume's ability to parameterize the location to which it writ
 However, often it is useful to view this initial drop-off point as a temporary staging area to which data is written prior to processing.
 After it is processed, it may be moved into the long-term directory structure.
 Scheduling At many points in the flows, we have discussed that there is an implicit need for an external task to do something.
+As mentioned before, we want MapReduce to process files once they are written to HDFS by Flume, but how is that task scheduled? Alternatively, how do we manage the post-processing, the archival or deletion of old data, even the removal of log files on the source hosts?
 Some of these tasks, such as the latter, are likely managed by existing systems such as logrotate on Linux but the others may be things you need to build.
 Obvious tools such as cron may be good enough, but as system complexity increases, you may need to investigate more sophisticated scheduling systems.
 We will briefly mention one such system with tight Hadoop integration in the next chapter.
@@ -3154,6 +3220,7 @@ Odder still may be the fact that most production deployments don't use the Apach
 Anyone can, providing they comply with the Apache Software License that governs Hadoop, make their own release of the software.
 There are two main reasons alternative distributions have been created.
 Bundling Some providers seek to build a pre-bundled distribution containing not only Hadoop but also other projects, such as Hive, HBase, Pig, and many more.
+Though installation of most projects is rarely difficult—with the exception of HBase, which has historically been more difficult to set up by hand—there can be subtle version incompatibilities that don't arise until a particular production workload hits the system.
 A bundled release can provide a pre-integrated set of compatible versions that are known to work together.
 The bundled release can also provide the distribution not only in a tarball file but also in packages that are easily installed through package managers such as RPM, Yum, or APT.
 Free and commercial extensions Being an open source project with a relatively liberal distribution license, creators are also free to enhance Hadoop with proprietary extensions that are made available either as free open source or commercial products.
@@ -3210,6 +3277,7 @@ Consider Oozie if you are building workflows with significant Hadoop interaction
 Whir When looking to use cloud services such as Amazon AWS for Hadoop deployments, it is usually a lot easier to use a higher-level service such as ElasticMapReduce as opposed to setting up your own cluster on EC2
 Though there are scripts to help, the fact is that the overhead of Hadoop-based deployments on cloud infrastructures can be involved.
 Whir provides a programmatic way of specifying and creating Hadoop-based deployments on cloud infrastructures in a way that handles all the underlying service aspects for you.
+This makes vendor lock-in—often a concern with cloud deployments—less of an issue.
 Today it is limited in what services it can create and only supports a single provider, AWS.
 However, if you are interested in cloud deployment with less pain, it is worth watching its progress.
 Mahout The previous projects are all general-purpose in that they provide a capability that is independent of any area of application.
@@ -3308,9 +3376,13 @@ Get the best out of Cassandra using this efficient recipe bank.
 Well illustrated, step-by-step recipes to make all tasks look easy!
 A different approach All roads lead to scale-out Share nothing Expect failure Smart software, dumb hardware Move processing, not data Build applications, not infrastructure.
 Time for action – checking the prerequisites Setting up Hadoop A note on versions.
+Time for action – downloading Hadoop Time for action – setting up SSH Configuring and running Hadoop.
 Time for action – using Hadoop to calculate Pi Three modes.
 Time for action – configuring the pseudo-distributed mode Configuring the base directory and formatting the filesystem.
+Time for action – changing the base HDFS directory Time for action – formatting the NameNode Starting and using Hadoop.
 Time for action – WordCount on EMR using the management console Other ways of using EMR AWS credentials The EMR command-line tools.
+Writing MapReduce programs Time for action – setting up the classpath Time for action – implementing WordCount Time for action – building a JAR file Time for action – running WordCount on a local Hadoop cluster Time for action – running WordCount on EMR The pre-0.20 Java MapReduce API Hadoop-provided mapper and reducer implementations.
+Time for action – WordCount the easy way Walking through a run of WordCount Startup Splitting the input Task assignment Task startup Ongoing JobTracker monitoring Mapper input Mapper execution Mapper output and reduce input Partitioning The optional partition function Reducer input Reducer execution Reducer output Shutdown That's all there is to it! Apart from the combiner…maybe Why have a combiner?
 Time for action – WordCount with a combiner When you can use the reducer as the combiner.
 Time for action – fixing WordCount to work with a combiner Reuse is your friend.
 Hadoop-specific data types The Writable and WritableComparable interfaces Introducing the wrapper classes Primitive wrapper classes Array wrapper classes Map wrapper classes.
@@ -3318,13 +3390,20 @@ Time for action – using the Writable wrapper classes Other wrapper classes Mak
 Time for action – WordCount using Streaming Differences in jobs when using Streaming.
 Analyzing a large dataset Getting the UFO sighting dataset Getting a feel for the dataset.
 Time for action – summarizing the UFO data Examining UFO shapes.
+Time for action – summarizing the shape data Time for action – correlation of sighting duration to UFO shape Using Streaming scripts outside Hadoop.
 Time for action – performing the shape/time analysis from the command line Java shape and location analysis.
+Time for action – using the Distributed Cache to improve location output Counters, status, and other output Time for action – creating counters, task states, and writing log output Too much information!
 Chapter 5: Advanced MapReduce Techniques Simple, advanced, and in-between Joins When this is a bad idea Map-side versus reduce-side joins Matching account and sales information.
 Time for action – reduce-side join using MultipleInputs DataJoinMapper and TaggedMapperOutput Implementing map-side joins Using the Distributed Cache Pruning data to fit in the cache Using a data representation instead of raw data Using multiple mappers.
+Graph algorithms Graph 101 Graphs and MapReduce – a match made somewhere Representing a graph.
 Time for action – representing the graph Overview of the algorithm The mapper The reducer Iterative application.
+Time for action – creating the source code Time for action – the first run Time for action – The second run Time for action – the third run Time for action – the fourth and last run Running multiple jobs Final thoughts on graphs.
 Time for action – getting and installing Avro Avro and schemas.
+Time for action – defining the schema Time for action – creating the source Avro data with Ruby Time for action – consuming the Avro data with Java Using Avro within MapReduce.
+Time for action – generating shape summaries in MapReduce Time for action – examining the output data with Ruby Time for action – examining the output data with Java And beyond with Avro.
 Chapter 6: When Things Break Failure Embrace failure Or at least don't fear it Don't try this at home Types of failure Hadoop node failures The dfsadmin command Cluster setup, test files, and block sizes Fault tolerance and Elastic MapReduce.
 Time for action – killing a DataNode process NameNode and DataNode communication.
+Time for action – the replication factor in action Time for action – intentionally causing missing blocks When data may be lost Block corruption.
 Time for action – killing a TaskTracker process Comparing the DataNode and TaskTracker failures Permanent failure.
 Time for action – killing the JobTracker Starting a replacement JobTracker.
 Task failures due to software Failures of slow running tasks.
@@ -3334,25 +3413,39 @@ Time for action – handling dirty data by using skip mode To skip or not to ski
 Time for action – browsing default properties Additional property elements Default storage location Where to set properties.
 Setting up a cluster How many hosts? Calculating usable space on a node Location of the master nodes Sizing hardware Processor / memory / storage ratio EMR as a prototyping platform.
 Special node requirements Storage types Commodity versus enterprise class storage Single disk versus RAID Finding the balance Network storage.
+Time for action – examining the default rack configuration Time for action – adding a rack awareness script What is commodity hardware anyway?
 Time for action – demonstrating the default security User identity More granular access control.
 Managing the NameNode Configuring multiple locations for the fsimage class.
 Time for action – adding an additional fsimage location Where to write the fsimage copies Swapping to another NameNode host Have things ready before disaster strikes.
+Time for action – swapping to a new NameNode host Don't celebrate quite yet What about MapReduce?
 MapReduce management Command line job management Job priorities and scheduling.
 Time for action – changing job priorities and killing a job Alternative schedulers Capacity Scheduler Fair Scheduler Enabling the alternative schedulers When to use the alternative schedulers.
 Scaling Adding capacity to a local Hadoop cluster Adding capacity to an EMR job flow Expanding a running job flow.
+Time for action – installing Hive Using Hive Time for action – creating a table for the UFO data Time for action – inserting the UFO data Validating the data.
+Time for action – validating the table Time for action – redefining the table with the correct column separator Hive tables – real or not?
 Time for action – creating a table from an existing file Time for action - performing a join Hive and SQL views.
 Time for action - using views Handling dirty data in Hive.
 Time for action – exporting query output Partitioning the table.
+Time for action – making a partitioned UFO sighting table Bucketing, clustering, and sorting – oh my! User-defined functions.
 Time for action – adding a new User Defined Function (UDF) To preprocess or not Hive versus Pig What we didn't cover.
 Hive on Amazon Web Services Time for action – running UFO analysis on EMR Using interactive job flows for development Integration with other AWS products.
 Chapter 9: Working with Relational Databases Common data paths Hadoop as an archive store Hadoop as a preprocessing step Hadoop as a data input tool The serpent eats its own tail.
+Setting up MySQL Time for action – installing and setting up MySQL Did it have to be so hard?
+Time for action – configuring MySQL to allow remote connections Don't do this in production!
 Time for action – setting up the employee database Be careful with data file access rights.
 Getting data into Hadoop Using MySQL tools and manual import Accessing the database from the mapper A better way – introducing Sqoop.
 Time for action – downloading and configuring Sqoop Sqoop and Hadoop versions Sqoop and HDFS.
 Time for action – exporting data from MySQL to HDFS Sqoop's architecture Importing data into Hive using Sqoop.
+Time for action – exporting data from MySQL into Hive Time for action – a more selective import Datatype issues.
+Time for action – using a type mapping Time for action – importing data from a raw query Sqoop and Hive partitions Field and line terminators.
 Getting data out of Hadoop Writing data from within the reducer Writing SQL import files from the reducer A better way: Sqoop again.
 Time for action – importing data from Hadoop into MySQL Differences between Sqoop imports and exports Inserts versus updates Sqoop and Hive exports.
+Time for action – importing Hive data into MySQL Time for action – fixing the mapping and re-running the export Other Sqoop features.
 Time for action – getting web server data into Hadoop Getting files into Hadoop Hidden issues Keeping network data on the network Hadoop dependencies Reliability Re-creating the wheel A common framework approach.
 Time for action – installing and configuring Flume Using Flume to capture network data.
+Time for action – capturing network traffic to a log file Time for action – logging to the console Writing network data to log files.
 Time for action – capturing the output of a command to a flat file Logs versus files.
 Time for action – capturing a remote file to a local flat file Sources, sinks, and channels Sources Sinks Channels Or roll your own.
+Time for action – writing network traffic onto HDFS Time for action – adding timestamps To Sqoop or to Flume?
+Time for action – multi-level Flume networks Time for action – writing to multiple sinks Selectors replicating and multiplexing Handling sink failure Next, the world.
+Chapter 11: Where to Go Next What we did and didn't cover in this book Upcoming Hadoop changes Alternative distributions Why alternative distributions? Bundling Free and commercial extensions Choosing a distribution.

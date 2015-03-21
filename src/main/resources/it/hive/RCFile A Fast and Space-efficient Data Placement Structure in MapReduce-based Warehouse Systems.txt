@@ -9,8 +9,6 @@ Big data not only requires a huge amount of storage, but also demands new data m
 One important and emerging application of big data happens in social networks on the Internet, where billions of people all over the world connect and the number of users along with their various activities is growing rapidly.
 One critical task in Facebook is to understand quickly the dynamics of user behavior trends and user needs based on big data sets recording busy user activities.
 Furthermore, MapReduce-based data warehouse systems have been successfully built in major Web service providers and social.
-Instead, they have to utilize the cluster-level distributed file system (e.g.
-HDFS, the Hadoop Distributed File System) to store a huge amount of table data.
 Therefore, a serious challenge in building such a system is to find an efficient data placement structure that determines how to organize table data in the underlying HDFS.
 Being a critical factor that can affect warehouse performance in a fundamental way, such a data placement structure must be well optimized to meet the big data processing requirements and to efficiently leverage merits in a MapReduce environment.
 On average, more than 20TB data are pushed into a Facebook data warehouse every day.
@@ -131,10 +129,12 @@ Data storage size with different row group sizes in RCFile.
 We can see that a large row group size can certainly improve the data compression efficiency and decrease the storage size.
 Therefore, we could not use a small row group size with the requirement of reducing storage space.
 The relationship between row group size and lazy decompression: Though a large row group size helps decrease the storage size for a table, it may hurt the data read performance, since a small row group size is a better choice to gain the performance advantage of lazy decompression than a large row group size.
+Consider a query “SELECT a,b,c,d FROM tbl WHERE e = 1”
 We now consider an extreme case where the row group size is as large as possible so that the HDFS block contains only one row group.
 In this case, RCFile will decompress column e first to check the where condition, and find that the condition can be satisfied in this row group.
 Therefore, RCFile will also decompress all the other four columns (a, b, c, d) since they are needed by the query.
 However, since only one record in the HDFS block is.
+If we use a small row group size, then there is only one useful row group that contains the record with e = 1, and all other row groups are useless for this query.
 Therefore, only in the useful row group, all the five columns (a, b, c, d, e) need to be decompressed.
 In other useless row groups, only column e needs to be decompressed, and the other four columns will not be decompressed, since the where condition cannot be satisfied.
 Users should choose the row group size to consider both.
@@ -224,9 +224,19 @@ This reflects the performance benefit of lazy decompression of RCFile.
 Due to the existence of a where condition in Query B, a lazy decompression can avoid to decompress unnecessary data and thus improve query execution performance.
 As we have discussed in Section II and evaluated in Section V, Zebra’s performance is highly dependent on how column groups have been pre-defined.
 The most recently related work to RCFile is a data storage component in the Cheetah system [25]
-Like RCFile, the Cheetah system also first horizontally partitions a table into small units (each unit is called a cell),
 However, Cheetah will further use Gzip to compress the whole cell.
 Thus, during query execution, Cheetah has to read from the storage and decompress the whole cell before processing any data in a cell.
 Compared to Cheetah, RCFile can skip unnecessary column reads by independent column compression, and avoid unnecessary column decompression by the lazy decompression technique.
 The major difference between RCFile and Bigtable/Hbase is that RCFile serves as a storage structure for the almost read-only data warehouse system, while Bigtable/Hbase is mainly a low-level key-value store for both read- and write-intensive applications.
 We thank anonymous reviewers for their feedback to improve the readability of the paper.
+Murthy, “Hive - a warehousing solution over a MapReduce framework,” PVLDB, vol.
+Srivastava, “Building a highlevel dataflow system on top of MapReduce: The Pig experience,” PVLDB, vol.
+Khoshafian, “A decomposition storage model,” in SIGMOD Conference, 1985, pp.
+Skounakis, “Weaving relations for cache performance,” in VLDB, 2001, pp.
+Graefe, “Query processing techniques for solid state drives,” in SIGMOD Conference, 2009, pp.
+Patel, “Data morphing: An adaptive, cacheconscious storage technique,” in VLDB, 2003, pp.
+Stonebraker, “A comparison of approaches to large-scale data analysis,” in SIGMOD Conference, 2009, pp.
+Silberschatz, “HadoopDB: An architectural hybrid of MapReduce and DBMS technologies for analytical workloads,” PVLDB, vol.
+DeWitt, “How to barter bits for chronons: compression and bandwidth trade offs for database scans,” in SIGMOD Conference, 2007, pp.
+Chen, “Cheetah: A high performance, custom data warehouse on top of mapreduce,” PVLDB, vol.
+Gruber, “Bigtable: A distributed storage system for structured data,” in OSDI, 2006, pp.

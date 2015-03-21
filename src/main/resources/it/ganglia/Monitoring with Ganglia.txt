@@ -5,6 +5,8 @@ While every precaution has been taken in the preparation of this book, the publi
 In 1999, I packed everything I owned into my car for a cross-country trip to begin my new job as Staff Researcher at the University of California, Berkeley Computer Science Department.
 It was an optimistic time in my life and the country in general.
 The economy was well into the dot-com boom and still a few years away from the dot-com bust.
+Private investors were still happily throwing money at any company whose name started with an “e-” and ended with “.com”
+The goal of NPACI was to advance science by creating a pervasive national computational infrastructure called, at the time, “the Grid.” Berkeley was one of dozens of universities and affiliated government labs committed to connecting and sharing their computational and storage resources.
 When I arrived at Berkeley, the Network of Workstations (NOW) project was just coming to a close.
 The NOW team had clustered together Sun workstations using Myrinet switches and specialized software to win RSA key-cracking challenges and break a number of sort benchmark records.
 The success of NOW led to a following project, the Millennium Project, that aimed to support even larger clusters built on x86 hardware and distributed across the Berkeley campus.
@@ -15,22 +17,25 @@ David Culler’s cluster research attracted talented graduated students, includi
 Ganglia’s use of a lightweight multicast listen/announce protocol was influenced by Brent Chun’s early work building a scalable execution environment for clusters.
 Matt Welsh is well known for his contributions to the Linux community and his expertise was invaluable to the broader teams and to me personally.
 Eric Fraser was the ideal Millennium team lead who was able to attend meetings, balance competing priorities, and keep the team focused while still somehow finding time to make significant technical contributions.
+It was during a “brainstorming” (pun intended) session that Eric came up with the name “Ganglia.” Albert Goto developed an automated installation system that made it easy to spin up large clusters with specific software profiles in minutes.
 His software allowed me to easily deploy and test Ganglia on large clusters and definitely contributed to the speed and quality of Ganglia development.
 I consider myself very lucky to have worked with so many talented professors, students, and staff at Berkeley.
 I spent five years at Berkeley, and my early work was split between NPACI and Millennium.
 Looking back, I see how that split contributed to the way I designed and implemented Ganglia.
+The Ganglia Meta Daemon (gmetad)—with its hierarchical delegation model and TCP/XML data exchange—is ideal for Grids.
 I should mention here that Federico Sacerdoti was heavily involved in the implementation of gmetad and wrote a nice academic paper2 highlighting the strength of its design.
+On the other hand, the Ganglia Monitoring Daemon (gmond)—with its lightweight messaging and UDP/XDR data exchange—is ideal for large clusters.
 The components of Ganglia complement each other to deliver a scalable monitoring system that can handle a variety of deployment scenarios.
 In 2000, I open-sourced Ganglia and hosted the project from a Berkeley website.
 You can still see the original website today using the Internet Archive’s Wayback Machine.
 The dendrite would send periodic heartbeats as well as publish any significant /proc metric changes on a common multicast channel.
-To collect the dendrite updates, you deployed a single instance of a daemon process, called an axon,
 If you ran ganglia without any options, it would output the following help: $ ganglia.
 As you can see from the help page, the first version of ganglia allowed you to query and sort by 21 different system metrics right out of the box.
 At one time, they were! The output of the ganglia command made it very easy to embed it inside of scripts.
 For example, the output from Example P-1 could be used to autogenerate an MPI machine file that contained the least-loaded machines in the cluster for load-balancing MPI jobs.
 Ganglia also automatically removed hosts from the list that had stopped sending heartbeats to keep from scheduling jobs on dead machines.
 The UI allowed for filtering by hostname and could limit the total number of hosts displayed.
+Ganglia has come a very long way in the last 11 years! As you read this book, you’ll see just how far the project has come.
 Ganglia 1.0 ran only on Linux, whereas Ganglia today runs on dozens of platforms.
 Ganglia 1.0 had no time-series support, whereas Ganglia today leverages the power.
 Ganglia 1.0 was not extensible, whereas Ganglia today can publish custom metrics via Python and C modules or a simple command-line tool.
@@ -40,6 +45,7 @@ When you consider all the third-party sites that distribute Ganglia packages, I�
 Over Ganglia’s history, we’ve had nearly 40 active committers and hundreds of people who have submitted patches and bug reports.
 The authors and contributors on this book are all core contributors and power users who’ll provide you with the in-depth information on the features they’ve either written themselves or use every day.
 Reflecting on the history and success of Ganglia, I’m filled with a lot of pride and only a tiny bit of regret.
+I regret that it took us 11 years before we published a book about Ganglia! I’m confident that you will find this book is worth the wait.
 I’d like to thank Michael Loukides, Meghan Blanchette, and the awesome team at O’Reilly for making this book a reality.
 Conventions Used in This Book The following typographical conventions are used in this book: Italic.
 Indicates new terms, URLs, email addresses, filenames, and file extensions.
@@ -68,6 +74,7 @@ If you’ve looked at other monitoring tools, or have already implemented a few,
 It runs on every popular OS out there, scales easily to very large networks, and is resilient by design to node failures.
 In the real world, Ganglia routinely provides near real-time monitoring and performance metrics data for computer networks that are simply too large for more traditional monitoring systems to handle, and it integrates seamlessly with any traditional monitoring systems you may happen to be using.
 In this chapter, we’d like to introduce you to Ganglia and help you evaluate whether it’s a good fit for your environment.
+Because Ganglia is a product of the labor of systems guys—like you—who were trying to solve a problem, our introduction begins with a description of the environment in which Ganglia was born and the problem it was intended to solve.
 It’s a Problem of Scale Say you have a lot of machines.
 I’m not talking a few hundred, I mean metric oodles of servers, stacked floor to ceiling as far as the eye can see.
 Servers so numerous that they put to shame swarms of locusts, outnumber the snowflakes in Siberia, and must be expressed in scientific notation, or as some multiple of Avogadro’s number.
@@ -87,6 +94,7 @@ Large installation admin are rarely concerned about individual node failures.
 Designs that incorporate single points of failure are generally to be avoided in large application frameworks where it can be safely assumed, given the sheer amount of hardware involved, that some percentage of nodes are always going to be on the fritz.
 Smaller installations tend to favor monitoring tools that strictly define individual hosts centrally and alert on individual host failures.
 This sort of behavior quickly becomes unwieldy and annoying in larger networks.
+If you think about it, the monitoring systems we’re used to dealing with all work the way they do because of this “little network” mind set.
 This tendency to centralize and strictly define the configuration begets a central daemon that sits somewhere on the network and polls every host every so often for status.
 These systems are easy to use in small environments: just install the (usually bloated) agent on every system and.
 A single daemon will always be capable of polling only so many hosts, and every host that gets added to the network increases the load on the monitoring server.
@@ -122,13 +130,11 @@ Your operating system and network aren’t hostile to multicast and/or User Data
 If that sounds like your setup, then let’s take a closer look at Ganglia.
 As depicted in Figure 1-1, Ganglia is architecturally composed of three daemons: gmond, gmetad, and gweb.
 Operationally, each daemon is self-contained, needing only its own configuration file to operate; each will start and run happily in the absence of the other two.
-Certain advanced features such as sFlow, zeromq, and Graphite support may belie the use of gmetad and/or gweb; see Chapter 3 for details.)
+Certain advanced features such as sFlow, zeromq, and Graphite support may belie the use of gmetad and/or gweb; see Chapter 3 for details.
 Given that every gmond host multicasts metrics to its cluster peers, it follows that every gmond host must also record the metrics it receives from its peers.
 In fact, every node in a Ganglia cluster knows the current value of every metric recorded by every other node in the same cluster.
-An XML-format dump of the entire cluster state can be requested by a remote poller from any single node in the cluster on port 8649
 This design has positive consequences for the overall scalability and resiliency of the system.
 Only one node per cluster needs to be polled to glean the entire cluster status, and no amount of individual node failure adversely affects the overall system.
-Further, for the 200 necessary network connections the poller must make, every metric (CPU, disk, memory, network, etc.) on every individual cluster node is recorded instead of just the single CPU metric.
 The recent addition of sFlow support to gmond (as described in Chapter 8) lightens the metric collection and polling load even further, enabling Ganglia to scale to cloud-sized networks.
 What performs the actual work of polling gmond clusters and storing the metric data to disk for later use? The short answer is also the title of the next section: gmetad, but there is a longer and more involved answer that, like everything else we’ve talked about so far, is made possible by Ganglia’s unique design.
 Given that gmond operates on its own, absent of any dependency on and ignorant of the policies or requirements of a centralized poller, consider that there could in fact be more than one poller.
@@ -144,13 +150,15 @@ This architecture allows for a much simpler poller design, entirely removing the
 Such a poller needs only a list of hostnames that specifies at least one host per cluster.
 The clusters will then inform the poller as to what metrics are available and will also provide their values.
 Of course, the poller will probably want to store the data it gleans from the cluster nodes, and RRDtool is a popular solution for this sort of data storage.
+Metrics are stored in “round robin” databases, which consist of static allocations of values for various chunks of time.
 This is fine for a few days of data, but it’s not optimal to store 8,640 data points per day for a year for every metric on every machine in the network.
+Given your data retention requirements, RRDtool manages these data “rollups” internally, overwriting old values as new ones are added (hence the “round robin” moniker)
 This sort of data storage scheme lets us analyze recent data with great specificity while at the same time providing years of historical data in a few megabytes of disk space.
 It has the added benefit of allocating all of the required disk space up front, giving us a very predictable capacity planning model.
 It is a simple poller that, given a list of cluster nodes, will poll each cluster, writing whatever data values are returned for every metric on every host to individual round robin databases.
+You’ll recall that “polling” each cluster requires only that the poller open a read socket to the target gmond node’s port 8649, a feat readily accomplished by telnet.
 Indeed, gmetad could easily be replaced by a shell script that used netcat to glean the XML dump from various gmond nodes and then parse and write the data to RRDtool databases via command-line tools.
 As of this writing, there is, in fact, already a Pythonbased replacement for gmetad, which adds a plug-in architecture, making it easier to write custom data-handling logic.
-It includes interactive query functionality and may be polled by external monitoring systems via a simple text protocol on TCP port 8652
 Finally, as mentioned in the previous section, gmetad is also capable of sending data to Graphite, a highly scalable data visualization engine.
 You want graphs that make your data dance, brimming with timely, accurate data and contrasted, meaningful colors.
 And not just pretty graphs, but a snazzy, welldesigned UI to go with them—a UI that is generous with the data, summarizing the status of the entire data center in just a few graphs while still providing quick, easy access to every combination of any individual metrics.
@@ -159,12 +167,12 @@ If it seems like I’m reading your mind, it’s because the Ganglia authors are
 Quite a bit of thought and real-world experience has gone into its creation, and we think you’ll find it a joy to work with.
 It knows what hosts exist, and what metrics are available for those hosts, but it doesn’t make you click through hierarchal lists of metrics to see graphs; rather, it graphically summarizes the entire grid using graphs that combine metrics by cluster and provides sane click-throughs for increased specificity.
 If you’re interested in something specific, you can specify a system name, or a regex or type-glob to combine various metrics from various hosts to create a custom graph of exactly what you want to see.
+There are many other features I could mention—so many, in fact, that we’ve dedicated an entire chapter (Chapter 4) to gweb alone, so for now we’ll have to content ourselves with this short description.
 Before I move on, however, I should mention that gweb is a PHP program, which most people run under the Apache web server (although any web server with PHP or FastCGI support should do the trick)
 It is usually installed on the same physical hardware as gmetad, because it needs access to the RRD databases created by the poller.
-Installation details and specific software requirements are provided in Chapter 2
+We’ve documented everything you might ever want to know about extending Ganglia’s metric-collection functionality in Chapter 5, from easily adding new metrics through shell scripts using gmetric to writing full-fledged plug-ins for gmond in C, C++, or Python.
 If you’re adept at any of those languages, you should appreciate the thorough documentation of gmond’s internals included herein, written by the implementor of gmond’s modular interface.
 I personally wish that documentation of this quality had existed when I undertook to write my first gmond module.
-Anyone who has spent any time on the Ganglia mailing lists will recognize the names of the authors of Chapter 6
 Bernard and Daniel both made the mistake of answering one too many questions on the Ganglia-General list and have hence been tasked with writing a chapter on troubleshooting.
 If you have a problem that isn’t covered in Chapter 6, odds are you’ll eventually get the answer you’re looking for from either Bernard or Daniel on the Ganglia lists.
 Ganglia includes built-in functionality that enables it to integrate with both of these tools, each of which extend Ganglia’s functionality beyond what would otherwise be a limitation.
@@ -172,6 +180,7 @@ Finally, the chapter we’re all most excited to bring you is Chapter 9, wherein
 Each case study highlights the varied and challenging monitoring requirements of the organization in question and goes on to describe the Ganglia configuration employed to satisfy them.
 Any customizations, integration with external tools, and other interesting hurdles are also discussed.
 The authors, all of whom are members of and contributors to the Ganglia community, undertook to write this book ourselves to make sure it was the book we would have wanted to read, and we sincerely hope it meets your needs.
+Until then, we bid you adieu by borrowing the famous blessing from O’Reilly’s sed & awk book: “May you solve interesting problems.”
 If you’ve made it this far, it is assumed that you’ve decided to join the ranks of the Ganglia user base.
 Congratulations! We’ll have your Ganglia-user conspiracy to conquer the world kit shipped immediately.
 Until it arrives, feel free to read through this chapter, in which we show you how to install and configure the various Ganglia components.
@@ -219,9 +228,11 @@ It also provides a simple query mechanism for collecting specific information ab
 The requirements for installing gmetad on Linux are nearly the same as gmond, except for the addition of RRDtool, which is required to store and display time-series data collected from other gmetad or gmond sources.
 Once again, you are encouraged to take advantage of the prepackaged binaries available in the repository of your Linux distribution; we provide instructions for the two most popular formats next.
 As mentioned in the earlier gmond installation section, an EPEL repository must be installed if the base repositories don’t provide gmetad.
+Refer to “gmond” on page 11 to add the EPEL repository.
 There are only two functional differences between building gmond and gmetad on OS X.
 First, gmetad has one additional software dependency (RRDtool), and second, you must include the --with-gmetad option to the configure script, because only gmond is built by the default Makefile.
 Following is the list of requirements that must be satisfied before you can build gmetad on Mac OS X:
+Refer to “OS X” on page 12 for instructions on installing Xcode and MacPorts.
 Once you have those sorted out, install the following packages to satisfy the requirements:
 Once those packages have been installed, proceed with the Ganglia installation by downloading the latest Ganglia version.
 Download the patch file and copy it to the root of the extracted Ganglia source tree, then apply it:
@@ -245,16 +256,17 @@ This command installs Apache and PHP 5 to satisfy its dependencies, in case you 
 You might have to enable the PHP JSON module as well.
 Once it’s downloaded, explode and edit Makefile to install gweb:
 This means that gweb will be available to the user here.
+Skip to “Configuring Ganglia” on page 20 for further information on gweb settings.
 The way to install gweb on a RPM-based distribution is very similar to installing gweb on a Debian-based distribution.
 You also need to enable the JSON extension for PHP.
 Once downloaded, explode and edit Makefile to install gweb 2:
+Skip to “Configuring Ganglia” on page 20 for further information on gweb settings.
 If you need to install gweb on Mac OS X, you have to follow a slightly different approach than if you were installing in Linux.
 Again, there isn’t any binary package for Mac OS X, leaving you with the option of downloading the source from the website.
 Before downloading, you have to make sure that your Mac OS X has shipped with a few of the requirements.
 First off, an HTTP server is required, and chances are good that your Mac OS X installation was shipped with Apache Web Server.
 You can also install it via MacPorts, but this approach is not covered here.
 To enable, edit the httpd.conf file and uncomment the line that loads the php5_module.
-Now that you have satisfied the requirements, it’s time to download and install gweb 2
 Once you have finished, change to the directory where the file is located and extract its content.
 This next step really depends on how Apache Web Server is set up on your system.
 You need to find out where Apache serves its pages from or, more specifically, its DocumentRoot.
@@ -268,6 +280,7 @@ Run the pkgutil tool on Solaris, and then use the tool to install the package:
 The default location for the configuration files on Solaris (OpenCSW) is /etc/opt/csw/ ganglia.
 You can now start and stop all the Ganglia processes using the normal SMF utility on Solaris, as in:
 Configuring Ganglia The following subsections document the configuration specifics of each Ganglia component.
+The default configuration shipped with Ganglia “just works” in most environments with very little additional configuration, but we want to let you know what other options are available in addition to the default.
 We would also like you to understand how the choice of a particular option may affect Ganglia deployment in your environment.
 It interacts with the host operating system to obtain metrics and shares the metrics it collects with other hosts in the same cluster.
 Every gmond instance in the cluster knows the value of every metric collected by every host in the same cluster and by default provides an XML-formatted dump of the entire cluster state to any client that connects to gmond’s port.
@@ -275,7 +288,7 @@ Of particular importance in this diagram is the disparate nature of the gmond da
 Internally, gmond’s sending and receiving halves are not linked (a fact that is emphasized in Figure 2-1 by the dashed vertical line)
 Any local data captured by the metric modules are transmitted directly to the network by the sender, and the receiver’s internal database contains only metric data gleaned from the network.
 This topology is adequate for most environments, but in some cases it is desirable to specify a few specific listeners rather than allowing every node to receive (and thereby waste CPU cycles to process) metrics from every other node.
-More detail about this architecture is provided in Chapter 3
+The use of “deaf” nodes, as illustrated in Figure 2-2, eliminates the processing overhead associated with large clusters.
 The deaf and mute parameters exist to allow some gmond nodes to act as special-purpose aggregators and relays for other gmond nodes.
 Mute means that the node does not transmit; it will not even collect information about itself but will aggregate the metric data from other gmond daemons in the cluster.
 Deaf means that the node does not receive any metrics from the network; it will not listen to state information from multicast peers, but if it is not muted, it will continue sending out its own metrics for any other node that does listen.
@@ -286,7 +299,6 @@ At least one gmond instance must receive all the metrics from all nodes in the c
 Periodically, gmetad must poll the gmond instance that holds the entire cluster state.
 In practice, however, nodes not configured with any multicast connectivity do not need to be deaf; it can be useful to configure such nodes to send metrics to themselves using the address 127.0.0.1 so that they will keep a record of their own metrics locally.
 This makes it possible to make a TCP probe of any gmond for an XML about its own agent state while troubleshooting.
-For a more thorough discussion of topology and scalability considerations, see Chapter 3
 You can generate a default configuration file for gmond by running the following command:
 The configuration file is composed of sections, enclosed in curly braces, that fall roughly into two logical categories.
 The sections in the first category deal with host and cluster configuration; those in the second category deal with the specifics of metrics collection and scheduling.
@@ -300,7 +312,6 @@ The following is the default globals section from Ganglia 3.3.1:
 Set this value to false if you’re running gmond under a daemon manager such as daemontools.
 A debug_level greater than zero will result in gmond running in the foreground and outputting debugging information.
 It is not a good idea to change this value.
-Mute” gmond nodes are only mute when it comes to other gmond daemons.
 They still respond to queries from external pollers such as gmetad.
 In large grids with thousands of nodes per cluster, or carefully optimized HPC grids, in which every CPU cycle spent on something other than the problem is a wasted cycle, “normal” compute nodes are often configured as deaf in order to minimize the overhead associated with aggregating cluster state.
 In these instances, dedicated nodes are set aside to be mute.
@@ -341,6 +352,7 @@ If it’s not set, port 8649 is used by default.
 Setting this value to any value higher than necessary could result in metrics being transmitted across WAN connections to multiple sites or even out into the global Internet.
 If you do not specify multicast attributes, gmond will create a unicast UDP server on the specified port.
 Ganglia will not allow IPv6=>IPv4 mapping (for portability and security reasons)
+See “Access control” on page 29 for details on ACL syntax.
 Ganglia will not allow IPv6=>IPv4 mapping (for portability and security reasons)
 This list allows you to specify addresses and address ranges from which gmond will accept or deny connections.
 The syntax should be fairly self-explanatory to anyone with a passing familiarity with access control concepts.
@@ -349,10 +361,8 @@ Any number of access blocks may be specified that list hostnames or IP addresses
 The mask attribute defines a subnet mask in CIDR notation, allowing you to specify address ranges instead of individual addresses.
 Notice that in case of conflicting ACLs, the first match wins.
 Originally targeted at embedded network hardware, sFlow collectors now exist for general-purpose operating systems as well as popular applications such as Tomcat, memcached, and the Apache Web Server.
-Further information about sFlow interoperability is provided in Chapter 8
 The modules section contains the parameters that are necessary to load a metric module.
 Metric modules are dynamically loadable shared object files that extend the available metrics gmond is able to collect.
-Much more information about extending gmond with modules can be found in Chapter 5
 Each modules section must contain at least one module subsection.
 The default configuration contains every module available in the default installation, so you should not have to change this section unless you’re adding new modules.
 Alternatively, the name can be the name of the source file if the module has been implemented in an interpreted language such as Python.
@@ -374,7 +384,6 @@ The units denoted by the value vary according to the metric module.
 For CPU stats, for example, the value represents a percentage, and network stats interpret the value as a raw number of bytes.
 Any time a value_threshold is surpassed by any single metric in a collection group, all metrics in that collection group are sent to every UDP receive channel.
 By default, gmetad will collect and aggregate these metrics in RRD files, but it is possible to configure gmetad to forward metrics to external systems such as Graphite instead.
-It also responds to interactive requests on tcp port 8652
 The interactive facility allows simple subtree and summation views of the grid state XML tree.
 The simplest topology is a single gmetad process polling one or more gmond instances, as illustrated in Figure 2-4
 Redundancy/high availability is a common requirement and is easily implemented.
@@ -397,6 +406,7 @@ Two or three are usually sufficient to ensure that data is collected in the even
 The following attributes affect the functioning of the gmetad daemon itself: gridname (text)
 Used by other gmetad instances to locate graphs for this instance’s data sources.
 Several attributes affect the creation and handling of RRD files.
+The default is (with a “step size” of 15 seconds):
 The full details of an RRA specification are contained in the manpage for rrdcreate(1)
 It is possible to export all the metrics collected by gmetad to Graphite, an external open source metrics storage and visualization tool, by setting the following attributes.
 This setting is important because gmetad’s carbon sender is not threaded and will block waiting on a response from a down carbon daemon.
@@ -413,6 +423,7 @@ In fact, there is no need to change anything whatsoever in gweb’s default conf
 Although gweb itself requires no configuration to speak of, some web server configuration is necessary to get gweb up and running.
 For further reading on the subject, we recommend further reading here.
 In fact, this file overrides and extends the default configuration set in conf_default.php.
+This file is well documented, and as of this writing there are more than 80 options, so it won’t cover them all, but it will cover some of the more important ones, and make note of some option categories—just so you’re aware they’re there.
 The file, as its name suggests, is itself a PHP script made up of variable assignments.
 Unlike the other configuration files, assignments might span multiple lines.
 Attribute names are themselves keys in gweb’s $conf data structure, so they are case sensitive, and look like PHP array assignments.
@@ -427,7 +438,6 @@ As described in Chapter 7, various Nagios integration features may be set in gwe
 Collectively, these enable Nagios to query metric information from gweb instead of relying on remote execution systems such as Nagios Service Check Acceptor (NSCA) and Nagios Remote Plugin Executor (NRPE)
 The config.php file defines numerous settings that modify the functional attributes of the graphs drawn in the UI.
 For example, you may change the colors used to plot the values in the built-in load report graph and the default colors used in all the graphs and even define custom time ranges.
-For more information on the authorization features in gweb, see Chapter 4
 This approach requires you to install patched versions of whisper and the Graphite webapp on your gweb server.
 Postinstallation Now that Ganglia is installed and configured, it’s time to get the various daemons started, verify that they’re functional, and ensure that they can talk to each other.
 Starting Up the Processes Starting the processes in a specific order is not necessary; however, if the daemons are started in the order recommended here, there won’t be a delay waiting for metadata to be retransmitted to the UDP aggregator and users won’t get error pages or incomplete data from the web server:
@@ -445,6 +455,7 @@ Here, we’ve collected the firewall requirements of the various daemons togethe
 If the gmond hosts must traverse a firewall to talk to each other, allow udp/8649 in both directions.
 For multicast, support for the IGMP protocol must also be enabled in the intermediate firewalls and routers.
 If gmetad must traverse a firewall to reach some of the gmond nodes, allow tcp/8649 inbound to a few gmond nodes in each cluster.
+The former port is analogous to gmond’s 8649, while the latter is the “interactive query” port to which specific queries may be sent.
 These ports are used by gweb, which is usually installed on the same host as gmetad, so unless you’re using some of the advanced integration features, such as Nagios integration, or have custom scripts querying gmetad, you shouldn’t need any firewall ACLs for gmetad.
 If your Ganglia installation uses sFlow collectors and the sFlow collectors must traverse a firewall to reach their gmond listener, allow inbound udp/6343 to the gmond listener.
 Who Should Be Concerned About Scalability? Scalability is discussed early in this book because it needs to be factored in at the planning stage rather than later on when stability problems are observed in production.
@@ -458,10 +469,12 @@ In a default installation, Ganglia collects about 30 metrics from each node.
 However, third-party metric modules can be used to collect more than 1,000 metrics per node, dramatically increasing the workload on the Ganglia architecture.
 Administrators of moderate-sized networks pursuing such aggressive monitoring strategies need to consider scalability in just the same way as a large enterprise with a huge network does.
 For a small installation of a few dozen hosts, this chapter is not required.
+It is quite possible that the default installation will “just work” and never require any attention.
 It is necessary to consider how the receiving nodes are affected as the network is scaled: Memory impact.
 The more nodes and the more metrics per node, the greater the memory consumption on those gmond processes that are configured to receive metrics from other nodes.
 The faster the rate of metrics arriving from the network, the more the CPU core is utilized.
 The metric arrival rate depends on three things: the number of nodes, the number of metrics per node, and the rate at which the nodes are configured to transmit fresh values.
+To reduce this overhead, the solution is the use of “deaf” nodes, as illustrated in the deaf/mute node topology of Figure 2-2
 No special effort needs to be made and this section can be skipped.
 If you have a large installation, it is important to read this section carefully before proceeding to configure gmetad.
 If the entire RRD file fits into one block on disk (4,096 bytes, typically) then all modifications to the file can, at best, be made with a single IO request.
@@ -535,6 +548,7 @@ The output report (san_test.out) is created in the current directory.
 In this sample, much of the output is truncated, so that only the rand-write job output is displayed.
 This job gives the best simulation of gmetad/RRDtool write behavior.
 The key point to look at is the IOPS throughput rate, iops=193 in the sample.
+Compare this to the IOPS estimate calculated in the section “Forecasting IO Workload” on page 47 to find out whether the SAN will cope.
 If you find that the IOPS capacity of the SAN is insufficient, consider options such as reducing the number of RRAs for different functions (e.g., keep only MAX and not MIN or AVERAGE), get a faster SAN, or review the list of suggestions in the next section.
 This directory usually resides on the local disk of the server that runs gmetad.
 If you are experiencing slowdowns on your gmetad servers, consider purchasing a RAID system and storing the RRD files there.
@@ -544,6 +558,7 @@ Furthermore, these often have a battery-backup or flash-backup option that is es
 Although this approach is very reliable (and necessary) in a client/server model, it is inappropriate for applications that have a heavy IO demand, particularly if the application is accessing multiple files.
 When a user invokes a web view that contains many graphs, many different RRD files are accessed and atime is updated for every RRD file (metadata write operation)
 If it is a cluster view and the files are from different hosts, then each metadata access is on a different directory, so a read operation actually involves a massive nonsequential write operation at the same time.
+On a RAID5 system, this issue is compounded by the R-W-R algorithm (one logical IOP = three physical IOPS)
 Therefore, enabling the noatime option can eliminate a huge amount of unnecessary IO and have a huge benefit.
 Similar to the previous solution, one could create a RAM disk using the physical memory available on the gmetad server.
 By default, half of the physical memory will be used by tmpfs.
@@ -552,6 +567,7 @@ The interval of backup should be determined by how much data you are willing to 
 You’ll also need to set up some script to automatically preload the data stored on persistent disk back to tmpfs after each reboot prior to gmetad starting up.
 Considering the size of your RRD files, the number of RRAs, sample intervals, and retention periods, you can estimate the rate of IOPS.
 Use a tool such as the flexible IO tester (man fio) to verify that your block device supports the target IO rate.
+From the rrdcached manpage, rrdcached “is a daemon that receives updates to existing RRD files, accumulates them, and, if enough have been received or a defined time has passed, writes the updates to the RRD file.” This daemon comes.
 Use a web proxy such as Squid to cache the graphs so that the same graphs are not constantly regenerated for multiple users.
 Set up cron jobs to prepare static HTML reports at desired intervals.
 Give users access to the static HTML reports rather than direct access to gweb.
@@ -584,6 +600,7 @@ Physical view is a compressed text-only display of all the nodes in a cluster.
 By omitting images, this view can render much more quickly than the main cluster view.
 Clicking on a hostname in physical view takes you to the node view for that host.
 Grid, cluster, and host views allow you to specify the time span (Figure 4-5) you’d like to see.
+Monitoring an ongoing event usually involves watching the last few minutes of data, but questions like “what is normal?” and “when did this start?” are often best answered over longer time scales.
 You are free to define your own time spans as well via your conf.php file.
 All of the built-in time ranges are relative to the current time, which makes it difficult to see (for example) five minutes of data from two days ago, which can be a very useful view to have when doing postmortem research on load spikes and other problems.
 The time range interface allows manual entry of begin and end times and also supports zooming via mouse gestures.
@@ -595,11 +612,13 @@ You can clear this by clicking clear and then go.
 Host View Metrics from a single gmond process are displayed and summarized in the host view (Figure 4-7)
 Summary graphs are displayed at the top, and individual metrics are grouped together lower down.
 Host Overview contains textual information about the host, including any string metrics being reported by the host, such as last boot time or operating system and kernel version.
+The “inspect” option for individual metrics, which is also available in the “all time periods” display, allows you to view the graph data interactively:
 Raw graph data can be exported as CSV or JSON.
 Events can be turned off and on selectively on all graphs or specific graphs.
 Trend analysis can make predictions about future metric values based on past data.
 Graph can be time-shifted to show overlay of previous period’s data.
 Node view (Figure 4-8) is an alternative text-only display of some very basic information about a host, similar to the physical view provided at the cluster level.
+Graphing All Time Periods Clicking on a summary graph at the top of the grid, cluster, or host views leads to an “all time periods” view of that graph.
 This display shows the same graph over a variety of time periods: typically the last hour, day, week, month, and year.
 Many of the options described for viewing individual metrics are also available for all time periods, include CSV and JSON export, interactive inspection, and event display.
 The gweb Search Tab Search allows you to find hosts and metrics quickly.
@@ -634,6 +653,7 @@ Decompose Graphs Related to aggregate graphs are decompose graphs, which decompo
 This feature is useful when you have many different metrics on an aggregate graph and colors are blending together.
 The gweb Compare Hosts Tab The compare hosts feature allows you to compare hosts across all their matching metrics.
 This feature is helpful when you want to observe why a particular host (or hosts) is behaving differently than other hosts.
+The gweb Events Tab Events are user-specified “vertical markers” that are overlaid on top of graphs.
 They are useful in providing visual cues when certain events happen.
 For example, you might want to overlay software deploys or backup jobs so that you can quickly associate change in behavior on certain graphs to an external event, as in Figure 4-13
 In this example, we wanted to see how increased rrdcached write delay would affect our CPU wait IO percentage, so we added an event when we made the change.
@@ -666,7 +686,6 @@ The filename must contain _report.json in it to be considered by the web UI.
 The first is a set of configurations for the overall report, and the second is a list of options for the specific data series that you wish to graph.
 The configuration options passed to the report are shown in Table 4-4
 Note that each series has its own instance of the different options.
-If this value is not specified, it defaults to 2
 Once you compose your graphs, it is often useful to validate JSON.
 One example would be to verify that there are no extra commas, etc.
 Other Features There are a number of features in gweb that are turned off by default or can be adjusted: Metric groups initially collapsed.
@@ -677,13 +696,12 @@ Strip domain name from hostname in graphs By default, the gweb interface will di
 If all your machines are on the same domain, you can strip the domain name by setting the strip_domainname option in conf.php:
 Set default time period You can adjust the default time period shown by adjusting the following variable:
 Authentication and Authorization Ganglia contains a simple authorization system to selectively allow or deny users access to certain parts of the gweb application.
-We rely on the web server to provide authentication, so any Apache authentication system (htpasswd, LDAP, etc.) is supported.
 Apache configuration is used for examples in this section, but the system works with any web server that can provide the required environment variables.
 If you wish to enable or disable authorization, add the change to your conf.php file.
 When a user successfully authenticates, a hash is generated from the username and a secret key and is stored in a cookie and made available to the rest of gweb.
 If the secret key value becomes known, it is possible for an attacker to assume the identity of any user.
 Users who have already logged in will need to log in again.
-This variable is not needed on any other gweb page.)
+This variable is not needed on any other gweb page.
 This is a secret value used for hashing authenticated user names.
 If login.php does not require authentication, the user will see an error message and no authorization will be allowed.
 More information about configuring authentication in Apache can be found here.
@@ -695,7 +713,7 @@ The GangliaAcl configuration property is based on the Zend_Acl property.
 Note that there is no built-in distinction between a user and a group in Zend_Acl.
 The system supports the configuration of hierarchical sets of ACL rules.
 We implement user/group semantics by making all user roles children of the GangliaAcl::GUEST role, and all clusters children of GangliaAcl::ALL:
-Users may also have other roles, but this one grants global view privileges to public clusters.)
+Users may also have other roles, but this one grants global view privileges to public clusters.
 GangliaAcl::ADMIN Admins may access all private clusters and edit configuration for any cluster.
 GangliaAcl::VIEW This permission is granted to guests on all clusters, and then selectively denied for private clusters.
 GangliaAcl::EDIT This permission is used to determine whether a user may update views and perform any other configuration tasks.
@@ -731,6 +749,7 @@ The second mode in which gmond can be configured is unicast mode.
 Unlike multicast mode, unicast mode specifically declares one or more gmond instances as being the primary node or reporting node for the cluster.
 The primary node’s job is to listen for metric data from all other leaf nodes in the cluster, store the latest metric values for each leaf node, and report those values to gmetad when queried.
 The major difference between multicast mode and unicast mode is that most of the nodes in the cluster neither listen for, nor store metric data from, any other nodes in the cluster.
+In fact, in many configurations, the leaf nodes in the cluster are configured to be “deaf” and the primary node is configured to be “mute.” What this means is that a deaf gmond instance is only capable of gathering and sending its own metric data.
 A gmond instance that is mute is only capable of listening for and storing data from other nodes in the cluster.
 It is usually the mute nodes that are designated as the gmetad reporting nodes.
 Another difference between unicast and multicast modes is that each gmond leaf node is configured to send its data via a UDP socket connection rather than a multicast channel.
@@ -762,7 +781,9 @@ So rather than reinvent a new type of modular interface, why not just reuse a tr
 With the addition of the modular interface to gmond in version 3.1, gmond was no longer a single self-contained executable program.
 Even the base metrics that were included as a fixed part of gmond were separated out and reimplemented as modules.
 This meant that if desired, gmond’s footprint could be reduced even beyond the previous version by eliminating some of the base metrics as well.
+Because the base set of metrics are essential to any system, why would anybody want to reduce or even eliminate them? Back in “Configuring Ganglia” on page 20, the cluster configuration of the various gmond head and leaf nodes was described, including the multicast configuration where head nodes could be configured as mute.
 By configuring a head node as mute, basically there is no need for the node to gather metrics because it wouldn’t have the ability to send them anyway.
+Therefore, if a node that has been configured to be mute can’t send metrics, why include in its footprint the overhead of the metric gathering modules? Why not just make that instance of gmond as lean and mean as possible by eliminating all metric gathering ability? In addition to that scenario, if a specific instance of gmond is configured to gather metrics for only a specific device (such as a video card), why include CPU, network, memory, disk, or system metrics if they aren’t needed or wanted? The point here is that the system administrator who is implementing.
 In addition, the system administrator also has the flexibility to gather more than just basic system metrics.
 Ultimately, with the introduction of the modular interface, if a metric can be acquired programatically, a metric module can be written to track and report it through Ganglia.
 When Ganglia 3.1 was initially released, it not only included the modular interface with a set of base metric modules but also included some new modules that extended gmond’s metric gathering capabilities, such as TcpConn, which monitors TCP connection, and MultiCpu and MultiDisk for monitoring individual CPUs and disks, respectively.
@@ -788,6 +809,7 @@ Even a beginning Python programmer could have a gmond Python module up and runni
 The Python scripting language hides the complexity of compiled languages such as C but at the cost of a larger memory and processing footprint.
 One advantage to gmond modular interface is that there is plenty of room for other types of modules as well.
 As of the writing of this book, work is being done to allow modules to be written in Perl or PHP as well.
+C/C++ Modules The first modular interface to be introduced into Ganglia 3.1 was the C/C++ interface.
 As mentioned previously, if you were to open the hood and take a peek at the gmond source code, and if you were familiar at all with the Apache HTTP server modules, you would probably notice a similarity.
 The implementation of the gmond modular interface looks very similar to the modular interface used by Apache.
 First, one of the major components of gmond is the APR library, a cross-platform interface intended to provide a set of APIs to common platform functionality in a common and predictable manner.
@@ -901,6 +923,7 @@ If none of these parameters have been specified, gmond will assume the location 
 The rest of the module configuration for a C/C++ module is optional.
 Of course, the module section must contain the name and path directives that have already been discussed.
 An optional parameter, which is not shown in the example above, is the lan guage directive.
+The language directive is required for all other types of modules, but for a C/C++ module, if the language directive is not specified, the value “C/C++” is assumed.
 Specifying module parameters is also optional—unless, of course, your module requires parameters.
 There are two ways in which module parameters can be passed to a module.
 The first way is by defining a single string parameter through the params directive.
@@ -927,6 +950,7 @@ Packaged distributions (particularly on Linux and Debian) typically distribute t
 There are two ways of using these projects as a model, along with some general comments on autotools that are common to both methods.
 Thanks to the git source control system, you can easily clone either of these projects from the public repository in order to get started.
 From that point, you can create a branch and start developing a custom module within your branch.
+When you work this way, the process is very simple: first make a copy of the example module directory (for example, to create a module called “foo”, you would copy the example contents to the “foo” directory)
 Finally, at the top level, modify both configure.ac, declaring your Makefile in AC_OUTPUT, and Makefile.am, declaring your new module directory in SUBDIRS.
 If you prefer to have your own project be completely standalone, then it is only slightly more difficult.
 First, start with the tarball distribution of one of the sample projects.
@@ -958,9 +982,11 @@ The following is a stripped-down template of what a typical Python metric module
 As you can see, there really isn’t much to one of these types of modules:
 In order to give you a better understanding of the required elements of every Python module, we’ll start out by describing each of the three functions that every Python module must implement.
 The metric init function serves exactly the same purpose as the init function in a C/C++ metric module.
+However, unlike a C/C++ metric module init function, the Python init function must be called metric_init and must take a single parameter.
 Its primary purpose is to construct and return a dictionary of metric definitions, but it can also perform any other initialization functionality required to properly gather the intended metric set.
 The params parameter that is passed into the init function contains a.
 Each metric definition returned by the init function as a dictionary object, must supply at least the following elements:
+All of the data elements that are required in a metric definition (i.e., the elements listed previously) are the same data elements that are described as command-line parameters of the gmetric command-line utility (see the section “Extending gmond with gmetric” on page 97)
 The call_back element designates a function that will be called whenever the data for this metric needs to be gathered.
 The callback function is the second required function that must be implemented in a gmond metric module.
 We will explain more about the callback function in just a moment, but for now just remember that the name of this function can be anything, but whatever name is assigned to the callback function must match the name given in the metric definition.
@@ -1009,6 +1035,7 @@ The configuration of a gmond Python module is really no different than any other
 In fact, the following configuration example should look very familiar.
 Most Python modules will not require any specialized configuration at all.
 One difference between the configuration of a Python module and C/C++ module is that the Python module configuration does not include a path directive.
+Modules written in the C/C++ language must include a path to the location of the dynamically loadable module or the module name relative to the library path (see the previous discussion on configuring C/C++ modules)
 Passing parameters into a Python module is supported in exactly the same way as well.
 This allows any module specific configuration to be specified in the configuration file and passed to the module at initialization time.
 At the risk of duplicating how to configure a gmond metric module, we’ll go through each of the directives shown in the previous example for configuring a Python metric module.
@@ -1072,16 +1099,20 @@ This behavior will most likely change in future, but for now, this flag does not
 It is not used for processing or interpretation of values, and it is blank by default.
 It defaults to being blank, which means that the metric name is used instead.
 This means that the metric will be identified by this information, rather than the local host identification assigned by the gmond instance(s) to which gmetric is transmitting this data.
+It uses a format of IP + : + hostname.
 Heartbeat packets are usually sent by gmond instances, so that their current hosts are thought to be alive by upstream instances of gmond and gmetad.
 This argument should be used in tandem with the -S/--spoof option to fake a heartbeat packet for a host that does not directly correspond to a running gmond instance.
 When used, the metric-specific options, such as -n, -v, and so on, should not be specified.
 It essentially allows packets to be submitted for hosts other than the gmond instance receiving the packets.
 You can use the fully qualified domain name of the host if you need to match what is being presented by another gmond instance.
+A large caveat is that due to the current cluster model used by gmond, you cannot submit spoofed metrics for a host that is not in the same cluster as the gmond instance to which you are submitting your gmetric packets.
 This issue can be overcome by simply using a separately specified gmond.conf file that points at the appropriate gmond instance (if you are using the standard monitoring core gmetric instance) or directly submitting the metrics to a gmond instance in the appropriate cluster (if you are not using the monitoring core gmetric instance)
+How to Choose Between C/C++, Python, and gmetric With such a diverse range of options, what factors should you consider when choosing how to add a custom metric to Ganglia? To answer this question, let’s take a look at what each method brings to the table as well as some of the complexities.
 The implementation of a C/C++ API would normally be chosen when there is a demand for minimal impact on the rest of the system.
 Because the C and C++ programing languages are lower-level compiled languages, the resulting modules tend to occupy a much smaller memory footprint on the system.
 The implementation of a C/C++ module would be most beneficial particularly when the metric-gathering code is intended to be run frequently and must perform complex functions in a very small period of time.
 This consideration is very relevant for servers running real-time systems, such as market data, Voice over IP (VoIP), or high-frequency trading.
+The development of a C/C++ module makes sense when there is preexisting C/C++ source code available that already lends itself to gathering and reporting metrics.
 For example, a database vendor may have provided a shared library and C headers for gathering metrics from the database.
 Implementing a C/C++ module in this instance is highly recommended.
 The gmetric solution offers a very simple approach to introduce new metrics into the Ganglia system quickly.
@@ -1101,6 +1132,7 @@ In fact, gmetric is a good example of how the XDR protocol can be used in this m
 The metric information is submitted as a series of two UDP packets: one containing metadata regarding the metric in question, and a second packet containing the metric value.
 Table 5-3 explains the lower-level format of XDR integer and string values.
 Null string values are represented as a zero-length value, followed by four 0 bytes.
+This should be represented in “spoof” form (IP address + “:” + hostname) if the packet represents spoofed data.
 Any nonalphanumeric characters will be translated into underscore characters by gmond in modern versions of the monitoring core.
 Metric name STRING Repetition of the earlier metric name field.
 Units STRING Textual name of the units being used for this metric.
@@ -1201,7 +1233,9 @@ For a gmetad server, consider installing and enabling the mod_io module to monit
 Consider setting threshold alerts for the metrics mentioned in this section.
 General Troubleshooting Mechanisms and Tools In this section, we provide some general strategies for troubleshooting Ganglia and a discussion of various tools that are helpful.
 If netcat is not available, you could use the telnet tool, but it would not be possible to pipe the output for further processing.
-Here are some common netcat/grep commands against gmetad port 8651
+Can you see the hostnames (or IP addresses) of the hosts you expect?
+Are there actual contents in the XML or is everything simply open/close tags?
+Are the outputs what you expect; for instance, is the metric showing up as an.
 These commands also work with port 8649 on a gmond instance:
 The first 51 lines of XML output of both gmond and gmetad are always the same, as follows:
 The output is truncated for brevity, but each host in this cluster has 103 metrics, and it repeats for each host.
@@ -1211,6 +1245,7 @@ Logs gmond and gmetad do not log many things to syslog; however, these logs shou
 If there is a problem, and the logs provide no clues at all, see the next section.
 If you are seeing a blank page when you point your web browser to your gweb page, you should check for errors in the error logs.
 Both errors in PHP code and in RRD file generation will show up in the web server error logs.
+Running in Foreground/Debug Mode All three main components of Ganglia—gmond, gmetad, and even the web frontend —have debug modes that could be triggered to provide verbose output when the programs are being executed.
 For the daemons (gmond, gmetad), this is accomplished by specifying -d on the command line.
 If a debug value greater than 0 is provided, the daemon will start in the foreground.
 In debug mode, a lot more messages are printed during operation such that you can see precisely what is happening.
@@ -1236,7 +1271,9 @@ If such errors are detected, please share them in a bug report.
 If gaps are observed in all the graphs, it is often a symptom of IO saturation, and iostat can confirm this.
 It can also show statistics about the IO queue performance, such as the average time an IO request is queued and the utilization rate of the block device.
 Here is an example of running iostat with a logical volume:
+A value of %util approaching 100 percent indicates that the block device is saturated.
 In that case, it is necessary to either reduce the workload or increase the IO capacity of the block device.
+See “gmetad Storage Planning and Scalability” on page 44 for a discussion of scalability planning and common strategies and things to avoid.
 Restarting Daemons Occasionally, Ganglia gets into some strange state—for instance, the correct number of hosts are reported but it is not the correct total number of cores.
 Sometimes these issues can be resolved by restarting the daemons.
 It allows you to quickly determine things such as which hosts are down and how many cores each host has, as well as their respective load.
@@ -1265,6 +1302,7 @@ If a firewall needs to be in place on servers running the Ganglia services, plea
 Typical Problems and Troubleshooting Procedures In this section, we list and categorize common issues encountered with a Ganglia installation.
 We categorize based on when the user will first notice the issue.
 For instance, one might have misconfigured gmond to the extent that certain nodes are not shown in the web interface.
+Even though technically the issue lies in gmond, because the user will first come across the issue via the web interface, this particular issue will be listed under “Web issues.”
 Web Issues There are a number of well-known problems that can occur when using gweb.
 We’ve listed them here to help you quickly get back up and running.
 Check the Apache access log: did the browser connect to the web server? If not, it could be a problem with the browser itself or a web proxy.
@@ -1290,6 +1328,7 @@ It does a reverse lookup against the source address of the packet.
 Sometimes that host has shortnames in /etc/hosts and it uses them instead of the FQDNs from DNS.
 Therefore, consider adapting /etc/hosts to contain both FQDN and shortname for each IP address.
 One or more hosts don’t appear in the web interface.
+Make sure gmond is running on the host in question (see the section “netcat and telnet” on page 110)
 If the hosts have only recently been added to the network, check whether the RRD files for the hosts have been created yet.
 If the gmetad server has a full filesystem, it will fail to create RRD files.
 If using multicast, check the interface where packets are sent (a packet sniffer such as tcpdump might help)
@@ -1304,6 +1343,7 @@ For multicast mode, the value needs to be set on all gmonds’ configuration.
 This issue is also relevant when monitoring dynamic environments such as cloud resources (for example, Amazon EC2)
 Hosts are constantly brought up and shut down and the IP addresses of hosts are generally not from a constant pool.
 You may end up with a lot of dead hosts in your cluster if this option is not properly set.
+You noticed that “Hosts up” is correct but “CPUs Total” is less than expected.
 If you drill down to the host view, some hosts are missing certain metrics and graphs.
 In that case, you might want to reload gmond on the hosts in question.
 If that does not work, try to do a systemic restart of all the daemons.
@@ -1332,6 +1372,7 @@ It is possible to increase this value by recompiling Ganglia; alternatively, you
 Gaps that appear randomly in the graphs are often a sign that some component is overloaded.
 The UDP packets sent by gmond are likely to be dropped by congested routers and switches.
 On the gmond that receives the packets (either via multicast or acting as a UDP aggregator), verify that the UDP receive buffer is big enough.
+Versions of Ganglia 3.4.0 and later have a “buffer” parameter in gmond.conf that can be used to make the buffer larger.
 Verify that the gmond process handling the TCP polls from gmetad is not overloaded.
 If the gmond is using 100 percent of CPU, that is a sign that it is overloaded.
 Split the cluster, reduce the number of metrics from each member node, reduce the transmission rate from the member nodes, or put that gmond on a more powerful CPU.
@@ -1347,7 +1388,6 @@ Confirm that the host is up and the gmond process is running.
 If the gmond process won’t start, see the sections about troubleshooting gmond in debug mode.
 Use a packet sniffer (tcpdump or wireshark) to verify that the host is transmitting packets.
 Try restarting the gmond: this will cause it to retransmit its metadata.
-If the filesystem fills up, the files are sometimes created with size 0
 The ACL can be tested by executing netcat between the gmetad hosts.
 The stack trace or strace output shows that it was writing to an RRD.
 This may be due to a buggy version of RRDtool.
@@ -1357,12 +1397,14 @@ However, gmetad doesn’t automatically failover/poll the second node when the f
 In many cases, it is necessary to completely restart gmetad to force it to resume polling the node that went down.
 Some people have a cron job configured to restart gmetad every few hours just to avoid this issue.
 The RRA definition in gmetad.conf is used only when new RRD files are created.
+If the RRA definition is changed—for example, to increase the retention period of the data —gmetad will not apply the change to existing RRD files.
 Two options are available for handling data in existing RRD files:
 Archive old RRD files and let gmetad create new RRD files based on updated RRA definition.
 Use rrddump to dump existing RRD files to XML format, massage them to conform to the new RRA definition, and reimport back to RRD files using rrdrestore.
 For more information about these tools, please refer to the RRDtool documentation.
 Use the ulimit command to increase the permitted number of open files or file descriptors for the rrdcached process.
 The process must be able to open all the RRDs for all the metrics concurrently.
+When bind_hostname = true (the default in recent versions of gmond), gmond will try to bind to the IP address associated with the hostname.
 On some machines, the /etc/hosts file contains an entry mapping the hostname to the localhost address (127.0.0.1)
 If the gmond memory usage grows to 2 GB or more and then gmond crashes, it is probably a memory leak or you have an extremely large number of hosts sending metrics to the gmond.
 It could also be a sign of a denial-ofservice attack (someone sending random metrics to fill up the memory)
@@ -1445,6 +1487,7 @@ Make sure that the GANGLIA_URL inside the script is correct.
 Next, add the check command to the service checks for any hosts you want monitored.
 Operators denote criticality The operators specified in the Nagios definitions for the Ganglia plugins always indicate the “critical” state.
 If you use a notequal operator, it means that state is critical if the value is not equal.
+For example, instead of configuring separate checks for disk utilization on /, /tmp, and /var —which could produce three separate alerts—you could instead set up a single check that alerted any time disk utilization fell below a given threshold.
 Make sure that the variable GANGLIA_URL in the script is correct.
 Then add a list of checks that are delimited with a colon.
 For example, the following service would monitor the disk utilization for root (/) and /tmp:
@@ -1483,11 +1526,13 @@ Using the logger utility for bash scripts or any of the variety of syslog submis
 Touch a stamp file to allow other monitoring tools to detect the last run of your script.
 That way, you can monitor the stamp file for becoming stale in a standard way.
 Be wary of permissions issues, as test-running a script as a user other than the one who will be running it in production can cause silent failures.
+Too many cron jobs are written to collect data, but assume things like “the network is always available,” “a file I’m monitoring exists,” or “some third-party dependency will never fail.” These will eventually lead to error conditions that either break collection completely or, worse, submit incorrect metrics.
 If you’re using netcat, telnet, or other network-facing methods to gather metrics data, there is a possibility that they will fail to return data before the next polling period, potentially causing a pile-up or resulting in other nasty behavior.
 Use common sense to figure out how long you should be waiting for results, then exit gracefully if you haven’t gotten them.
 Collecting rrdcached Metrics It can be useful to collect metrics on the backlog and processing metrics for your rrdcached services (if you are using them to speed up your gmetad host)
 This can be done by querying the rrdcached stats socket and pushing those metrics into Ganglia using gmetric.
 Excessive backlogs can be caused by high IO or CPU load on your rrdcached server, so this can be a useful tool to track down rogue cron jobs or other root causes:
+Ganglia’s gmond agent already has built-in metrics and can be extended using plug-in modules—why do I need to know about sFlow? The short answer is that sFlow agents are available for platforms such as Windows servers and hypervisors that aren’t currently supported by gmond.
 A longer answer requires a basic understanding of how sFlow integrates with Ganglia to extend coverage and improve efficiency.
 There are strong parallels between Ganglia’s approach to monitoring large numbers of servers and the sFlow standard used to monitor the switches connecting them.
 The scalability challenge of monitoring the network links mirrors the challenge of monitoring servers because each server has at least one link to the network.
@@ -1531,6 +1576,7 @@ The remainder of this chapter describes in detail the architecture of a Ganglia 
 Monitoring the performance of its host and sharing the metrics with other hosts in the cluster by sending multicast messages.
 In an sFlow deployment, sFlow agents replace gmond agents on all the hosts within the cluster; see Figure 8-1
 The sFlow agents in each cluster send metrics as unicast messages to a single gmond instance that tracks cluster state and responds to requests from gmetad.
+As you will see in “Configuring gmond to Receive sFlow” on page 155, deploying gmond as an sFlow collector requires minimal configuration and eliminates dependencies because functionality associated with generating and transmitting metrics is disabled.
 A single gmond instance monitoring each cluster does represent a single point of failure.
 If this is a concern, there are a number of strategies for making the deployment fault tolerant.
 A second gmond instance can be added to each cluster and the sFlow agents can be configured to send metrics to both the primary and secondary gmond instances.
@@ -1555,6 +1601,7 @@ By default, Ganglia assumes that there is a single JVM instance per host.
 By default, Ganglia assumes that there is a single HTTP sFlow instance per host.
 In addition, an HTTP sFlow agent exports HTTP operation records for randomly sampled HTTP requests.
 The HTTP operation records contain a superset of the attributes in the widely supported Combined Logfile Format (CLF) commonly used in web server logging.
+The section “Using Ganglia with Other sFlow Tools” on page 165 describes how sFlow can be converted into CLF for use with logfile analyzers.
 Metrics that are present in the gmond module are indicated with an asterisk next to the metric name.
 By default, Ganglia assumes that there is a single memcache sFlow instance per host.
 In addition to the memcache metrics, a memcache sFlow agent also exports memcache operation records for randomly sampled operations.
@@ -1571,9 +1618,7 @@ If each cluster is monitored by a separate server, then the sFlow agents on each
 Another alternative is to assign multiple IP addresses to a single server, one per cluster that is to be monitored.
 In this case, multiple gmond instances are created, each associated with a distinct IP address, and the sFlow agents in each cluster are configured to send metrics to the associated IP address.
 For example, the following settings configures the gmond instance to listen for sFlow on a specific IP address:
-For more information on configuring Ganglia clusters, see Chapter 2
 Host sFlow Agent The Host sFlow agent is an open source implementation of the sFlow standard for server monitoring.
-The Host sFlow agent provides “scalable, multi-vendor, multi-OS performance monitoring with minimal impact on the systems being monitored.
 The following example shows how to install and configure the Host sFlow daemon (hsflowd) on a Linux server in order to illustrate how to send sFlow metrics to Ganglia gmond.
 The Host sFlow website should be consulted for detailed instructions on installing and configuring Host sFlow on other platforms.
 By default, hsflowd is configured to use DNS Service Discovery (DNSSD) to automatically retrieve settings (i.e., DNSSD = on)
@@ -1584,6 +1629,7 @@ Host sFlow Subagents The Host sFlow website maintains a list of related projects
 These subagents require minimal additional configuration because they share configuration settings with hsflowd (Figure 8-2)
 The sFlow protocol allows each subagent to operate autonomously and send an independent stream of metrics to the sFlow collector.
 Distributing monitoring among the agents eliminates dependencies and synchronization challenges that would increase the complexity of the agents.
+In fact, gmetric can easily be used to add custom metrics to the standard metrics exported using sFlow (see “Custom Metrics Using gmetric” on page 160)
 Each of the sFlow subagents is responsible for exporting a different set of metrics.
 At the time of writing, the following subagents are available: hsflowd.
 In addition, network traffic monitoring using iptables/ULOG is supported on Linux platforms.
@@ -1592,6 +1638,7 @@ Enabling the built-in sFlow monitoring on the virtual switch offers the same vis
 The sflowovsd daemon ships with Host sFlow and automatically configures sFlow monitoring on the Open vSwitch using the ovs-vsctl command.
 Similar integrated sFlow support is available for the Microsoft extensible virtual switch that is part of the upcoming Windows Server 2012 version of Hyper-V.
 Custom Metrics Using gmetric One of the strengths of Ganglia is the ability to easily add new metrics.
+Although the Host sFlow agent doesn’t support the addition of custom metrics, the Ganglia gmetric command-line tool provides a simple way to add custom metrics (see “Extending gmond with gmetric” on page 97)
 For example, the following command exports the number of users currently logged into a system:
 Using the -S or --spoof option ensures that the receiving gmond instance correctly associates metrics sent using gmetric with metrics sent by hsflowd.
 The spoof argument is a colon-separated string containing an IP address and a hostname.
@@ -1601,6 +1648,7 @@ Because there are no gmond instances running on the hosts in an sFlow deployment
 The gmetric.py utility is a simple Python script that can be used a replacement for gmetric.
 The following bash script demonstrates how configuration settings can be extracted from the hsflowd.auto file and used as arguments for the gmetric.py command:
 This script assumes that gmetric.py has been installed as an executable in /usr/local/bin.
+The calculation for the gmetric port is based on the numbering convention used in “Configuring gmond to Receive sFlow” on page 155, where the standard sFlow and gmetric ports are shifted by the same constant when creating multiple gmond instances.
 Additional custom metrics can be added to the end of the script; ganglia/gmetric is a library of user-contributed gmetric scripts maintained by the Ganglia project on github.
 Scheduling the script to run every minute using cron allows Ganglia to automatically track the custom metrics.
 Troubleshooting Most problems with sFlow deployments occur because the sFlow datagrams are dropped somewhere between the sFlow agent and gmond.
@@ -1629,8 +1677,10 @@ At this point, if the sFlow is being received and metrics are missing, it is lik
 Are the Measurements Being Sent? If possible, use sflowtool and tcpdump on the sending machine to verify that measurements are being transmitted.
 Again, it is possible that local firewall rules on the sending machine are preventing transmission of the sFlow datagrams.
 Make sure to verify that the destination IP and port correspond to the gmond.conf file settings at the receiving end.
+Verify that the sFlow agent’s counter polling interval is configured and set to a reasonable value—a polling interval of 30 seconds is typical for sFlow deployments.
 Ganglia gmond is able to process only counter data, so it is possible that sFlow sample records are being transmitted to gmond, but without counter records, Ganglia will not show any data.
 If the measurements are being sent but not received, work with your network administrator to identify any firewall or ACL setting in intermediate switches, routers, or firewall that may be dropping the sFlow datagrams.
+Using Ganglia with Other sFlow Tools Ganglia is reporting an increase in HTTP traffic to your web servers—how do you know whether you are the target of a denial of service attack, or a marketing promotion has just gone viral? You are seeing an increase in cache misses to your memcached cluster —how can you fix the problem? If you are using sFlow agents to generate the metrics, you have the data to answer these types of question at your fingertips.
 The metrics that Ganglia displays are only part of the information contained in an sFlow stream.
 Accessing the sampled HTTP operations allows you to dig deeper into a trend and identify the source of the increased traffic.
 The following sflowtool output shows the HTTP counters and operation samples reported by mod_sflow:
@@ -1644,11 +1694,13 @@ The sFlow data can be converted into different forms for compatibility with exis
 For example, the following command uses sflowtool to convert the binary sFlow HTTP operation data into ASCII CLF so that the operations can be visually inspected or exported to a web log analyzer such as Webalizer:
 You can also use protocol reporting tools such as Wireshark with sFlow, using sflowtool to convert sFlow into the standard PCAP format:
 In addition, there are a broad range of native sFlow analysis options that provide complementary functionality to Ganglia’s.
+The sFlow.org website contains a list of open source and commercial sFlow analysis tools—including Ganglia, of course! When using multiple sFlow analysis tools, each tool needs to receive copies of the sFlow packets.
 There are two main approaches to replicating sFlow: Source replication.
 Configure each sFlow agent to send sFlow packets to multiple destinations.
 Because sFlow is a unicast protocol, this involves resending packets to each of the destinations and this increases measurement traffic on the network.
 The additional traffic is generally not an issue, as each sFlow agent generates a small number of packets.
 Destination replication Some sFlow analyzers have built-in replication and packet forwarding capabilities, and there are commercial and open source UDP replication tools available, including sflowtool.
+Finally, the case study “Tagged, Inc.” on page 172 demonstrates how Ganglia and sFlow are used in a large deployment, illustrating the techniques described in this chapter and providing examples that demonstrate the importance of performance monitoring to the operations and developer teams.
 The Ganglia project started out in 1999 with the aim of monitoring grid computing infrastructure: largely homogeneous clusters of similar compute nodes, typically in the academic and research community.
 The project founders (including Matt Massie) designed the system to be lightweight and efficient.
 In this chapter, we present a range of case studies that demonstrate just how widely respected Ganglia has become—not just within the original audience, but in the wider world of industry.
@@ -1682,6 +1734,7 @@ On a big network like Tagged, anything that can lower packets per second is a bi
 The switch to sFlow was used as an opportunity to templatize all the Puppet CMDB configurations for this purpose.
 Monitoring Configuration The diagram in Figure 9-2 shows the elements making up Tagged’s monitoring system.
 The diagram has been simplified—in reality there are multiple clusters within each of the service tiers.
+Host sFlow agents, described in “Host sFlow Agent” on page 157, are installed on each server in the Web, memcached, and Application clusters.
 Puppet is used extensively by Tagged for managing server configurations.
 In this case, gmond.conf, hsflowd.conf, and gmetad.conf files are all generated using Puppet ERB templates.
 Coordination between the hsflowd.conf and gmond.conf settings is needed to ensure that sFlow and gmetric messages are sent to the correct gmond instance.
@@ -1691,8 +1744,11 @@ There are a limited number of statistics you can get using the STATS interface t
 Some of the STATS commands (like SIZES) will actually lock up the entire cache while it scans the items, leaving your memcached instance unusable for several seconds.
 Before moving to sFlow, Tagged used to get Java virtual machine metrics using Zenoss, which uses a dedicated JMX poller to retrieve information from a designated list of hosts.
 Consider Netflix in Amazon EC2, which has potentially thousands of machines disappearing and appearing on the network in minutes but can refresh the host list on the poller only so often.
+The alternative of using a gmond module (see “Extending gmond with Modules” on page 78) would require starting a JVM every time it needs to check a metric, because a Java client is needed to retrieve metrics from a JVM using the JMX protocol.
 With sFlow instrumentation of the JVM, data is pushed from the JVMs to gmond, with no polling necessary.
 The jmx-flow-agent runs as a -javaagent argument to the Java command line.
+Each JVM automatically sends its metrics (see “Java Virtual Machine Metrics” on page 150) to gmond the moment the JVM starts.
+Again, the jmx-sflow-agent reads configuration settings from the Host sFlow agent, so no additional configuration is needed (see “Host sFlow Subagents” on page 158)
 Examples The following examples highlight some of the areas where Ganglia and sFlow provide visibility into critical site services to the operations and developer teams at Tagged.
 Using Ganglia to monitor the cold start of a memcached cluster provides a compelling demonstration of the leverage that a memcached cluster provides.
 The two charts shown in Figure 9-3 show overall bytes in and out of a cluster as it starts up.
@@ -1706,6 +1762,7 @@ The Ganglia chart shown in Figure 9-4 trends the overall efficiency of the memca
 Although Ganglia does an excellent job of trending the performance counters exported by sFlow, one of the benefits of using sFlow as the measurement technology is that counters aren’t the only information being exported.
 In addition to periodically exporting the standard memcache counters to Ganglia, the sFlow agents embedded in the memcached servers also randomly sample memcache operations.
 For example, the table in Figure 9-5 is updated every minute to show the keys associated with the most cache misses.
+The data also identifies “hot keys” that, if deleted, could result in a stampede of requests to the database—a cache miss storm.
 Measurements from the web tier provide an overview of the entire site, tracking response times and request rates to each of the applications running on the site.
 The charts in Figure 9-6 show combined CPU, network, HTTP request type, and HTTP status code metrics from a static web cluster.
 The CPU load is low, mostly waiting for the disk, as you would expect when serving static content.
@@ -1721,14 +1778,18 @@ The Ganglia chart in Figure 9-9 trends the amount of heap memory allocated by an
 It turns out that this application periodically needed to be restarted, but no one knew why.
 With sFlow-instrumented Java, finegrained detail of heap utilization can be tracked.
 After a restart, the garbage collection is able to keep up again.
+Monitoring isn’t limited to Java heap memory; there are many additional Java metrics that we can track with Ganglia (see “Java Virtual Machine Metrics” on page 150), allowing Tagged to keep a close eye on the many Java applications running on the site.
 Amongst other things, SARA provides computational, storage, and networking resources for the Dutch research community and institutions.
 Their research fields are very diverse and vary from meteorology, chemistry, and astronomy to economics and psychology.
 Researchers, students, and teachers may receive access to one or more of the facilities provided by SARA through national subsidiaries or can approach SARA directly.
+Amongst these facilities are a National Supercomputer “Huygens,” a National Computational Cluster “LISA,” and various grid computational and storage services.
 For more detailed and complete information on SARA, please visit their website.
 Now, 10 years later, we monitor just about every system with Ganglia.
 Advantages Ganglia provides a number of advantages to both system administrators as well as our users.
+For system administrators and consultants, Ganglia provides a few benefits:
 We have a large TV setup in our office that rotates graphs at an interval, displaying several different systems (Figure 9-11)
 Ganglia allows us to keep a watch on the general status of the systems we manage.
+For example, whenever the “running processes” does not match the “1-minute load,” or the “gray area” goes higher than the “blue line,” we can conclude we have a rogue machine in the cluster.
 This usually means that a machine is getting overloaded, is crashing, or has some other issues that are out of the ordinary and needs attention.
 It also enables us to see how well (or poorly) the system is being used.
 Low usage or load might indicate a problem with batch job scheduling or inefficient usage of the system.
@@ -1775,7 +1836,7 @@ While visiting a conference, I learned that one performance bottleneck was the L
 This kernel feature tries to predict IO actions and accelerate performance by reading ahead.
 This feature does not work for RRD as the IO access is fairly random.
 Installing a new RRDtool version that contains a call to disable readahead for RRDs helped a lot for this particular issue.
-See this article by David Plonka, Archit Gupta, and Dale Carder.) Even with readahead disabled, all the RRD activity can still be cumbersome on the Ganglia server side.
+Even with readahead disabled, all the RRD activity can still be cumbersome on the Ganglia server side.
 Because our Ganglia server has enough memory, we now use a RAM disk for the RRD files.
 Obviously, RAM disks can be dangerous in terms of the loss of files, but as long as you are aware of this risk, you can watch out for it.
 We now use a 2 GB RAM disk with Linux tmpfs.
@@ -1818,10 +1879,12 @@ Using various profiling tools, some inefficient code paths were identified and o
 Once again, the simulations were performed and it was observed that the exponential behavior no longer occurred within the trading volumes expected by the client.
 The custom rrdtool graphs provide a convenient way to show the client evidence of the testing and also allow them to forecast the market data volumes that they can safely handle in the future.
 Ganglia in a Major Client Project Upgrading a Kondor+ client from an old version of the product to the current version is a major project.
+One particular client desired to upgrade Kondor+ and the full suite of related products in a single weekend—a tremendously complicated exercise.
 Such projects often involve anywhere from six to twelve months of planning and testing before a real upgrade is attempted.
 This process validates that the bank will be able to complete the upgrade safely.
 In most banks, upgrades are performed on Saturdays, and postupgrade tests are performed on Sundays.
 There is always a fall-back plan in case a problem is found on a Sunday so that the bank will always be open for business as usual on Monday morning.
+This schedule imposes an important nonfunctional test criterion on the project: how long does it take to run the upgrade? For the project in question, in which the client was upgrading all components of the Kondor Suite on the same weekend, the simulation upgrade required almost 40 hours.
 Such a long upgrade would not be permitted, as it would not allow enough time for bank staff to test the system on Sunday.
 For example, a specialist from the database vendor was called to verify the configuration of the database server.
 Application support staff pored over the log files looking for update queries that ran too slowly.
@@ -1833,6 +1896,7 @@ Behind the scenes, the database server has to perform an enormous amount of work
 All of the database activity is typically IO-bound, so the SAN performance is the major bottleneck during these phases of the upgrade.
 It was not expected that Ganglia would solve all the problems on this project.
 In fact, it was only expected to help answer a couple questions:
+How many hours of the upgrade are CPU-bound, and how many hours are IObound? (How often is it bound by one CPU?)
 To help answer these questions, Ganglia binaries are used from the OpenCSW project for Solaris.
 The per-CPU metrics are very valuable for visualizing the periods when the upgrade process is bound by a single CPU.
 However, the per-LUN metrics (reporting IOPS from the SAN) are slightly more challenging because the database actually stripes across multiple LUNs.
@@ -1840,7 +1904,6 @@ Fortunately, with rrdtool as the backend for Ganglia, it is possible to manually
 Notice that the average service time for each LUN is graphed separately (colored lines), while the throughput (MB/s) for all LUNs is summed to create the shaded area graph.
 Spikes in the shaded area graph show periods when there is a need for significant IO throughput.
 It is interesting to note that the LUNs don’t all demonstrate the same service times during those peaks in throughput; this is a very interesting revelation that encouraged further analysis of the SAN architecture.
-The results showed that the project was more often blocked by IO than by CPU, making it clear that remediation should be focused on the IO system itself, or on improving (or.
 Furthermore, the visualization with RRDtool made it clear that a particularly long phase of the upgrade was IO bound all the way through.
 Lumicall (Mobile VoIP on Android) Lumicall is an advanced open source mobile VoIP app for Android published as part of the OpenTelecoms.org initiative.
 Mobile VoIP started as a niche area, but recent trends suggest that it has the potential to become the dominant paradigm for voice communications.
@@ -1867,6 +1930,7 @@ Consequently, the most recent version of gmetric4j allows the timing code to be 
 A cutdown version of the WifiSampler class, just extracting the Wi-Fi metric, is presented here:
 The output of this metric is demonstrated by the RSSI graph in Figure 9-14
 Some mobile devices spend little time in Wi-Fi coverage areas, so it is also important to understand the quality of the mobile/cell network.
+At the end of the day, does all this monitoring exhaust the phone’s battery? Ganglia can monitor that, too! Figure 9-17 shows that the battery still holds a full day’s charge.
 Lumicall: Conclusion The data collected by gmetric4j in Lumicall and the advanced reporting provided by the new Ganglia web interface provide a unique opportunity for those deploying mobile VoIP to bring all of their quality metrics and useful support metrics within a single framework.
 This powerful visualization method is likely to see increases in mobile VoIP service quality, particularly in campus environments where IT managers can tailor the Wi-Fi topology based on real-time data from Lumicall.
 Count what is countable, measure what is measurable, and what is not measurable, make measurable.
@@ -1923,6 +1987,9 @@ We make use of the capability to “spoof” a metric’s source IP and DNS name
 We make extensive use of gmond-style plug-ins, especially for operating system metrics.
 For instance, some of the plug-ins that we’ve written collect:
 These metrics are a powerful tool for troubleshooting and analyzing system performance, especially when correlating systems that might seem unrelated through the Ganglia web UI.
+We have a small army of scripts that work with RRD files:
+Adding new RRAs to existing files, such as a new MAX or MIN RRA.
+Smoothing transient spikes in RRD data that throw off average calculations (particularly common with SNMP OID counters)
 Drawbacks Although Ganglia is both powerful and flexible, it does have its weak points.
 Each of the following subsections describes a challenge we had to overcome to run Ganglia at our scale.
 As our infrastructure grew, we discovered that a single gmetad process just couldn’t keep up with the number of metrics we were trying to collect.
@@ -1953,6 +2020,7 @@ Monitoring Is Mandatory Having metrics on your infrastructure should be consider
 We do wonder about how the underlying foundations of our applications are performing when we’re deploying changes, not to mention the continual process of capacity planning.
 We use Ganglia in the same vein that we use configuration management at Etsy: as the basic building blocks of our confidence.
 A common approach in fast-growing web operations is to gather clusters of nodes that do the same work and distribute workload amongst them in one way or another.
+A node knows what it will be when it’s first born into the infrastructure; it’s a “Web,” or a “Shard,” or a “Search” node, and so on.
 Very rarely (if at all) do we have fewer than two nodes in a single cluster.
 Because of this, Ganglia’s notion of the node/cluster/grid hierarchy makes it a good fit for tiered web applications.
 Getting a node into production in its specific role within Ganglia has one requirement: the placement of a single gmond.conf file.
@@ -1969,8 +2037,10 @@ I can confirm (or not) the fact that all nodes are behaving identically.
 If they do, I can drill into them with one action.
 If they don’t, I can eliminate node-level issues and move my process of elimination elsewhere.
 Above that sits Graphite, which rounds out the rest of what we need.
+Application metrics such as “registrations,” “purchases,” and “logins” have rates and volumes that exist in the Etsy context, not the node context.
 They are actions that depend on multiple nodes in multiple clusters acting together to produce what is, in essence, a feature of our site.
 Embrace Diversity Trying to shoehorn these types of metrics into the node/cluster/grid context that Ganglia is so good at is akin to mowing a lawn with a snowplow.
+If I can gather “registrations,” which node should I place them in? I can’t point to one node (or even a cluster) that would be responsible for registering new members on Etsy, so I would have misplaced context if I put that metric there.
 In the same vein, I don’t believe that Graphite is appropriate at all for node and clusterlevel metrics; the UI and collection methods simply don’t encourage this usage and forcing it would be a tough sell for me on a cost/benefit basis.
 We use Graphite for application-level metrics such as those mentioned previously: statistics on highresolution values such as page performance and error log line entries.
 We have Logster (based on the original Ganglia logtailer), which can derive metrics from log files.
@@ -1978,6 +2048,7 @@ We can send these metrics to either Ganglia (for things that make sense in a nod
 We aim to layer tools together, in complementary fashion, as part of a palette of tools to gain situational awareness.
 To support this approach, we have a lightweight dashboard UI framework that can juxtapose graphs from Cacti, FITB, Ganglia, Graphite, and others.
 Conclusion Even in this world of disposable and fully automated infrastructures, node- and clusterlevel metrics matter a great deal.
+There are some who think that this “many tools” approach is wasteful, that there must be a singular “One Tool to Rule Them All.” I don’t believe that idea is true or even possible.
 I have yet to see an implementation of any metrics collection system that is the best at every one of these layers—only individual tools that are the best at one of the layers.
 To those who aspire to create such an omniscient tool that can elegantly handle metrics collection for every device possible, along with flexible anomaly detection, alerting, and escalation—all at the same time remaining human-centered enough to be used efficiently: I salute you, and godspeed.
 Module Metric Definitions The following tables describe the metric modules that are part of the distribution of the Ganglia monitoring system.
@@ -1988,6 +2059,7 @@ Some of the additional modules that are available from this repository include m
 If the hardware architecture supported multiple CPUs, gmond reported only the overall usage rather than the usage for each individual CPU.
 Through the configuration of Mod_MultiCPU, all CPU-related metrics can be reported for each CPU detected on the system.
 The purpose of this module was to detect and report all of the metric gathering, data packet sends, and receives as gmond was running.
+In other words, as gmond is capable of monitoring every aspect of the system, why shouldn’t gmond also monitor itself? Some of the metrics that Mod_GStatus reports are the number of metadata packets sent and received and the number of value packets sent and received, as well as the overall totals.
 If gmond is incapable of sending or receiving a packet of any kind, Mod_GStatus will report these failures as well.
 In previous versions of gmond, the metrics that reported disk space added up the totals for all disks and reported this value for total disk space and used space.
 Multidisk (Python module): report disk available and disk used space for each individual disk device.
@@ -2008,6 +2080,7 @@ By invoking the netstat utility within a thread, the module is able to gather th
 As the metrics are being gathered from within the thread, these values are stored in a shared cache that can be accessed quickly whenever gmond asks the module for its metric values.
 Introducing threads through Python is actually a very convenient way to make a single-threaded gmond daemon act as if it were multithreaded.
 Advanced Metrics Aggregation and You There are certain types of metrics aggregation that can’t easily be accomplished by using only gmond and gmetric submission.
+The most notable of these instances are “derivative” values and “counters.” These require collection and aggregation over time, in the case of derivative values, and are less than optimally collected using counters.
 It is worth pointing out, at this point in this text, that Ganglia does have a way of dealing with some derivative values.
 Metrics submitted using a “positive” slope generate RRDs that are created as COUNTERs; however, this mechanism is not ideal for situations involving incrementing values that submit on each iteration (i.e., Apache httpd page serving counts without log-scraping)
 One of the solutions for dealing with counter values is statsd.
@@ -2023,9 +2096,9 @@ For example, statsd and its clones don’t have any particular notion of “host
 Configuring VDED VDED has some of the same constraints as statsd, except that it is not constrained to submit all values as if they belonged to a single host.
 The optional “spoof” parameter for submitting metrics to VDED allows different spoof arguments to be associated with.
 It is a good idea to remember that VDED aggregation is limited to the cluster of which the receiving gmond instance is a member.
+The command-line arguments for VDED, which are managed in /etc/vded/config on RHEL installations, is configured using the following switches: --ghost=(ganglia host) --gport=(ganglia port) --gspoof=(default spoof)
 It can be controlled via a command socket and is distributed with the standard RRDtool packages for most Linux distributions.
 Note that rrdcached may be unnecessary if you’re using a ramdisk to store your RRD files.
-Installing The rrdcached package can be installed on Debian-based distributions (Debian, Ubuntu, Linux, Mint, etc.) by using apt:
 Configuring gmetad for rrdcached gmetad can be configured to use rrdcached by setting the RRDCACHED_ADDRESS variable in the configuration file included by gmetad’s init script.
 Along with the gmetad configuration change (which will require a restart of any running gmetad processes), it is also recommended that a change be made to the Ganglia web frontend, which will force the frontend to also use rrdcached for forming graphs.
 Controlling rrdcached There are a number of useful operations that can be performed by using telnet, netcat, or socat (depending on whether you have a network or Unix socket set up as the control socket)
@@ -2034,17 +2107,17 @@ Troubleshooting There are several things that can go awry with an rrdcached Gang
 Make sure that the permissions on the rrdcached socket file are permissive enough to allow both the gmetad service user and the web server user to be able to read and write.
 Failures to communicate via the socket will be visible in gmetad’s log.
 Heavy load on the server hosting the rrdcached instance may result in a backlog of metrics that have not been written properly to disk.
-Note that this does not indicate that the metrics have been dropped, but rather that the rrdcached file still has not written them to their final location.) Individual metrics can be flushed to disk by using the rrdcached socket and issuing a FLUSH command followed by the full pathname to the target RRD file.
+Note that this does not indicate that the metrics have been dropped, but rather that the rrdcached file still has not written them to their final location.
+Individual metrics can be flushed to disk by using the rrdcached socket and issuing a FLUSH command followed by the full pathname to the target RRD file.
 This will bring the specified RRD file to the top of the rrdcached job queue.
 Alternatively, a full flush to disk of all queued RRD updates can be initiated by sending a FLUSHALL instead.
 Debugging with gmond-debug gmond-debug is a useful tool for debugging inbound gmetric formatted traffic.
 It can be used to debug any of the third-party gmetric libraries or to track down most unusual gmetric behaviors.
-To test using gmond-debug, point your gmetric submission software at this machine, port 1234
 As soon as UDP packets on port 1234 are received, gmond-debug will attempt to decode it and print a serialized version of the information contained therein.
 You’ve got data—lots and lots of data that’s just too valuable to delete or take offline for even a minute.
 Your data is likely made up of a number of different formats, and you know that your data will only grow larger and more complex over time.
 The growing pains you’re facing have been faced by other people and there are systems to handle it: Hadoop and HBase.
-If you want to use Ganglia to monitor a Hadoop or HBase cluster, I have good news— Ganglia support is built in.
+If you want to use Ganglia to monitor a Hadoop or HBase cluster, I have good newsGanglia support is built in.
 Hadoop was created by Doug Cutting, who now works as an architect at Cloudera and serves as chair of the Apache Software Foundation.
 He named Hadoop after his son’s yellow stuffed toy elephant.
 With Hadoop, you can grow the size of your filesystem by adding more machines to your cluster.
@@ -2066,7 +2139,6 @@ You can turn on Ganglia monitoring for one or all contexts.
 I’m sure you noticed some obvious patterns from these snippets.
 The prefix of the configuration keys is the name of the context (e.g., mapred), and each context has class, period, and servers properties.
 The class specifies what format that metric should be published in.
-If you don’t explicitly provide a port number, Hadoop will assume you want the default gmond port: 8649
 If you bind the multicast address using the bind option in gmond.conf, you cannot also send a metric message to the unicast address of the host running gmond.
 If you are not receiving Hadoop metrics after setting the servers property, doublecheck your gmond udp_recv_channel setting in gmond.conf.
 For your metric configuration changes to take effect, you must restart your Hadoop and HBase services.
@@ -2080,6 +2152,7 @@ This is the number of blocks of StoreFiles (HFiles) in the cache.
 Number of blocks that had to be evicted from the block cache due to heap size constraints.
 The cache-hit ratio for reads configured to look in the cache (i.e., cacheBlocks=true)
 Number of blocks of StoreFiles (HFiles) read from the cache.
+Includes all read requests, although those with cacheBlocks=false will always read from disk and be counted as a “cache miss.”
 Number of blocks of StoreFiles (HFiles) requested but not read from the cache.
 Block cache size in memory (bytes), that is, memory in use by the BlockCache.
 This is the number of Stores in the RegionServer that have been targeted for compaction.
@@ -2088,15 +2161,13 @@ Metric Name Explanation of value will result in 1 request for each "next" call (
 Sum of all the StoreFile index sizes in this RegionServer (MB)
 For example, if a table (which contains the column family) has three regions on a RegionServer, there will be three stores open for that column family.
 We’d like to hear your suggestions for improving our indexes.
-Android platform based on, 191 heap memory utilization in Tagged study,
 RRAs (Round Robin Archive values), 37 definition changed in gmetad.conf, but RRD.
-SELinux and firewall, 120 send channel, UDP, gmond configuration file,
-User Mode Linux, 149 users (SARA), benefits provided by Ganglia,
 He designed Ganglia to monitor a shared computational grid of clusters distributed across the United States for scientific research.
 Matt is currently a software engineer at Cloudera and is focused on Apache Hadoop enterprise management and monitoring.
 He is currently one of the maintainers of the Ganglia project.
 He has been involved with HPC since 2003 and has worked on Open Source projects such as OSCAR, SystemImager, and Warewulf.
 In addition to being a committer on the Apache HTTPD and APR projects, Brad is also a developer as well as one of the administrators of the Ganglia project.
+As a developer on the Ganglia project, Brad developed and introduced the C/C++ and Python metric module interface into Gangla 3.1.x.
 He also developed and contributed several of the initial metric modules that currently ship with Ganglia.
 Brad attended school at the University of Utah and Brigham Young University and holds a degree in computer science.
 Vladimir Vuksan (Broadcom) has worked in technical operations, systems engineering, and software development for over 15 years.
@@ -2112,6 +2183,7 @@ The blue button itself is a passive drifter, meaning that it feeds on both livin
 It competes with other drifters for food and mainly feeds on small fish, eggs, and zooplankton.
 The blue button has a single mouth located beneath the float, which is used for both the intake of nutrients and the expulsion of wastes.
 This species reproduces by releasing tiny medusa, which go on to develop new colonies.
+Configuring a C/C++ metric module Deploying a C/C++ metric module Cloning and building a C/C++ module with autotools Adding a module within either project Creating a new project.
 Mod_Python Configuring gmond to support Python metric modules Writing a Python metric module Debugging and testing a Python metric module Configuring a Python metric module Deploying a Python metric module.
 Extending gmond with gmetric Running gmetric from the Command Line Spoofing with gmetric.
 Typical Problems and Troubleshooting Procedures Web Issues Blank page appears in the browser Browser displays white page with error message Cluster view shows uppercase hostname, link doesn’t work Host appears in the wrong cluster Host appears multiple times in web, different variations of the hostname (or IP address) Some hosts appear with shortname instead of FQDN One or more hosts don’t appear in the web interface Hosts don’t appear/data stale after UDP aggregator restarted Dead/retired hosts still appearing in the Web Wrong CPU count or other metrics are missing Fonts in graphs are too big or too small Spikes in graphs Custom metrics don’t appear Custom metric’s value is truncated Gaps appear randomly in the graphs Some host is completely missing from the cluster gmetad hierarchy and federation; some grids don’t appear on the Web.

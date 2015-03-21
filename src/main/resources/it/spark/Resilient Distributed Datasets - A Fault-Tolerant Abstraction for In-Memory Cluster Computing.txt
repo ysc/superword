@@ -56,12 +56,11 @@ The user can also perform further transformations on the RDD and use their resul
 After the first action involving errors runs, Spark will store the partitions of errors in memory, greatly speeding up subsequent computations on it.
 Note that the base RDD, lines, is not loaded into RAM.
 This is desirable because the error messages might only be a small fraction of the data (small enough to fit into memory)
-Finally, to illustrate how our model achieves fault tolerance, we show the lineage graph for the RDDs in our third query in Figure 1
 In this query, we started with errors, the result of a filter on lines, and applied a further filter and map before running a collect.
 The Spark scheduler will pipeline the latter two transformations and send a set of tasks to compute them to the nodes holding the cached partitions of errors.
 In addition, if a partition of errors is lost, Spark rebuilds it by applying a filter on only the corresponding partition of lines.
-To understand the benefits of RDDs as a distributed memory abstraction, we compare them against distributed shared memory (DSM) in Table 1
 In DSM systems, applications read and write to arbitrary locations in a global address space.
+The main difference between RDDs and DSM is that RDDs can only be created (“written”) through coarsegrained transformations, while DSM allows reads and writes to each memory location.3 This restricts RDDs to applications that perform bulk writes, but allows for more efficient fault tolerance.
 In particular, RDDs do not need to incur the overhead of checkpointing, as they can be recovered using lineage.4 Furthermore, only the lost partitions of an RDD need to be recomputed upon failure, and they can be recomputed in parallel on different nodes, without having to roll back the whole program.
 A second benefit of RDDs is that their immutable nature lets a system mitigate slow nodes (stragglers) by running backup copies of slow tasks as in MapReduce [10]
 Backup tasks would be hard to implement with DSM, as the two copies of a task would access the same memory locations and interfere with each other’s updates.
@@ -78,7 +77,6 @@ RDDs would be less suitable for applications that make asynchronous finegrained 
 Our goal is to provide an efficient programming model for batch analytics and leave these asynchronous applications to specialized systems.
 We chose Scala due to its combination of conciseness (which is convenient for interactive use) and efficiency (due to static typing)
 However, nothing about the RDD abstraction requires a functional language.
-To use Spark, developers write a driver program that connects to a cluster of workers, as shown in Figure 2
 The driver defines one or more RDDs and invokes actions on them.
 Spark code on the driver also tracks the RDDs’ lineage.
 The workers are long-lived processes that can store RDD partitions in RAM across operations.
@@ -106,7 +104,6 @@ As an example, the following program implements logistic regression [14], a comm
 We save each closure at the time it is created, so that the map in this example will always add 5 even if x changes.
 Table 2: Transformations and actions available on RDDs in Spark.
 The algorithm uses gradient descent: it starts w at a random value, and on each iteration, it sums a function of w over the data to move w in a direction that improves it.
-This program leads to the RDD lineage graph in Figure 3
 On each iteration, we create a new ranks dataset based on the contribs and ranks from the previous iteration and the static links dataset.6 One interesting feature of this graph is that it grows longer with the number.
 Note that although RDDs are immutable, the variables ranks and contribs in the program point to different RDDs on each iteration.
 Thus, in a job with many iterations, it may be necessary to reliably replicate some of the versions of ranks to reduce fault recovery times [20]
@@ -144,10 +141,8 @@ We have implemented Spark in about 14,000 lines of Scala.
 The system runs over the Mesos cluster manager [17], allowing it to share resources with Hadoop, MPI and other applications.
 Each Spark program runs as a separate Mesos application, with its own driver (master) and workers, and resource sharing between these applications is handled by Mesos.
 Spark can read data from any Hadoop input source (e.g., HDFS or HBase) using Hadoop’s existing input plugin APIs, and runs on an unmodified version of Scala.
-Spark’s scheduler uses our representation of RDDs, described in Section 4
 Partitions are shaded rectangles, in black if they are already in memory.
 To run an action on RDD G, we build build stages at wide dependencies and pipeline narrow transformations inside each stage.
-Whenever a user runs an action (e.g., count or save) on an RDD, the scheduler examines that RDD’s lineage graph to build a DAG of stages to execute, as illustrated in Figure 5
 Each stage contains as many pipelined transformations with narrow dependencies as possible.
 The boundaries of the stages are the shuffle operations required for wide dependencies, or any already computed partitions that can shortcircuit the computation of a parent RDD.
 The scheduler then launches tasks to compute missing partitions from each stage until it has computed the target RDD.
@@ -156,6 +151,7 @@ If a task needs to process a partition that is available in memory on a node, we
 Otherwise, if a task processes a partition for which the containing RDD provides preferred locations (e.g., an HDFS file), we send it to those.
 For wide dependencies (i.e., shuffle dependencies), we currently materialize intermediate records on the nodes holding parent partitions to simplify fault recovery, much like MapReduce materializes map outputs.
 If a task fails, we re-run it on another node as long as its stage’s parents are still available.
+If some stages have become unavailable (e.g., because an output from the “map side” of a shuffle was lost), we resubmit tasks to compute the missing partitions in parallel.
 We do not yet tolerate scheduler failures, though replicating the RDD lineage graph would be straightforward.
 Finally, although all computations in Spark currently run in response to actions called in the driver program, we are also experimenting with letting tasks on the cluster (e.g., maps) call the lookup operation, which provides random access to elements of hash-partitioned RDDs by key.
 In this case, tasks would need to tell the scheduler to compute the required partition if it is missing.
@@ -169,7 +165,6 @@ We modified the code generation logic to reference the instance of each line obj
 Figure 6 shows how the interpreter translates a set of lines typed by the user to Java objects after our changes.
 We found the Spark interpreter to be useful in processing large traces obtained as part of our research and exploring datasets stored in HDFS.
 We also plan to use to run higher-level query languages interactively, e.g., SQL.
-Spark provides three options for storage of persistent RDDs: in-memory storage as deserialized Java objects,
 The first option provides the fastest performance, because the Java VM can access each RDD element natively.
 The second option lets users choose a more memory-efficient representation than Java object graphs when space is limited, at the cost of lower performance.8
 The third option is useful for RDDs that are too large to keep in RAM but costly to recompute on each use.
@@ -177,6 +172,7 @@ To manage the limited memory available, we use an LRU eviction policy at the lev
 When a new RDD partition is computed but there is not enough space to store it, we evict a partition from the least recently accessed RDD, unless this is the same RDD as the one with the new partition.
 In that case, we keep the old partition in memory to prevent cycling partitions from the same RDD in and out.
 This is important because most operations will run tasks over an entire RDD, so it is quite likely that the partition already in memory will be needed in the future.
+We found this default policy to work well in all our applications so far, but we also give users further control via a “persistence priority” for each RDD.
 Finally, each instance of Spark on a cluster currently has its own separate memory space.
 In future work, we plan to investigate sharing RDDs across instances of Spark through a unified memory manager.
 Although lineage can always be used to recover RDDs after a failure, such recovery may be time-consuming for RDDs with long lineage chains.
@@ -187,6 +183,7 @@ Because our scheduler knows the size of each dataset as well as the time it took
 Because consistency is not a concern, RDDs can be written out in the background without requiring program pauses or distributed snapshot schemes.
 When nodes fail, Spark can recover quickly by rebuilding only the lost RDD partitions.
 Before each test, we cleared OS buffer caches to measure IO costs accurately.
+We implemented two iterative machine learning applications, logistic regression and k-means, to compare the performance of the following systems:
 HadoopBinMem: A Hadoop deployment that converts the input data into a low-overhead binary format in the first iteration to eliminate text parsing in later ones, and stores it in an in-memory HDFS instance.
 The key difference between the two applications is the amount of computation they perform per byte of data.
 The iteration time of kmeans is dominated by computation, while logistic regression is less compute-intensive and thus more sensitive to time spent in deserialization and I/O.
@@ -200,7 +197,6 @@ HadoopBinMem was the slowest because it ran an extra MapReduce job to convert th
 Deserialization cost to convert binary records to usable in-memory Java objects.
 Regarding (2), we found that HDFS performed multiple memory copies and a checksum to serve each block.
 In particular, we compared the time to process text and binary inputs from both HDFS (where overheads in the HDFS stack will manifest) and an in-memory local file (where the kernel can very efficiently pass data to the program)
-We show the results of these tests in Figure 9
 The differences between in-memory HDFS and local file show that reading through HDFS introduced a 2-second overhead, even when data was in memory on the local machine.
 The differences between the text and binary input indicate the parsing overhead was 7 seconds.
 Finally, even when reading from an in-memory file, converting the pre-parsed binary data into Java objects took 3 seconds, which is still almost as expensive as the logistic regression itself.
@@ -216,7 +212,6 @@ Note that with a checkpoint-based fault recovery mechanism, recovery would likel
 In contrast, the lineage graphs for the RDDs in our examples were all less than 10 KB in size.
 A natural question is how Spark runs if there is not enough memory to store a job’s data.
 In this experiment, we configured Spark not to use more than a certain percentage of memory to store RDDs on each machine.
-We present results for various amounts of storage space for logistic regression in Figure 12
 In-Memory Analytics Conviva Inc, a video distribution company, used Spark to accelerate a number of data analytics reports that previously ran over Hadoop.
 For example, one report ran as a series of Hive [1] queries that computed various statistics for a customer.
 These queries all worked on the same subset of the data (records matching a customer-provided filter), but performed aggregations (averages, percentiles, and COUNT DISTINCT) over different grouping fields, requiring separate MapReduce jobs.

@@ -26,7 +26,6 @@ The storage cluster is managed exclusively through the manipulation of the clust
 The map specifies which OSDs are included in the cluster and compactly specifies the distribution of all data in the system across those devices.
 It is replicated by every storage node as well as clients interacting with the RADOS cluster.
 Because the cluster map completely specifies the data distribution, clients expose a simple interface that treats the entire storage cluster (potentially tens of thousands of nodes) as a single logical object store.
-Each time the cluster map changes due to an OSD status change (e.
 Map epochs allow communicating parties to agree on what the current distribution of data is, and to determine when their information.
 Table 1: The cluster map specifies cluster membership, device state, and the mapping of data objects to devices.
 The data distribution is specified first by mapping objects to placement groups (controlled by m) and then mapping each PG onto a set of devices (CRUSH)
@@ -37,21 +36,25 @@ This strategy is robust in that it maintains a probabilistically balanced distri
 Most importantly, data placement is a two stage process that calculates the proper location of objects; no large or cumbersome centralized allocation table is needed.
 Placement groups are assigned to OSDs based on the cluster map, which maps each PG to an ordered list of r OSDs upon which to store object replicas.
 Our implementation utilizes CRUSH, a robust replica distribution algorithm that calculates a stable, pseudo-random mapping [28]
-Other placement strategies are possible; even an explicit table mapping each PG to a set of devices is still relatively small (megabytes) even for extremely large clusters.) From a high level, CRUSH behaves similarly to a hash function: placement groups are deterministically but pseudo-randomly distributed.
+Other placement strategies are possible; even an explicit table mapping each PG to a set of devices is still relatively small (megabytes) even for extremely large clusters.
+From a high level, CRUSH behaves similarly to a hash function: placement groups are deterministically but pseudo-randomly distributed.
 Unlike a hash function, however, CRUSH is stable: when one (or many) devices join or leave the cluster, most.
+PGs remain where they are; CRUSH shifts just enough data to maintain a balanced distribution.
+In contrast, hashing approaches typically force a reshuﬄe of all prior mappings.
 The cluster map includes a description and current state of devices over which data is distributed.
 This includes the current network address of all OSDs that are currently online and reachable (up), and an indication of which devices are currently down.
 For each PG, CRUSH produces a list of exactly r OSDs that are in the mapping.
 If the active list is currently empty, PG data is temporarily unavailable, and pending I/O is blocked.
 OSDs are normally both up and in the mapping to actively service I/O, or both down and out if they have failed, producing an active list of exactly r OSDs.
+OSDs may also be down but still in the mapping, meaning that they are currently unreachable but PG data has not yet been remapped to another OSD (similar to the “degraded mode” in RAID systems)
 Likewise, they may be up and out, meaning they are online but idle.
-This facilitates a variety of scenarios, including tolerance of intermittent periods of unavailability (e.
 Because the RADOS cluster may include many thousands of devices or more, it is not practical to simply broadcast map updates to all parties.
 Fortunately, differences in map epochs are significant only when they vary between two communicating OSDs (or between a client and OSD), which must agree on their proper roles with respect to the particular PG the I/O references.
 This property allows RADOS to distribute map updates lazily by combining them with existing inter-OSD messages, effectively shifting the distribution.
 Each OSD maintains a history of past incremental map updates, tags all messages with its latest epoch, and keeps track of the most recent epoch observed to be present at each peer.
 If an OSD receives a message from a peer with an older map, it shares the necessary incremental(s) to bring that peer in sync.
 Similarly, when contacting a peer thought to have an older epoch, incremental updates are preemptively shared.
+The heartbeat messages periodically exchanged for failure detection (see Section 3.3) ensure that updates spread quickly—in O(log n) time for a cluster of n OSDs.
 For example, when an OSD first boots, it begins by informing a monitor (see Section 4) that is has come online with a OSDBoot message that includes its most recent map epoch.
 The monitor cluster changes the OSD’s status to up, and replies with the incremental updates necessary to bring the OSD fully up to date.
 When the new OSD begins contacting OSDs with whom it shares data (see Section 3.4.1), the exact set of devices who are affected by its status change learn about the appropriate map updates.
@@ -59,16 +62,15 @@ Because a booting OSD does not yet know exactly which epochs its peers have, it 
 The knowledge of the data distribution encapsulated in the cluster map allows RADOS to distribute management of data redundancy, failure detection, and failure recovery to the OSDs that comprise the storage cluster.
 This exploits the intelligence present in OSDs by utilizing peer to peer-like protocols in a high-performance cluster environment.
 Replication is performed by the OSDs themselves: clients submit a single write operation to the first primary OSD, who is then responsible for consistently and safely updating all replicas.
-Object versions and short-term logs facilitate fast recovery in the event of intermittent node failure (e.
+We will briefly describe how the RADOS cluster architecturein particular, the cluster map—enables distributed replication and recovery operations, and how these capabilities can be generalized to include other redundancy mechanisms (such as parity-based RAID codes)
 Primary-copy processes both reads and writes on the first OSD and updates replicas in parallel, while chain forwards writes sequentially and processes reads at the tail.
 Splay replication combines parallel updates with reads at the tail to minimize update latency.
-The messages exchanged during an update operation are shown in Figure 2
-In all cases, clients send I/O operations to a single (though possibly different) OSD, and the cluster ensures that replicas are safely updated and consistent read/write semantics (i.
 Once all replicas are updated, a single acknowledgement is returned to the client.
 Primary-copy replication updates all replicas in parallel, and processes both reads and writes at the primary OSD.
 Chain replication instead updates replicas in series: writes are sent to the primary (head), and reads to the tail, ensuring that reads always reflect fully replicated updates.
 Splay replication simply combines the parallel updates of primary-copy replication with the read/write role separation of chain replication.
 The primary advantage is a lower number of message hops for 2-way mirroring.
+All RADOS messages—both those originating from clients and from other OSDs—are tagged with the sender’s map epoch to ensure that all update operations are applied in a fully consistent fashion.
 If a client sends an I/O to the wrong OSD due to an out of data map, the OSD will respond with the appropriate incrementals so that the client can redirect the request.
 This avoids the need proactively share map updates with clients: they will learn about them as they interact with the storage cluster.
 In most cases, they will learn about updates that do not affect the current operation, but allow future I/Os to be directed accurately.
@@ -85,19 +87,17 @@ This ensures both timely failure detection and a short interval of PG data unava
 A failure on the TCP socket results in a limited number of reconnect attempts before a failure is reported to the monitor cluster.
 Storage nodes exchange periodic heartbeat messages with their peers (those OSDs with whom they share PG data) to ensure that device failures are detected.
 OSDs that discover that they have been marked down simply sync to disk and kill themselves to ensure consistent behavior.
+Such changes may be due to device failures, recoveries, cluster expansion or contraction, or even complete data reshuﬄing from a totally new CRUSH replica distribution policy—device failure is simply one of many possible causes of the generalized problem of establishing a new distribution of data across the storage cluster.
 In all cases, RADOS employs a robust peering algorithm to establish a consistent view of PG contents and to restore the proper distribution and replication of data.
-This strategy relies on the basic design premise that OSDs aggressively replicate a PG log and its record of what the current contents of a PG should be (i.
 Thus, even if recovery is slow and object safety is degraded for some time, PG metadata is carefully guarded, simplifying the recovery algorithm.
 When an OSD receives a cluster map update, it walks through all new map incrementals up through the most recent to examine and possibly adjust PG state values.
 Any locally stored PGs whose active list of OSDs changes are marked must re-peer.
 Considering all map epochs (not just the most recent) ensures that intermediate data distributions are taken into consideration: if an OSD is removed from a PG and then added again, it is important to realize that intervening updates to PG contents may have occurred.
 As with replication, peering (and any subsequent recovery) proceeds independently for every PG in the system.
 Peering is driven by the first OSD in the PG (the primary)
-For each PG an OSD stores for which it is not the current primary (i.
 This message includes basic state information about the locally stored PG, including the most recent update, bounds of the PG log, and the most recent known epoch during which the PG successfully peered.
 Notify messages ensure that a new primary for a PG discovers its new role without having to consider all possible PGs (of which there may be millions) for every map change.
 Once aware, the primary generates a prior set, which includes all OSDs that may have participated in the PG since it was last successfully peered.
-The prior set is explicitly queried to solicit a notify to avoid waiting indefinitely for a prior OSD that does not actually store the PG (e.
 Armed with PG metadata for the entire prior set, the primary can determine the most recent update applied on any replica, and request whatever log fragments are necessary from prior OSDs in order to bring the PG logs up to date on active replicas.
 For node reboots or other short outages, however, this is not necessary—the recent PG logs are sufficient to quickly resynchronize replicas.
 Finally, the primary OSD shares missing log fragments with replica OSDs, such that all replicas know what objects the PG should contain (even if they are still missing locally), and begins processing I/O while recovery proceeds in the background.
@@ -105,14 +105,12 @@ A critical advantage of declustered replication is the ability to parallelize fa
 Replicas shared with any single failed device are spread across many other OSDs, and each PG will independently choose a replacement, allowing re-replication to just as many more OSDs.
 On average, in a large system, any OSD involved in recovery for a single failure will be either pushing or pulling content for only a single PG, making recovery very fast.
 Recovery in RADOS is motivated by the observation that I/O is most often limited by read (and not write) throughput.
-Although each individual OSD, armed with all PG metadata, could independently fetch any missing objects,
 First, multiple OSDs independently recovering objects in the same PG they will probably not pull the same objects from the same OSDs at the same time, resulting in duplication of the most expensive aspect of recovery: seeking and reading.
 Second, the update replication protocols (described in Section 3.1) become increasingly complex if replica OSDs are missing the objects being modified.
 For these reasons, PG recovery in RADOS is coordinated by the primary.
 As before, operations on missing objects are delayed until the primary has a local copy.
 Since the primary already knows which objects all replicas are missing from the peering process, it can preemptively “push” any missing objects that are about to be modified to replica OSDs, simplifying replication logic while also ensuring that the surviving copy of the object is only read once.
 Thus, in the aggregate, every rereplicated object is read only once.
-A small cluster of monitors are collectively responsible for managing the storage system by storing the master copy of the cluster map and making periodic updates in response to configuration changes or changes in OSD state (e.
 The cluster, which is based in part on the Paxos part-time parliament algorithm [14], is designed to favor consistency and durability over availability and update latency.
 Notably, a majority of monitors must be available in order to read or update the cluster map, and changes are guaranteed to be durable.
 The cluster is based on a distributed state machine service, based on the Paxos, in which the cluster map is the current machine state and each successful update results in a new map epoch.
@@ -130,7 +128,6 @@ New failures are forwarded to the leader, who aggregates updates.
 Periodically the leader will initiate a map update by incrementing the map epoch and using the Paxos update protocol to distribute the update proposal to other monitors, simultaneously revoking leases.
 If the update is acknowledged by a majority of monitors, a final commit message issues a new lease.
 The combination of a synchronous two-phase commit and the probe interval T ensures that if the active set of monitors changes, it is guaranteed that all prior leases (which have a matching term T ) will have expired before any subsequent map updates take place.
-In the general case, monitors do very little work: most map distribution is handled by storage nodes (see Section 2.4), and device state changes (e.
 The leasing mechanism used internally by the monitor cluster allows any monitor to service reads from OSDs or clients requesting the latest copy of the cluster map.
 Such requests rarely originate from OSDs due to the preemptive map sharing, and clients request updates only when OSD operations time out and failure is suspected.
 The monitor cluster can be expanded to distribute this workload (beyond what is necessary purely for reliability) for large clusters.
@@ -150,10 +147,8 @@ Another storage data structure that is often required at scale is a FIFO queue, 
 Unlike GFS, however, we hope to create a distributed and scalable FIFO data structure in RADOS with reliable queue insertion.
 Many storage systems provide snapshot functionality on a volume-wide basis, allowing a logical point-in-time copy of the system to be created efficiently.
 As systems grow to petabytes and beyond, however, it becomes increasingly doubtful that a global snapshot schedule or policy will be appropriate for all data.
-We are currently implementing an object-granularity clone operation to create object copies with copy-on-write behavior for efficient storage utilization, and are extending the RADOS client interface to allow transparent versioning for logical point-in-time copies across sets of objects (i.
 Although this research is being driven by our efforts to incorporate flexible snapshot-like functionality in Ceph, we expect it to generalize to other applications of RADOS.
 Although RADOS manages scalability in terms of total aggregate storage and capacity, we have not yet addressed the issue of many clients accessing a single popular object.
-We have done some preliminary experimentation with a read shedding mechanism which allows a busy OSD to shed reads to object replicas for servicing, when the replica’s OSD has a lower load and when consistency allows (i.
 Heartbeat messages exchange information about current load in terms of recent average read latency, such that OSDs can determine if a read is likely to be service more quickly by a peer.
 This facilitates fine-grained balancing in the presence of transient load imbalance, much like D-SPTF [16]
 Although preliminary experiments are promising, a comprehensive evaluation has not yet been conducted.
@@ -164,6 +159,8 @@ To date we have conducted only minimal analysis of the effects of such workloads
 The integration of intelligent disk scheduling, including the prioritization of replication versus workload and quality of service guarantees, is an ongoing area of investigation within the research group [32]
 In addition to n-way replication, we would also like to support parity-based redundancy for improved storage efficiently.
 In order to facilitate a broad range of parity-based schemes, we would like to incorporate a generic engine such as REO [12]
+Preserving the existing client protocol currently used for replication—in which client reads and writes are serialized and/or replicated by the primary OSD—would facilitate flexibility in the choice of encoding and allow the client to remain ignorant of the redundancy strategy (replication or parity-based) utilized for a particular object.
+Although data flow may be non-ideal in certain cases—a client could write each parity fragments directly to each OSD—aggregate network utilization is only slightly greater than the optimum [11], and often better than straight replication.
 For example, like RADOS, Ursa Minor [1] provides a distributed object storage service (and, like Ceph, layers a file system service on top of that abstraction)
 In contrast to RADOS, however, Ursa Minor relies on an object manager to maintain a directory of object locations and storage.
 More significantly, objects in PAST are immutable, facilitating cryptographic protection and simplifying consistency and caching, but limiting the systems usefulness as a general storage service.
@@ -171,6 +168,7 @@ In contrast to these systems, RADOS targets a high-performance cluster or data c
 These systems focus primarily on data safety and secrecy (using erasure codes or, in the case of Farsite, encrypted replicas) and wide-area scalability (like CFS and PAST), but not performance.
 Although this improves tolerance to intermittent failures, multiple bricks are required to ensure consistent read access, while the lack of complete knowledge of the data distribution further requires coordinator bricks to help conduct I/O.
 In contrast, RADOS’s cluster maps drive consensus and ensure consistent access despite a simple and direct data access protocol.
+They find that declustered replication improves reliability at scale, particularly in the presence of relatively high failure rates for new disks (“infant mortality”)
 Although both consider only independent failures, RADOS leverages CRUSH to mitigate correlated failure risk with failure domains.
 The architecture utilizes a globally replicated cluster map that provides all parties with complete knowledge of the data distribution, typically specified using a function like CRUSH.
 This avoids the need for object lookup present in conventional architectures, which RADOS leverages to distribute replication, consistency management, and failure recovery among a dynamic cluster of OSDs while still preserving consistent read and update semantics.

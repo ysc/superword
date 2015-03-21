@@ -117,6 +117,7 @@ In the Identity Service, a token that is issued to a user includes the list of r
 Services that are being called by that user determine how they interpret the set of roles a user has and to which operations or resources each role grants access.
 Accepts Image API calls for image discovery, retrieval, and storage.
 A number of periodic processes run on the Image Service to support caching.
+As shown in the section called “Conceptual architecture” [2], the Image Service is central to the overall IaaS picture.
 It accepts API requests for images or image metadata from end users or Compute components and can store its disk files in the Object Storage Service.
 Efficiently collects the metering data about the CPU and network costs.
 Collects data by monitoring notifications sent from services or by polling the infrastructure.
@@ -175,6 +176,8 @@ This user CRUD filter enables users to use a HTTP PATCH to change their own pass
 Each user can then change their own password with a HTTP PATCH:
 In addition to changing their password, all of the user's current tokens are deleted (if the back-end is KVS or sql)
 Logging You configure logging externally to the rest of the Identity Service.
+The file specifying the logging configuration is in the [DEFAULT] section of the keystone.conf file under log_config.
+To route logging through syslog, set use_syslog=true option in the [DEFAULT] section.
 Like other OpenStack projects, the Identity Service uses the Python logging module, which includes extensive configuration options that let you define the output levels and formats.
 For example, each server application has its own configuration file.
 For example in Compute, you can remove the middleware parameters from api-paste.ini, as follows:
@@ -205,6 +208,7 @@ The token revocation list is updated once a minute, but the certificates are not
 One possible problem is that the certificates are the wrong files or garbage.
 You can remove these files and run another command against your server: They are fetched on demand.
 The Identity Service log should show the access of the certificate files.
+Set debug = True and verbose = True in your Identity Service configuration file and restart the Identity Service server.
 If the files do not appear in your directory after this, it is likely one of the following issues:
 Your service is configured incorrectly and cannot talk to the Identity Service.
 Use the chmod command to change its permissions so that the service (POSIX) user can write to it.
@@ -419,8 +423,9 @@ Volumes Depending on the setup of your cloud provider, they may give you an endp
 In either case, you can use the nova CLI to manage volumes.
 Networking with nova-network Understanding the networking configuration options helps you design the best configuration for your Compute instances.
 For each VM instance, Compute assigns to it a private IP address.
-Currently, Compute with nova-network only supports Linux bridge networking that enables the virtual interfaces to connect to the outside network through the physical interface.)
+Currently, Compute with nova-network only supports Linux bridge networking that enables the virtual interfaces to connect to the outside network through the physical interface.
 The network controller with nova-network provides virtual networks to enable compute servers to interact with each other and with the public network.
+Currently, Compute with nova-network supports these kinds of networks, implemented in different “Network Manager” types:
 However, because you can't yet select the type of network for a given project, you cannot configure more than one type of network in a given Compute installation.
 All networking options require network connectivity to be already set up between OpenStack physical nodes.
 OpenStack automatically creates all network bridges (for example, br100) and VM virtual interfaces.
@@ -483,7 +488,6 @@ You can retrieve a listing of these elements by making a GET query to:
 Instances can retrieve the public SSH key (identified by keypair name when a user requests a new instance) by making a GET request to:
 Instances can retrieve user data by making a GET request to:
 The metadata service is implemented by either the nova-api service or the nova-apimetadata service.
-The nova-api-metadata service is generally only used when running in multi-host mode, see the OpenStack Configuration Reference for details)
 The default enabled_apis configuration setting includes the metadata service, so you should not need to modify it.
 The metadata_host configuration option must be an IP address, not a host name.
 The default Compute service settings assume that the nova-network service and the nova-api service are running on the same host.
@@ -646,7 +650,6 @@ Directories defined on this line should all exist, be owned and writable only by
 Filters definition files contain lists of filters that nova-rootwrap will use to allow or deny a specific command.
 Since they are in the trusted security path, they need to be owned and writable only by the root user.
 It uses an INI file format with a [Filters] section and several lines, each with a unique parameter name (different for each filter that you define):
-ListOpt) Comma-separated list containing first the Filter class to use, followed by that Filter arguments (which vary depending on the Filter class selected)
 Migration provides a scheme to migrate running instances from one OpenStack Compute server to another OpenStack Compute server.
 Look at the running instances, to get the ID of the instance you wish to migrate.
 Look at information associated with that instance - our example is vm1 from above.
@@ -691,7 +694,6 @@ Let's see what runs and how it runs before the crash:
 From the SAN to the cloud controller, we have an active iscsi session (used for the "cindervolumes" LVM's VG)
 From the cloud controller to the compute node we also have active iscsi sessions (managed by cinder-volume)
 From the cloud controller to the compute node, we also have iptables/ ebtables rules which allows the access from the cloud controller to the running instance.
-And at least, from the cloud controller to the compute node ; saved into database, the current state of the instances (in that case "running" ), and their volumes attachment (mount point, volume id, volume status, and so on.)
 Now, after the power loss occurs and all hardware components restart, the situation is as follows:
 From the SAN to the cloud, the ISCSI session no longer exists.
 From the cloud controller to the compute node, the ISCSI sessions no longer exist.
@@ -713,6 +715,7 @@ At that stage, depending on your image, some instances completely reboot and bec
 Do not reboot the ones that are stopped at that stage (see the fourth step)
 In fact it depends on whether you added an /etc/fstab entry for that volume.
 Images built with the cloud-init package remain in a pending state, while others skip the missing volume and start.
+The idea of that stage is only to ask nova to reboot every instance, so the stored state is preserved.
 After the restart, you can reattach the volumes to their respective instances.
 Now that nova has restored the right status, it is time to perform the attachments through a nova volume-attach.
 At that stage, instances that were pending on the boot sequence (plymouth) automatically continue their boot, and restart normally, while the ones that booted see the volume.
@@ -951,6 +954,7 @@ To provide acceptable replication speeds, object replication is designed to inva
 An OpenStack Object Storage cluster is a collection of many daemons that work together across many nodes.
 With so many different components, you must be able to tell what is going on inside the cluster.
 Tracking server-level metrics like CPU utilization, load, memory consumption, disk usage and utilization, and so on is necessary, but not sufficient.
+What are different daemons are doing on each server? What is the volume of object replication on node8? How long is it taking? Are there errors? If so, when did they happen?
 In such a complex ecosystem, you can use multiple approaches to get the answers to these questions.
 Swift Recon The Swift Recon middleware (see http://swift.openstack.org/admin_guide.html#clustertelemetry-and-monitoring) provides general machine statistics, such as load average, socket statistics, /proc/meminfo contents, and so on, as well as Swift-specific metrics:
 Count of each type of quarantined file: Account, container, or object.
@@ -988,7 +992,6 @@ The sending of metrics is integrated with the logging framework.
 You can also specify the port and a default sample rate.
 The specified default sample rate is used unless a specific call to a statsd logging method (see the list below) overrides it.
 Then the LogAdapter object returned by get_logger(), usually stored in self.logger, has these new methods:
-The default prefix is the “name” of the logger (such as,
 This is used when you need to add or subtract.
 Note that these logging methods may safely be called anywhere you have a logger object.
 If StatsD logging has not been configured, the methods are no-ops.
@@ -1146,7 +1149,6 @@ This warning and error occur when the sg3-utils package is not installed on the 
 The IDs in your message are unique to your system:
 Run this command on the Compute node to install the sg3-utils package:
 Unless you really know what you're doing, make sure that only one greenthread can read any particular socket.
-If you do know what you're doing and want to disable this error,
 You need to update your copy of the hp_3par_fc.py driver which contains the synchronization code.
 The JSON serializable issue is caused by an RPC response timeout.
 Make sure your iptables allow port 3260 communication on the ISC controller.
@@ -1220,7 +1222,6 @@ The community reference implementation of LBaaS only supports a one-arm model, w
 The NVP LBaaS plugin only supports a two-arm model between north-south traffic, meaning that the VIP can only be created on the external (physical) network.
 The community reference implementation of FWaaS applies firewall rules to all logical routers in a tenant, while the NVP FWaaS plugin applies firewall rules only to one logical router according to the router_id of the firewall entity.
 Optional, if not specified, a default global deployment container will be used.
-Install Networking Services in Installation Guide), and update the following in the [ovs] section for the ryu-neutron-agent:
 The openflow_rest_api is used to tell where Ryu is listening for REST API.
 The ovsdb_interface is used for Ryu to access the ovsdb-server.
 If you want to change this value irrespective of the interface name, ovsdb_ip can be specified.
@@ -1228,6 +1229,7 @@ If you use a non-default port for ovsdb-server, it can be specified by ovsdb_por
 The IP address is derived from the network interface name.
 You can use the same configuration file for many Compute nodes by using a network interface name with a different IP address:
 Configure neutron agents Plug-ins typically have requirements for particular software that must be run on each node that handles data packets.
+A data-forwarding node typically has a network interface with an IP address on the “management network” and another interface on the “data network”
 This section shows you how to install and configure a subset of the available plug-ins, which may include the installation of switching software (for example, Open vSwitch) as well as agents used to communicate with the neutron-server process running elsewhere in the data center.
 This section also applies to the ML2 plugin when Open vSwitch is used as a mechanism driver.
 Install the OVS agent package (this pulls in the Open vSwitch software as a dependency):
@@ -1243,6 +1245,7 @@ Controller Cluster and that the NVP Controller Cluster can see the br-int integr
 If you use the Ryu plug-in, you must install both Open vSwitch and Ryu, in addition to the Ryu agent package:
 Install Ryu (there isn't currently an Ryu package for ubuntu):
 Configure DHCP agent The DHCP service agent is compatible with all existing plug-ins and is required for all deployments where VMs should automatically receive IP addresses through DHCP.
+You must configure the host running the neutron-dhcp-agent as a "data forwarding node" according to the requirements for your plug-in (see the section called “Configure neutron agents” [131])
 Important If you reboot a node that runs the DHCP agent, you must run the neutron-ovscleanup command before the neutron-dhcp-agent service starts.
 However, on Debian-based systems such as Ubuntu, you must manually run this command or write your own system script that runs on boot before the  neutron-dhcp-agent service starts.
 Big Switch/Floodlight plug-in, which supports both the open source Floodlight controller and the proprietary Big Switch controller.
@@ -1359,7 +1362,6 @@ In this scenario, tenant A and tenant B each have a network with one subnet and 
 Under the tenantA user tenant, create the tenant router and set its gateway for the public network.
 Similarly, for tenantB, create a router and another network, using VLAN ID 102 on the physical switch:
 The following figure shows how to configure Linux networking devices on the Compute host:
-The Compute host configuration resembles the configuration in scenario 1
 However, in scenario 1, a guest connects to two subnets while in this scenario, the subnets belong to different tenants.
 The following figure shows the network devices on the network host for the second scenario.
 In this configuration, the network namespaces are organized to isolate the two subnets from each other as shown in the following figure.
@@ -1381,7 +1383,6 @@ Each tenant has a network with one subnet, and each one has a router that connec
 Under the tenantA user tenant, create the tenant router and set its gateway for the public network.
 Similarly, for tenantB, create a router and another network, using VLAN ID 102 on the physical switch:
 The following figure shows how the various Linux networking devices would be configured on the compute host under this scenario.
-The configuration on the compute host is very similar to the configuration in scenario 1
 The only real difference is that scenario 1 had a guest that was connected to two subnets, and in this scenario, the subnets belong to different tenants.
 The following figure shows the network devices on the network host for the second scenario.
 The main difference between the configuration in this scenario and the previous one is the organization of the network namespaces, in order to provide isolation across the two subnets, as shown in the following figure.
@@ -1437,6 +1438,7 @@ The metering agent and the L3 agent have to have the same configuration regardin
 A driver which implements the metering abstraction needs to be configured.
 Currently there is only one implementation which is based on iptables.
 To enable L3 metering you have to be sure to set the following parameter in neutron.conf on the host that runs neutron-server:
+No equivalent for nova-network --multi_host flag: Nova-network has a model where.
 OpenStack Networking now support running multiple l3agent and dhcp-agents with load being split across those agents, but the tight coupling of that scheduling with the location of the VM is not supported in Grizzly.
 The Havana release is expected to include an exact replacement for the --multi_host flag in novanetwork.
 Linux network namespace required on nodes running neutron-l3-agent or neutron-dhcp-agent if overlapping IPs are in use:
@@ -1463,7 +1465,6 @@ Note that nova-network should not be running because it is replaced by Neutron.
 Commands in agent management and scheduler extensions The following commands require the tenant running the command to have an admin role.
 These are used by the various clients to access Keystone.
 Every agent which supports these extensions will register itself with the neutron server when it starts up.
-The alive field shows :-) if the agent reported its state within the period defined by the agent_down_time option in the neutron.conf file.
 In some deployments, one DHCP agent is not enough to hold all network data.
 In addition, you must have a backup for it even when the deployment is small.
 The same network can be assigned to more than one DHCP agent and one DHCP agent can host more than one network.
@@ -1536,6 +1537,7 @@ You must configure security group rules depending on the type of plug-in you are
 This example enables ping and ssh access to your VMs.
 Does not implement Networking security groups, you can configure security group rules by using the nova secgroup-add-rule or euca-authorize command.
 These nova commands enable ping and ssh access to your VMs.
+If your plug-in implements Networking security groups, you can also leverage Compute security groups by setting security_group_api = neutron in the nova.conf file.
 After you set this option, all Compute security group commands are proxied to Networking.
 Advanced features through API extensions Several plug-ins implement API extensions that provide capabilities similar to what was available in nova-network: These plug-ins are likely to be of interest to the OpenStack community.
 The provider extension allows administrators to explicitly manage the relationship between Networking virtual networks and underlying physical mechanisms such as VLANs and tunnels.
@@ -1555,6 +1557,7 @@ All types of provider networks can be created by administrators, while tenant ne
 The name of the physical network over which the virtual network is implemented for flat and VLAN networks.
 The default Networking configuration authorizes both actions for users with the admin role.
 An authorized client or an administrative user can view and set the provider extended attributes through Networking API calls.
+See the section called “Authentication and authorization” [206] for details on policy configuration.
 Provider extension API operations To use the provider extension with the default policy settings, you must have the administrative role.
 This table shows example neutron commands that enable you to complete basic provider extension API operations:
 When you create flat networks, <phys-net-name> must be known to the plug-in.
@@ -1616,7 +1619,6 @@ Only admin users can specify a tenant_id other than its own.
 This is a read-only attribute that gets populated with the uuid of the firewall policy when this firewall rule is associated with a firewall policy.
 A firewall rule can be associated with only one firewall policy at a time.
 However, the association can be changed to a different firewall policy.
-Attribute name Type Default Value Description the format of a ':' separated range)
 It indicates the position of this rule in that firewall policy.
 Facilitates selectively turning off rules without having to disassociate the rule from the firewall policy.
 Only admin users can specify a tenant_id other their own.
@@ -1688,6 +1690,7 @@ Only administrators can manage the L3 metering labels and rules.
 This table shows example neutron commands that enable you to complete basic L3 metering operations:
 Logging configuration can be provided in neutron.conf or as command line options.
 To configure logging for Networking components, use one of these methods:
+Show more verbose log output (sets INFO log level output) if debug is False # verbose = False.
 Notifications Notifications can be sent when Networking resources such as network, subnet and port are created, updated or deleted.
 To set up the notification, edit notification options in neutron.conf:
 Defined in rpc_notifier for rpc way, can be comma separated values.

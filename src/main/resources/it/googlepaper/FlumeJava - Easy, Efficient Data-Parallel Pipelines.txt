@@ -13,6 +13,7 @@ It has been used very successfully in practice by many developers.
 MapReduce works well for computations that can be broken down into a map step, a shuffle step, and a reduce step, but for many real-world computations, a chain of MapReduce stages is required.
 Such data-parallel pipelines require additional coordination code to chain together the separate MapReduce stages, and require additional work to manage the creation and later deletion of the intermediate results between pipeline stages.
 The logical computation can become obscured by all these low-level coordination details, making it difficult for new developers to understand the computation.
+Moreover, the division of the pipeline into particular stages becomes “baked in” to the code and difficult to change later if the logical computation needs to evolve.
 In this paper we present FlumeJava, a new system that aims to support the development of data-parallel pipelines.
 FlumeJava is a Java library centered around a few classes that represent parallel collections.
 Parallel collections support a modest number of parallel operations which are composed to implement data-parallel computations.
@@ -24,7 +25,6 @@ They also confer a degree of adaptability of the logical FlumeJava computations 
 To achieve good performance, FlumeJava internally implements parallel operations using deferred evaluation.
 The invocation of a parallel operation does not actually run the operation, but instead simply records the operation and its arguments in an internal execution plan graph structure.
 Once the execution plan for the whole computation has been constructed, FlumeJava optimizes the execution plan, for example fusing chains of parallel operations together into a small number of MapReduce operations.
-When running the execution plan, FlumeJava chooses which strategy to use to implement each operation (e.g., local sequential loop vs.
 FlumeJava also manages the creation and clean-up of any intermediate files needed within the computation.
 The optimized execution plan is typically several times faster than a MapReduce pipeline with the same logical structure, and approaches the performance achievable by an experienced MapReduce programmer writing a hand-optimized chain of MapReduces, but with significantly less effort.
 The FlumeJava program is also easier to understand and change than the handoptimized chain of MapReduces.
@@ -55,6 +55,7 @@ The Reducer will typically complete the combining step, combining values from di
 By default, the Shuffle phase sends each key-and-values group to a deterministically but randomly chosen Reduce worker machine; this choice determines which output file shard will hold that key’s results.
 Alternatively, a user-defined Sharder function can be specified that selects which Reduce worker machine should receive the group for a given key.
 A user-defined Sharder can be used to aid in load balancing.
+It also can be used to sort the output keys into Reduce “buckets,” with all the keys of the ith Reduce worker being ordered before all the keys of the i+1st Reduce worker.
 Since each Reduce worker processes keys in lexicographic order, this kind of Sharder can be used to produce sorted output.
 Many physical machines can be used in parallel in each of these three phases.
 MapReduce automatically handles the low-level issues of selecting appropriate parallel worker machines, distributing to them the program to run, managing the temporary storage and flow of intermediate data between the three phases, and synchronizing the overall sequencing of the phases.
@@ -66,6 +67,7 @@ The Shuffle and Reduce phases support cross-element computations, such as aggreg
 The art of programming using MapReduce mainly involves mapping the logical parallel computation into these basic operations.
 Many computations can be expressed as a MapReduce, but many others require a sequence or graph of MapReduces.
 As the complexity of the logical computation grows, the challenge of mapping it into a physical sequence of MapReduces increases.
+Higherlevel concepts such as “count the number of occurrences” or “join tables by key” must be hand-compiled into lower-level MapReduce operations.
 In addition, the user takes on the additional burdens of writing a driver program to invoke the MapReduces in the proper sequence, managing the creation and deletion of intermediate files holding the data passed between MapReduces, and handling failures across MapReduces.
 In this section we present the interface to the FlumeJava library, as seen by the FlumeJava user.
 The FlumeJava library aims to offer constructs that are close to those found in the user’s logical.
@@ -103,7 +105,7 @@ A deferred operation, in turn, holds references to the PCollections that are its
 When a FlumeJava operation like parallelDo() is called, it just creates a ParallelDo deferred operation object and returns a new deferred PCollection that points to it.
 The result of executing a series of FlumeJava operations is thus a directed acyclic graph of deferred PCollections and operations; we call this graph the execution plan.
 This pipeline takes four different input sources and writes two outputs.
-For simplicity, we usually elide PCollections from execution plan diagrams.)
+For simplicity, we usually elide PCollections from execution plan diagrams.
 The results of these two operations are flatten()ed together and fed into parallelDo() D.
 The results of parallelDo()s A, D, and E are joined together.
 Finally, the results of parallelDo()s A and F are written to output files.
@@ -132,11 +134,13 @@ ParallelDo is not needed by other operations in the graph, fusion has rendered i
 ParallelDo sibling fusion applies when two or more ParallelDo operations read the same input PCollection.
 They are fused into a single multi-output ParallelDo operation that computes the results of all the fused operations in a single pass over the input.
 Both producer-consumer and sibling fusion can apply to arbitrary trees of multi-output ParallelDo operations.
+Figure 2 shows an example execution plan fragment where ParallelDo operations A, B, C, and D can be fused into a single ParallelDo A+B+C+D.
 The new ParallelDo creates all the leaf outputs from the original graph, plus output A.1, since it is needed by some other non-ParallelDo operation Op.
 Intermediate output A.0 is no longer needed and is fused away.
 As mentioned earlier, CombineValues operations are special cases of ParallelDo operations that can be repeatedly applied to partially computed results.
 The core of the FlumeJava optimizer transforms combinations of ParallelDo, GroupByKey, CombineValues, and Flatten operations into single MapReduces.
 An MSCR operation has M input channels (each performing a map operation) and R output channels (each optionally performing a shuffle, an optional combine, and a reduce)
+The former kind of output channel is called a “grouping” channel, while the latter kind of output channel is called a “pass-through” channel; a pass-through channel allows the output of a mapper to be a result of an MSCR operation.
 Despite its apparent greater expressiveness, each MSCR operation is implemented using a single MapReduce.
 An MSCR operation is produced from a set of related GroupByKey operations.
 GroupByKey operations are considered related if they consume (possibly via Flatten operations) the same input or inputs created by the same (fused) ParallelDo operations.
@@ -156,6 +160,7 @@ After all GroupByKey operations have been transformed into MSCR operations, any 
 The final optimized execution plan contains only MSCR, Flatten, and Operate operations.
 The optimizer performs a series of passes over the execution plan, with the overall goal to produce the fewest, most efficient MSCR operations in the final optimized plan:
 The original CombineValues is left in place, and is henceforth treated as a normal ParallelDo operation and subject to ParallelDo fusion.
+If two GroupByKey operations are connected by a producer-consumer chain of one or more ParallelDo operations, the optimizer must choose which ParallelDos should fuse “up” into the output channel of the earlier GroupByKey, and which should fuse “down” into the input channel of the later GroupByKey.
 The optimizer estimates the size of the intermediate PCollections along the chain of ParallelDos, identifies one with minimal expected size, and marks it as boundary blocking ParallelDo fusion.
 In this section, we show how the optimizer works on the SiteData pipeline introduced in Section 3.3
 Figure 5 shows the execution plan initially and after each major optimization phase.
@@ -186,7 +191,6 @@ Modest-size data sets are common during development and testing, and by using lo
 If the input data set appears large, FlumeJava chooses to launch a remote, parallel MapReduce.
 It uses observations of the input data sizes and estimates of the output data sizes to automatically choose a reasonable number of parallel worker machines.
 Users can assist in estimating output data sizes, for example by augmenting a DoFn with a method that returns the expected ratio of output data size to input data size, based on the computation represented by that DoFn.
-In the future, we would like to refine these estimates through dynamic monitoring and feedback of observed output data sizes,
 FlumeJava automatically creates temporary files to hold the outputs of each operation it executes.
 It automatically deletes these temporary files as soon as they are no longer needed by some unevaluated operation later in the pipeline.
 FlumeJava strives to make building and running pipelines feel as similar as possible to running a regular Java program.
@@ -273,6 +277,7 @@ The Dryad [11] system implements a general-purpose dataparallel execution engine
 Dryad programs are written in C++ using overloaded operators to specify an arbitrary acyclic dataflow graph, somewhat akin to Cascading’s model of explicit graph construction.
 Like MapReduce, Dryad handles the details of communication, partitioning, placement, concurrency and fault tolerance.
 Unlike stock MapReduce but similar to the FlumeJava optimizer’s MSCR primitive, computation nodes can have multiple input and output edge “channels.” Unlike FlumeJava, Dryad does not have an optimizer to combine or rearrange nodes in the dataflow graph, since the nodes are computational black boxes, but Dryad does include a notion of run-time graph refinement through which users can perform some kinds of optimizations.
+This construct is syntactic sugar for a series of library calls, which can be implemented differently over different kinds of data being “queried.” The SQL-like construct can be used to express queries over traditional relational data (and shipped out to remote database servers), over XML data, and over in-memory C# objects.
 It can also be used to express parallel computations and executed on Dryad [20]
 The manner in which the SQL-like construct is desugared into calls that construct an internal representation of the original query is similar to how FlumeJava’s parallel operations.
 The C# language was significantly extended in order to support LINQ; in contrast, FlumeJava is implemented as a pure Java library, with no language changes.
@@ -299,6 +304,7 @@ Lumberjack’s parallel run-time system shared many of the characteristics of Fl
 While the Lumberjack-based version of Flume offered a number of benefits for programmers, it suffered from several important disadvantages relative to the FlumeJava version:
 Since Lumberjack was specially designed for the task, Lumberjack programs were significantly more concise than the equivalent FlumeJava programs.
 However, the implicitly parallel, mostly functional programming model was not natural for many of its intended users.
+FlumeJava’s explicitly parallel model, which distinguishes Collection from PCollection and iterator() from parallelDo(), coupled with its “mostly imperative” model that disallows mutable shared state only across DoFn boundaries, is much more natural for most of these programmers.
 Since FlumeJava is a pure library, it cannot use a traditional static optimization approach.
 Instead, we adopted a more dynamic approach to optimization, where the running user program first constructs an execution plan (via deferred evaluation), and then optimizes the plan before executing it.
 FlumeJava does no static analysis of the source program nor dynamic code generation, which imposes some costs in run-time performance; those costs have turned out to be relatively modest.

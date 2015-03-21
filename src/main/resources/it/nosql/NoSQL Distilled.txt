@@ -34,12 +34,14 @@ The primary reason is that a relational database is designed to run on a single 
 Many NoSQL databases are designed explicitly to run on clusters, so they make a better fit for big data scenarios.
 The first part concentrates on core concepts that we think you need to know in order to judge whether NoSQL databases are relevant for you and how they differ.
 In the second part we concentrate more on implementing systems with NoSQL databases.
+Chapter 1 begins by explaining why NoSQL has had such a rapid rise—the.
 This explains an important feature of the data model of many NoSQL databases—the explicit storage of a rich structure of closely related data that is accessed as a unit.
 In this book we call this kind of structure an aggregate.
 Aggregates provide a natural unit of interaction for many kinds of applications, which both improves running on a cluster and makes it easier to program the data access.
 Having covered the data-modeling aspect of NoSQL, we move on to distribution: Chapter 4 describes how databases distribute data to run on clusters.
 With the distribution models defined, we can then move on to the issue of consistency.
-NoSQL databases provide a more varied range of consistency options than relational databases— which is a consequence of being friendly to clusters.
+NoSQL databases provide a more varied range of consistency options than relational databaseswhich is a consequence of being friendly to clusters.
+If you’ve heard anything about NoSQL, you’ll almost certainly have heard of the CAP theorem; the “The CAP Theorem” section on p.
 While these chapters concentrate primarily on the principles of how data gets distributed and kept consistent, the next two chapters talk about a couple of important tools that make this work.
 Chapter 6 describes version stamps, which are for keeping track of changes and detecting inconsistencies.
 Chapter 7 outlines mapreduce, which is a particular way of organizing parallel computation that fits in well.
@@ -48,6 +50,7 @@ We must stress that this is not a comprehensive study—there are too many out t
 Our aim here is to give you a feel for the variety of stores that exist and for how different database technologies use the concepts we outlined earlier.
 You’ll see what kind of code you need to write to program against these systems and get a glimpse of the mindset you’ll need to use them.
 A common statement about NoSQL databases is that since they have no schema, there is no difficulty in changing the structure of data during the life of an application.
+We disagree—a schemaless database still has an implicit schema that needs change discipline when you implement it, so Chapter 12 explains how to do data migration both for strong schemas and for schemaless systems.
 All of this should make it clear that NoSQL is not a single thing, nor is it something that will replace relational databases.
 Chapter 13 looks at this future world of Polyglot Persistence, where multiple data-storage worlds coexist, even within the same application.
 In our view, there are two key factors—finding a productive programming model where the data storage model is well aligned to your application, and ensuring that you can get the data access performance and resilience you need.
@@ -92,11 +95,13 @@ ThoughtWorks continues to be a very hospitable home for us, a source of knowledg
 Additionally, Pramod would like to thank Schaumburg Library for providing great service and quiet space for writing; Arhana and Arula, my beautiful daughters, for their understanding that daddy would go to the library and not take them along; Rupali, my beloved wife, for her immense support and help in keeping me focused.
 For almost as long as we’ve been in the software profession, relational databases have been the default choice for serious data storage, especially in the world of enterprise applications.
 If you’re an architect starting a new project, your only choice is likely to be which relational database to use.
-And often not even that, if your company has a dominant vendor.) There have been times when a database technology threatened to take a piece of the action, such as object databases in the 1990’s, but these alternatives never got anywhere.
+And often not even that, if your company has a dominant vendor.
+There have been times when a database technology threatened to take a piece of the action, such as object databases in the 1990’s, but these alternatives never got anywhere.
 After such a long period of dominance, the current excitement about NoSQL databases comes as a surprise.
 In this chapter we’ll explore why relational databases became so dominant, and why we think the current rise of NoSQL databases isn’t a flash in the pan.
 Relational databases have become such an embedded part of our computing culture that it’s easy to take them for granted.
 Probably the most obvious value of a database is keeping large amounts of persistent data.
+Most computer architectures have the notion of two areas of memory: a fast volatile “main memory” and a larger but slower “backing store.” Main memory is both limited in space and loses all data when you lose power or something bad happens to the operating system.
 Therefore, to keep data around, we write it to a backing store, commonly seen a disk (although these days that disk can be persistent memory)
 The backing store can be organized in all sorts of ways.
 For many productivity applications (such as word processors), it’s a file in the file system of the operating system.
@@ -113,6 +118,7 @@ With transactions, you can make a change, and if an error occurs during the proc
 Enterprise applications live in a rich ecosystem that requires multiple applications, written by different teams, to collaborate in order to get things done.
 This kind of inter-application collaboration is awkward because it means pushing the human organizational boundaries.
 Applications often need to use the same data and updates made through one application have to be visible to others.
+A common way to do this is shared database integration [Hohpe and Woolf] where multiple applications store their data in a single database.
 Using a single database allows all the applications to use each others’ data easily, while the database’s concurrency control handles multiple applications in the same way as it handles multiple users in a single application.
 Relational databases have succeeded because they provide the core benefits we.
 As a result, developers and database professionals can learn the basic relational model and apply it in many projects.
@@ -122,34 +128,41 @@ Even from their early days, there have been lots of frustrations with them.
 For application developers, the biggest frustration has been what’s commonly called the impedance mismatch: the difference between the relational model and the in-memory data structures.
 The relational data model organizes data into a structure of tables and rows, or more properly, relations and tuples.
 In the relational model, a tuple is a set of name-value pairs and a relation is a set of tuples.
-The relational definition of a tuple is slightly different from that in mathematics and many programming languages with a tuple data type, where a tuple is a sequence of values.) All operations in SQL consume and return relations, which leads to the mathematically elegant relational algebra.
+The relational definition of a tuple is slightly different from that in mathematics and many programming languages with a tuple data type, where a tuple is a sequence of values.
+All operations in SQL consume and return relations, which leads to the mathematically elegant relational algebra.
 This foundation on relations provides a certain elegance and simplicity, but it also introduces limitations.
 In particular, the values in a relational tuple have to be simple—they cannot contain any structure, such as a nested record or a list.
 This limitation isn’t true for in-memory data structures, which can take on much richer structures than relations.
 As a result, if you want to use a richer in-memory data structure, you have to translate it to a relational representation to store it on disk.
+Hence the impedance mismatch—two different representations that require translation (see Figure 1.1)
 An order, which looks like a single aggregate structure in the UI, is split into many rows from many tables in a relational database.
 The impedance mismatch is a major source of frustration to application developers, and in the 1990s many people believed that it would lead to relational databases being replaced with databases that replicate the in-memory data structures to disk.
 That decade was marked with the growth of object-oriented programming languages, and with them came object-oriented databases—both looking to be the dominant environment for software development in the new millennium.
 However, while object-oriented languages succeeded in becoming the major force in programming, object-oriented databases faded into obscurity.
 Relational databases saw off the challenge by stressing their role as an integration mechanism, supported by a mostly standard language of data manipulation (SQL) and a growing professional divide between application developers and database administrators.
+Impedance mismatch has been made much easier to deal with by the wide availability of object-relational mapping frameworks, such as Hibernate and iBATIS that implement well-known mapping patterns [Fowler PoEAA], but the mapping problem is still an issue.
 Relational databases continued to dominate the enterprise computing world in the 2000s, but during that decade cracks began to open in their dominance.
 The exact reasons why relational databases triumphed over OO databases are still the subject of an occasional pub debate for developers of a certain age.
 But in our view, the primary factor was the role of SQL as an integration mechanism between applications.
 In this scenario, the database acts as an integration database—with multiple applications, usually developed by separate teams, storing their data in a common database.
 This improves communication because all the applications are operating on a consistent set of persistent data.
+A structure that’s designed to integrate many applications ends up being more complex—indeed, often dramatically more complex—than any single application needs.
 Furthermore, should an application want to make changes to its data storage, it needs to coordinate with all the other applications using the database.
 Different applications have different structural and performance needs, so an index required by one application may cause a problematic hit on inserts for another.
 The fact that each application is usually a separate team also means that the database usually cannot trust applications to update the data in a way that preserves database integrity and thus needs to take responsibility for that within the database itself.
-A different approach is to treat your database as an application database— which is only directly accessed by a single application codebase that’s looked after by a single team.
+A different approach is to treat your database as an application databasewhich is only directly accessed by a single application codebase that’s looked after by a single team.
 With an application database, only the team using the application needs to know about the database structure, which makes it much easier to maintain and evolve the schema.
 Since the application team controls both the database and the application code, the responsibility for database integrity can be put in the application code.
 Interoperability concerns can now shift to the interfaces of the application, allowing for better interaction protocols and providing support for changing them.
+During the 2000s we saw a distinct shift to web services [Daigneau], where applications would communicate over HTTP.
+Much of this work was done under the banner of “ServiceOriented Architecture”—a term most notable for its lack of a consistent meaning.
 An interesting aspect of this shift to web services as an integration mechanism was that it resulted in more flexibility for the structure of the data that was being exchanged.
 If you communicate with SQL, the data must be structured as relations.
 However, with a service, you are able to use richer data structures with nested records and lists.
 These are usually represented as documents in XML or, more recently, JSON.
 In general, with remote communication you want to reduce the number of round trips involved in the interaction, so it’s useful to be able to put a rich structure of information into a single request or response.
-Only do this if you are sure you have the need, as text protocols are easier to work with— consider the example of the Internet.
+If you are going to use services for integration, most of the time web services —using text over HTTP—is the way to go.
+Only do this if you are sure you have the need, as text protocols are easier to work withconsider the example of the Internet.
 Once you have made the decision to use an application database, you get more freedom of choosing a database.
 Since there is a decoupling between your internal database and the services with which you talk to the outside world, the outside world doesn’t have to care how you store your data, allowing you to consider nonrelational options.
 Furthermore, there are many features of relational databases, such as security, that are less useful to an application database because they can be done by the enclosing application instead.
@@ -170,12 +183,12 @@ But bigger machines get more and more expensive, not to mention that there are r
 The alternative is to use lots of small machines in a cluster.
 A cluster of small machines can use commodity hardware and ends up being cheaper at these kinds of scales.
 It can also be more resilient—while individual machine failures are common, the overall cluster can be built to keep going despite such failures, providing high reliability.
-As large properties moved towards clusters, that revealed a new problem— relational databases are not designed to be run on clusters.
+As large properties moved towards clusters, that revealed a new problemrelational databases are not designed to be run on clusters.
 Clustered relational databases, such as the Oracle RAC or Microsoft SQL Server, work on the concept of a shared disk subsystem.
 They use a cluster-aware file system that writes to a highly available disk subsystem—but this means the cluster still has the disk subsystem as a single point of failure.
-Relational databases could also be run as separate servers for different sets of data, effectively sharding (“Sharding,” p.
 While this separates the load, all the sharding has to be controlled by the application which has to keep track of which database server to talk to for each bit of data.
 Also, we lose any querying, referential integrity, transactions, or consistency controls that cross shards.
+A phrase we often hear in this context from people who’ve done this is “unnatural acts.”
 Commercial relational databases are usually priced on a single-server assumption, so running on a cluster raised prices and led to frustrating negotiations with purchasing departments.
 This mismatch between relational databases and clusters led some organization to consider an alternative route to data storage.
 Both were on the forefront of running large clusters of this kind; furthermore, they were capturing huge amounts of data.
@@ -195,12 +208,15 @@ Johan was interested in finding out more about some of these new databases while
 Since he had little time there, he felt that it wouldn’t be feasible to visit them all, so he decided to host a meetup where they.
 Johan wanted a name for the meetup—something that would make a good.
 Twitter hashtag: short, memorable, and without too many Google hits so that a search on the name would quickly find the meetup.
+He asked for suggestions on the #cassandra IRC channel and got a few, selecting the suggestion of “NoSQL” from Eric Evans (a developer at Rackspace, no connection to the DDD Eric Evans)
 While it had the disadvantage of being negative and not really describing these systems, it did fit the hashtag criteria.
 At the time they were thinking of only naming a single meeting and were not expecting it to catch on to name this entire technology trend [Oskarsson]
 The term “NoSQL” caught on like wildfire, but it’s never been a term that’s had much in the way of a strong definition.
+The original call [NoSQL Meetup] for the meetup asked for “open-source, distributed, nonrelational databases.” The talks there [NoSQL Debrief] were from Voldemort, Cassandra, Dynomite, HBase, Hypertable, CouchDB, and MongoDB—but the term has never been confined to that original septet.
 There’s no generally accepted definition, nor an authority to provide one, so all we can do is discuss some common characteristics of the databases that tend to be called “NoSQL.”
 To begin with, there is the obvious point that NoSQL databases don’t use SQL.
 Some of them do have query languages, and it makes sense for them to be similar to SQL in order to make them easier to learn.
+Cassandra’s CQL is like this —“exactly like SQL (except where it’s not)” [CQL]
 But so far none have implemented anything that would fit even the rather flexible notion of standard SQL.
 It will be interesting to see what happens if an established NoSQL database decides to implement a reasonably standard SQL; the only predictable outcome for such an eventuality is plenty of argument.
 Another important characteristic of these databases is that they are generally open-source projects.
@@ -210,6 +226,7 @@ This has an effect on their data model as well as their approach to consistency.
 This inherently clashes with a cluster environment, so NoSQL databases offer a range of options for consistency and distribution.
 However, not all NoSQL databases are strongly oriented towards running on clusters.
 Graph databases are one style of NoSQL databases that uses a distribution model similar to relational databases but offers a different data model that makes it better at handling data with complex relationships.
+NoSQL databases are generally based on the needs of the early 21st century web estates, so usually only systems developed during that time frame are called NoSQL—thus ruling out hoards of databases created before the new millennium, let alone BC (Before Codd)
 NoSQL databases operate without a schema, allowing you to freely add fields to database records without having to define any changes in structure first.
 This is particularly useful when dealing with nonuniform data and custom fields which forced relational databases to use names like customField6 or custom field tables that are awkward to process and understand.
 All of the above are common characteristics of things that we see described as NoSQL databases.
@@ -219,7 +236,10 @@ Our chief enthusiasm with this subject is that the rise of NoSQL has opened up t
 Consequently, this opening up shouldn’t be confined to what’s usually classed as a NoSQL store.
 We hope that other data storage options will become more acceptable, including many that predate the NoSQL movement.
 There is a limit, however, to what we can usefully discuss in this book, so we’ve decided to concentrate on this noDefinition.
+When you first hear “NoSQL,” an immediate question is what does it stand for—a “no” to SQL? Most people who talk about NoSQL say that it really means “Not Only SQL,” but this interpretation has a couple of problems.
+Most people write “NoSQL” whereas “Not Only SQL” would be written “NOSQL.” Also, there wouldn’t be much point in calling something a NoSQL database under the “not only” meaning—because then, Oracle or Postgres would fit that definition, we would prove that black equals white and would all get run over on crosswalks.
 To resolve this, we suggest that you don’t worry about what the term stands for, but rather about what it means (which is recommended with most acronyms)
+Thus, when “NoSQL” is applied to a database, it refers to an ill-defined set of mostly open-source databases, mostly developed in the early 21st century, and mostly not using SQL.
 The “not-only” interpretation does have its value, as it describes the ecosystem that many people think is the future of databases.
 This is in fact what we consider to be the most important contribution of this way of thinking—it’s better to think of NoSQL as a movement rather than a technology.
 We don’t think that relational databases are going away—they are still going to be the most common form of database in use.
@@ -243,17 +263,19 @@ Application developers have been frustrated with the impedance mismatch between 
 There is a movement away from using databases as integration points towards encapsulating databases within applications and integrating through services.
 The vital factor for a change in data storage was the need to support large volumes of data by running on clusters.
 Relational databases are not designed to run efficiently on clusters.
-There is no prescriptive definition— all you can make is an observation of common characteristics.
+There is no prescriptive definitionall you can make is an observation of common characteristics.
 The most important result of the rise of NoSQL is Polyglot Persistence.
 A data model is the model through which we perceive and manipulate our data.
 For people using a database, the data model describes how we interact with the data in the database.
 This is distinct from a storage model, which describes how the database stores and manipulates the data internally.
-In an ideal world, we should be ignorant of the storage model, but in practice we need at least some inkling of it— primarily to achieve decent performance.
+In an ideal world, we should be ignorant of the storage model, but in practice we need at least some inkling of itprimarily to achieve decent performance.
+In conversation, the term “data model” often means the model of the specific data in an application.
+However, in this book we’ll mostly be using “data model” to refer to the model by which the database organizes data—what might be more formally called a metamodel.
 The dominant data model of the last couple of decades is the relational data model, which is best visualized as a set of tables, rather like a page of a spreadsheet.
 Each table has rows, with each row representing some entity of interest.
 We describe this entity through columns, each having a single value.
 A column may refer to another row in the same or different table, which constitutes a relationship between those entities.
-We’re using informal but common terminology when we speak of tables and rows; the more formal terms would be relations and tuples.)
+We’re using informal but common terminology when we speak of tables and rows; the more formal terms would be relations and tuples.
 One of the most obvious shifts with NoSQL is a move away from the relational model.
 Each NoSQL solution has a different model that it uses, which we put into four categories widely used in the NoSQL ecosystem: key-value, document, column-family, and graph.
 Of these, the first three share a common characteristic of their data models which we will call aggregate orientation.
@@ -276,6 +298,7 @@ At this point, an example may help explain what we’re talking about.
 Let’s assume we have to build an e-commerce website; we are going to be selling items directly to customers over the web, and we will have to store information about users, our product catalog, orders, shipping addresses, billing addresses, and payment data.
 We can use this scenario to model the data using a relation data store as well as NoSQL data stores and talk about their pros and cons.
 For a relational database, we might start with a data model shown in Figure 2.1
+Data model oriented around a relational database (using UML notation [Fowler UML])
 Typical data using RDBMS data model As we’re good relational soldiers, everything is properly normalized, so that.
 A realistic order system would naturally be more involved than this, but this is the benefit of the rarefied air of a book.
 Now let’s see how this model might look when we think in more aggregateoriented terms (Figure 2.3)
@@ -288,7 +311,7 @@ A single logical address record appears three times in the example data, but ins
 This fits the domain where we would not want the shipping address, nor the payment’s billing address, to change.
 In a relational database, we would ensure that the address rows aren’t updated for this case, making a new row instead.
 With aggregates, we can copy the whole address structure into the aggregate as we need to.
-The link between the customer and the order isn’t within either aggregate— it’s a relationship between aggregates.
+The link between the customer and the order isn’t within either aggregateit’s a relationship between aggregates.
 Similarly, the link from an order item would cross into a separate aggregate structure for products, which we haven’t gone into.
 We’ve shown the product name as part of the order item here—this kind of denormalization is similar to the tradeoffs with relational databases, but is more common with aggregates because we want to minimize the number of aggregates we access during a data interaction.
 The important thing to notice here isn’t the particular way we’ve drawn the aggregate boundary so much as the fact that you have to think about accessing that data—and make that part of your thinking when developing the application data model.
@@ -323,7 +346,6 @@ In general, it’s true that aggregate-oriented databases don’t have ACID tran
 This means that if we need to manipulate multiple aggregates in an atomic way, we have to manage that ourselves in the application code.
 In practice, we find that most of the time we are able to keep our atomicity needs to within a single aggregate; indeed, that’s part of the consideration for deciding how to divide up our data into aggregates.
 We should also remember that graph and other aggregate-ignorant databases usually do support ACID transactions similar to relational databases.
-Above all, the topic of consistency is much more involved than whether a database is ACID or not, as we’ll explore in Chapter 5
 We said earlier on that key-value and document databases were strongly aggregateoriented.
 What we meant by this was that we think of these databases as primarily constructed through aggregates.
 Both of these types of databases consist of lots of aggregates with each aggregate having a key or ID that’s used to get at the data.
@@ -341,6 +363,7 @@ For example, Riak allows you to add metadata to aggregates for indexing and inte
 You can support querying by integrating search tools such as Solr.
 As an example, Riak includes a search facility that uses Solrlike searching on any aggregates that are stored as JSON or XML structures.
 With document databases, we mostly expect to submit some form of query based on the internal structure of the document; this might be a key, but it’s more likely to be something else.
+One of the early and influential NoSQL databases was Google’s BigTable [Chang etc.]
 Its name conjured up a tabular structure which it realized with sparse columns and no schema.
 As you’ll soon see, it doesn’t help to think of this structure as a table; rather, it is a two-level map.
 But, however you think about the structure, it has been a model that influenced later databases such as HBase and Cassandra.
@@ -371,6 +394,7 @@ While new columns are added to rows during regular database access, defining new
 The example of Figure 2.5 illustrates another aspect of column-family databases that may be unfamiliar for people used to relational tables: the orders column family.
 Since columns can be added freely, you can model a list of items by making each item a separate column.
 This is very odd if you think of a column family as a table, but quite natural if you think of a column-family row as an aggregate.
+Cassandra uses the terms “wide” and “skinny.” Skinny rows have few columns with the same columns used across the many different rows.
 In this case, the column family defines a record type, each row is a record, and each column is a field.
 A wide row has many columns (perhaps thousands), with rows having very different columns.
 A wide column family models a list, with each column being one element in that list.
@@ -405,6 +429,7 @@ The simplest way to provide such a link is to embed the ID of the customer withi
 That way, if you need data from the customer record, you read the order, ferret out the customer ID, and make another call to the database to read the customer data.
 This will work, and will be just fine in many scenarios—but the database will be ignorant of the relationship in the data.
 This can be important because there are times when it’s useful for the database to know about these links.
+As a result, many databases—even key-value stores—provide ways to make these relationships visible to the database.
 Document stores make the content of the aggregate available to the database to form indexes and queries.
 Riak, a key-value store, allows you to put link information in metadata, supporting partial retrieval and link-walking capability.
 An important aspect of relationships between aggregates is how they handle updates.
@@ -416,19 +441,24 @@ All of this means that aggregate-oriented databases become more awkward as you n
 There are various ways to deal with this, which we’ll explore later in this chapter, but the fundamental awkwardness remains.
 This may imply that if you have data based on lots of relationships, you should prefer a relational database over a NoSQL store.
 While that’s true for aggregate-oriented databases, it’s worth remembering that relational databases aren’t all that stellar with complex relationships either.
+While you can express queries involving joins in SQL, things quickly get very hairy—both with SQL writing and with the resulting performance—as the number of joins mounts up.
 This makes it a good moment to introduce another category of databases that’s often lumped into the NoSQL pile.
 Graph databases are an odd fish in the NoSQL pond.
 Most NoSQL databases were inspired by the need to run on clusters, which led to aggregate-oriented data models of large records with simple connections.
+Graph databases are motivated by a different frustration with relational databases and thus have an opposite modelsmall records with complex interconnections, something like Figure 3.1
 An example graph structure In this context, a graph isn’t a bar chart or histogram; instead, we refer to a.
 In Figure 3.1 we have a web of information whose nodes are very small.
+With this structure, we can ask questions such as “ find the books in the Databases category that are written by someone whom a friend of mine likes.”
 Graph databases specialize in capturing this sort of information—but on a much larger scale than a readable diagram could capture.
 This is ideal for capturing any data consisting of complex relationships such as social networks, product preferences, or eligibility rules.
 The fundamental data model of a graph database is very simple: nodes connected by edges (also called arcs)
 Once you have built up a graph of nodes and edges, a graph database allows you to query that network with query operations designed with this kind of graph in mind.
 This is where the important differences between graph and relational databases come in.
-Although relational databases can implement relationships using foreign keys, the joins required to navigate around can get quite expensive— which means performance is often poor for highly connected data models.
+Although relational databases can implement relationships using foreign keys, the joins required to navigate around can get quite expensivewhich means performance is often poor for highly connected data models.
 A large part of this is because graph databases shift most of the work of navigating relationships from query time to insert time.
 This naturally pays off for situations where querying performance is more important than insert speed.
+Most of the time you find data by navigating through the network of edges, with queries such as “ tell me all the things that both Anna and Barbara like.” You do need a starting place, however, so usually some nodes can be indexed by an attribute such as ID.
+So you might start with an ID lookup (i.e., look up the people named “Anna” and “Barbara”) and then start using the edges.
 Still, graph databases expect most of your query work to be navigating relationships.
 The emphasis on relationships makes graph databases very different from aggregate-oriented databases.
 This data model difference has consequences in other aspects, too; you’ll find such databases are more likely to run on a single server rather than distributed across clusters.
@@ -447,12 +477,12 @@ You can easily add new things as you discover them.
 Furthermore, if you find you don’t need some things anymore, you can just stop storing them, without worrying about losing old data as you would if you delete columns in a relational schema.
 As well as handling changes, a schemaless store also makes it easier to deal with nonuniform data: data where each record has a different set of fields.
 A schema puts all rows of a table into a straightjacket, which becomes awkward if you have different kinds of data in different rows.
-You either end up with lots of columns that are usually null (a sparse table), or you end up with meaningless columns like custom column 4
 Schemalessness avoids this, allowing each record to contain just what it needs—no more, no less.
 Schemalessness is appealing, and it certainly avoids many problems that exist with fixed-schema databases, but it brings some problems of its own.
 If all you are doing is storing some data and displaying it in a report as a simple list of fieldName: value lines then a schema is only going to get in the way.
 But usually we do with our data more than this, and we do it with programs that need to know that the billing address is called billingAddress and not addressForBilling and that the quantify field is going to be an integer 5 and not five.
 The vital, if sometimes inconvenient, fact is that whenever we write a program that accesses data, that program almost always relies on some form of implicit.
+Programs are not humans; they cannot read “qty” and infer that that must be the same as “quantity”—at least not unless we specifically program them to do so.
 So, however schemaless our database is, there is usually an implicit schema present.
 This implicit schema is a set of assumptions about the data’s structure in the code that manipulates the data.
 Having the implicit schema in the application code results in some problems.
@@ -489,8 +519,8 @@ When you access a view, the database computes the data in the view—a handy for
 Views provide a mechanism to hide from the client whether data is derived data or base data—but can’t avoid the fact that some views are expensive to compute.
 To cope with this, materialized views were invented, which are views that are computed in advance and cached on disk.
 Materialized views are effective for data that is read heavily but can stand being somewhat stale.
+Although NoSQL databases don’t have views, they may have precomputed and cached queries, and they reuse the term “materialized view” to describe them.
 It’s also much more of a central aspect for aggregate-oriented databases than it is for relational systems, since most applications will have to deal with some queries that don’t fit well with the aggregate structure.
-Often, NoSQL databases create materialized views using a map-reduce computation, which we’ll talk about in Chapter 7.)
 There are two rough strategies to building a materialized view.
 The first is the eager approach where you update the materialized view at the same time you update the base data for it.
 In this case, adding an order would also update the purchase history aggregates for each product.
@@ -545,9 +575,11 @@ For the rest of this chapter we’ll be wading through the advantages and compli
 Don’t let the volume of words fool you into thinking that we would prefer these options.
 If we can get away without distributing our data, we will always choose a single-server approach.
 Often, a busy data store is busy because different people are accessing different parts of the dataset.
+In these circumstances we can support horizontal scalability by putting different parts of the data onto different servers—a technique that’s called sharding (see Figure 4.1)
 Sharding puts different data on separate nodes, each of which does its own reads and writes.
 In the ideal case, we have different users all talking to different server nodes.
 Each user only has to talk to one server, so gets rapid responses from that server.
+The load is balanced out nicely between servers—for example, if we have ten servers, each one only has to handle 10% of the load.
 Of course the ideal case is a pretty rare beast.
 In order to get close to it we have to ensure that data that’s accessed together is clumped together on the same node and that these clumps are arranged on the nodes to provide the best data access.
 The first part of this question is how to clump the data up so that one user mostly gets her data from a single server.
@@ -601,7 +633,6 @@ Replication comes with some alluring benefits, but it also comes with an inevita
 You have the danger that different clients, reading different slaves, will see different values because the changes haven’t all propagated to the slaves.
 In the worst case, that can mean that a client cannot read a write it just made.
 Even if you use master-slave replication just for hot backup this can be a concern, because if the master fails, any updates not passed on to the backup are lost.
-We’ll talk about how to deal with these issues later (“Consistency,” p.
 Master-slave replication helps with read scalability but doesn’t help with scalability of writes.
 It provides resilience against failure of a slave, but not of a master.
 Essentially, the master is still a bottleneck and a single point of failure.
@@ -625,12 +656,11 @@ Using peer-to-peer replication and sharding is a common strategy for columnfamil
 In a scenario like this you might have tens or hundreds of nodes in a cluster with data sharded over them.
 A good starting point for peer-to-peer replication is to have a replication factor of 3, so each shard is present on three nodes.
 Should a node fail, then the shards on that node will be built on the other nodes (see Figure 4.5)
-There are two styles of distributing data: • Sharding distributes different data across multiple servers, so each.
 Replication copies data across multiple servers, so each bit of data can.
-Replication comes in two forms: • Master-slave replication makes one node the authoritative copy that.
 Master-slave replication reduces the chance of update conflicts but peerto-peer replication avoids loading all writes onto a single point of failure.
 One of the biggest changes from a centralized relational database to a clusteroriented NoSQL database is in how you think about consistency.
 Relational databases try to exhibit strong consistency by avoiding all the various inconsistencies that we’ll shortly be discussing.
+Once you start looking at the NoSQL world, phrases such as “CAP theorem” and “eventual consistency” appear, and as soon as you start building something you have to think about what sort of consistency you need for your system.
 Consistency comes in various forms, and that one word covers a myriad of ways errors can creep into your life.
 So we’re going to begin by talking about the various shapes consistency can take.
 After that we’ll discuss why you may want to relax consistency (and its big sister, durability)
@@ -652,7 +682,7 @@ A common optimistic approach is a conditional update where any client that does 
 In this case, Martin’s update would succeed but Pramod’s would fail.
 The error would let Pramod know that he should look at the value again and decide whether to attempt a further update.
 Both the pessimistic and optimistic approaches that we’ve just described rely on a consistent serialization of the updates.
-With a single server, this is obvious— it has to choose one, then the other.
+With a single server, this is obviousit has to choose one, then the other.
 But if there’s more than one server, such as with peer-to-peer replication, then two nodes might apply the updates in a different order, resulting in a different value for the telephone number on each peer.
 There is another optimistic way to handle a write-write conflict—save both updates and record that they are in conflict.
 This approach is familiar to many programmers from version control systems, particularly distributed version control systems that by their nature will often have conflicting commits.
@@ -696,6 +726,7 @@ Martin and Cindy are a couple considering this room, but they are discussing thi
 Meanwhile Pramod, who is in Mumbai, goes and books that last room.
 That updates the replicated room availability, but the update gets to Boston quicker than it gets to London.
 When Martin and Cindy fire up their browsers to see if the room is available, Cindy sees it booked and Martin sees it free.
+This is another inconsistent read—but it’s a breach of a different form of consistency we call replication consistency: ensuring that the same data item has the same value when read from different replicas (see Figure 5.2)
 An example of replication inconsistency Eventually, of course, the updates will propagate fully, and Martin will see the.
 Therefore this situation is generally referred to as eventually consistent, meaning that at any time nodes may have replication inconsistencies but, if there are no further updates, eventually all nodes will be updated to the same value.
 Although replication consistency is independent from logical consistency, replication can exacerbate a logical inconsistency by lengthening its inconsistency window.
@@ -723,6 +754,7 @@ One way of handling this is for writes to be sent the slave, who then takes resp
 Another approach is to switch the session to the master temporarily when doing a write, just long enough that reads are done from the master until the slaves have caught up with the update.
 We’re talking about replication consistency in the context of a data store, but it’s also an important factor in overall application design.
 Even a simple database system will have lots of occasions where data is presented to a user, the user cogitates, and then updates that data.
+It’s usually a bad idea to keep a transaction open during user interaction because there’s a real danger of conflicts when the user tries to make her update, which leads to such approaches as offline locks [Fowler PoEAA]
 Consistency is a Good Thing—but, sadly, sometimes we have to sacrifice it.
 It is always possible to design a system to avoid inconsistencies, but often impossible to do so without making unbearable sacrifices in other characteristics of the system.
 As a result, we often have to tradeoff consistency for something else.
@@ -735,9 +767,11 @@ We most commonly see people using the read-committed transaction level, which el
 Many systems forgo transactions entirely because the performance impact of transactions is too high.
 On a small scale, we saw the popularity of MySQL during the days when it didn’t support.
 Many websites liked the high speed of MySQL and were prepared to live without transactions.
+At the other end of the scale, some very large websites, such as eBay [Pritchett], have had to forgo transactions in order to perform acceptably—this is particularly true when you need to introduce sharding.
 Even without these constraints, many application builders need to interact with remote systems that can’t be properly included within a transaction boundary, so updating outside of transactions is a quite common occurrence for enterprise applications.
 In the NoSQL world it’s common to refer to the CAP theorem as the reason why you may need to relax consistency.
-You may also hear this referred to as Brewer’s Conjecture.)
+It was originally proposed by Eric Brewer in 2000 [Brewer] and given a formal proof by Seth Gilbert and Nancy Lynch [Lynch and Gilbert] a couple of years later.
+You may also hear this referred to as Brewer’s Conjecture.
 The basic statement of the CAP theorem is that, given the three properties of Consistency, Availability, and Partition tolerance, you can only get two.
 Obviously this depends very much on how you define these three properties, and differing opinions have led to several debates on what the real consequences of the CAP theorem are.
 Consistency is pretty much as we’ve defined it so far.
@@ -749,10 +783,12 @@ A single-server system is the obvious example of a CA system—a system that has
 A single machine can’t partition, so it does not have to worry about partition tolerance.
 This is the world that most relational database systems live in.
 However, this would mean that if a partition ever occurs in the cluster, all the nodes in the cluster would go down so that no client can talk to a node.
+By the usual definition of “available,” this would mean a lack of availability, but this is where CAP’s special usage of “availability” gets confusing.
 So a failed, unresponsive node doesn’t infer a lack of CAP availability.
 This does imply that you can build a CA cluster, but you have to ensure it will only partition rarely and completely.
 This can be done, at least within a data center, but it’s usually prohibitively expensive.
 And here is the real point of the CAP theorem.
+Although the CAP theorem is often stated as “you can only get two out of three,” in practice what it’s saying is that in a system that may suffer partitions, as distributed system do, you have to trade off consistency versus availability.
 This isn’t a binary decision; often, you can trade off a little consistency to get some availability.
 The resulting system would be neither perfectly consistent nor perfectly available—but would have a combination that is reasonable for your particular needs.
 Martin and Pramod are both trying to book the last hotel room on a system that uses peer-to-peer distribution with two nodes (London for Martin and Mumbai for Pramod)
@@ -771,6 +807,7 @@ However, depending on how this hotel operates, that may be fine.
 Often, travel companies tolerate a certain amount of overbooking in order to cope with no-shows.
 Conversely, some hotels always keep a few rooms clear even when they are fully booked, in order to be able to swap a guest out of a room with.
 Some might even cancel the booking with an apology once they detected the conflict—reasoning that the cost of that is less than the cost of losing bookings on network failures.
+The classic example of allowing inconsistent writes is the shopping cart, as discussed in Dynamo [Amazon’s Dynamo]
 In this case you are always allowed to write to your shopping cart, even if network failures mean you end up with multiple shopping carts.
 The checkout process can merge the two shopping carts by putting the union of the items from the carts into a single cart and returning that.
 Almost always that’s the correct answer—but if not, the user gets the opportunity to look at the cart before completing the order.
@@ -786,6 +823,7 @@ In these cases you need to know how tolerant you are of stale reads, and how lon
 Different data items may have different tolerances for staleness, and thus may need different settings in your replication configuration.
 Advocates of NoSQL often say that instead of following the ACID properties of relational transactions, NoSQL systems follow the BASE properties (Basically Available, Soft state, Eventual consistency) [Brewer]
 Although we feel we ought to mention the BASE acronym here, we don’t think it’s very useful.
+The acronym is even more contrived than ACID, and neither “basically available” nor “soft state” have been well defined.
 We should also stress that when Brewer introduced the notion of BASE, he saw the tradeoff between ACID and BASE as a spectrum, not a.
 We’ve included this discussion of the CAP theorem because it’s often used.
 However, it’s usually better to think not about the tradeoff between consistency and availability but rather between consistency and latency.
@@ -793,6 +831,7 @@ We can summarize much of the discussion about consistency in distribution by say
 We can then think of availability as the limit of latency that we’re prepared to tolerate; once latency gets too high, we give up and treat the data as unavailable—which neatly fits its definition in the context of CAP.
 So far we’ve talked about consistency, which is most of what people mean when they talk about the ACID properties of database transactions.
 The key to Consistency is serializing requests by forming Atomic, Isolated work units.
+But most people would scoff at relaxing durability—after all, what is the point of a data store if it can lose updates?
 As it turns out, there are cases where you may want to trade off some durability for higher performance.
 If a database can run mostly in memory, apply updates to its in-memory representation, and periodically flush changes to disk, then it may be able to provide substantially higher responsiveness to requests.
 The cost is that, should the server crash, any updates since the last flush will be lost.
@@ -820,8 +859,10 @@ If you have conflicting writes, only one can get a majority.
 The number of replicas is often called the replication factor.
 Similarly to the write quorum, there is the notion of read quorum: How many nodes you need to contact to be sure you have the most up-to-date change.
 The read quorum is a bit more complicated because it depends on how many nodes.
+If, however, writes are only confirmed by a single node (W = 1) we need to talk to all three nodes to be sure we have the latest updates.
 In this case, since we don’t have a write quorum, we may have an update conflict, but by contacting enough readers we can be sure to detect it.
 Thus we can get strongly consistent reads even if we don’t have strong consistency on our writes.
+This relationship between the number of nodes you need to contact for a read (R), those confirming a write (W), and the replication factor (N) can be captured in an inequality: You can have a strongly consistent read if R + W > N.
 These inequalities are written with a peer-to-peer distribution model in mind.
 If you have a master-slave distribution, you only have to write to the master to avoid write-write conflicts, and similarly only read from the master to avoid readwrite conflicts.
 With this notation, it is common to confuse the number of nodes in the cluster with the replication factor, but these are often different.
@@ -834,7 +875,10 @@ Similarly, a read that needs speed but can tolerate staleness should contact les
 That would mean that your writes are slow, since they have to contact all three nodes, and you would not be able to tolerate losing a node.
 But in some circumstances that may be the tradeoff to make.
 The point to all of this is that you have a range of options to work with and.
+Some writers on NoSQL talk about a simple tradeoff between consistency and availability; we hope you now realize that it’s more flexible—and more complicated—than that.
+There are all sorts of interesting blog posts and papers on the Internet about consistency in distributed systems, but the most helpful source for us was [Tanenbaum and Van Steen]
 It does an excellent job of organizing much of the fundamentals of distributed systems and is the best place to go if you’d like to delve deeper than we have in this chapter.
+As we were finishing this book, IEEE Computer had a special issue [IEEE Computer Feb 2012] on the growing influence of the CAP theorem, which is a helpful source of further clarification for this topic.
 Write-write conflicts occur when two clients try to write the same data at the same time.
 Read-write conflicts occur when one client reads inconsistent data in the middle of another client’s write.
 Distributed systems see read-write conflicts due to some nodes having received updates while other nodes have not.
@@ -860,6 +904,8 @@ Yet all of this usually won’t occur within the system transaction provided by 
 Usually applications only begin a system transaction at the end of the interaction with the user, so that the locks are only held for a short period of time.
 The problem, however, is that calculations and decisions may have been made based on data that’s changed.
 The price list may have updated the price of the Talisker, or someone may have updated the customer’s address, changing the shipping charges.
+The broad techniques for handling this are offline concurrency [Fowler PoEAA], useful in NoSQL situations too.
+A particularly useful approach is the Optimistic Offline Lock [Fowler PoEAA], a form of conditional update where a client operation rereads any information that the business transaction relies on and checks that it hasn’t changed since it was originally read and displayed to the user.
 A good way of doing this is to ensure that records in the database contain some form of version stamp: a field that changes every time the underlying data in the record changes.
 When you read the data you keep a note of the version stamp, so that when you write data you can check to see if the version has changed.
 You may have come across this technique with updating resources with HTTP [HTTP]
@@ -870,7 +916,7 @@ If the resource has changed on the server, the etags won’t match and the serve
 Some databases provide a similar mechanism of conditional update that allows you to ensure updates won’t be based on stale data.
 You can do this check yourself, although you then have to ensure no other thread can run against the resource between your read and your update.
 Sometimes this is called a compare-and-set (CAS) operation, whose name comes from the CAS operations done in processors.
-The difference is that a processor CAS compares a value before setting it, while a database conditional update compares a version stamp of the value.)
+The difference is that a processor CAS compares a value before setting it, while a database conditional update compares a version stamp of the value.
 There are various ways you can construct your version stamps.
 You can use a counter, always incrementing it when you update the resource.
 Counters are useful since they make it easy to tell if one version is more recent than another.
@@ -889,7 +935,6 @@ You can blend the advantages of these different version stamp schemes by using m
 For example, CouchDB uses a combination of counter and content hash.
 Most of the time this allows version stamps to be compared for recentness, even when you use peer-to-peer replication.
 Should two peers update at the same time, the combination of the same count and different content hashes makes it easy to spot the conflict.
-As well as helping to avoid update conflicts, version stamps are also useful for providing session consistency (p.
 The basic version stamp works well when you have a single authoritative source for data, such as a single server or master-slave replication.
 In that case the version stamp is controlled by the master.
 But this system has to be enhanced in a peer-to-peer distribution model because there’s no longer a single place to set the version stamps.
@@ -910,8 +955,8 @@ In addition, you can’t detect writewrite conflicts with timestamps, so it woul
 The most common approach used by peer-to-peer NoSQL systems is a special form of version stamp which we call a vector stamp.
 In essence, a vector stamp is a set of counters, one for each node.
 There are several variations of exactly how this synchronization is done.
+We’re coining the term “vector stamp” as a general term in this book; you’ll also come across vector clocks and version vectors—these are specific forms of vector stamps that differ in how they synchronize.
 By using this scheme you can tell if one version stamp is newer than another because the newer stamp will have all its counters greater than or equal to those in the older stamp.
-There may be missing values in the vector, in which case we use treat the missing value as 0
 This allows you to easily add new nodes without invalidating the existing vector stamps.
 Vector stamps are a valuable tool that spots inconsistencies, but doesn’t resolve them.
 Any conflict resolution will depend on the domain you are working in.
@@ -929,6 +974,8 @@ This comes at the cost of having to shlep lots of data from the database server.
 If you need to hit a lot of data, then it makes sense to do the processing on the server, paying the price in programming convenience and increasing the load on the database server.
 When you have a cluster, there is good news immediately—you have lots of machines to spread the computation over.
 However, you also still need to try to reduce the amount of data that needs to be transferred across the network by doing as much processing as you can on the same node as the data it needs.
+The map-reduce pattern (a form of Scatter-Gather [Hohpe and Woolf]) is a way to organize processing in such a way as to take advantage of multiple machines on a cluster while keeping as much processing and the data it needs together on the same machine.
+It first gained prominence with Google’s MapReduce framework [Dean and Ghemawat]
 A widely used open-source implementation is part of the Hadoop project, although several databases include their own implementations.
 As with most patterns, there are differences in detail between these implementations, so we’ll concentrate on the general concept.
 The name “map-reduce” reveals its inspiration from the map and reduce operations on collections in functional programming languages.
@@ -938,7 +985,7 @@ Each line item has a product ID, quantity, and the price charged.
 This aggregate makes a lot of sense as usually people want to see the whole order in one access.
 We have lots of orders, so we’ve sharded the dataset over many machines.
 However, sales analysis people want to see a product and its total revenue for the last seven days.
-This report doesn’t fit the aggregate structure that we have— which is the downside of using aggregates.
+This report doesn’t fit the aggregate structure that we havewhich is the downside of using aggregates.
 In order to get the product revenue report, you’ll have to visit every machine in the cluster and examine many records on each machine.
 This is exactly the kind of situation that calls for map-reduce.
 The first stage in a map-reduce job is the map.
@@ -950,6 +997,7 @@ Each application of the map function is independent of all the others.
 This yields a great deal of parallelism and locality of data access.
 For this example, we are just selecting a value out of the record, but there’s no reason why we can’t carry out some arbitrarily complex function as part of the map—providing it only depends on one aggregate’s worth of data.
 A map operation only operates on a single record; the reduce function takes multiple map outputs with the same key and combines their values.
+So, a map function might yield 1000 line items from orders for “Database Refactoring”; the reduce function would reduce down to one, with the totals for the quantity and revenue.
 While the map function is limited to working only on data from a single aggregate, the reduce function can use all values emitted for a single key (see Figure 7.2)
 A reduce function takes several key-value pairs with the same key and aggregates them into one.
 The map-reduce framework arranges for map tasks to be run on the correct nodes to process all the documents and for data to be moved to the reduce function.
@@ -961,6 +1009,7 @@ While this will work, there are things we can do to increase the parallelism and
 Partitioning allows reduce functions to run in parallel on different keys.
 The first thing we can do is increase parallelism by partitioning the output of the mappers.
 Each reduce function operates on the results of a single key.
+This is a limitation—it means you can’t do anything in the reduce that operates across keys —but it’s also a benefit in that it allows you to run multiple reducers in parallel.
 To take advantage of this, the results of the mapper are divided up based the key on each processing node.
 The framework then takes the data from all the nodes for one partition, combines it into a single group for that partition, and sends it off to a reducer.
 Multiple reducers can then operate on the partitions in parallel, with the final results merged together.
@@ -1013,6 +1062,7 @@ As with any reuse activity, however, it’s important to build them out of exper
 So it’s important to look at the forms of various queries as they are built and factor out the common parts of the calculations into materialized views.
 Map-reduce is a pattern that can be implemented in any programming language.
 However, the constraints of the style make it a good fit for languages specifically designed for map-reduce computations.
+Apache Pig [Pig], an offshoot of the Hadoop [Hadoop] project, is a language specifically built to make it easy to.
 It certainly makes it much easier to work with Hadoop than the underlying Java libraries.
 In a similar vein, if you want to specify mapreduce programs using an SQL-like syntax, there is hive [Hive], another Hadoop offshoot.
 The map-reduce pattern is important to know about even outside of the context of NoSQL databases.
@@ -1056,6 +1106,7 @@ Key-value stores are the simplest NoSQL data stores to use from an API perspecti
 The client can either get the value for the key, put a value for a key, or delete a key from the data store.
 The value is a blob that the data store just stores, without caring or knowing what’s inside; it’s the responsibility of the application to understand what was stored.
 Since key-value stores always use primary-key access, they generally have great performance and can be easily scaled.
+Some of the popular key-value databases are Riak [Riak], Redis (often referred to as Data Structure server) [Redis], Memcached DB and its flavors [Memcached], Berkeley DB [Berkeley DB], HamsterDB (especially suited for embedded use) [HamsterDB], Amazon DynamoDB [Amazon’s Dynamo] (not open-source), and Project Voldemort [Project Voldemort] (an open-source implementation of Amazon DynamoDB)
 In some key-value stores, such as Redis, the aggregate being stored does not.
 Redis supports storing lists, sets, hashes and can do range, diff, union, and intersection operations.
 These features allow Redis to be used in more different ways than a standard keyvalue store.
@@ -1073,7 +1124,6 @@ The primary reason is to understand what features are missing and how does the a
 Some of the features we will discuss for all the NoSQL data stores are consistency, transactions, query features, structure of the data, and scaling.
 Consistency is applicable only for operations on a single key, since these operations are either a get, put, or delete on a single key.
 Optimistic writes can be performed, but are very expensive to implement, because a change in value cannot be determined by the data store.
-In distributed key-value store implementations like Riak, the eventually consistent (p.
 Since the value may have already been replicated to other nodes, Riak has two ways of resolving update conflicts: either the newest write wins and older writes loose, or both (all) values are returned allowing the client to resolve the conflict.
 In Riak, these options can be set up during the bucket creation.
 Buckets are just a way to namespace keys so that key collisions can be reduced—for example, all customer keys may reside in the customer bucket.
@@ -1087,6 +1137,7 @@ If you have requirements to query by using some attribute of the value column, i
 What if we don’t know the key, especially during ad-hoc querying during debugging? Most of the data stores will not give you a list of all the primary keys; even if they did, retrieving lists of keys and then querying for the value would be very cumbersome.
 Some key-value databases get around this by providing the ability to search inside the value, such as Riak Search that allows you to query the data just like you would query it using Lucene indexes.
 While using key-value stores, lots of thought has to be given to the design of.
+Or derived from timestamps or other data that can be derived outside of the database?
 These query characteristics make key-value stores likely candidates for storing session data (with the session ID as the key), shopping cart data, user profiles, and so on.
 The expiry_secs property can be used to expire keys after a certain time interval, especially for session/shopping cart objects.
 When writing to the Riak bucket using the store API, the object is stored for the key provided.
@@ -1116,6 +1167,7 @@ There are problem spaces where key-value stores are not the best solution.
 If you need to have relationships between different sets of data, or correlate the data between different sets of keys, key-value stores are not the best solution to use, even though some key-value stores provide link-walking features.
 If you’re saving multiple keys and there is a failure to save any one of them, and you want to revert or roll back the rest of the operations, key-value stores are not the best solution to be used.
 If you need to search the keys based on something found in the value part of the key-value pairs, then key-value stores are not going to perform well for you.
+There is no way to inspect the value on the database side, with the exception of some products like Riak Search or indexing engines like Lucene [Lucene] or Solr [Solr]
 Since operations are limited to one key at a time, there is no way to operate upon multiple keys at the same time.
 If you need to operate upon multiple keys, you have to handle this from the client side.
 The database stores and retrieves documents, which can be XML, JSON, BSON, and so on.
@@ -1133,6 +1185,7 @@ If you look at the documents, you will see that some of the attributes are simil
 At the same time, there are attributes in the second document which do not exist in the first document, such as addresses, while likes is in the first document but not the second.
 This different representation of data is not the same as in RDBMS where every column has to be defined, and if it does not have data it is marked as empty or set to null.
 In documents, there are no empty attributes; if a given attribute is not found, we assume that it was not set or not relevant to the document.
+Some of the popular document databases we have seen are MongoDB [MongoDB], CouchDB [CouchDB], Terrastore [Terrastore], OrientDB [OrientDB], RavenDB [RavenDB], and of course the well-known and often reviled Lotus Notes [Notes Storage Facility] that uses document storage.
 While there are many specialized document databases, we will use MongoDB as a representative of the feature set.
 Keep in mind that each product has some features that may not be found in other document databases.
 Each MongoDB instance has multiple databases, and each database can have multiple collections.
@@ -1189,7 +1242,6 @@ Scaling for heavy-read loads can be achieved by adding more read slaves, so that
 Adding a new node, mongo D, to an existing replica-set cluster Once the new node, mongo D, is started, it needs to be added to the replica.
 When a new node is added, it will sync up with the existing nodes, join the replica set as secondary node, and start serving read requests.
 An advantage of this setup is that we do not have to restart any other nodes, and there is no downtime for the application either.
-When we want to scale for write, we can start sharding (“Sharding,” p.
 Sharding is similar to partitions in RDBMS where we split data by value in a.
 With RDBMS, partitions are usually on the same node, so the client application does not have to query a specific partition but can keep querying the base table; the RDBMS takes care of finding the right partition for the query and returns the data.
 In sharding, the data is also split by certain field, but then moved to different Mongo nodes.
@@ -1211,6 +1263,7 @@ If you need to have atomic cross-document operations, then document databases ma
 However, there are some document databases that do support these kinds of operations, such as RavenDB.
 Flexible schema means that the database does not enforce any restrictions on the schema.
 If you need to query these entities ad hoc, your queries will be changing (in RDBMS terms, this would mean that as you join criteria between tables, the tables to join keep changing)
+Column-family stores, such as Cassandra [Cassandra], HBase [Hbase], Hypertable [Hypertable], and Amazon SimpleDB [Amazon SimpleDB], allow you to store data with keys mapped to values and the values grouped into multiple column families, each column family being a map of data.
 In this chapter, we will talk about Cassandra but also reference other column-family databases to discuss features that may be of interest in particular scenarios.
 Column-family databases store data in column families as rows that have many columns associated with a row key (Figure 10.1)
 Column families are groups of related data that is often accessed together.
@@ -1268,6 +1321,7 @@ Cassandra is by design highly available, since there is no master in the cluster
 The availability of a cluster can be increased by reducing the consistency level of the requests.
 You can tune the availability by changing the R and W values for a fixed value of N.
 In this scenario, when one node goes down, availability is not affected much, as the data can be retrieved from the other two nodes.
+With the R + W > N equation, you are making conscious decisions about consistency tradeoffs.
 You should set up your keyspaces and read/write operations based on your needs—higher availability for write or higher availability for read.
 When designing the data model in Cassandra, it is advised to make the columns and column families optimized for reading the data, as it does not have a rich query language; as data is inserted in the column families, data in each row is sorted by column names.
 If we have a column that is retrieved much more often than other columns, it’s better performance-wise to use that value for the row key instead.
@@ -1317,7 +1371,9 @@ The node of Martin is actually a node that has property of name set to Martin.
 An example graph structure We also see that edges have types, such as likes, author, and so on.
 We can assign a property of since on the friend relationship type between Martin and Pramod.
 Relationship types have directional significance; the friend relationship type is bidirectional but likes is not.
+Once we have a graph of these nodes and edges created, we can query the graph in many ways, such as “get all nodes employed by Big Co that like NoSQL Distilled.” A query on the graph is also known as traversing the graph.
 An advantage of the graph databases is that we can change the traversing requirements without having to change the nodes or edges.
+Usually, when we store a graph-like structure in RDBMS, it’s for a single type of relationship (“who is my manager” is a common example)
 Adding another relationship to the mix usually means a lot of schema changes and data movement, which is not the case when we are using graph databases.
 Similarly, in relational databases we model the graph beforehand based on the Traversal we want; if the Traversal changes, the data will have to change.
 In graph databases, traversing the joins or relationships is very fast.
@@ -1334,7 +1390,7 @@ This directionality helps in designing a rich domain model (Figure 11.2)
 Nodes know about INCOMING and OUTGOING relationships that are traversable both ways.
 Relationships with properties Relationships are first-class citizens in graph databases; most of the value of.
 Relationships don’t only have a type, a start node, and an end node, but can have properties of their own.
-Using these properties on the relationships, we can add intelligence to the relationship— for example, since when did they become friends, what is the distance between the nodes, or what aspects are shared between the nodes.
+Using these properties on the relationships, we can add intelligence to the relationshipfor example, since when did they become friends, what is the distance between the nodes, or what aspects are shared between the nodes.
 These properties on the relationships can be used to query the graph.
 Since most of the power from the graph databases comes from the relationships and their properties, a lot of thought and design work is needed to model the relationships in the domain that we are trying to work with.
 Since graph databases are operating on connected nodes, most graph database solutions usually do not support distributing the nodes on different servers.
@@ -1351,10 +1407,12 @@ Setting success without issuing finish also does not commit the data to the data
 This way of managing transactions has to be remembered when developing, as it differs from the standard way of doing transactions in an RDBMS.
 These slaves can also handle writes: When they are written to, they synchronize the write to the current master, and the write is committed first at the master and then at the slave.
 Other graph databases, such as Infinite Graph and FlockDB, provide for distributed storage of the nodes.
+Neo4J uses the Apache ZooKeeper [ZooKeeper] to keep track of the last transaction IDs persisted on each slave node and the current master node.
 Once a server starts up, it communicates with ZooKeeper and finds out which server is the master.
 If the server is the first one to join the cluster, it becomes the master; when a master goes down, the cluster elects a master from the available nodes, thus providing high availability.
 Graph databases are supported by query languages such as Gremlin [Gremlin]
 Gremlin is a domain-specific language for traversing graphs; it can traverse all graph databases that implement the Blueprints [Blueprints] property graph.
+Neo4J also has the Cypher [Cypher] query language for querying the graph.
 Outside these query languages, Neo4J allows you to query the graph for properties of the nodes, traverse the graph, or navigate the nodes relationships using language bindings.
 Properties of a node can be indexed using the indexing service.
 Similarly, properties of relationships or edges can be indexed, so a node or edge can be found by the value.
@@ -1375,6 +1433,7 @@ Graph databases are really powerful when you want to traverse the graphs at any 
 This is especially useful when you are trying to find nodes that are related to the starting node at more than one level down.
 The traversal has to start at some node—in this example, we try to find all the nodes at any depth that are related as a FRIEND with Barbara:
 The friendsTraverser provides us a way to find all the nodes that are related to Barbara where the relationship type is FRIEND.
+The nodes can be at any depth—friend of a friend at any level—allowing you to explore tree structures.
 One of the good features of graph databases is finding paths between two nodes —determining if there are multiple paths, finding all of the paths or the shortest path.
 In the graph in Figure 11.1, we know that Barbara is connected to Jill by two distinct paths; to find all these paths and the distance between Barbara and Jill along those different paths, we can use.
 This feature is used in social networks to show relationships between any two nodes.
@@ -1385,7 +1444,7 @@ Many other graph algorithms can be applied to the graph at hand, such as Dijkstr
 Neo4J also provides the Cypher query language to query the graph.
 The start node can be identified by its node ID, a list of node IDs, or index lookups.
 Cypher uses the MATCH keyword for matching patterns in relationships; the WHERE keyword filters the properties on a node or relationship.
-The RETURN keyword specifies what gets returned by the query— nodes, relationships, or fields on the nodes or relationships.
+The RETURN keyword specifies what gets returned by the querynodes, relationships, or fields on the nodes or relationships.
 In Figure 11.2, we find all nodes connected to Barbara, either incoming or outgoing, by using the --
 Match can also be done on specific relationships using the :RELATIONSHIP_TYPE convention and returning the required fields or nodes.
 We start with Barbara, find all outgoing relationships with the type of FRIEND, and return the friends’ names.
@@ -1396,13 +1455,13 @@ There are many other query features in the Cypher language that can be used to q
 In NoSQL databases, one of the commonly used scaling techniques is sharding, where data is split and distributed across different servers.
 Since any given node can be related to any other node, storing related nodes on the same server is better for graph traversal.
 Traversing a graph when the nodes are on different machines is not good for performance.
+Knowing this limitation of the graph databases, we can still scale them using some common techniques described by Jim Webber [Webber Neo4J Scaling]
 Generally speaking, there are three ways to scale graph databases.
 Since machines now can come with lots of RAM, we can add enough RAM to the server so that the working set of nodes and relationships is held entirely in memory.
 This technique is only helpful if the dataset that we are working with will fit in a realistic amount of RAM.
 We can improve the read scaling of the database by adding more slaves with read-only access to the data, with all the writes going to the master.
 This pattern of writing once and reading from many servers is a proven technique in MySQL clusters and is really useful when the dataset is large enough to not fit in a single machine’s RAM, but small enough to be replicated across multiple machines.
 Slaves can also contribute to availability and read-scaling, as they can be configured to never become a master, remaining always read-only.
-When the dataset size makes replication impractical, we can shard (see the “Sharding” section on p.
 For example, nodes that relate to the North America can be created on one server while the nodes that relate to Asia on another.
 This application-level sharding needs to understand that nodes are stored on physically different databases (Figure 11.3)
 Let’s look at some suitable use cases for graph databases.
@@ -1413,11 +1472,14 @@ Every location or address that has a delivery is a node, and all the nodes where
 Relationships between nodes can have the property of distance, thus allowing you to deliver the goods in an efficient manner.
 Distance and location properties can also be used in graphs of places of interest, so that your application can provide recommendations of good restaurants or entertainment options nearby.
 You can also create nodes for your points of sales, such as bookstores or restaurants, and notify the users when they are close to any of the nodes to provide location-based services.
+As nodes and relationships are created in the system, they can be used to make recommendations like “your friends also bought this product” or “when invoicing this item, these other items are usually invoiced.” Or, it can be used to make recommendations to travelers mentioning that when other visitors come to Barcelona they usually visit Antonio Gaudi’s creations.
 An interesting side effect of using the graph databases for recommendations is that as the data size grows, the number of nodes and relationships available to make the recommendations quickly increases.
 The same data can also be used to mine information—for example, which products are always bought together, or which items are always invoiced together; alerts can be raised when these conditions are not met.
 Like other recommendation engines, graph databases can be used to search for patterns in relationships to detect fraud in transactions.
+When you want to update all or a subset of entities—for example, in an analytics solution where all entities may need to be updated with a changed property—graph databases may not be optimal since changing a property on all the nodes is not a straightforward operation.
 Even if the data model works for the problem domain, some databases may be unable to handle lots of data, especially in global graph operations (those involving the whole graph)
 The recent trend in discussing NoSQL databases is to highlight their schemaless nature—it is a popular feature that allows developers to concentrate on the domain design without worrying about schema changes.
+It’s especially true with the rise of agile methods [Agile Methods] where responding to changing requirements is important.
 Discussions, iterations, and feedback loops involving domain experts and product owners are important to derive the right understanding of the data; these discussions must not be hampered by a database’s schema complexity.
 We have seen that developing and maintaining an application in the brave new world of schemaless databases requires careful attention to be given to schema migration.
 While developing with standard RDBMS technologies, we develop objects, their corresponding tables, and their relationships.
@@ -1442,10 +1504,10 @@ There are many other tools for such upgrades, including Liquibase [Liquibase], M
 How to implement migrations when an existing application is in production? We found that taking an existing database and extracting its structure into scripts, along with all the database code and any reference data, works as a baseline for the project.
 Once the baseline is ready, further changes can be done using the migrations technique described above (Figure 12.5)
 Use of baseline scripts with a legacy database One of the main aspects of migrations should be maintaining backward.
+We can achieve backward compatibility by maintaining a transition phase for the change, as described in detail in Refactoring Databases [Ambler and Sadalage]
 During a transition phase, the old schema and the new schema are maintained in parallel and are available for all the applications using the database.
 For this, we have to introduce scaffolding code, such as triggers, views, and virtual columns ensuring other applications can access the database schema and the data they require without any code changes.
 A direct rename of the fname column and changing the application code we are responsible for may just work, for our application—but will not for the other applications in the enterprise that are accessing the same database.
-Using the transition phase technique, we introduce the new column fullname,
 We also introduce a BEFORE UPDATE trigger to synchronize data between the columns before they are committed to the database.
 Now, when applications read data from the table, they will read either from fname or from fullname but will always get the right data.
 We can drop the trigger and the fname column once all the applications have moved on to using the new fullname column.
@@ -1497,6 +1559,7 @@ You then have to ensure that the code can work with both versions of the aggrega
 If it does not find the old objects, it will look for the new aggregates.
 Code that runs in the background can read one aggregate at a time, make the necessary change, and save the data back into different aggregates.
 The advantage of operating on one aggregate at a time is that this way, you’re not affecting data availability for the application.
+For more on migrations with relational databases, see [Ambler and Sadalage]
 Although much of this content is specific to relational work, the general principles in migration will also apply to other databases.
 Databases with strong schemas, such as relational databases, can be migrated by saving each schema change, plus its data migration, in a version-controlled sequence.
 Schemaless databases still need careful migration due to the implicit schema in any code that accesses the data.
@@ -1507,6 +1570,7 @@ If we want to discover relationships, or have to find data from different tables
 Database engines are designed to perform certain operations on certain data structures and data amounts very well—such as operating on sets of data or a store and retrieving keys and their values really fast, or storing rich documents or complex graphs of information.
 Many enterprises tend to use the same database engine to store business transactions, session management data, and for other storage needs such as reporting, BI, data warehousing, or logging information (Figure 13.1)
 Use of RDBMS for every aspect of storage for the application The session, shopping cart, or order data do not need the same properties of.
+Does session management storage need the same rigorous backup/recovery strategy as the e-commerce orders data? Does the session management storage need more availability of an instance of database engine to write/read session data?
 In 2006, Neal Ford coined the term polyglot programming, to express the idea that applications should be written in a mix of languages to take advantage of the fact that different languages are suitable for tackling different problems.
 Complex applications combine different types of problems, so picking the right language for each job may be more productive than trying to fit all aspects into a single language.
 Similarly, when working on an e-commerce business problem, using a data store for the shopping cart which is highly available and can scale is important, but.
@@ -1525,6 +1589,7 @@ The data ownership and the APIs provided by the service are more useful than a s
 Example implementation of wrapping data stores into services The philosophy of service wrapping can be taken further: You could wrap all.
 This allows for the databases inside the services to evolve without you having to change the dependent applications.
 Often, we cannot really change the data storage for a specific usage to something different, because of the existing legacy applications and their dependency on existing data storage.
+We can, however, add functionality such as caching for better performance, or use indexing engines such as Solr [Solr] so that search can be more efficient (Figure 13.6)
 When technologies like this are introduced, we have to make sure data is synchronized between the data storage for the application and the cache or indexing engine.
 Using supplemental storage to enhance legacy storage While doing this, we need to update the indexed data as the data in the.
 The process of updating the data can be real-time or batch, as long as we ensure that the application can deal with stale data in the index/search engine.
@@ -1540,6 +1605,7 @@ The enterprise is used to having uniform RDBMS environments; whatever is the dat
 In this new world of polyglot persistence, the DBA groups will have to become more poly-skilled—to learn how some of these NoSQL technologies work, how to monitor these systems, back them up, and take data out of and put into these systems.
 Once the enterprise decides to use any NoSQL technology, issues such as licensing, support, tools, upgrades, drivers, auditing, and security come up.
 Many NoSQL technologies are open-source and have an active community of supporters; also, there are companies that provide commercial support.
+There is not a rich ecosystem of tools, but the tool vendors and the open-source community are catching up, releasing tools such as MongoDB Monitoring Service [Monitoring], Datastax Ops Center [OpsCenter], or Rekon browser for Riak [Rekon]
 One other area that enterprises are concerned about is security of the data—the ability to create users and assign privileges to see or not see data at the database level.
 Most of the NoSQL databases do not have very robust security features, but that’s because they are designed to operate differently.
 In traditional RDBMS, data was served by the database and we could get to the database using any query tools.
@@ -1603,7 +1669,6 @@ To get a full record of every change in your application state, you need to keep
 But in many cases such a long-lived record isn’t necessary, as you can fold older events into a snapshot and only use the event log after the date of the snapshot.
 You can broadcast events to multiple systems, each of which can build a different application state for different purposes (Figure 14.3)
 For read-intensive systems, you can provide multiple read nodes, with potentially different schemas, while concentrating the writes on a different processing system (an approach broadly known as CQRS [CQRS])
-Event sourcing is also an effective platform for analyzing historic information,
 You can also easily investigate alternative scenarios by introducing hypothetical events into an analysis.
 Event sourcing does add some complexity—most notably, you have to ensure.
 Any collaboration with external systems needs to take the event sourcing into account; you’ll need to be careful of external side effects when replaying events to rebuild an application state.
@@ -1613,9 +1678,10 @@ Keeping all your working data in memory provides a performance advantage, since 
 It also simplifies programming since there is no need to perform mapping between disk and in-memory data structures.
 The obvious limitation here is that you must be able to store all the data you’ll need to access in memory.
 This is an increasingly viable option—we can remember disk sizes that were considerably less than the current memory sizes.
-You also need to ensure that you can recover quickly enough from a system crash— either by reloading events from the event log or by running a duplicate system and cutting over.
+You also need to ensure that you can recover quickly enough from a system crasheither by reloading events from the event log or by running a duplicate system and cutting over.
 One route is a transactional memory system, such as the one that comes with the Clojure language.
 Another route is to do all input processing on a single thread.
+Designed carefully, a single-threaded event processor can achieve impressive throughput at low latency [Fowler lmax]
 Breaking the separation between in-memory and persistent data also affects how you handle errors.
 A common approach is to update a model and roll back any changes should an error occur.
 With a memory image, you’ll usually not have an automated rollback facility; you either have to write your own (complicated) or ensure that you do thorough validation before you begin to apply any changes.
@@ -1645,7 +1711,7 @@ As they increase comfort with polyglot persistence, we should consider other dat
 At this point in the book, we’ve covered a lot of the general issues you need to be aware of to make decisions in the new world of polyglot persistence.
 It’s now time to talk about choosing your databases for future development work.
 Naturally, we don’t know your particular circumstances, so we can’t give you your answer, nor can we reduce it to a simple set of rules to follow.
-Furthermore, it’s still early days in the production use of NoSQL systems, so even what we do know is immature— in a couple of years we may well think differently.
+Furthermore, it’s still early days in the production use of NoSQL systems, so even what we do know is immaturein a couple of years we may well think differently.
 We see two broad reasons to consider a NoSQL database: programmer productivity and data access performance.
 In different cases these forces may complement or contradict each other.
 Both of them are difficult to assess early on in a project, which is awkward since your choice of a data storage model is difficult to abstract so as to allow you to change your mind later on.
@@ -1670,6 +1736,7 @@ This would suggest using different databases for different aspects of your data.
 Using multiple databases is inherently more complex than using a single store, but the advantages of a good fit in each case may be better overall.
 As you look at the data model fit, pay particular attention to cases where there is a problem.
 You may see most of your features will work well with an aggregate, but a few will not.
+Having a few features that don’t fit the model well isn’t a reason to avoid the model—the difficulties of the bad fit may not overwhelm the advantages of the good fit—but it’s useful to spot and highlight these bad fit cases.
 Going through your features and assessing your data needs should lead you to one or more alternatives for how to handle your database needs.
 This will give you a starting point, but the next step is to try things out by actually building software.
 Take some initial features and build them, while paying close attention to how straightforward it is to use the technology you’re considering.
@@ -1709,18 +1776,20 @@ You’re not going to be able to test every way in which your application will b
 The latter may alert you to any risks outside of your main use cases.
 Coming up with volumes to test for can be tricky, especially early on in a project when it’s not clear what your production volumes are likely to be.
 You will have to come up with something to base your thinking on, so be sure to make it explicit and to communicate it with all the stakeholders.
+Making it explicit reduces the chance that different people have varying ideas on what a “heavy read load” is.
 It also allows you to spot problems more easily should your later discoveries wander off your original assumptions.
 Without making your assumptions explicit, it’s easier to drift away from them without realizing you need to redo your testbed as you learn new information.
-Naturally we think that NoSQL is a viable option in many circumstances— otherwise we wouldn’t have spent several months writing this book.
 But we also realize that there are many cases, indeed the majority of cases, where you’re better off sticking with the default option of a relational database.
 Relational databases are well known; you can easily find people with the experience of using them.
 They are mature, so you are less likely to run into the rough edges of new technology.
 There are lots of tools that are built on relational technology that you can take advantage of.
 So, on the whole, we tend to take a view that to choose a NoSQL database you need to show a real advantage over relational databases for your situation.
 There’s no shame in doing the assessments for programmability and performance, finding no clear advantage, and staying with the relational option.
+We think there are many cases where it is advantageous to use NoSQL databases, but “many” does not mean “all” or even “most.”
 One of the greatest difficulties we have in giving advice on choosing a data-storage option is that we don’t have that much data to go on.
 As we write this, we are only seeing very early adopters discussing their experiences with these technologies, so we don’t have a clear picture of the actual pros and cons.
 With the situation this uncertain, there’s more of an argument for encapsulating your database choice—keeping all your database code in a section of your codebase that is relatively easy to replace should you decide to change your database choice later.
+The classic way to do this is through an explicit data store layer in your application—using patterns such as Data Mapper and Repository [Fowler PoEAA]
 Such an encapsulation layer does carry a cost, particularly when you are unsure about using quite different models, such as key-value versus graph data models.
 Worse still, we don’t have experience yet with encapsulating data layers between these very different kinds of data stores.
 On the whole, our advice is to encapsulate as a default strategy, but pay attention to the cost of insulating layer.
@@ -1730,7 +1799,7 @@ As well as reducing coupling between various services, this has the additional a
 This is a plausible approach even if you end up using the same database everywhere—should things go badly, you can gradually swap it out, focusing on.
 This design advice applies just as much if you prefer to stick with a relational.
 By encapsulating segments of your database into services, you can replace parts of your data store with a NoSQL technology as it matures and the advantages become clearer.
-The two main reasons to use NoSQL technology are: • To improve programmer productivity by using a database that better.
+To improve programmer productivity by using a database that better.
 It’s essential to test your expectations about programmer productivity and/or performance before committing to using a NoSQL technology.
 Service encapsulation supports changing data storage technologies as needs and technology evolve.
 Separating parts of applications into services also allows you to introduce NoSQL into an existing application.

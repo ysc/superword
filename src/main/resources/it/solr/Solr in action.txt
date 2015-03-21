@@ -15,6 +15,7 @@ That was a bit of a mouthful, so let’s break the previous statement down into 
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Scalable—Solr scales by distributing work (indexing and query processing) to multiple servers in a cluster.
 Ready to deploy—Solr is open-source, is easy to install and configure, and provides a preconfigured example to help you get started.
+Optimized for search—Solr is fast and can execute complex queries in subsecond speed, often only 10’s of milliseconds.
 Large volumes of documents—Solr is designed to deal with indexes containing millions of documents.
 Text-centric—Solr is optimized for searching natural language text, like emails, web pages, resumes, PDF documents, and social messages like tweets or blogs.
 Results sorted by relevance—Solr returns documents in ranked order based on how relevant each document is to the user’s query.
@@ -27,6 +28,7 @@ Let’s start by looking at the properties of data that a search engine is optim
 A hallmark of modern application architectures is matching the storage and processing engine to your data.
 If you’re a programmer, then you know to select the best data structure based on how you use the data in an algorithm, that is, you don’t use a linked list when you need fast random lookups.
 There are four main characteristics of data search engines like Solr are optimized to handle.
+A possible fifth characteristic is having a large volume of data to deal with, that is, “big data,” but our focus is on what makes a search engine special among other NoSQL technologies.
 It goes without saying that Solr can deal with large volumes of data.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Although these are the four main characteristics of data that search engines like Solr handle efficiently, you should think of them as rough guidelines and not strict rules.
@@ -60,7 +62,6 @@ In other words, a document in a search engine like Solr has a flat structure and
 The “flat” concept is slightly relaxed in Solr in that a field can have multiple values but fields don’t contain sub-fields.
 That is, you can store multiple values in a single field but you can’t nest fields inside of other fields.
 The flat, document-oriented approach in Solr works well with data that’s already in document format, such as a web page, blog, or PDF document, but what about modeling normalized data stored in a relational database? In this case, you need to denormalize data spread across multiple tables into a flat, self-contained document structure.
-We’ll learn how to approach problems like this in chapter 3
 You also want to consider which fields in your documents must be stored in Solr and which should be stored in another system, such as a database.
 Put simply, a search engine isn’t the place to store data unless it’s useful for search or displaying results.
 For example, if you have a search index for online videos, then you don’t want to store the binary video files in Solr.
@@ -97,6 +98,7 @@ Spell correction in case the user misspells some of the query terms.
 Auto-suggestions to save users some typing, particularly for mobile applications.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Phrase handling, that is, does the user want documents matching all words or any of the words in a phrase.
+Proper handling of queries with common words like “a,” “an,” “of,” and “the”
 Giving the user a way to see more results if the top results aren’t satisfactory.
 As you can see, a number of issues exist that make a seemingly simple feature hard to implement without a specialized approach.
 But with a search engine like Solr, these features come out of the box and are easy to implement.
@@ -109,6 +111,7 @@ Ranking documents by relevancy is important for a couple of reasons.
 First, modern search engines typically store a large volume of documents, often millions or billions of documents.
 Without ranking documents by relevance to the query, users can become overloaded with results without any clear way to navigate them.
 Second, users are more comfortable and accustomed to getting results from other search engines using only a few keywords.
+Users are impatient and expect the search engine to “do what I mean, not what I say.” This is true of search solutions backing mobile applications where users on the go will enter short queries with potential misspellings and expect it to “just work.”
 To influence ranking, you can assign more weight or “boost” certain documents, fields, or specific terms.
 For example, you can boost results by their age to help push newer documents towards the top of search results.
 For many users, though, this is only the first step in a more interactive session where the search results give them the ability to keep exploring.
@@ -138,13 +141,13 @@ But, before we get into the specifics of what Solr is, let’s make sure you kno
 Now, imagine we need to design a real estate search web application for potential.
 The central use case for this application will be searching for homes to buy across the United States using a web browser.
 Figure 1.1 depicts a screen shot from this fictitious web application.
-Don’t focus too much on the layout or design of the user interface,
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 What’s important is the type of experience that Solr can support.
 Figure 1.1 Mock-up screen shot of fictitious search application to depict Solr features.
 Let’s take a quick tour of the screen shot in figure 1.1 to illustrate some of Solr’s key features.
 First, starting at the top-left corner, working clock-wise, Solr provides powerful features to support a keyword search box.
 As we discussed in section 1.1.2, providing a great user experience with basic keyword search requires complex infrastructure that Solr provides out-of-the-box.
+Specifically, Solr provides spell checking, auto-suggesting as the user types, synonym handling, phrase queries, and text-analysis tools to deal with linguistic variations in query terms, such as “buying a house” or “purchase a home.”
 Solr also provides a powerful solution for implementing geo-spatial queries.
 In figure 1.1, matching home listings are displayed on a map based on their distance from the latitude / longitude of the center of some fictitious neighborhood.
 With Solr’s geo-spatial support, you can sort documents by geo-distance or even rank documents by geo-distance.
@@ -155,15 +158,14 @@ In figure 1.1, search results are categorized into three facets for features, ho
 Now that we have a basic idea of the type of functionality we need to support our real estate search application, let’s see how we’d implement these features with Solr.
 To begin, we need to know how Solr matches home listings in the index to queries entered by users, as this is the basis for all search applications.
 Solr is built on Apache Lucene, a popular Java-based open source information retrieval library.
-We’ll save a detailed discussion of what information retrieval is for chapter 3
 For now, we’ll touch on the key concepts behind information retrieval starting with the formal definition taken from one of the prominent academic texts on modern search concepts:
 Information retrieval (IR) is finding material (usually documents) of an unstructured nature (usually text) that satisfies an information need from within large collections (usually stored on computers)
 In the case of our example real estate application, the user’s primary information need is finding a home to purchase based on location, home style, features, and price.
+Our search index will contain home listings from across the U.S., which definitely qualifies as a “large collection.” In a nutshell, Solr uses Lucene to provide the core infrastructure for indexing documents and executing searches to find documents.
 Under the covers, Lucene is a Java-based library for building and managing an inverted index, which is a specialized data structure for matching query terms to text-based documents.
 Figure 1.2 provides a simplified depiction of a Lucene inverted index for our example real estate search application.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Figure 1.2 The key data structure supporting information retrieval is the inverted index.
-You’ll learn all about how an inverted index works in chapter 3
 You might be thinking that a relational database could easily return the same results using a SQL query, which is true for this simple example.
 But one key difference between a Lucene query and a database query is that in Lucene, results are ranked by their relevance to a query and database results can only be sorted by one of the table columns.
 In other words, ranking documents by relevance is a key aspect of information retrieval and helps differentiate it from other types of search.
@@ -230,7 +232,6 @@ Lucene is an extremely fast search library and Solr takes full advantage of Luce
 But regardless of how fast Lucene is, a single server will reach its limits in terms of how many concurrent queries from different users it can handle due to CPU and I/O constraints.
 As a first pass to scalability, Solr provides flexible cache management features that help your server avoid recomputing expensive operations.
 Specifically, Solr comes preconfigured with a number of caches to save expensive recomputations, such as caching the results of a query filter.
-We’ll learn about Solr’s cache management features in chapter 4
 Caching only gets you so far so at some point, you’re going to need to scale out your capacity to handle more documents and higher query throughput by adding more servers.
 For now let’s focus on the two most common dimensions of scalability in Solr.
 First is query throughput, which is the number of queries your engine can support per second.
@@ -247,7 +248,6 @@ Fueling this trend towards using virtualized commodity hardware are cloud-comput
 Although Solr will run on virtualized hardware, you should be aware that search is I/O and memory intensive.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Therefore, if search performance is a top priority for your organization, then you should consider deploying Solr on higher end hardware with high-performance disks, ideally solid-state drives (SSD)
-Hardware considerations for deploying Solr are discussed in chapter 13
 Scalability is important, but ability to survive failures is also important for a modern system.
 In the next section, we discuss how Solr handles software and hardware failures.
 Beyond scalability, you need to consider what happens if one or more of your servers fails, particularly if you’re planning to deploy Solr on virtualized hardware or commodity hardware.
@@ -283,10 +283,11 @@ Otherwise, Solr is a standard Java web application that deploys easily to any Ja
 All access to Solr can be done via HTTP and Solr is designed to work with caching HTTP reverse proxies like Squid and Varnish.
 Solr also works with JMX so you can hook it up to your favorite monitoring application, such as Nagios.
 Lastly, Solr provides a nice administration console for checking configuration settings, statistics, issuing test queries, and monitoring the health of SolrCloud.
-We’ll learn more about the administration console in chapter 2
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Although it’s unlikely that a CEO will be reading this book, here are some key talking points about Solr in case your CEO stops you in the hall.
 First, executive types like to know an investment in a technology today is going to payoff in the long term.
+As you’ll see in the next chapter, Solr “just works” and you can have it up and running in minutes.
+Another concern is what happens if the Solr guy walks out the door—will business come to a halt? It’s true that Solr is complex technology but having a vibrant community behind it means you have help when you need it.
 And, you have access to the source code, which means if something is broken and you need a fix, you can do it yourself.
 Many commercial service providers also can help you plan, implement, and maintain your Solr installation; many of which offer training courses for Solr.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -302,13 +303,14 @@ Geo-spatial search PAGINATION AND SORTING Rather than returning all matching doc
 If users don’t find what they’re looking for on the first page, then you can request subsequent pages using simple API request parameters.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 In our real estate example (figure 1.1) we saw how search results from a basic keyword search were organized into three facets: Features, Home Style, and Listing Type.
-Solr faceting is one of the more popular and powerful features available in Solr; we cover faceting in depth in chapter 8
+AUTO-SUGGEST Most users will expect your search application to “do the right thing” even if they provide incomplete information.
 Auto-suggest helps users by allowing them to see a list of suggested terms and phrases based on documents in your index.
 Solr’s auto-suggest features allows user to start typing a few characters and receive a list of suggested queries as they type.
 This reduces the number of incorrect queries, particularly because many users may be searching from a mobile device with small keyboards.
 Auto-suggest gives users examples of terms and phrases available in the index.
 Again, users expect to be able to type misspelled words into the search box and the search engine should handle it gracefully.
 Auto-correct—Solr can make the spell correction automatically based on whether the misspelled term exists in the index.
+Did you mean that Solr can return a suggested query that might produce better results so that you can display a hint to your users, such as “Did you mean highlands?” if you user typed in “hilands.”
 Most useful for longer format documents, so you can help users find relevant information in longer documents by quickly scanning highlighted sections in search results.
 GEO-SPATIAL Geographical location is a first-class concept in Solr 4 in that it has built-in support for indexing latitude and longitude values as well as sorting or ranking documents by geographical distance.
 Solr can find and sort documents by distance from a geo-location (latitude and longitude)
@@ -322,7 +324,6 @@ Multilingual support FIELD COLLAPSING / GROUPING Although Solr requires a flat, 
 Field grouping, also known as field collapsing, allows you to return unique groups instead of individual documents in the results.
 The classic example of field collapsing is threaded email discussions where emails matching a specific query could be grouped under the original email message that started the conversation.
 Phrase queries with slop to allow for some distance between terms.
-Don’t worry if you don’t know what all of these terms mean as we’ll cover all of them in depth in chapter 7
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 But in Solr, joins are more like sub-queries in SQL in that you don’t build documents by joining data from other documents.
 For example, with Solr joins, you can return child documents of parents that match your search criteria.
@@ -331,9 +332,7 @@ This is helpful to avoid returning many documents containing the same informatio
 For example, if your search engine is based on news articles pulled from multiple RSS feeds, then it’s likely that you’ll have many documents for the same news story.
 Rather than returning multiple results for the same story, you can use clustering to pick a single representative story.
 With Solr this is easy because it integrates with Apache Tika project that supports most popular document formats.
-We cover Solr’s data import handler (DIH) in chapter 12
 Solr has language detection built-in and provides language-specific text analysis solutions for many languages.
-We’ll see Solr’s language detection in action in chapter 6
 In general, version 4 is a huge milestone for the Apache Solr community as it addresses many of the major pain-points discovered by real users over the past several years.
 We selected a few of the main features to highlight here but we’ll also point out new features in Solr 4 throughout the book.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -344,7 +343,6 @@ You might be wondering what happens if two different users attempt to change the
 In this case, Solr guards against incompatible updates using optimistic concurrency.
 In a nutshell, Solr uses a special version field named _version_ to enforce safe update semantics for documents.
 In the case of two different users trying to update the same document concurrently, the user that submits updates last will have a stale version field so their update will fail.
-Atomic updates and optimistic concurrency are covered in chapter 12
 REAL-TIME GET At the beginning of this chapter, we stated that Solr is a NoSQL technology.
 Solr’s real-time get feature definitely fits within the NoSQL approach by allowing you to retrieve the latest version of a document using its unique identifier regardless of whether that document has been committed to the index.
 This is similar to using a key-value store like Cassandra to retrieve data using a row key.
@@ -357,12 +355,10 @@ It also plays a role in servicing real-time get requests as documents are retrie
 The transaction log allows Solr to decouple update durability from update visibility.
 This means that documents can be on durable storage but aren’t visible in search results yet.
 This gives your application control over when to commit documents to make them visible in search results without risking data loss if a server fails before you commit.
-We’ll discuss durable writes and commit strategies in chapter 5
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 With SolrCloud, scaling is simple and automated because Solr uses Apache Zookeeper to distribute configuration and manage shard leaders and replicas.
 In Solr, Zookeeper is responsible for assigning shard leaders and replicas and keeps track of which servers are available to service requests.
 SolrCloud bundles Zookeeper so you don’t need to do any additional configuration or setup to get started with SolrCloud.
-We’ll dig into the details of SolrCloud in chapter 16
 We hope you now have a good sense for what types of data and use cases Solr supports.
 As you learned in section 1.1, Solr is optimized to handle data that’s text-centric, readdominant, document-oriented, and has a flexible schema.
 We also learned that search engines like Solr aren’t general-purpose data storage and processing solutions but are intended to power keyword search, ranked retrieval, and information discovery.
@@ -371,7 +367,6 @@ Solr 4 can be scaled in two dimensions to support millions of documents and high
 We also touched on some key reasons why to choose Solr based on the perspective of key stakeholders.
 We saw how Solr addresses the concerns of software architects, system administrators, and even the CEO.
 Lastly, we covered some of Solr’s main features and gave you pointers where you can learn more about each feature in this book.
-We hope you’re excited to continue learning about Solr, so now it’s time to download the software and run it on your local system, which is what we’ll do in chapter 2
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 It’s natural to have a sense of uneasiness when you start using an unfamiliar technology.
 You can put your mind at ease because Solr is designed to be easy to install and set up.
@@ -381,7 +376,6 @@ But you don’t need to worry about index sharding or replication until you need
 By the end of this chapter, you’ll have Solr running on your computer, know how to start and stop Solr, know your way around the web-based administration console, and have a basic understanding of key Solr terminology such as solr home, core, and collection.
 You may have heard of SolrCloud and wondered what the difference is between Solr 4 and SolrCloud.
 Technically, SolrCloud is the code name for a sub-set of features in Solr 4 that makes it easier to configure and run a scalable, fault-tolerant cluster of Solr servers.
-Think of SolrCloud as a way to configure a distributed installation of Solr 4
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Also, SolrCloud doesn’t have anything to do with running Solr in a cloud-computing environment like Amazon EC2, although you can run Solr in a cloud.
 We presume that the “cloud” part of the name reflects the underlying goal of the SolrCloud feature set to enable elastic scalability, high-availability, and ease of use we’ve all come to expect from cloud-based services.
@@ -405,7 +399,7 @@ After downloading, move the downloaded file to a permanent location on your comp
 For example, on Windows, you could move it to the C:\ root directory, or on Linux, choose a location like /opt/solr.
 For Windows users, we highly recommend that you extract Solr to a directory that doesn’t have spaces in the name, i.e.
 Your mileage may vary on this, but being a Java-based software, you're likely to run into issues with paths that contain a space.
-There is no formal installer needed because Solr is self-contained in a single archive file— all you need to do is extract it.
+There is no formal installer needed because Solr is self-contained in a single archive fileall you need to do is extract it.
 When you extract the archive, all files will be created under the solr-4.1.0 directory.
 On Windows, you can use the built-in Zip extraction support or a tool like WinZip.
 This will create the directory structure shown in figure 2.1
@@ -423,7 +417,6 @@ You can verify that Solr started correctly by directing your web browser to the 
 Figure 2.2 provides a screen shot of the Solr administration console; please take a minute to get acquainted with the layout and navigational tools in the console.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Click on the link labeled "collection1" to access more tools such as the query form.
-Behind the scenes, start.jar launched a Java web server named Jetty, listening on port 8983
 Figure 2.3 illustrates what is now running on your computer.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Figure 2.3 Solr from a systems perspective showing the Solr web application (solr.war) running in Jetty on top of Java.
@@ -439,7 +432,7 @@ However, this doesn’t mean that Jetty is a bad choice for production deploymen
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 However, if you have some choice, then we recommend you try out Jetty.
 It's fast, stable, mature, and easy to administer and customize.
-Jetty does provide a safer mechanism for stopping the server, which will be discussed in chapter 12
+In fact, Google uses Jetty for their AppEngine, see http://www.infoq.com/news/2009/08/google-chose-jetty/, which gives great credibility to Jetty as a solid platform for running Solr in even the most demanding environments!
 Now we have a running server, let's take a minute to understand where Solr gets its configuration information and where it manages its Lucene index.
 Understanding how the example server you just started is configured will help you when you're ready to start configuring a Solr server for your application.
 In Solr, a “core” is composed of a set of configuration files, Lucene index files, and Solr's transaction log.
@@ -460,8 +453,6 @@ Figure 2.4 shows a directory listing of the default Solr home "solr" for the exa
 Figure 2.4 Directory listing of the default Solr home directory for the Solr examples.
 It contains a single core named "collection1," which is configured in solr.xml.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
-We'll learn more about the main Solr configuration file for a core, named solrconfig.xml, in chapter 4
-Also, schema.xml is the main configuration file that governs index structure and text analysis for documents and queries; you'll learn all about schema.xml in chapter 5
 For now, just take a moment to scan figure 2.3 so that you have a sense for the basic structure.
 The example directory contains two other solr home directories for exploring advanced functionality.
 Also, the example/multicore directory provides an example of a multi-core configuration.
@@ -486,6 +477,7 @@ Figure 2.6 provides some annotations of key sections of this form.
 Take a minute to read through each annotation in the diagram.
 Figure 2.6 Annotated screen shot of Solr's query form to illustrate the main features of Solr query processing, such as filters, results format, sorting, paging, and search components.
 Take a moment to fill-out the form and execute the query in your own environment.
+Do the two documents that Solr returned make sense? Table 2.1 provides an overview of the form fields we're using for this example.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 In this example, we filter results that have manufacturer field "manu" equal to "Belkin"
 Start should be incremented by the page size to advance to the next page.
@@ -507,6 +499,7 @@ Paging doesn't really come into play with this result set because there are only
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 So far, we've only seen results returned as XML, but Solr also supports other formats such as CSV, JSON, and language specific formats for popular languages.
 For instance, Solr can return a Python specific format that allows the response to be safely parsed into a Python object tree using the eval function.
+As we touched upon on chapter 1, the key differentiator between Solr's query processing and that of a database or other NoSQL data store is ranked retrieval—the process of sorting documents by their relevance to a query, where the most relevant documents are listed first.
 Let's see ranked retrieval at work with some of the example documents you indexed in section 2.1.4
 This should return three documents sorted in descending order by score.
 Take a moment to scan the results and decide if you agree with the ranking for this simple query.
@@ -517,7 +510,6 @@ The key take-away is that every document that matches a query is assigned a rele
 Next, change your query to be "iPod power" and you'll see that the same three documents are returned and are in the same order.
 This is because all three documents contain both query terms in either their name or features field.
 This makes sense because "power" occurs twice in the second document so its relevance to the "iPod power" query is much higher than its relevance to the "iPod" query.
-In a nutshell, this means that the "power" term is twice as important to this query as the "iPod" term, which has an implicit boost of 1
 Again, the same three documents are returned but in a different order.
 Now the top document in the results is "Belkin Mobile Power Cord for iPod w/ Dock" because it contains the term "power" in the name and features field and we told Solr that "power" is twice as important as "iPod" for this query.
 Now you have a taste of what ranked retrieval looks like.
@@ -580,12 +572,10 @@ Recall that the example server we've been working with has only one core named "
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 View core specific properties such as the number of Lucene segments from the main core page, e.g.
 Send a quick request to a core to make sure it’s alive using Ping.
-View the currently active solconfig.xml for the core from Config; you’ll learn more about solrconfig.xml in chapter 4
 See how your index is replicated to other servers from Replication.
 Analyze text from Analysis; you’ll learn all about text analysis in chapter 6, including how to use the Analysis form.
 Determine how fields in your documents are analyzed from Schema Browser.
 Get information about the top terms for a field using Load Term Info on the Schema Browser.
-View the status and configuration for Plug-ins from PlugIns / Stats; you’ll learn all about PlugIns in chapter 4
 View statistics about core Solr cache regions, such as how many documents are in the documentCache from PlugIns / Stats.
 Manage the data import handler from Dataimport; this isn’t enabled in the example server.
 We'll dig into the details for most of these pages in various places throughout the book, when it's more appropriate.
@@ -593,6 +583,7 @@ For instance, you'll learn all about the Analysis page in chapter 6 when we cove
 For now, take a few moments to explore these pages on your own.
 To give your self-guided tour some direction, see if you can answer the following questions about your Solr server.
 What’s the value of the lucene-spec version property for your Solr server?
+What’s the value of the maxDoc property for the collection1 core?
 What’s the top term for the manu field? (hint: select the "manu" field in the schema browser and click on the Load Term Info button)
 What’s the current size of your documentCache? (hint: think stats)
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -613,12 +604,15 @@ When you restart Solr, you’ll have a fresh index with 0 documents.
 Restart Solr from your new directory using the same process from section 2.1.2
 For example, to restart our clone for the realestate application, we’d do:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+Lastly, you might be wondering about setting JVM options, configuring backups, monitoring, setting Solr up as a service, and so on? We feel these are important concerns when you’re ready to go to production so we cover these questions in chapter 12, when we discuss taking Solr to production.
 To recap, we started by installing Solr 4.1 from the binary distribution Apache provided.
 In reality, the installation process was only a matter of choosing an appropriate directory where to extract the downloaded archive (.zip or .tgz) and then doing the extraction.
 Next, we started the example Solr server and added some example documents using the post.jar command-line application.
 After adding documents, we introduced you to Solr's query form, where you learned the basic components of a Solr query.
+Specifically, you learned how to construct queries containing a main query parameter “q” as well as an optional filter “fq.” You saw how to control which fields are returned using the “fl” parameter and how to control the ordering of results using “sort.” We also touched on ranked retrieval concepts where results are ordered by relevancy score.
 We also introduced you to search components and provided some insights into how they work in Solr using the Solritas example user interface.
 Specifically, you saw an example of how the facet component allows users to refine their search criteria using dynamically generated filters called facets.
+We also touched on how the spell check component allows you to prompt users “did you mean X? ” when their query contains a misspelled term.
 Next, we gave you some tips on what other tools are available in the Solr administration console.
 You’ll find many great tools and statistics available about Solr, so we hope you were able to answer the questions we posed as you walked through the administration console in your browser.
 Lastly, we presented the steps to clone the example directory to begin customizing it for your own application.
@@ -650,7 +644,6 @@ Listing 3.1 shows an example document, defining the values for each field.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 When we run a search against Solr, we can search on one or more of these fields (or even fields not contained in this particular document), and Solr will return documents that contain content in those fields matching the query specified in the search.
 It is worth noting that, unlike Lucene, Solr is not schema-less.
-All field types must be defined, and all field names (or dynamic field naming patterns) must be specified in Solr’s schema.xml, as we’ll discuss further in chapter 5
 This does not mean that every document must contain every field, only that all possible fields must be mapped to a particular field type should they appear in a document and need to be processed.
 A document, then, is a collection of fields that map to particular field types defined in a schema.
 Each field in a document is analyzed according to its field type and stored in a search index in order to later retrieve the document by sending in a related query.
@@ -658,21 +651,30 @@ The primary search results returned from a Solr query are documents containing o
 Before we dive into an overview of how search works in Solr, it is helpful to understand what fundamental problem search engines are solving.
 Let’s say, for example, you were tasked with creating some search functionality that helps users search for books.
 Figure 3.1 Example search interface, as would be seen on a typical website, demonstrating how a user would submit a query to your application.
+Now, imagine a customer wants to find a book on purchasing a new home and searches for “buying a home.” Some potentially relevant books titles you may want to return for this search are listed in table 3.1
+Table 3.1 Books relevant to the query “buying a home”
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 All other book titles, as listed in table 3.2, would not be considered relevant for customers interested in purchasing a new home.
+Table 3.2 Books not relevant to the query “buying a home”
 In addition, customers will only ever see results for future queries if the query matches the full book title exactly.
 Perhaps a more forgiving approach would be to search for each single word within a customer’s query:
+Table 3.3 Results from database “like” query requiring a fuzzy match for every term.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Of course, you may believe that requiring documents to match all of the words your customers include in their queries is overly restrictive.
 You could easily make the search experience more flexible by only requiring a single word to exist in any matching book titles, by issuing the following SQL query:
 Additionally, because this query is performing only partial string matching on each keyword, any book title that merely contains the letter “a” is also returned.
 The preceding example, which required all of the terms, also matched on the letter “a”, but we did not experience this problem of returning too many results because the other keywords were more restrictive.
+Table 3.4 Results from database “like” query only requiring a fuzzy match at least one term.
 We have just seen that the first query (requiring all words to match) resulted in many.
+It does not understand linguistic variations of words such as “buying” vs “buy”
+It does not understand synonyms of words such as “buying” and “purchasing”
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 There is no sense of relevancy ordering in the results – books which only match one of the queried words often show up higher than books matching multiple or all of the words in the customer’s query.
 These queries will become slow as the size of the book catalog grows or the number of customer queries grows, as the query must scan through every book’s title to find partial matches instead of using an index to look up the words.
 Search engines like Solr really shine in solving problems like the ones listed above.
+Solr is able to perform text analysis on content and on search queries to determine textually similar words, understand and match on synonyms, remove unimportant words like “a”, “the”, and “of”, and score each result based upon how well it matches the incoming query to ensure that the best results are returned first and that your customers do not have to page through countless less relevant results to find the content they were expecting.
 Solr accomplishes all of this utilizing an index that maps content to documents instead of mapping documents to content like a traditional database model.
+This “inverted index” is at the heart of how search engines work.
 Solr utilizes Lucene’s inverted index to power its fast searching capabilities, as well as.
 While we’ll not get into many of the internal Lucene data structures in this book (I recommend picking up a copy of Lucene in Action if you want a deeper dive), it is important to understand the high-level structure of the inverted index.
 Recalling our previous book-searching example, we can get a feel for what an index mapping each term to each document would look like from table 3.5
@@ -686,12 +688,16 @@ You can tell from looking at table 3.5 that the original input text was split on
 A few final important details should be noted about the inverted index:
 All terms in the index map to one or more documents.
 Terms in the inverted index are sorted in ascending alphanumeric order.
+This view of the inverted index is greatly simplified – we’ll see in section 3.1.6 that additional information can also be stored in the index to improve Solr’s querying and scoring capabilities.
 As you will see in the next section, the structure of Lucene’s inverted index allows many powerful query capabilities that maximize both the speed and flexibility of keyword based searching.
 Now that we’ve seen what content looks like in Lucene’s inverted index, let’s jump into.
 In this section, we’ll go over the basics of looking up terms and phrases in this inverted search index and utilizing Boolean logic and fuzzy queries to enhance these lookup capabilities.
+Referring back to our book-searching example, let’s take a look at a simple query of “new house”, as portrayed in figure 3.2
 Figure 3.2 Simple search to demonstrate nuances of query interpretation.
 We saw in the last section that all of the text in our content field was broken up into individual terms when inserted into the Lucene index.
 Now that we have an incoming query, we need to select from among several options for querying the index:
+Search for two different terms, “new” and “house”, requiring both to match.
+Search for two different terms, “new” and “house”, requiring only one to match.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 All of these options are perfectly valid approaches, depending upon your use case, and thanks to Solr’s powerful querying capabilities built using Lucene, are very easy to accomplish using boolean logic.
 There are two identical ways to write this query using the standard query parser in Solr:
@@ -701,6 +707,7 @@ By default, Solr is also configured to treat any part of the query without an ex
 While the default configuration in Solr assumes that a term or phrase by itself is an optional term, this is configurable on a per-query basis using the q.op url parameter with many of Solr’s query handlers.
 Do note, however, that if you change the default operator from OR to AND that now parts of the query without an operator will always be required unless you explicitly place an OR between them to override the default AND operator.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+In the queries above, no document which contains the word “rental” will be returned, only documents matching “new” or “house.”
 The Solr query syntax can represent arbitrarily complex queries through grouping terms together using parenthesis like the following examples:
 The use of required terms, optional terms, negated terms, and grouped expressions provides a very powerful and flexible set of query capabilities that allow arbitrarily complex lookup operations against the search index, as we’ll see in the following section.
 With a basic understanding of terms, phrases, and Boolean queries in place, we can now dive into exactly how Solr is able to utilize the internal Lucene inverted index to find matching documents.
@@ -710,7 +717,9 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 If a customer passes in a query now of new home, how exactly is Solr able to find.
 As such both terms must be looked up separately in the Lucene Index:
 Assuming our default operator is an OR, this query would result in a union of the result sets for both terms, as pictured in the Venn diagram in figure 3.3
+Figure 3.3  Results returned from an Union query using the “OR” operator.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+Figure 3.4  Results returned from an Intersection query using the “AND” operator.
 In addition to union and intersection queries, negating particular terms is also common.
 Figure 3.5 demonstrates a breakdown of the results expected for each of the result set permutations of this two-term search query (assuming a default OR operator)
 Figure 3.5  Graphical representation of using common boolean query operators.
@@ -725,6 +734,7 @@ Table 3.7 demonstrates how documents (on the left side of the table) map into an
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 The term position actually goes one step further, telling us where in the document each term appears.
 Table 3.8 shows a condensed version of the inverted index focused upon only the primary terms under discussion: new and home.
+This makes sense, as the original book titles for these books were “Buying a New Home” and “Becoming a new Home Owner.” We have thus seen the power of term positions – they allow us to reconstruct the original positions of our indexed terms within their respective documents, making it possible to search for specific phrases at query time.
 Searching for specific phrases is not the only benefit provided by term positions, though.
 We’ll see in the next section another great example of their use to improve our search results quality.
 It’s not always possible to know up-front exactly what will be found in the Solr index for any given search, so Solr provides the ability to perform several types of fuzzy matching queries.
@@ -732,7 +742,6 @@ Fuzzy matching is defined as the ability to perform inexact matches on terms in 
 For example, someone may want to search for any words that start with a particular prefix (known as wildcard searching), may want to find spelling variations within one or two characters (known as fuzzy or edit distance searching), or may even want to match two terms within some maximum distance of each other (known as proximity searching)
 For use cases in which multiple variations of the terms or phrases queried may exist across the documents being searched, these fuzzy matching capabilities serve as a very powerful tool.
 In this section, we’ll explore multiple fuzzy matching query capabilities in Solr, including wildcard searching, range searching, edit distance searching, and proximity searching.
-Suppose you wanted to find any documents which started with the letters “offic"
 One way to do this would be to create a query which enumerates all of the possible variations:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Requiring that this list of words be turned into a query up-front can be an unreasonable expectation for customers, or even for you on behalf of your customers.
@@ -747,29 +756,34 @@ Do note, however, that turning this feature on requires dual-storing all terms i
 Turning this capability on is thus not recommended unless it is needed within your search application.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 One last important point to note about wildcard searching is that wildcards are only meant to work on individual search terms, not on phrase searches, as demonstrated by the following example:
-If you need the ability to perform wildcard searches within a phrase, you will have to store the entire phrase in the index as a single term, which you should feel comfortable doing by the end of chapter 5
 This can be useful when you want to search for a particular subset of documents falling within a range.
 Each of the above range queries surrounds the range with square brackets, which is the.
 Solr also supports exclusive range searching through use of curly braces:
 It is important to note that the ordering of terms of range queries is exactly that – the order in which they are found in the Solr index, which is an alphanumeric sorted order.
 Numeric types in Solr, at least the ones we’ll recommend in the coming chapters, compensate for this by indexing the incoming content in a special way, but it is important to understand that the sort order within the Solr index is dependent upon how the data within the field is processed when it is written to the Solr index.
-We’ll dive much deeper into this kind of content analysis in chapter 5
-FUZZY/EDIT DISTANCE SEARCHING For many search application, it is important not only to match a customer’s text exactly,
 Solr provides the ability to handle character variations using edit distance.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Solr achieves these fuzzy edit distance searches through the use of the tilde (~) character as follows:
 The above query matches both the original term (administrator) and any other terms.
 An edit distance here is defined as an insertion, a deletion, a substitution, or a transposition of characters.
+Likewise the term sadministrator is one edit distance away because it has one insertion (the “s” that was added to the beginning), and the term administratro is one edit distance away because it has transposed the last two characters (“or” became “ro”)
 It is also possible to modify the strictness of edit distance searches to allow matching of terms with an edit distance of greater than one:
 This edit distance principle is applicable beyond just searching for alternate characters within a term – it can also be applied between terms for variations of phrases.
 Let’s say that that you want to search across a Solr index of employee profiles for executives within your company.
 One way to do this would be to enumerate each of the possible executive titles within your company:
+Query: “chief executive officer” OR “chief financial officer” OR “chief marketing officer” OR “chief technology officer” OR …
 Of course, this assumes you know all of the possible titles, which may be unrealistic if you’re searching across other companies with which you’re poorly acquainted, or if you have a more challenging use case.
 Another possible strategy is to search for each term independently:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Query: chief AND officer This should match all of the possible use cases, but it will also match any document which.
+One problematic example would be a document containing the text “One chief concern arising from the incident was the safety of the police officer on duty.” This document is clearly a poor match for our use case, but it and similar bad matches would be returned given the above query.
 Thankfully, Solr provides a simple solution to this problem: proximity searching.
+In the above example, a good strategy would be to ask Solr to bring back all documents which contain the term “chief” near officer “officer”
+This can be accomplished through the following example queries: Query:  “chief officer”~1
+Query:  “chief officer”~2 Examples: “chief business development officer”, “officer, police chief”
+Query:  “chief officer”~N Finds chief within N edit distances of officer.
 The edit distances above can be seen as nothing more than sloppy phrase searches.
+In fact, an exact phrase search of “chief development officer” could easily be rewritten as “chief development officer”~0
 These queries will yield the exact same results, because an edit distance of zero is the very definition of an exact phrase search.
 Both mechanisms make use of the term positions stored in the Solr index (which we discussed in section 3.1.6) to calculate the edit distances.
 At this point, you should have a basic grasp of how Solr stores information in its inverted index and queries that index to find matching documents.
@@ -807,7 +821,9 @@ Wow – that equation can be quite overwhelming, especially at first glance.
 Fortunately, it is much more intuitive when each of the pieces are broken down.
 The math is presented above for reference, but you will likely never need to really dig into the full equation unless you decide to overwrite the similarity for your search application.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
-At a high level, the important concepts are demonstrated by the high-level formula – namely, Term Frequency (tf), Inverse Document Frequency (idf), Term Boosts (t.getBoost), the Field Normalization (norm), the Coordination Factor (coord), and the Query Normalization (queryNorm)
+At a high level, the important concepts are demonstrated by the high-level formula namely, Term Frequency (tf), Inverse Document Frequency (idf), Term Boosts (t.getBoost), the Field Normalization (norm), the Coordination Factor (coord), and the Query Normalization (queryNorm)
+If you were searching through a search index filled with newspaper articles for an article on the President of the United States, would you prefer to find articles which only mention the president once, or articles which discuss the president consistently throughout the article? What if an article just happens to contain the phrases “President” and “United States” each one time (perhaps out of context) – should it be considered as relevant as an article that contains these phrases multiple times?
+Clearly the second article above is more relevant than the first, and the identification of the phrases “President” and “United States” multiple times throughout the article provides a strong indication that the content of the second article is more closely related to this query.
 Furman University, one of the top liberal arts universities in the southern United States.
 Furman also consistently ranks among the most beautiful campuses to visit and ranks among the top 50 liberal arts colleges nation-wide each year.
 Today, international leaders met with the President of the United States to discuss options for dealing with growing instability in global financial markets.
@@ -818,10 +834,14 @@ This is the basic premise behind the TF (Term Frequency) component of the defaul
 The more times the search term appears within a document, the more relevant that document is considered.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Imagine if someone were to search for the book The Cat in the Hat by Dr.
+Seuss, and the top results returned were those which included a high term frequency for the words “the” and “in” instead of “cat” and “hat”
 Common sense would indicate that words which are more rare across all documents are likely to be better matches for a query than terms which are more common.
+Inverse Document Frequency (IDF) is a measure of how “rare” a search term is, and it is calculated by finding the document frequency (how many total documents the search term appears within), and calculating it’s inverse (see the full formula in section 3.2.1 for the actual calculation)
 Because the Inverse Document Frequency appears for the term in both the query and the document, it is squared in the relevancy formula.
+Figure 3.8 shows an visual example of the “rare-ness” of each of the words in the title “The Cat in the Hat,” with a higher IDF being represented as a larger term.
 Figure 3.8  Visual depiction of the relative significance of terms as measured by Inverse Document Frequency.
 The terms which are more rare are depicted as larger, indicating a larger Inverse Document Frequency.
+Likewise, if someone were searching for a profile for “an experienced Solr development team lead,” we wouldn’t expect documents to rank higher which best match the words “an”, “team”, or “experienced”
 Instead, we would expect the important terms to resemble the largest terms in figure 3.9
 Figure 3.9 Another demonstration of relative score of terms derived from Inverse Document Frequency.
 Once again, a higher Inverse Document Frequency indicates a more rare and more relevant term, which is depicted here using larger text.
@@ -829,7 +849,9 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 Clearly the user is looking for someone who knows Solr who can be a team lead, so these terms stand out with considerably more weight when found in any document.
 Term Frequency and Inverse Document Frequency, when multiplied together in the relevancy calculation, provide a nice counter-balance to each other.
 The term frequency elevates terms which appear multiple times within a document, while the inverse document frequency penalizes those terms which appear commonly across many documents.
+Thus common words such as “the”, “an”, and “of” in the English language ultimately yield very low scores, even though they may appear many times in any given document.
 Query-time boosting is the most flexible and easiest to understand form of boosting, utilizing the following syntax:
+Query boosts can also be used to “penalize” certain terms if a boost of less than 1.0 is used:
 In addition to query time boosting, it is also possible to boost documents or fields within.
 These boosts are factored into the Field Norm, which is covered in the following section.
 The default Solr relevancy formula calculates three kinds of normalization factors.
@@ -837,6 +859,7 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 This byte packs a lot of information in: the boost set on the document when indexed, the boost set on the field when indexed, and a length normalization factor which penalizes longer documents and helps shorter documents (under the assumption that finding any given keyword in a longer document is more likely and thus less relevant)
 The actual field norms are calculated using the formula in figure 3.10
 Field Norms factor in the matching documents boost, the matching field’s boost, and a length normalization factor which penalizes longer documents.
+These three fairly separate pieces of data are stored as a single byte in the Solr index, which is the only reason they are combined together into this single “field norms” variable.
 The d.getBoost() component represents the boost applied to the document when it is sent to Solr, and the f.getBoost() component represents the boost applied to the field for which the norm is being calculated.
 It is worth mentioning that Solr actually allows the same field to be added to a document multiple times (performing some magic under the covers to actually map each separate entry for the field into the same underlying Lucene field)
 Because duplicate fields are ultimately mapped to the same underlying field, if multiple copies of the field exist, the f.getBoost() actually becomes the product of the field boost for each of the multiple fields with the same name.
@@ -853,6 +876,7 @@ It merely serves as a normalization factor to attempt to make scores between que
 It utilizes the sum of the squared weights for each of the query terms to generate this factor, which is multiplied with the rest of the relevancy score to normalize it.
 The Query Norm should not affect the relative weighting of each document that matches a given query.
 The Coord factor’s role is to measure how much of the query each document matches.
+Query:        Accountant AND (“San Francisco” OR “New York” OR “Paris”) You may prefer to find an accountant with offices in each of the cities you mentioned, as.
 If all four of these terms match, the Coord factor is 4/4
 The idea here behind the Coord factor is that, all things being equal, documents which contain more of the terms in the query should score higher than documents which only match a few.
 We have now discussed all of the major components of the default relevancy algorithm in Solr.
@@ -862,14 +886,17 @@ With a solid conceptual understanding and a detailed overview of the specific co
 The information retrieval concepts of Precision (a measure of accuracy) and Recall (a measure of thoroughness) are very simple to explain, but are also very important to understand when building any search application or understanding why the results being returned are not meeting your business requirements.
 We’ll provide a brief summary here of each of these key concepts.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+The precision of a search results set (the documents which match a query) is a measurement answering attempting to answer the question “Were the documents which came back the ones I was looking for?”
 Let’s return to our earlier example from section 3.1 about searching for a book on the topic of buying a new home.
 We’ve determined that by our internal company measurements that the books in table 3.10 would be considered good matches for such a query.
 All other book titles, for purposes of this example, would not be considered relevant for.
 For this example, if all of the documents which were supposed to be returned (documents Matches / 3 Total Matches), which would be perfect.
+If, however, all results came back, the precision would only be .5, since half of the results which were returned were not correct – that is, they were not “precise.”
+As you can see, Precision is a measure of how “good” each of the results of a query are, but it pays no attention to how thorough they are – a query which returns one single correct document out of a million other correct documents is still considered perfectly precise.
 Because Precision only considers the overall accuracy of the results that come back and not the comprehensiveness of the result set, we need to counterbalance the Precision measurement with one that takes thoroughness into account – Recall.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Whereas Precision measures how “correct” each of the results being returned is, Recall is.
-Recall is essentially answering the question of “How many of the correct documents were returned.
+This underlies the critical difference between Precision and Recall – Precision is high when the results returned are “correct”, whereas Recall is high when the correct results are “present.” Recall does not care that all of the results are correct, whereas Precision does not care that all of the results are present.
 In the next section, we’ll talk about strategies for striking an appropriate balance between Precision and Recall.
 Though there is clearly tension between the two, Precision and Recall are not mutually.
 Maximizing for full Precision and full Recall is the ultimate goal of just about every search relevancy-tuning endeavor.
@@ -895,15 +922,20 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 Central to Solr is the concept of all documents being denormalized.
 A completely denormalized document is one in which all fields are self-contained within the document, even if the values in those fields are duplicated across many documents.
 This concept of denormalized data is common to many NoSQL technologies.
+A good example of denormalization is a user profile document having a “city”, “state”, and “postalCode” field, even though in most cases the “city” and “state” field will be exactly the same across all documents for each unique “postalCode” value.
 This is in contrast to a normalized document where relationships between parts of the document may be broken up into multiple smaller documents, the pieces of which can be joined back together at query time.
+A normalized document would only have a “postalCode” field, and a separate location document would exist for each unique “postalCode” so that the “city” and “state” would not need to be duplicated on each user profile document.
 If you have any training whatsoever in building normalized tables for relational databases, please leave that training at the door when thinking about modeling content into Solr.
+Figure 3.11 demonstrates a traditional normalized database table model, with big “X” over it to make it obvious that this is not the kind of datamodeling strategy you will use with Solr.
 Figure 3.11 Solr documents do not follow the traditional normalized model of a relational database.
 This figure demonstrates how NOT to think of Solr Documents.
 Instead of thinking in terms of multiple entities with relationship to each other, a Solr Document is modeled as a flat, denormalized data structure, as shown in listing 3.2
+Notice that the information in figure 3.11 represents two users working at a company called “Code Monkeys R Us, LLC”
 While this figure shows the data nicely normalized into separate tables for the employees’ personal information, location, and company, this is not.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Listing 3.2 shows the denormalized representation for each of these employees as mapped to a Solr Document.
 In a traditional relational database, a query can be constructed which will join data from multiple tables when resolving a query.
+While some basic “join” functionality does now exist Solr (which will be discussed in chapter 14), it is only recommended for cases where it is impractical to actually denormalize content.
 Solr knows about terms that map to documents but does not natively know about any relationships between documents.
 That is, if you wanted to search for all users (in the previous example) who work for companies in Decatur, GA, you would.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -926,7 +958,7 @@ The important take-away here is the nature of scaling Solr.
 The reason for this is that a federated search across multiple Solr Cores is run in parallel on each of those index partitions.
 Thus, if you divide one Solr index into two Solr indexes with the same number of documents, the distributed search across the two indexes should be approximately 50% faster, minus any aggregation overhead.
 This should also theoretically scale to any other number of servers (in reality, you will eventually hit a limit at some point)
-Query Speed on N indexes)/(N+1) This formula is useful for estimating the benefit you can expect from increasing the.
+The conceptual formula for determining total query speed after adding an additional index partition (assuming the same total number of documents) is thus as follows: (Query Speed on N+1 indexes) = Aggregation Overhead.
 Since Solr scales nearly linearly, you should be able to reduce your query times proportional to the additional number of Solr cores (partitions) you add, assuming you’re not constrained by server resources due to heavy load.
 In the last section we introduced the concept of distributed searching to enable scaling to handle large document sets.
 It is also possible to add multiple essentially identical servers into your system to balance the load of high query volumes.
@@ -936,17 +968,18 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 Notice that the servers, for this use case, are mutually dependent.
 If one becomes unavailable for searching, they all become unavailable for searching and begin failing, as indicated in the exception in listing 3.3
 It is thus important to think in terms of “clusters” of servers instead of single servers when building out Solr solutions which must scale beyond a single box, as those servers are essentially combining to serve as a single computing resource.
-Solr provides some built-in cluster management capabilities, through the use of Apache Zookeeper, which will be covered in chapter 13
 As we wrap up our discussions of the key concepts behind searching at scale, we should be clear that Solr does have its limitations, several of which will be discusses in the next section.
 Solr is an incredibly powerful document-based NoSQL datastore which supports full text searching and data analytics.
 We have already discussed the powerful benefits of Solr’s inverted index and complex keyword-based Boolean query capabilities.
 We have also seen how important relevancy is, and we’ve seen that Solr can scale essentially linearly across multiple servers to handle additional content or query volumes.
+What then, are the use cases where Solr is not a good solution – what are the limits of Solr?
 One limit, as we have already seen, is that Solr is NOT relational in any way across documents.
 It is not well suited for joining significant amounts of data across different fields on different documents, and it cannot perform join operations at all across multiple servers.
 While this is a functional limit of Solr, as compared to relational databases, this assumption of independence of documents is a tradeoff common among many NoSQL technologies, as it enables them to scale well beyond the limits of relational databases.
 We have also already discussed the denormalized nature of Solr documents – data which is redundant must be repeated across each document for which that data applies.
 This can be particularly problematic when the data in one field which is shared across many documents changes.
 For example, let’s say that you were creating a search engine of social networking user profiles, and one of your user’s, John Doe becomes friends with another user named Coco.
+Now, I not only need to update John’s and Coco’s profiles, but I also need to update the “second level connections” field for all of John’s and Coco’s friends, which could represent.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 This harkens back to the notion of Solr not being relational in any way.
 An additional limitation of Solr is that it currently serves primarily as a document storage mechanism – that is, you can insert, delete and update documents, but not single fields (very easily)
@@ -966,6 +999,7 @@ We took a deep dive into Solr relevancy, laying out the default relevancy formul
 We then provided a brief overview of the concepts of Precision and Recall, which serve as two opposing forces within the field of information retrieval and provide us with a good conceptual framework with which to judge whether or not our search results are meeting our goals.
 Finally, we discussed key concepts for how Solr scales, including discussions of content denormalization within documents and federated distributed searching to ensure query.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+We ended with a discussion of thinking in terms of “clusters” as opposed to “servers” as we scale our search architectures, and we ended by discussing some of the limitations of Solr and use cases for when Solr may not be a great fit.
 At this point, you should have all of the conceptual background necessary to understand the core features of Solr throughout the rest of this book and should have a solid grasp the most important search concepts for building a killer search application.
 In the next chapter, we’ll begin digging into Solr’s key configuration settings, which will enable more fine-grained control over many of the features discussed in this chapter.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -1122,7 +1156,6 @@ The key take-away for now is that faceting is built-in to every search request a
 To see an example of the More Like This component in action, search for "hard drive" in the.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Figure 4.8 Example of similar items found by the More Like This search component.
-We cover the More Like This component in chapter 10
 To see an example of what the stats component produces, execute GET request as shown in listing 4.8:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 A Request statistics for the price field #B Summary statistics returned for the price field.
@@ -1179,8 +1212,6 @@ Listing 4.11 shows the configuration of cache warming queries for the example se
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Also, note that the actual queries are commented out! This is intentional because there is a cost to executing warming queries and the Solr developers wanted to ensure you configure warming queries explicitly for your application.
 In other words, the cache warming queries are application specific so the out-of-the-box defaults are strictly for example purposes.
-As a rule of thumb, warming queries should contain query parameters (q, fq, sort, etc.) that are used frequently by your application.
-Since we haven't covered Solr query syntax yet, we'll table the discussion of creating warming queries in until chapter 7
 For now, it's sufficient to make a mental note that you need to revisit this topic once you have a more thorough understanding of Solr query construction.
 We should also mention that you do not need to have any warming queries for your application.
 If query performance begins to suffer after commits, then you'll know it is time to consider using warming queries.
@@ -1220,7 +1251,6 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 A common misconception with cache sizing is to make your cache sizes really large if you have the memory available.
 The problem with this approach is that once a cache becomes invalidated after a commit, there can be many objects that need to be garbage collected by the JVM.
 Without proper tuning of garbage collection, this can lead to long pauses in your server caused by full garbage collection.
-We'll learn more about tuning garbage collection parameters for Solr in chapter 12
 For now, the important lesson is to avoid defining overly large caches and let some objects in the cache be evicted periodically.
 Hit ratio indicates how much benefit your application is getting from its cache.
 Conversely, a low hit ratio is an indication that Solr is not benefiting from caching.
@@ -1241,6 +1271,7 @@ Now, let's learn about the specific types of caches Solr uses to optimize query 
 In Solr, a filter restricts search results to documents that meet the filter criteria but does not affect scoring.
 A Filter query "fq" on the manu field When Solr executes this query, it computes and caches an efficient data structure that indicates which documents in your index match the filter.
 For the example server, there are 2 documents that match this filter.
+Now consider what happens if another query is sent to Solr with the same filter query (fq=manu:Belkin) but a different query, such as q=USB.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Figure 4.11 Execute a query with a filter query "fq" clause to see the filter cache in action.
 Next, navigate to the to the Plugins / Stats page for the collection1 and click on the CACHE link.
@@ -1263,7 +1294,6 @@ For the filter cache, the key is the filter query, such as manu:Belkin.
 To warm the new cache, a subset of keys are pulled from the old cache and then executed against the new searcher, which re-computes the filter.
 In other words, auto-warming the filter cache requires Solr to re-execute the filter query with the new searcher.
 Consequently, auto-warming the filter cache can be a source of performance and resource utilization problems in Solr.
-Imagine the scenario where you have hundreds of filters cached and your autowarmCount is set to 100
 When warming the new searcher, Solr must execute 100 filter queries.
 Under this scenario, you'll quickly run into problems where you are warming too many searchers in the background.
 We recommend that you enable auto-warming for the filter cache but set the autowarmCount attribute to a small number, less than 10 to start out.
@@ -1319,6 +1349,8 @@ First, you need to activate the transformer by adding the following configuratio
 A The name of the field to produce in response documents #B Return explanation as a named-list.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Next, you need to reload the core to pick-up this configuration change, see section 4.1.2
+After reloading the core, execute the query passing [explain] in the field list parameter "fl" as in listing 4.15:
+A Request the [explain] field for each document in the field list parameter "fl" #B [explain] field produced for each document using a document transformer.
 Table 4.2 provides a summary of Solr's built-in document transformers:
 Before we wrap up this chapter, we want to introduce the Core Admin API, which allows you to programmatically create, update, reload, rename, swap, and unload cores.
 You've already seen how to reload a core from the Solr administration panel in section 4.1.2
@@ -1371,9 +1403,7 @@ How to index XML, JSON, CSV and other document types.
 In Chapter 3, we learned how Solr finds documents using an inverted index, which in its simplest form, is a dictionary of terms and a list of documents where each term occurs.
 Solr uses this index to match terms in a user’s query with documents where those terms occur.
 In this chapter, we learn how Solr processes documents to build the index.
-In this chapter we’ll focus on the indexing process and non-text fields, saving a detailed discussion of text analysis until Chapter 6
 At the end of this chapter, you’ll know how to get documents indexed in Solr and will understand key concepts like fields, field types, and schema design.
-As a prerequisite, this chapter will be easier to work through if you have the Solr example server running locally, which was covered in chapter 2
 On the other hand, you will still be able to follow along with most examples without actually running Solr if you prefer to read this chapter and then come back to doing the hands-on activities another time.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Throughout this chapter and the next, we will design and implement an indexing and text analysis solution for searching micro-blog content from popular social media sites like Twitter.
@@ -1410,6 +1440,7 @@ Solr supports several formats for indexing your document including XML, JSON, an
 In Figure 5.2, we chose XML because its self-describing format makes it easy to understand.
 Here is how our example tweet would look using the Solr XML format:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+Notice that each field from Table 5.1 is represented in the XML and that the syntax is rather simple—you simply define the field name and value for each field! What you don’t see is anything about text analysis or field type.
 This is because you define how fields are analyzed in the schema.xml document depicted in the diagram.
 Recall from our discussion in Chapter 2 that Solr provides a simple HTTP-based interface to all of its core services, including a document update service for adding and updating documents.
 At the top left of the diagram in Figure 5.2, we depict sending the XML for our example tweet using an HTTP POST to a document update service in Solr.
@@ -1458,6 +1489,7 @@ We’ll return to the discussion of unique keys when we discuss distributed sear
 For our example micro-blog search application from section 5.1, the tweet already includes a unique identifier field: id.
 However, if we index content from a variety of social media sources, then we would probably add something like "twitter:" as a prefix to differentiate this document from a Facebook post with the same numeric id value.
 Once you have determined what a document is for your index and how to uniquely identify each document, the next step is to determine the indexed fields in the document.
+The best way to think about indexed fields is to ask whether a typical user could develop a meaningful query using that field? Another way to decide if a field should be indexed is if you removed this field from the search form would your users miss it?
 For example, every book has a title and an author.
 When searching for books, people generally expect to find books of interest based on title and author, so these fields should be indexed.
 On the other hand, although every book has an editor, users typically do not search.
@@ -1513,6 +1545,7 @@ For now, it’s important to understand that Solr joins are more like sub-querie
 A typical use case is to find the parent documents of child documents that match your search criteria using Solr joins.
 For example, in our example micro-blog application, we could use Solr joins to bring back the original post instead of re-tweets.
 One thing that can be confusing is that when a field is stored, Solr stores the original value and not the analyzed value.
+For example, in listing 5.3, we declared the text field with indexed="true" and stored="true"
 This means that the text field will be searchable and you can return the original text in search results.
 Of course, if you don’t return a field in search results, then it doesn’t need to be stored.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -1549,6 +1582,7 @@ Now imagine that in addition to these three fields, we have dozens of "string" f
 Of course you can type in an explicit definition for each field or you can define a single <dynamicField> element to account for all of these string fields using a suffix pattern on the field name:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 You can also use dynamic fields for multi-valued fields, such as our links field in the previous section.
+Of course, if your documents don’t have a common base schema, then they should probably not be in the same index! In our social media example, if we index documents from Twitter, Facebook, YouTube, and Google+, then documents from each of these sources will have some fields that are unique to each social network.
 We think it’s more intuitive and maintainable to handle these source-specific fields as dynamic fields.
 For example, instead of defining many fields for each source as in the example below:
 A Many Facebook specific string fields that are stored and indexed #B Many Twitter specific string fields that are stored and indexed.
@@ -1570,6 +1604,7 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 In addition, if a tweet contains shortened bit.ly-style URLs, then searches in the text field for the actual "resolved" URL will not match as those are stored in the links field.
 What we really want here is a catch-all search field that contains the text from the screen_name, text, and resolved link fields.
 Thankfully, Solr makes it easy to create a single catch-all search field from many other fields in your document using the <copyField> directive.
+First, you need to define a destination field that other fields will be copied into—let’s name this field catch_all:
 A Catch all field should not be stored as it is populated from another field #B Destination field must be multivalued if any of the source fields are multi-valued.
 This looks like any other field except there are two important aspects to the definition.
 First, notice that this field is not stored (stored="false"), which makes sense because we probably don’t want to display a blob of many fields concatenated together to our users.
@@ -1589,6 +1624,7 @@ For example, with stemming enabled, your search application would not be able to
 Solr copy fields give you the flexibility to enable or disable certain text analysis features like stemming without having to duplicate storage in your index.
 In this case, the text field has field type "stemmed_text" which presumably means the text is stemmed.
 Under the covers, Solr sends the raw, un-analyzed contents of the text field to the auto_suggest field, which allows a different text analysis strategy.
+To reiterate, you cannot return the original value of the auto_suggest field in search results so it has stored="false"
 In section 5.2.2, we discussed how it is a good idea to make your documents uniquely identifiable in the index using some unique ID value.
 To recap, if you provide a unique identifier field for each of your documents, then Solr will avoid creating duplicates during indexing.
 In addition, if you plan to distribute your Solr index across multiple servers, then you must provide a unique identifier for your documents.
@@ -1655,6 +1691,7 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 As we discussed in section 5.4.3, Solr uses a trie data structure to support efficient range queries and sorting of numeric and date values.
 Let's learn how to choose the best value for precisionStep to support range queries and sorting in your Solr instance.
 First, decide if you even need to worry about precisionStep by asking whether you have any numeric or date fields in your index that users would like to find documents across a range of values in those fields.
+For each of these fields, think about the range of possible values that will be indexed—are there potentially millions of unique values or just a handful? In Solr terminology, the number of unique values in a field as called the "cardinality" of the field.
 For example, consider a Solr index for finding houses for sale across the United States.
 Homebuyers typically search for houses in a specific area and price range.
 Home price seems like a good example of a field that needs to support efficient range searches.
@@ -1669,7 +1706,6 @@ In other words, two different home prices will have overlapping terms at lower p
 Lucene does this to reduce the number of terms that have to be matched to satisfy a range query.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Let's compare this to using precisionStep="4" for listing price to see the impact of using a smaller step size.
-Table 5.6 shows that using a smaller precision step equates to more terms being indexed,
 In general, a smaller precision step leads to more terms being indexed per value, which increases the size of your index.
 However, more terms also equates to faster range queries because Lucene can narrow the search space quicker with more terms.
 The intuition here is that Lucene can search the center of a range using the lowest possible precision in the trie.
@@ -1721,7 +1757,6 @@ It turns out that SolrJ actually uses an internal binary protocol called javabin
 When doing Java-to-Java communication, the javabin protocol is more efficient than using XML or JSON.
 In listing 5.15, each invocation of the add method resulted in a.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
-Looking ahead, we’ll see another type of SolrServer provided by SolrJ called CloudSolrServer when we learn about SolrCloud in chapter 13
 We’ve seen how we can send documents to Solr using basic HTTP POST using the post.jar application and using the popular SolrJ client from Java.
 These are not the only ways to get your documents into Solr.
 Being a mature, widely-adopted open source technology, Solr offers a number of powerful utilities for adding documents from other systems.
@@ -1761,7 +1796,6 @@ For now, let it suffice to say that a hard commit can be an.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 After a normal commit succeeds, the newly committed documents are safely persisted to durable storage and will survive server restarts due to normal maintenance operations or a server crash.
 For high availability, you still need to have a solution to fail-over to another server if the disk fails.
-We discuss near-real-time searching in more depth in chapter 13
 For now, you can think of a soft commit as a mechanism to make documents searchable in near real-time by skipping the costly aspects of hard commits, such as flushing to durable storage and warming a new searcher.
 As soft commits are less expensive, you can issue a soft commit every second to make newly indexed documents searchable within about a second of adding them to Solr.
 However, keep in mind that you still need to do a hard commit at some point to ensure documents are eventually flushed to durable storage.
@@ -1790,7 +1824,6 @@ During a commit, the active transaction log is processed and then a new transact
 Figure 5.7 illustrates the steps involved in processing an update request.
 Figure 5.7 Sequence of events and main components used to process update requests, such as adding a new document.
 A few of the components in figure 5.7 should be familiar to you, such as the request dispatcher and response writer.
-These are the same components we discussed in chapter 4
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Let's walk through the sequence of events in figure 5.7 to highlight some of the important concepts:
 The client can send the request as JSON, XML, or Solr's internal binary javabin format.
@@ -1828,6 +1861,7 @@ The "_ti" suffix applies the following dynamic field (from schema.xml):
 A Slightly un-intuitive but updates must be wrapped in an <add> element.
 It follows that all fields must be stored for this to work because the client application is only sending the id field and the new field.
 All other fields must be pulled from the existing document.
+We used the update="set" directive to set the retweet_count_ti field.
 Alternatively, since our update process runs daily, we can just count them for the previous day and increment the existing value using update="inc"
 In addition to set and inc, you can also use "add" to append a new value to a multi-valued field.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -1942,7 +1976,10 @@ After finishing chapter 6, you will have a solid foundation for designing and im
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 In Chapter 5, we learned how the Solr indexing process works and learned to define nontext fields in schema.xml.
 In this chapter, we get a little deeper into the indexing process by learning about text analysis.
+Text analysis removes the linguistic variations between terms in the index and terms provided by users when searching, so that a user querying for “buying a new house” matches documents with terms “home” and “purchase”
+In this chapter, you’ll learn, for example, how to configure Solr to establish a match between queries containing “house” and documents containing “home”
 When done correctly, text analysis allows your users to query using natural language without having to think about all the possible forms of their search terms.
+You don’t want your users to have to construct queries like: “buying house or purchase home or buying a home or purchasing a house …”
 Allowing users to find information they seek using natural language is fundamental to providing a good user experience.
 Given the broad adoption and sophistication of Google and similar search engines, users are conditioned to expect search engines to be very intelligent and intelligence in search starts with great text analysis!
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -1963,11 +2000,13 @@ Specifically, we’ll see how to analyze micro-blog content from sites like Twit
 Tweets present some unique challenges that require us to think hard about how users will use our search solution.
 Collapse repeated characters down to a maximum of two in terms like “yummm”
 Use a custom token filter to resolve shortened bit.ly style URLs.
-Let’s continue with the example micro-blog search application we introduced in chapter 5
 To recap, we’re designing and implementing a solution to search micro-blogs from popular social media sites like Twitter.
 Since the main focus of this chapter is on text analysis, let’s take a closer look at the text field in our example micro-blog document.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 As was discussed in the introduction above, a primary goal of text analysis is to allow your users to search using natural language without having to worry about all the possible forms of their search terms.
+In Figure 6.1, the user searched the text field for “San Francisco north beach coffee”, which is a natural query to expect given all the great coffee houses in North Beach; maybe our user is trying to find a great place to drink coffee in North Beach by searching social media content.
+We assert that our example tweet should be a strong match for this query even though the exact terms “San Francisco”, “north beach”, and “coffee” do not occur in our sample tweet.
+Yes, “North Beach” is in our document, but case matters in search unless you take specific action to make your search index case-insensitive.
 We assert that our example document should be a strong match for this query because of the relationships between terms used in the user’s search query and terms in the document shown in table 6.1:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Table 6.1 Query terms that match terms in our example tweet.
@@ -1976,6 +2015,7 @@ In the remaining sections of this chapter, we’ll open up the black box to see 
 Figure 6.2 Tweet text transformed into a more optimal form for searching.
 Each box indicates a unique term in the Solr index after text analysis process is applied to the text.
 The extra space between some terms indicates stop words that were excluded from the index.
+Can you spot all the transformations that were applied? Table 6.2 provides a summary of the key transformations that were applied to the text using various Solr text analysis tools that we’ll go through in detail below.
 Notice that each transformation taken individually is usually quite simple but collectively they make a big difference in improved user experience with your search application.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Table 6.2 Overview of the transformations made to the micro-blog text using Solr’s text analysis tools.
@@ -1985,6 +2025,7 @@ For now, let’s consider a few of the interesting transformations occurring on 
 Solr also allows you to replace characters and terms using regular expressions.
 For instance, repeating letters in a word is very common in social media content like tweets in.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+However, from a search perspective, “yummm” and “yumm” are basically equivalent so we can reduce the number of unique terms in our index by collapsing these repeated letters down to a maximum of two.
 Later in the chapter, we’ll see how to use regular expressions with Solr to make this transformation.
 It’s worth highlighting that all of the transformations shown above were provided by built-in Solr tools, meaning that we only had to configure them and didn’t write any Java code.
 While Solr’s built-in arsenal is powerful, sometimes you need to extend its capabilities.
@@ -2005,6 +2046,7 @@ Take a moment to think about why you might use different analyzers for indexing 
 It turns out that you often need to do some additional analysis for processing queries than is needed for indexing a document.
 For example, adding synonyms is typically done during query text analysis only to avoid inflating the size of your index and to make it easier to manage synonyms.
 Although you can define two separate analyzers, the analysis applied to query terms must be compatible with how the text was analyzed during indexing.
+For example, consider the case where an analyzer is configured to lowercase terms during indexing but does not lowercase query terms; users searching for “North Beach” would not find our example tweet because the index contains the lowercased forms “north” and “beach”
 Technically, there is also a pre-processing phase before tokenization where you can apply character filters.
 We’ll discuss character filtering in more detail in section 6.3.1, so for now let’s concentrate on tokenization and token filters.
 In the tokenization phase, text is split into a stream of tokens using some form of parsing.
@@ -2022,16 +2064,16 @@ Filters can be chained together to apply a series of transformations on each tok
 The order of the filters is important as you wouldn’t want to have a filter that depended on the case of your tokens listed after a filter that lowercases all tokens.
 Let’s see this process in action to process our example tweet text, starting with the StandardTokenizer.
 At this point, you should have a good understanding of the schema design process and.
-Let’s put this knowledge to work to do some basic text analysis of our example tweet text from chapter 5
 The first step in basic text analysis is to determine how to parse the text into a stream of tokens using a tokenizer.
 Let’s start by using the StandardTokenizer, which has been the classic go-to solution for many Solr and Lucene projects because it does a great job of splitting text on whitespace and punctuation but also handles acronyms and contractions with ease.
 To see this tokenizer in action, let’s use it to parse our example tweet:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+Not bad! The StandardTokenizer split the tweet successfully into a stream of 23 separate tokens.
 Splits on whitespace and standard punctuation characters such as period, comma, semi-colon, etc.
 Preserves Internet domain names and email addresses as a single token.
-Supports a configurable maximum token length attribute, default is 255
 Next, let’s look at several common token filters provided by Solr to do basic text analysis.
 Returning to our example tweet, there are a number of issues with the token stream that should be addressed before this text is added to the index.
+First, there are a few extremely common terms such as “a” or “in” that only serve a grammatical purpose and add little value in differentiating one document from another.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Solr’s StopFilterFactory removes stop words from the token stream during analysis as.
 Removing stop words during indexing helps reduce the size of your index and can improve search performance as it reduces the number of documents Solr has to rank for queries that contain stop words.
@@ -2043,6 +2085,7 @@ Google’s patented approach to stop words is a great example of how search prov
 Even with something as simple as removing stop words, there is not a one-size fits all solution.
 For example, terms starting with a capital letter in the middle of a sentence typically indicate a proper noun that can greatly improve precision of your results if users seek the proper.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+For example a user searching for “North Beach” is probably more interested in documents about the popular San Francisco neighborhood and would be less interested in a document containing “the waves are stronger on the north beach of the island”
 However, using a more nuanced approach to lowercasing terms assumes that your users use the right case when searching.
 In most cases, you’ll want apply the lowercase filter but still need to determine where in the filter chain to apply it.
 If you have synonym list in all lowercase, then you’ll need to apply the lowercase filter before your synonym filter.
@@ -2053,18 +2096,24 @@ So now we have a basic text analysis solution for our sample tweet.
 Let’s apply what we learned so far to see some actual text analysis in action.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 The form also allows you to see if a query would match a sample document without having to actually index the document.
+Let’s try a query “San Francisco coffee” to see if it matches our example tweet as we.
 The easiest way to get started is to use Solr’s admin console, which provides a simple Web form to analyze your content.
 Figure 6.5 How to find the link to the Analysis form from the Solr admin panel.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Once you enter the field type and text to analyze, click on the Analyse Values button to see the result.
 Below the form, Solr reports the steps it takes to analyze the text for indexing using the text_general field type.
 Notice how the text is first parsed with the StandardTokenizer, abbreviated as ST and then each token passes through the StopFilter (SF) and LowercaseFilter (LCF)
+Next, let’s try a query against our example tweet to see if it is a match; enter “drinking a latte” in the text box labeled Field Value (query) as shown in the screen shot in figure 6.7
+When you click on the Analyse Values button, Solr will highlight any terms in the document that match the query, in this case: “drinking” and “latte”
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+Figure 6.7 Search for “drinking a latte” on the analysis panel and Solr will highlight matching terms “drinking” and “latte” in the example document.
+Next, enter “San Francisco drink cafe ipad” and click on the Analyse Values button again.
 Although this is a nonsensical query, we would expect our sample document to be a match.
 We’re using this nonsensical query to demonstrate that seemingly small differences in terms can lead to highly relevant documents being missed by your users.
 Case in point, none of the query terms match the example document! The problem of course is that while it’s easy for a human to see the similarity between the terms in the query and the example document, to Solr, the terms have no relation to each other! We will use better text analysis to overcome this mismatch.
 Overall, as a first pass, we resolved a number of text parsing and basic analysis issues with very little effort.
 On the other hand, there are a number of outstanding issues that will make finding this tweet difficult for your users.
+How many potential issues do you see in the text? Compare your results to figure 6.8:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Figure 6.8 Remaining text analysis issues with our sample tweet after applying the lowercase and stop filters.
 Unless you are indexing tweets or content from other social media sources, you may not encounter any of the analysis issues shown in figure 6.8
@@ -2076,7 +2125,6 @@ In this section, we address these remaining issues by introducing a few more of 
 To begin, since none of the predefined field types meet all of our needs, we will define a new custom field type in schema.xml.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
-You should recognize the structure and some of the elements in this field type definition,
 Table 6.3 provides an overview of the new tools we’ll cover in this section.
 Table 6.3 List of additional Solr text analysis tools needed to analyze micro-blog text.
 KStemFilterFactory Stemming on English text; less aggressive than the Porter stemmer.
@@ -2093,11 +2141,17 @@ Don’t worry if you’re not a regular expression expert, in most cases you can
 Let’s use this <charFilter> to solve those pesky terms with repeated letters like yummm.
 In regex speak, the [a-zA-Z] is a character class that identifies a single letter in lower or uppercase.
 The parenthesis around the character class identifies the matching letter as a captured group.
+So that covers the pattern to match, what about the replacement? Our goal is to collapse repeated letters down to a maximum of two so what we need is a way to address the part of a term that matches ([a-zA-Z])
+With regular expressions, the ([a-zA-Z]) part of our expression is called a captured group and is addressable as $1
+For example, in yummm, ([a-zA-Z]) evaluates to the first “m” and the entire expression evaluates to “mmm”, so “mmm” gets replaced to “mm”
 It turns out that a few of the issues we are having with the example tweet are caused by.
+In addition, it’s splitting hyphenated terms into two tokens, such as “i-Pad” becoming “i” and “Pad”
 Unfortunately, the means that searches for “iPad” won’t match our example document as we saw in the previous section.
 In terms of hashtags and mentions, you might wonder why we care about preserving those special characters on the front?
 Specifically, @Manning used in a social context has a very special meaning in that it identifies a specific social account, in this case the one used by Manning Publishers.
 This is very different than a tweet about Peyton Manning.
+Also, if we apply stemming, then “manning” will become “man”
+This is an extreme case in that our example tweet will be a match for queries with the term “man” in them!
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 For example, #fail is a hashtag commonly used to denote a person’s dissatisfaction with another person, place or thing such as a brand.
 Now we just need to figure out how to do it.
@@ -2114,6 +2168,7 @@ First let’s see how this filter helps us preserve the special characters on ou
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 The leading backslash on the hash sign is so that Solr won’t interpret that line as a comment when reading the wdfftypes.txt file.
 With this simple mapping, hashtags and mentions are preserved in our text.
+In our example tweet, the author incorrectly used “i-Pad” instead of “iPad”; what would be nice is for our tweet to match all possible forms used in queries, ie.
 Think for a minute about what needs to happen during indexing and query analysis to ensure all three forms produce matches.
 Table 6.4 gives you an overview of how each of these options works.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -2121,11 +2176,13 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 In search, it’s often the case that doing simple things can make a big difference.
 Stemming transforms words into a base form using language-specific rules.
 This stemmer is less aggressive in its transformations than other popular stemmers like the PorterStemmer.
-We’ll discuss stemming and lemmatization in more depth in chapter 18
+For now, we apply the KStemFilterFactory to remove “ing” from terms like “drinking” and “learning”1
 Table 6.5 Comparing stems produced by the KStemmer and Porter algorithms.
 It should be clear from these few examples that the Porter stemming algorithm is much.
 The problem with being too aggressive is that your search application may end up matching documents that have little to do with a user’s query.
+For example, if a user searches for “wedding in July”, the term “wedding” is stemmed to.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+Also notice that “operating” and “operative” both stem to “oper” using Porter so documents containing “covert operative” and “operating system” will both be a match for a query for “operating capital”
 In general, a stemmer expands the set of documents that match a query but can negatively impact precision of the results.
 This filter injects synonyms for important terms into the token stream.
 In most cases, synonyms are injected only during query time analysis.
@@ -2178,7 +2235,6 @@ Under the covers, this feature uses document term vectors to compute the similar
 The term vector for any document can be computed at query time using information stored in the index.
 However, for better performance, term vectors can be pre-computed and stored during indexing.
 The optional termVectors attribute allows you to enable term vectors to be stored for each document during indexing.
-Thus, if you plan to make heavy use of the More Like This feature in your search application, you should set termVectors=”true” for text fields.
 If you decide to enable this feature after indexing documents, then you will need to need to reindex all documents.
 We will revisit these attributes throughout the rest of the book, when applicable.
 For example, we’ll look closely at the termPositions and termOffsets attributes in Chapter 9 when we discuss hit highlighting.
@@ -2193,6 +2249,8 @@ Of course, if you know a document is French ahead of time, then you can manually
 For example, assume we have the following tweet, which is a famous quote from Voltaire:
 The Solr XML document to index this French tweet is shown in listing 6.6:
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+Notice how we specify the lang as “fr” and use the text_fr field explicitly.
+This approach is fine if you already know the text is French, but what do you do when you don’t know the language ahead of time? Part of Solr’s appeal is its large community of active users, contributors, and committers, so as you might have guessed, Solr has a built-in solution for language detection!
 BUILT-IN LANGUAGE DETECTION Solr language detection solution was designed to work with documents that are primarily.
 In other words, your mileage may vary if you send a document that contains a mixture of languages.
 Mixed language documents aside, let’s apply Solr’s language detection solution to our social media search application to see how it works.
@@ -2200,12 +2258,12 @@ Solr’s solution should work well for our social media search application in th
 What we hope to see is that we can send a document, such as a tweet, in any major language, have Solr detect the language, and then apply the correct text analysis based on the language.
 Continuing with our Voltaire quote, we want Solr to determine the document is French and then populate our lang field with the value “fr”
 Once the language is known, Solr will look for a field named “text_fr” to populate so that this text gets analyzed using the correct field type designed for French text.
-Solr provides two options for detecting language: 1) Tika-based language.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Also, LangDetect is an open-source project released under the commercial friendly Apache 2.0 license; it’s hosted at http://code.google.com/p/language-detection/
 Listing 6.8 shows how to configure language detection in solrconfig.xml.
 The processor pulls the text and determines the language using statistical analysis on the patterns in the text.
 Once the language is detected, the processor populates the language code in the field specified in the langid.langField parameter, which in our example is lang.
+Lastly, the processor is configured by the langid.map field to map the text to a specific field in the index by combining the name of the incoming field used for language detection “text” and the language code “fr”
 Thus, for our example, the processor will map French text to the text_fr field.
 With these settings in place, you can now send documents containing text in any of the 53 languages supported by LangDetect and Solr will do the right thing.
 Of course, you still need to define the fields and field types to handle specific languages as we did for French.
@@ -2219,6 +2277,7 @@ To begin, we need a requirement that Solr can’t solve with built-in tools.
 Recall from our previous discussion of multi-valued fields where we indexed zero or more URLs into the “links” field.
 For tweets, any links in the text are going to be shortened links provided by an online service like bitly.com.
 For instance, the shortened bit.ly URL for the Solr home page http://lucene.apache.org/solr/ is http://bit.ly/3ynriE.
+From a search perspective, the shortened URL isn’t very useful as it’s hard to imagine someone entering “bit.ly/3ynriE” in a search box! What we want is for a document with a shortened link to be found when someone searches for the resolved URL, e.g.
 Thus, during indexing, we need to extract the shortened URL and replace it with the resolved URL.
 To get the resolved URL, we can use an HTTP HEAD request and follow redirects until we reach the resolved URL or, in the case of bit.ly, we can use their Web service API.
 Now that we know the problem to solve and have a basic understanding of how we want to solve it, we need to determine where in the Solr text analysis process to plug-in our solution.
@@ -2273,7 +2332,6 @@ Faceted search, also called faceted navigation or faceted browsing, is a capabil
 When running a search on a news site, you would expect to see options to filter your results by timeframe (last hour, last 24 hours, last week) or by category (politics, technology, local, business)
 When searching on a job search site, you would likewise expect to see options to filter results by city, job category, industry, or even company name.
 These filtering options generally display not only the available values for each of these facets, but also a count of the total search results matching each of those values.
-In fact, since only a limited number of values can be displayed on the screen for each facet, search engines often sort the values for each facet based upon the most prevalent values (those matching the.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 This allows users to quickly see a birds-eye-view of their results set, without having to actually look through every single search result.
 Faceting in Solr enables this kind of dynamic metadata to be brought back with each set of search results.
@@ -2284,13 +2342,18 @@ We will investigate each of these capabilities in this chapter, leaving you with
 A basic understanding of how the Lucene index stores terms (covered in chapter 3) is also useful, but not required.
 Let us begin with some examples demonstrating how faceting in Solr enables navigating through and visualizing search results at a glance.
 In this section, we you will see a high-level overview of faceting, including several.
+Faceted search is generally composed of two separate steps, calculating and displaying facets to users (which I will refer to going forward as “bringing back facets” or sometimes just “faceting”), and allowing users to select one or more facet values by which their results should be filtered (which I will refer to as “selecting” or “filtering” on a facet)
 At this point, you may be wondering exactly what a facet looks like when it is brought back from the search engine.
+If you were searching on a set of restaurant documents, you might expect several facets to be represented as a navigational element in the user interface, such as the one depicted in figure 8.1 depicting the facets to be returned for the query “hamburger.”
+Figure 8.1  Navigational element in a search results user interface depicting a breakdown of various “facets” of the content returned for a search query of “hamburger.”
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 This navigational element provides a clear visual demonstration of what faceting is, and it also provides an initial glimpse into the power faceting provides.
+Each of the categories brought back (“Restaurant Type”, “State”, “Price Range”, and “City”) are individually considered one facet.
 You can think of each facet as a slice of information that describes the results of a search.
 It is important to note that, while the information in figure 8.1 is useful, there are many potentially better way to visualize these facets.
 One downside of including each of the values above is that you can only display a few at a time for each facet.
 Figure 8.2 demonstrates an alternate way to view the State facet.
+Figure 8.2  Representation of a facet on “State” in a visually appealing way.
 This visualization allows all 50 States within the United States to be displayed in the user interface at one time, preventing the user from being overwhelmed by information.
 As you can see, by utilizing modern visualization techniques, it is possible to utilize facets as representing important meta-data about a user’s search results to provide an enhanced searching experience.
 Figure 8.3 illustrates a similarly appropriate visualization for the Restaurant Type facet.
@@ -2337,6 +2400,7 @@ With the twenty example documents now searchable, we are ready to begin running 
 We will begin with the most common form of faceting: faceting upon each of the unique values within a field.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Field faceting is the most common form of faceting: requesting the unique values found in a particular field back, along with the number of documents in which they are found, when a search is performed.
+In section 8.1, several Field Facets were demonstrated from the restaurants example: a facet on “Restaurant Type” field, a facet on the “State” field, and a facet on the “City” field.
 In this section, you will learn how to construct a Solr query requesting a Field Facet, and you will learn the various faceting parameters that allow you to tweak how the facet values are calculated and returned from Solr.
 For demonstration purposes for the rest of the chapter, we are going to be faceting upon the documents we indexed in section 8.2
 Listing 8.3  Facet results for a Field Facet on a single-valued field.
@@ -2347,6 +2411,7 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 Not all fields in Solr contain a single value, however.
 The tags field is an example of a multi-valued field.
 Let us see what happens when we try to facet upon the tags field in listing 8.4
+It is interesting to note that the tags “breakfast” and “coffee” were the two most.
 This is because two of the restaurants, Starbucks and McDonalds, fell into both of these categories.
 If you were to search for breakfast or for coffee, this would become readily apparent from the search results returned from Solr.
 It is also important to note that sum of the counts for each of the tags facet values is much greater than 20, which is the total number of documents in the search engine.
@@ -2360,9 +2425,10 @@ The size of the text is relative to the number of documents in which the phrase 
 This demonstrates again that there are many ways to visualize facets.
 Tag clouds are common ways for users to see a high-level overview of the results of their search from a categorical standpoint.
 In addition to using tags like in this example, it is also common to facet upon a raw content field containing everyday language to glean these kinds of insights (such as the full-text of a restaurant’s description in this case)
+The problem with using a raw content field, of course, is that much more noise exists in such a field, since everyday language contains junk words (such as stopwords like “and”, “of”, and “like”), making it less reliable in describing the document than explicit tags would be.
 An additional important item to keep in mind when you are faceting is that the values returned for a field facet are based upon the indexed values for a field.
+In other words, if you pass in the term “San Francisco, CA”, but you actually tokenize the field as a text field which splits on spaces and commas and also lowercases the text, then the actual values in the Solr index for that field would be “ca”, “francisco”, and “san”
 Thus, unless you want to actually bring back facet counts for each of those terms individually and lowercased, you have to consider how you may want to facet on a field when you create the field definition in Solr’s schema.xml.
-It is fairly standard for Solr developers to create a separate field into which they will put a duplicate copy of certain content for the sole purpose of faceting (so that the original text can be preserved in a facetable form.
 At this point you should have a solid grasp of what a facet is, and you should also have a good feel for requesting a facet on either a single-valued field or a multi-valued field.
 Thusfar, however, you have only been exposed to the default settings for bringing back a facet.
 Faceting seems easy when you are only dealing with twenty documents, but what happens when there are thousands or millions of unique terms that would come back from Solr on a faceting request?  Fortunately, Solr has many faceting options which allow finetuning how facets are returned on a per-query basis.
@@ -2371,7 +2437,6 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 Table 8.1  A listing of the Field Faceting parameters which can be specified on the Solr url to modify faceting behavior.
 One important take-away from table 8.1 is that multiple facets can be requested by specifying the facet.field parameter multiple times.
 This parameter may be specified multiple times to return multiple facets.
-By default, terms with zero matches in the current search will be included in facet results, so it is common to set facet.mincount to at least 1
 The fc (field cache) method loops over the documents that match the query and finds the terms within those documents.
 The fc method is faster for fields which contain many unique values, whereas the enum method is faster for fields which contain few values.
 The fc method is the default for all fields except Boolean fields.
@@ -2383,9 +2448,11 @@ As you can see, this listing combines multiple facet options on multiple fields 
 While the query required many parameters, the flexibility these faceting options provide can be well worth the additional complexity.
 At this point you have learned how to request Field Facets back in Solr so that you can see how many documents match each unique value in any of your indexed fields.
 While this is a powerful feature, faceting in Solr is actually much more powerful.
+The next realm of faceting we will explore is Query Faceting, the ability to bring back facet counts for literally any query – no matter how complex – which also matches your search results.
 While it is great to be able to return the top values within any indexed field as a facet, as discussed in the last section, it can also be extremely useful to bring back counts for arbitrary sub-queries so that you know how many results might match a future search.
 The best way to demonstrate this capability is through an example.
 You could certainly accomplish this by running three different queries, as indicated in listing 8.6
+The example in listing 8.6 demonstrates the most brute-force method for finding search result counts for sub-queries in Solr – running each sub-query as a separate search and.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 While the pain may not seem enormous in this small, contrived example, it is nevertheless unnecessary.
 Listing 8.7 demonstrates how such a query can be easily combined into a single query using Query Facets.
@@ -2424,6 +2491,7 @@ The “before” option creates a bucket for all values prior to the lower bound
 The “after” option creates a bucket for all values after the upper bound.
 The between option creates a bucket for all values between the lower and upper bounds.
 This parameter may be specified multiple times to include multiple values.
+The “all” option is a shortcut for saying “before, after, and between”
 If the “none” option is present, it will override any other parameters which are specified.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 This parameter may be specified multiple times to include multiple values.
@@ -2437,17 +2505,22 @@ Returning facets from Solr is the first step toward allowing your users to refin
 Once you’ve shown the breakdown of faceted values to your users, however, the next step is to allow them to actually click on one or more facet values to apply that value as a filter.
 In this section, we will discuss the best approaches for applying these filters.
 At the most basic level, applying filters upon a facet is no more difficult than just adding.
+In other words, assuming we wanted to return three facets with our searches, one a Field Facet on the “state” field, one a Field Facet on the “city” field, and one a Query Facet on the “price” field.
 Our initial query and results would look similar to listing 8.10
 Listing 8.10  Faceting upon the tags field in the example restaurant data.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+In this example, how would you go about filtering upon a facet value?  You actually already know how to do this – you simply add a filter to your query for each selected facet value.
+Listing 8.11 demonstrates a second search, where the user has clicked the state of “California”
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 First, they run a base search bringing back facets, and then they select a facet to run a subsequent search and narrow down their search results with a filter.
 This could continue, with the user running a third search, such as in listing 8.12
 It is worth noting that each of the examples you have seen thus far operate on a field containing only one value.
 As such, as soon as you filter upon that value, no documents.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+This makes sense in our single valued fields – if a document can only have one “price” or only appear in one “state”, there is no way it could appear in a facet where another price or state was selected.
 Any field which is marked as multivalued in Solr’s schema.xml file or that is of a field type which is analyzed into multiple tokens may actually contribute multiple terms to a facet.
 We can see this in action by utilizing the multivalued “tags” field in the example Solr index.
+Listing 8.13 shows several searches that successively apply filters on the “tags” field.
 Listing 8.13  Applying several filters on a faceted field containing multiple values.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 It is also worth noting that, even though these examples specify each selected filter value as its own fq parameter on the Solr url, there is no requirement that this be done.
@@ -2458,6 +2531,7 @@ The discussion of multi-select faceting in the following section will highlight 
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 All of our examples of applying facet filters thus far have applied filters based upon a.
 In reality, the terms brought back in facets may be more challenging to deal with, such as multi-word terms.
+What happens, for example, if you want to facet upon the multi-word term Los Angeles?  As you already know, the filter fq=city:Los Angeles is invalid, as it syntactically says to find documents containing a city of “Los” and the term “Angeles” in the default field(s)
 In order to allow for phrases separated by a space, most Solr developers decide to quote all terms they facet upon.
 Unfortunately, there is even a problem with just blindly quoting the terms you are filtering upon: if the term has quotes within it, the syntax will break unless you escape it.
 If quoting and escaping quotes were not already enough trouble, you also have to be mindful of all text processing taking place on the field upon which you are faceting.
@@ -2493,7 +2567,9 @@ This is problematic if you want to allow your user to select multiple values to 
 Even though you would expect your search results to only display documents in California given the above user interface, you would also expect the facets to continue displaying the other states so that you could expand your query.
 The same principle applies for price ranges and cities – it is silly to only allow your users to search for one value per facet at a time.
 Fortunately, Solr has a solution to this problem through a feature called Facet Exclusions.
+Facet Exclusions allow you to “add back” documents removed by any groups of filters that were applied on your search request.
 By adding back the removed documents to the facet counts, you can make facet counts on each facet effectively ignore any filters applied based upon that facet.
+The parameters necessary to implement this are the “tag” local param and the “ex” local param.
 Listing 8.16  Using tags and excludes to implement multi-select faceting.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 Even though you cannot see the actual search results in listing 8.16, it is important to keep in mind that the documents returned from Solr are still constrained to the state of California (because the filter was applied to the query), even though state facet is not limited by that filter.
@@ -2510,20 +2586,18 @@ There are several additional aspects of faceting that have not yet been discusse
 In the next section, we will touch on some of the more advanced topics related to faceting which will be discussed in later chapters.
 This chapter provides a solid overview of the most used faceting capabilities in Solr, but this is not the last time you will see faceting discussed.
 Faceting makes heavy use of Solr’s caches, so you will need to optimize your use of Solr’s built in caches in order to maximize the performance of your faceting requests.
-Working with caches will be discussed in-depth in chapter 13
-In addition to performance tuning, you will also see some more advanced forms of faceting in chapter 14
 One of these advanced faceting capabilities is called Pivot Faceting, and it provides the ability for you to facet in many dimensions.
 For example, say it was not sufficient for your application to just know the top values from the “tags” field, and that you really needed to know the top tags per city.
 How would you go about accomplishing this? You could run a first search and get a facet for all the cities, and then run subsequent searches for each city to get its tags facet.
 Unfortunately, this approach does not scale very well and can easily result in you having to run dozens or hundreds of searches as your document set gets larger.
 Pivot facets, however, allow you to facet across multiple dimensions to pull back these kinds of calculations in a single search.
-If you would like to learn more, please checkout the Advanced Faceting section of chapter 14
 Congratulations on wrapping up an in-depth chapter on one of Solr’s most powerful features.
 As you have seen, faceting provides a fast way to allow users to see a high-level overview of what kinds of documents their queries match.
 You would be hard pressed to find a major search-powered website today which does not provide some form of faceting to allow users to drill down and explore their search results.
 Using Solr, you have the ability to bring back the top values within each field using Field Facets, to bring back bucketed ranges of numbers or date values utilizing Range Facets, or to bring back the counts of any number of arbitrarily complex queries by utilizing Query Faceting.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 You also saw that it is possible to utilize keys to rename facets as they are being returned, learned how to use tags and Facet Excludes to implement multi-select faceting which returns counts even for documents which are filtered out by a query, and explored multiple ways of applying filters to a query once facets are clicked upon by your users.
+Finally, you encountered a brief introduction to the importance of effectively utilizing Solr’s caches (covered further in chapter 12) for faceting performance optimization, and you heard about multi-dimensional Pivot Faceting, which will be discussed in detail in the “Complex data operations” chapter.
 At this point, you should be able to implement some fairly sophisticated search application utilizing all but the most complex forms of faceting available in Solr.
 In the next chapter, you will learn how to use another very common Solr feature, Hit Highlighting, which allows the snippets of text matched in each document during a search to be returned for display in your list of search results, providing a potentially important insight to your users as to whether a document in your search results is worth exploring.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
@@ -2531,6 +2605,7 @@ Returning multiple groups of query results in a single search request.
 Ensuring variety in search results by ensuring multiple categories are represented.
 Result Grouping is a useful capability in Solr for ensuring an optimal mix of search results is returned for a user’s query.
 Result Grouping, also commonly referred to as Field Collapsing, is the ability to ensure only one document (or some limited number) is returned for each unique value (actual or dynamically computed) within a field.
+This can be useful if you have multiple similar documents – say products from the same company, locations for the same restaurant chain, or companies with multiple offices – but do not want an entire page of search results to only represent a single product, restaurant, or company.
 You have probably seen implementations of this capability when using your favorite web search engine at some point.
 If you have ever seen search results telling you that many results matched your query, but only one (or the top few) were being displayed, you have encountered Field Collapsing.
 Often times, such a message will provide a link users can click to see the fully-expanded list of search results, along with a count of how many additional documents would have been returned had the search results not been collapsed.
@@ -2541,8 +2616,14 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 One way in which grouping is very different than Faceting, however, is that it returns the requested groups within the search results section, which means the groups and values within the groups are sorted based upon the sorts specified for the documents in the query.
 Grouping can be performed based upon field values, functions, or queries, making its applications numerous.
 While this may sound complex initially, we will cover several use cases to demonstrate this incredibly useful and (mostly) straightforward feature.
+Before jumping in, however, it will be useful to clarify the sometimes confusing distinction between the names “Result Grouping” and “Field Collapsing.”
 One question commonly asked is why the Result Grouping functionality in Solr is referred.
 Field Collapsing is the more commonly used term for this functionality in other search engines, referring to the act of returning a normal set of results with duplicate values removed.
+An early version of this functionality was being developed for Solr and was unofficially called the “Field Collapsing” patch.
+The decision was later made to make this capability more generic, however, and the “Result Grouping” name was chosen to signify the more generic capabilities now available.
+While returning a single results set collapsed on the duplicate values within a field (“Field Collapsing”) is certainly a supported option using Solr’s Result Grouping functionality, it is also possible to return multiple result sets – or “groups” from a single query.
+The “Result Grouping” name thus signifies a more generic capability than the traditional “Field Collapsing” use-case.
+This chapter will demonstrate multiple uses for Solr’s Result Grouping functionality, starting with the most common one – “Field Collapsing” to removing duplicate documents from a set of search results.
 Let’s say you are running an online e-commerce website that sells user-posted items.
 While on the one hand it may be nice to run a search for an item and see thousands of copies of identical products, you may actually provide a much better user experience if instead you only show one document per unique item (possibly along with a count of how many of each item exists)
 This will allow some diversity in the search results, just in case the item that shows up at the top is not exactly what the user was trying to find.
@@ -2550,6 +2631,7 @@ Please post comments or corrections to the Author Online forum: http://www.manni
 In order to demonstrate this capability in action, some example product documents have been added in the source code that accompanies this book.
 After following the steps in Appendix A to obtain a clean version of Solr, you can start up Solr and add the example documents using the commands in Listing 11.1
 With our e-commerce search engine up and running, we can now demonstrate Solr’s Result Grouping capabilities in action.
+Listing 11.2 demonstrates a standard search request for the query “Spider-man” without grouping turned on.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 The results from listing 11.2 almost certainly represent a bad user experience, as they seem to present every format of the same product as separate products, listing it multiple times.
 By turning Grouping on, the results appear much more diverse, providing a cleaner user experience, as demonstrated in Listing 11.3
@@ -2575,10 +2657,12 @@ You have seen throughout this section how to collapse the results of a query int
 You have also seen three formats in which grouped search results can be returned: the default advanced grouping format, the simple grouping format, and the returning of a single collapsed group in the main search results.
 Each of these formats strikes a balance between backwards compatibility with the standard search results format and the richness of information available to describe the identified groups.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+The collapsing of results down to a single document per unique field value represents the essence of what is meant by the use of the traditional term “Field Collapsing.”
 Throughout the rest of this chapter, we will see some more advanced use cases for the more generic grouping capabilities available in Solr.
 The next section will begin by demonstrating how to request multiple documents per group in a single query.
 Collapsing to a single document per unique field value is not the only practical use-case for Solr’s Grouping functionality, of course.
 Returning to our e-commerce search engine example from the previous section, imagine that if instead of only collapsing duplicate documents, we could actually guarantee that we would return a fixed number of results from each product category.
+For example, going back to our earlier search (in section 11.2) for “spider-man”, imagine that instead of returning a flat list of collapsed (de-duplicated) documents, that instead, we returned up to three documents per unique category.
 If you still have your Solr instance up and running from listing 11.1 (if not, you can easily go back and restart it), we can run this query.
 The example documents contain a type field that we can group upon, requesting a limit of three documents per group.
 Additionally, let us request a maximum of 5 total groups be returned.
@@ -2592,6 +2676,7 @@ Likewise, the start parameter controls the group offset for paging through group
 One final very important aspect of grouping can be gleaned from listing 11.6: the way sorting interacts with grouping.
 Conceptually, all groups are sorted based upon the order in which their top document is sorted.
 What this means is that, assuming groupings were not enabled, all of the documents would appear in their sorted order (by relevancy score by default)
+If the highest sorted document were to have a type field value of “Movies”, the second highest a value of “Comic Books”, the third highest again a value of “Movies” and the fourth highest a value of “Clothing”, then the sorted order of the groups would be “Movies”, “Comic Books”, and then “Clothing”
 Inside of each group, the documents are also sorted, by default, in the order of their first appearance.
 While grouping on the values within a field provides so very useful search capabilities, as shown in the above examples, much more is possible with Solr’s Result Grouping capabilities.
 The next section will begin by demonstrating the ability to group on more than just field values - you will see how to group by arbitrary queries and functions, as well.
@@ -2608,6 +2693,7 @@ In section 11.3, you saw that it is possible to collapse search results so that 
 In addition to grouping on pre-defined field values, it can also be useful to dynamically group on arbitrary queries.
 For example, a customer-centric user experience could be highly customized to return three sets of search results: those within 50 kilometers of the user, those within the customer’s price range, and those within the customer’s favorite category.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+To demonstrate this capability utilizing our dataset for this chapter, let us see what it would look like to request three somewhat arbitrary query groups: one query that matches all movies, one query that matches anything in a DVD format, and one query which is for the specific product named “The Hunger Games.”  Listing 11.8 demonstrates how to accomplish this.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 This is actually true for any kind of grouping query (group.field, group.func, or group.query) – any number of groups can be returned from Solr within a single request.
 Second, a query group is essentially a way to perform multiple sub-searches of the original search.
@@ -2617,7 +2703,9 @@ In other words, it is as if you are literally running multiple searches within t
 With this ability to run multiple sub-searches in a single Solr request, some interesting interactions take place between Solr’s grouping functionality and the results paging and document sorting which also occur during the request.
 Grouping, because of its richer search results structure, introduces some additional complexity when paging through and sorting search results.
 You will recall from chapter 7 that Solr utilizes the rows parameter to determine how many documents to return from Solr for a standard search query.
+When grouping results, however, there is an extra layer of complexity – what is it you are actually trying to put a limit upon?  Do you wish to return a certain number of documents per group, a certain number across all groups, or a certain number of groups?  Similar questions exist when using Solr’s start parameter to page through grouped search results and the sort parameter to sort the grouped search results.
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
+What does it mean to page through and sort search results in the context of multiple groups of search results? In order to handle this additional complexity, Solr’s grouping functionality applies these global parameters – rows, start, and sort – to the groups themselves.
 The rows parameter determines how many groups to return, the start parameter controls paging through available groups, and the sort parameter controls how groups are sorted (based upon their top document) as opposed to how documents are sorted across groups.
 Should you additionally need to increase the number of documents per group, page through the results within a group, or sort the results within the groups differently, Solr’s Result Grouping functionality has separate parameters to control this.
 As indicated in section 11.3, the group.limit parameter specifies the maximum number of results to return per group, performing the behavior that the rows parameter performs on a non-grouped search.
@@ -2625,11 +2713,13 @@ The group.offset parameter allows you to page through the results within a group
 Finally, the group.sort parameter allows you to re-sort the documents within your groups, even though they have already been sorted initially by the sort parameter to determine the order in which the groups will appear.
 Some very interesting uses for this two-pass sorting could be implemented, with one phase finding the relevant groups of documents and the other phase sorting the documents within that group based upon some other business need.
 At the end of the day, perhaps the easiest way to think of paging, sorting, and limiting the results in a grouped request is to think of the groups as the actual documents Solr is returning.
+You can page, sort, and limit those “document groups” just like you would page, sort, and limit single documents in a standard search request.
 Solr then provides the additional group parameters (group.limit, group.offset, and group.sort) to help you refine the documents within the groups for display.
 While Solr’s Grouping capabilities prove useful for many use-cases, there are a few aspects of this functionality that can be a bit tricky to navigate.
 Understanding these details is important for determining how to partition your data, what Facet counts represent, and how your query performance will be impacted.
 By default, Facet counts are based upon the original query results, not the grouped results.
 This means that whether you turn grouping on for a query or not, the facet counts will be the same.
+It is possible, however, to only return facet counts for “collapsed” results by setting the parameter group.facet=true.
 If you were to turn faceting on and facet on the type field using the ecommerce data for this chapter, you would get the results in listing 11.9
 Please post comments or corrections to the Author Online forum: http://www.manning-sandbox.com/forum.jspa?forumID=828
 The first characteristic of listing 11.9 that you should notice is that while eleven documents matched the filter for type:Movies, only six documents were returned in the grouped search results when the results were collapsed by the product field.

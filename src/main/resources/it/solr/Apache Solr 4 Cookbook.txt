@@ -47,6 +47,7 @@ Customer support Now that you are the proud owner of a Packt book, we have a num
 Downloading the example code You can download the example code files for all Packt books you have purchased from your account at http://www.packtpub.com.
 If you purchased this book elsewhere, you can visit http://www.packtpub.com/support and register to have the files e-mailed directly to you.
 Errata Although we have taken every care to ensure the accuracy of our content, mistakes do happen.
+If you find a mistake in one of our books—maybe a mistake in the text or the code—we would be grateful if you would report this to us.
 By doing so, you can save other readers from frustration and help us improve subsequent versions of this book.
 If you find any errata, please report them by visiting http://www.packtpub.com/support, selecting your book, clicking on the errata submission form link, and entering the details of your errata.
 Once your errata are verified, your submission will be accepted and the errata will be uploaded to our website, or added to any list of existing errata, under the Errata section of that title.
@@ -158,6 +159,7 @@ There are some other tasks that are common problems when running Solr on Apache 
 Changing the port on which we see Solr running on Tomcat Sometimes it is necessary to run Apache Tomcat on a different port other than 8080, which is the default one.
 To do that, you need to modify the port variable of the connector definition in the server.xml file located in the $TOMCAT_HOME/conf directory.
 If you would like your Tomcat to run on port 9999, this definition should look like the following code snippet:
+Installing a standalone ZooKeeper You may know that in order to run SolrCloud—the distributed Solr installation—you need to have Apache ZooKeeper installed.
 Zookeeper is a centralized service for maintaining configurations, naming, and provisioning service synchronization.
 SolrCloud uses ZooKeeper to synchronize configuration and cluster states (such as elected shard leaders), and that's why it is crucial to have a highly available and fault tolerant ZooKeeper installation.
 If you have a single ZooKeeper instance and it fails then your SolrCloud cluster will crash too.
@@ -252,6 +254,7 @@ Let's see one more thing – the ability to have more than one spellchecker defi
 More than one spellchecker If you would like to have more than one spellchecker handling your spelling suggestions you can configure your handler to use multiple search components.
 Solr cache configuration As you may already know, caches play a major role in a Solr deployment.
 And I'm not talking about some exterior cache – I'm talking about the three Solr caches:
+There is a fourth cache – Lucene's internal cache – which is a field cache, but you can't control its behavior.
 It is managed by Lucene and created when it is first used by the Searcher object.
 With the help of these caches we can tune the behavior of the Solr searcher instance.
 In this task we will focus on how to configure your Solr caches to suit most needs.
@@ -259,6 +262,7 @@ There is one thing to remember – Solr cache sizes should be tuned to the numbe
 Getting ready Before you start tuning Solr caches you should get some information about your Solr instance.
 For the purpose of this task I assumed the following numbers:
 Of course the above configuration is based on the example values.
+Further let's set our result window to match our needs – we sometimes need to get 20–30 more results than we need during query execution.
 So we change the appropriate value in the solrconfig.xml file to something like this:
 So the called FastLRUCache tends to be faster when Solr puts less into caches and gets more.
 This is the opposite to LRUCache which tends to be more efficient when there are more puts than gets operations.
@@ -310,6 +314,7 @@ For information on how to cache whole pages of results please refer to the Cachi
 How to fetch and index web pages There are many ways to index web pages.
 We could download them, parse them, and index them with the use of Lucene and Solr.
 The indexing part is not a problem, at least in most cases.
+But there is another problem – how to fetch them? We could possibly create our own software to do that, but that takes time and resources.
 That's why this recipe will cover how to fetch and index web pages using Apache Nutch.
 Getting ready For the purpose of this task we will be using Version 1.5.1 of Apache Nutch.
 To download the binary package of Apache Nutch, please go to the download section of http://nutch.
@@ -318,9 +323,7 @@ To do that we just need to extract the downloaded archive to the directory of ou
 Of course this is a single server installation and it doesn't include the Hadoop filesystem, but for the purpose of the recipe it will be enough.
 Now let's create empty directories called crawl and urls in the $NUTCH_HOME directory.
 After that we need to create the seed.txt file inside the created urls directory with the following contents: http://lucene.apache.org.
-So the appropriate entry should look like the following code: +^http://([a-z0-9]*\.)*lucene.apache.org/
 One last thing before fetching the data is Solr configuration.
-We start with copying the index structure definition file (called schema-solr4
 We also create an empty stopwords_en.txt file or we use the one provided with Solr if you want stop words removal.
 Now we need to make two corrections to the schema.xml file we've copied:
 Now we can start crawling and indexing by running the following command from the $NUTCH_ HOME directory:
@@ -398,9 +401,11 @@ When the search results are poor, it's almost certain the users will not be sati
 That's why we need our data to be prepared and indexed as well as possible.
 On the other hand, preparing data is not an easy task.
 We need to index multiple formats of data from multiple sources.
+Do we need to parse the data manually and prepare the data in XML format? The answer is no – we can let Solr do that for us.
 This chapter will concentrate on the indexing process and data preparation beginning from how to index data that is a binary PDF file, teaching how to use the Data Import Handler to fetch data from database and index it with Apache Solr, and finally describing how we can detect the document's language during indexing.
 Indexing PDF files Imagine that the library on the corner that we used to go to wants to expand its collection and make it available for the wider public though the World Wide Web.
 It asked its book suppliers to provide sample chapters of all the books in PDF format so they can share it with the online users.
+With all the samples provided by the supplier came a problem – how to extract data for the search box from more than 900 thousand PDF files.
 Solr can do it with the use of Apache Tika.
 This recipe will show you how to handle such a task.
 Getting ready Before you start getting deeper into the task, please refer to the How to set up the extracting request handler recipe in Chapter 1, Apache Solr Configuration, which will guide you through the process of configuring Solr to use Apache Tika.
@@ -416,6 +421,7 @@ Remember the contents of the PDF file I created? It contained the word "Solr"
 That's why I asked Solr to give me documents which contain the word "Solr" in a field named text.
 In response, I got one document which matched the given query.
 To simplify the example, I removed the response header part.
+As you can see in the response there were a few fields that were indexed dynamically – their names start with attr_
 Those fields contained information about the file such as the size, the application that created it, and so on.
 As we can see, we have our identifier indexed as we wished, and some other fields that were present in the schema.xmlfile that Apache Tika could parse and return to Solr.
 Generating unique fields automatically Imagine you have an application that crawls the web and index documents found during that crawl.
@@ -438,7 +444,6 @@ And now he wants to expand his business to e-commerce.
 But his IT department said that this will be tricky – because they need to hire someone to fill up the database with the product names and their metadata.
 And that is the place where you come in and tell them that you can extract titles and authors from the MP3 files that are available as samples.Now let's see how that can be achieved.
 Getting ready Before you start getting deeper into the task, please refer to the How to set up the extracting request handler recipe in Chapter 1, Apache Solr Configuration, which will guide you through the process of configuring Solr to use Apache Tika.
-To do that, let's run the following command: curl "http://localhost:8983/solr/update/extract?literal.
 To do that type a query like the following to your web browser: http://localhost:8983/solr/select/?q=title:207
 First we define an index structure that will suit our needs.
 I decided that besides the unique ID, I need to store the title and author name.
@@ -457,6 +462,7 @@ Solr and Tika managed to extract the name and author of the file.
 See also f If you want to index other types of binary files please refer to the Indexing PDF files.
 His database of users grew to such size that even the simple SQL select statement is taking too much time, and he seeks how to improve the search time.
 Of course he heard about Solr but he doesn't want to generate XML or any other data format and push it to Solr; he would like the data to be fetched.
+What can we do about it? Well there is one thing – we can use one of the contribute modules of Solr, Data Import Handler.
 This task will show you how to configure the basic setup of Data Import Handler and how to use it.
 If you want to use other database engines, please change the driver, url, and user and password attributes.
 One more thing before the indexing – you should copy an appropriate JDBC driver to the lib directory of your Solr installation or the dih directory we created before.
@@ -472,6 +478,7 @@ Next we have a document definition – a tag named document.
 This is the section containing information about the document that will be sent to Solr.
 The document definition is made of database queries – the entities.
 The entity is defined by a name (the name attribute) and a SQL query (the query attribute)
+The entity name can be used to reference values in sub-queries – you can see an example of such a behavior in the second entity named user_desc.
 As you may already have noticed, entities can be nested to handle sub-queries.
 The SQL query is there to fetch the data from the database and use it to fill the entity variables which will be indexed.
 There is a single field tag for every column returned by a query, but that is not a must – Data Import Handler can guess what the mapping is (for example, where the entity field name matches the column name), but I tend to use mappings because I find it easier to maintain.
@@ -481,6 +488,7 @@ Remember that the default behavior is to delete the index contents at the beginn
 If you don't want to delete the index contents at the start of the full indexing using Data Import Handler, add the clean=false parameter to your query.
 Let's assume that we want to index the Wikipedia data, and we don't want to parse the whole Wikipedia data and make another XML file.
 Instead we asked our DB expert to import the data dump information from the PostgreSQL database, so we could fetch that data.
+Did I say fetch? Yes it is possible – with the use of Data Import Handler and JDBC data source.
 This task will guide you through how to do it.
 Getting ready Please refer to the How to properly configure Data Import Handler recipe in this chapter to get to know the basics about how Data Import Handler is configured.
 I'll assume that you already have Solr set up according to the instructions available in the mentioned recipe.
@@ -499,7 +507,9 @@ There is also information about the start of the indexing process.
 One thing you should be aware of: this response can change in the next versions of Solr and Data Import Handler.
 The last listing shows us the summary of the indexing process.
 How to import data using Data Import Handler and delta query.
+Do you remember the task with the users import from the recipe named How to properly configure Data Import Handler? We imported all the users from our client database but it took ages – about two weeks.
 His database is now not used for searching but only updating.
+And yes, that is the problem for us – how do we update data in the index? We can't fetch the whole data every time – it took two weeks.
 What we can do is an incremental import which will modify only the data that has changed since the last import.
 Getting ready Please refer to the How to properly configure Data Import Handler recipe in this chapter to get to know the basics of the Data Import Handler configuration.
 I assume that Solr is set up according to the description given in the mentioned recipe.
@@ -515,6 +525,8 @@ The statuses that are returned by Solr are the same as with the full import, so 
 One more thing – the delta queries are only supported for the default SqlEntityProcessor class.
 This means that you can only use those queries with JDBC data sources.
 Do you remember the first example with the Wikipedia data? We asked our fellow DB expert to import the data dump into PostgreSQL and we fetched the data from there.
+But what if our colleague is sick and can't help us, and we need to import that data? We can parse the data and send it to Solr, but that's not an option – we don't have much time to do that.
+So what to do? Yes, you guessed – we can use Data Import Handler and one of its data sources, file data source.
 Getting ready Please refer to the How to properly configure Data Import Handler recipe in this chapter to get to know the basics of the Data Import Handler configuration.
 I assume that Solr is set up according to the description given in the mentioned recipe.
 To be consistent, I chose to index the Wikipedia data, which you should already be familiar with.
@@ -570,7 +582,6 @@ The last operation is the returning of the processed row.
 It tells Data Import Handler to use the defined function name for every row returned by the query.
 The rest is the usual indexing process described in the How to properly configure Data Import Handler task in this chapter.
 If you want to use a different language other than JavaScript, then you have to specify it in the language attribute of the <script> tag.
-Just remember that the scripting language that you want to use must be supported by Java 6
 Updating a single field of your document Imagine that you have a system where you store a document your users upload.
 In addition to that, your users can add other users to have access to the files they uploaded.
 As you probably know, before Solr 4.0, when you wanted to update a single field in a document you had to re-index the whole document.
@@ -657,11 +668,13 @@ However, remember to still specify the update.chain parameter during indexing or
 Optimizing your primary key field indexing Most of the data stored in Solr has some kind of primary key.
 Primary keys are different from most of the fields in your data as each document has a unique value stored; because they are primary in most cases they are unique.
 Because of that, a search on this primary field is not always as fast as you would expect when you compare it to databases.
+So, is there anything we can do to make it faster? With Solr 4.0 we can, and this recipe will show you how to improve the execution time of queries run against unique fields in Solr.
 Let's assume we have the following field defined as a unique key for our Solr collection.
 So, in your schema.xml file, you would have the following:
 The following steps will help you optimize the indexing of your primary key field:
 Now, we would like to use the Lucene flexible indexing and use PulsingCodec to handle our id field.
 In addition to that, we need to change the id field definition to use the new type.
+The changes we made use the new feature introduced in Apache Lucene 4.0 and in Solr – the so-called flexible indexing.
 It allows us to modify the way data is written into an inverted index and thus configure it to our own needs.
 The idea behind that codec is that the data for low frequency terms is written in a special way to save a single I/O seek operation when retrieving a document or documents for those terms from the index.
 That's why in some cases, when you do a noticeable amount of search to your unique field (or any high cardinality field indexed with PulsingCodec), you can see a drastic performance increase for that fields.
@@ -697,7 +710,6 @@ Furthermore it defines a delimiter which separates the term from the payload.
 In our case the separator is the pipe character (|)
 The one that we are interested in is the speech field.
 It contains pairs which are made of a term, a delimiter, and a boost value.
-I also decided that words that cannot be identified by my application, which is used to identify parts of speech, will be given a boost of 1
 Pairs are separated with a space character, which in our case will be used to split those pairs – that is the task of the tokenizer which we defined earlier.
 To index the documents we use simple post tools provided with the example deployment of Solr.
 To use it, invoke the command shown in the example.
@@ -760,6 +772,7 @@ The synonyms.txt file should be placed in the same directory as other configurat
 Finally we can look at the analysis page of the Solr administration panel to see if the synonyms are properly recognized and applied:
 The second one should be of interest r to us ight now.
 It's based on the new type text_syn which is shown in the second listing.
+Now about the new type, text_syn – it's based on the solr.TextField class.
 Its definition is divided; it behaves in one way while indexing and in a different way while querying.
 So the first thing we see is the query time analyzer definition.
 It consists of the tokenizer that splits the data on the basis of whitespace characters, and then the lowercase filter converts all the tokens to lowercase.
@@ -789,6 +802,7 @@ First of all we have the field definition part of the schema.xml file.
 We have two fields defined–one that is responsible for holding information about the identifier (the id field) and the second one that is responsible for the product description (the description field)
 We name our type text_split and have it based on a text type, solr.TextField.
 We also told Solr that we want our text to be tokenized by whitespaces by adding the whitespace tokenizer (the tokenizer tag)
+To do what we want to do–split by case change–we need more than this.
 We also need to define the appropriate behavior of the filter, so we add two attributes – generateWordParts and splitOnCaseChange.
 The values of those two parameters are set to 1 which means that they are turned on.
 The first attribute tells Solr to generate word parts, which means that the filter will split the data on non-letter characters.
@@ -800,6 +814,8 @@ Splitting text by whitespace only One of the most common problems that you proba
 Finally, let's run the following query in the web browser: http://localhost:8983/solr/select?q=description_split:text.
 On the other hand, we won't get the indexed document in the response after running the following query: http://localhost:8983/solr/select?q=description_string:text.
 First of all we have the field definition part of the schema.xml file.
+We have three fields defined – one for the identifier of the document (the id field), and one named description_string which is based on a string field and thus not analyzed.
+We named our type text_split and had it based on a text type – solr.TextField.
 We told Solr that we want our text to be tokenized by whitespaces by adding a whitespace tokenizer (the tokenizer tag)
 Because there are no filters defined, the text will only be tokenized by whitespace characters and nothing more.
 That's why our sample data in the field description_text will be split into two words, test and text.
@@ -849,6 +865,7 @@ Next we will also add one dynamic field (add this to your schema.xml file in the
 First of all we have three fields and one dynamic field defined in our schema.xml file.
 The first field is the one responsible for holding the unique identifier.
 The third one named location is responsible for holding geographical points and is based on the location type.
+The dynamic field – *_coordinate will be used internally by our location type.
 It uses the tdouble field which was taken from the schema.xml file distributed with Solr.
 It's based on the solr.LatLonType class which is specially designed for spatial search and is defined by a single attribute – subFieldSuffix.
 That attribute specifies which fields (in our case it's the dynamic *_coordinate field) will be used internally for holding the actual values of latitude and longitude.
@@ -870,6 +887,7 @@ Our index consists of three fields; one holding the unique identifier of the doc
 The last field is the field that will be stemmed.
 The stemmed field is based on a Solr text field and has an analyzer that is used at query and indexing time.
 It is tokenized on the basis of the whitespace characters, and then the stemming filter is used.
+What does the filter do? It tries to bring the words to its root form, which means that words such as shows, showing, and show will all be changed to show – or at least they should be changed to that form.
 Please note that in order to properly use stemming algorithms they should be used at query and indexing time.
 As you can see, our test data consists of two documents.
 One of the documents contains the word showed and the other has the word show in their description fields.
@@ -883,6 +901,7 @@ So how to do that with Solr and not kill our Solr server? This task will show yo
 As you can see, the document has been found, so our setup is working as intended.
 First of all let's look at our index structure defined in the schema.xml file.
 We have two fields – one holding the unique identifier of the document (the id field) and the second one holding the name of the document (the name field) which is actually the field we are interested in.
+The name field is based on the new type we defined – string_wildcard.
 This type is responsible for enabling trailing wildcards, the ones that will enable the LIKE 'WORD%' SQL queries.
 As you can see the field type is divided into two analyzers, one for the data analysis during indexing and the other for query processing.
 The querying analyzer is straight; it just tokenizes the data on the basis of whitespace characters.
@@ -988,6 +1007,7 @@ That's terrible, right? That's why with Solr you can specify the sort fields and
 Let's assume that you want to sort your data by an additional field, for example, the field that contains the name of the author of the book.
 As I wrote earlier, we want to sort the result list by author name in ascending order.
 Additionally, we want the books that have the same author to be sorted by relevance in the descending order.
+To do that we must send the following query to Solr: http://localhost:8983/solr/select?q=solr&sort=author+asc, score+desc.
 As you can see, our data is sorted exactly how we wanted it to be.
 As you can see I defined three fields in our index.
 The most interesting to us is the author field, based on which we will perform the sorting operation.
@@ -1009,12 +1029,10 @@ The debug query (the debugQuery=on parameter) shows us the Lucene query that was
 As you can see we only got one document which is perfectly good.
 As I said in the Introduction section, our requirement was to search for phrases over fields that are stemmed and lowercased.
 If you want to know more about stemming please refer to the Stemming your data recipe in Chapter 3, Analyzing Your Text Data.
-Lowercasing is described in the Lowercasing the whole string recipe in Chapter 3
 We only need two fields because we will only search the title, and return the title and unique identifier of the field; thus the configuration is as shown in the example.
 The example data is quite simple so I'll skip commenting on it.
 The query is something that we should be more interested in.
 The query is made to the standard Solr query parser, thus we can specify the field name and the value we are looking for.
-The query differs from the standard word searching query by the use of the " character at the start and end of the query.
 It tells Solr to use the phrase query instead of the term query.
 Using the phrase query means that Solr will search for the whole phrase not a single word.
 That's why only the document with identifier 1 was found, because the third document did not match the phrase.
@@ -1123,7 +1141,6 @@ Getting ready Before continuing please read the Storing geographical points in t
 I assumed that the user location will be provided from the application that is making a query.
 So our user is standing at the North Pole and is using our search application.
 Now let's assume that we want to get the companies sorted in such a way that the ones that are nearer the user are at the top of the results list.
-The query to find such companies could look like the following query: http://localhost:8983/solr/select?q=company&sort=geodist(location,
 If you would like to calculate the distance by hand, you would see that the results are sorted as they should be.
 As you can see in the index structure and in the data, every company is described by the following three fields:
 I'll skip commenting on how the actual location of the company is stored.
@@ -1142,7 +1159,6 @@ The third step is to made a query that will satisfy the requirements.
 As you can see, even though the query was made up of too many words, the result list contains all the documents from the example file.
 Every book is described by two fields: a unique identifier and a title.
 The query is the thing that we are interested in.
-We have passed about eight words to Solr (the q parameter), we defined that we want to use the DisMax query parser (the defType parameter), and we sent the mysterious mm parameter set to the value of 2
 Yes, you are right, the mm parameter, also called minimum should match, tells the DisMax query parser how many of the words passed into the query must be matched with the document, to ascertain that the document is a match.
 In our case we told the DisMax query parser that there should be two or more words matched to identify the document as a match.
 We've also included q.op=AND, so that the default logical operator for the query would be set to AND.
@@ -1201,6 +1217,7 @@ Each query tag is responsible for elevating documents for a query defined with t
 Inside the query tag we can have multiple doc tags with an id attribute, which should have a value of the identifier of the document to which we want add to results or modify positions.
 In our case, we want the document with an identifier value of 3 to be placed in the first position when users enter the book query.
 The query we sent was simple; we asked for documents that have book in the default field (the df parameter) which is name in our case.
+In addition to that, we want all stored fields to be returned (the * part of the fl parameter) and we also want to activate one of the document transformers, which is responsible for marking the documents that were elevated by the query elevation component, by adding the [elevated] part of the fl parameter.
 Using parent-child relationships When using Solr you are probably used to having a flat structure of documents without any relationships.
 However, there are situations where decomposing relationships is a cost we can't take.
 Because of that Solr 4.0 comes with a join functionality that allows us to use some basic relationships.
@@ -1222,7 +1239,6 @@ We also need to add the copy field definition to our schema.xml file, to automat
 As you can see the document we were interested in was found.
 As you can see from the index structure, we have two fields, namely name and description, which we defined to use the text_ngram field because we want these fields to support the returning of the search results even when the user enters a typo of some sort.
 The third attribute of the filter tag is the class attribute that specifies the filter factory class we want to use.
-Let's concentrate on the provided screenshot (refer to step 2 in the How to do it...
 As I wrote earlier, we want the ngram filter to produce grams built up of two characters.
 From the word multiple it created the following bi-grams (n-grams built from 2 characters):
 So, the idea of the algorithm is quite simple – divide the word, so that we take the first character and the character after it, and we make a bi-gram from it.
@@ -1396,6 +1412,7 @@ Suggesting words not whole phrases If you want to suggest words instead of a who
 You should remember, though, not to use heavily analyzed text (like stemmed text) to be sure that your word won't be modified too much.
 Getting the number of documents that don't have a value in the field.
 Let's imagine we have an e-commerce library where we put some of our books on a special promotion, for example, we give them away for free.
+We want to share that knowledge with our customers and say: Hey! You searched for Solr, we found this, but we also have X books that are free! To do that, we index the books that are free without the price defined.
 But how do you make a query to Solr to retrieve the data that we want? This recipe will show you how.
 Getting ready Before you start reading this recipe, please take a look at the Getting the number of documents matching the query and the subquery recipe in this chapter.
 As you can see, the first three documents have a value in the price field, while the last one doesn't.
@@ -1462,11 +1479,11 @@ Of course we are looking at the most relevant documents, so the first ones in ou
 So, as you can easily see, we've got two facet counts for the stock field, both with a count of 1, which is what we would expect.
 There is one thing more—at the time of writing this book, the group.truncate parameter was not supported when using distributed search, so please be aware of that.
 Introduction Performance of the application is one of the most important factors.
+Of course, there are other factors, such as usability and availability—we could recite many more—but one of the most crucial is performance.
 Even if our application is perfect in terms of usability, the users won't be able to use it if they will have to wait for minutes for the search results.
 The standard Solr deployment is fast enough, but sooner or later a time will come when you will have to optimize your deployment.
 This chapter and its recipes will try to help you with the optimization of Solr deployment.
 If your business depends on Solr, you should keep monitoring it even after optimization.
-There are numerous solutions available in the market, from the generic and open-sourced ones such as Gangila (http://ganglia.sourceforge.net/) to search-specific ones such as Scalable Performance Monitoring (http://www.sematext.com/spm/index.
 Paging your results quickly Imagine a situation where you have a user constantly paging through the search results.
 For example, one of the clients I was working for was struggling with the performance of his website.
 His users tend to search for a word and then page through the result pages – the statistical information gathered from the application logs showed that typical users changed the page about four to seven times.
@@ -1522,7 +1539,6 @@ The next parameter tells Solr about the maximum size of the cache (the size para
 This cache should be able to store the ordered identifiers of the objects that were returned by the query with its sort parameter and the range of documents requested.
 This means that we should take the number of unique queries, multiply it by the number of sort parameters and the number of possible orders of sort.
 So in our example, the size should be at least the result of the following equation:
-I tend to set the initial size of this cache to the maximum size; so in our case, I set the initialSize parameter to a value of 16000
 This is done to avoid the resizing of the cache.
 The last parameter (autowarmCount) says how many entries should be copied when Solr invalidates caches (for example, after a commit operation)
 I tend to set this parameter to a quarter of the maximum size of the cache.
@@ -1553,7 +1569,6 @@ This is done because each entry of the filter cache stores the unordered sets of
 In this way, after the first use of the filter, Solr can use the filter cache to apply filtering and thus save the I/O operations.
 The next parameter – initialSize tells Solr about the initial size of the filter cache.
 I tend to set it's value to the same as that of the size parameter to avoid cache resizing.
-So in our example, we set it to the value of 2000
 The last parameter (autowarmCount) says how many entries should be copied when Solr invalidates caches (for example, after a commit operation)
 I tend to set this parameter to a quarter of the maximum size of the cache.
 This is done because I don't want the caches to be warming for too long.
@@ -1621,6 +1636,7 @@ Assuming that the query is matching one-fourth of our documents, we can expect t
 This is because the default faceting calculation is optimized for fields that have many unique values in the index and we have the opposite—we have many documents but few unique terms.
 If you measure the performance before and after the change you will notice the difference; let's discuss why.
 Let's take a look at the query—we search for the given words in the name field using the AND logical operator (q.op parameter)
+As our requirements state, we also run faceting on the size field (facet=true and facet.field=size parameters)
 We know that our fields have only six distinct values, and we also assumed that our queries can return vast amount of documents.
 To handle such faceting calculation faster than the default method, we decided to use the enum method of facet calculation.
 The enum method does the other thing – it enumerates all the terms in the field that we want to calculate faceting on, and intersects the documents that match the query with the documents that match the enumerated terms.
@@ -1632,9 +1648,11 @@ For example, if you would like to change the faceting method for the size field,
 One of the most common problems when indexing a vast amount of data is the indexing time.
 Some of the problems with indexing time are not easily resolvable, but others are.
 Imagine that you need to index about 300,000 documents that are in a single XML file.
+Something is wrong when you index 10,000 documents you need about a minute, but now you are waiting about an hour and the commit operation didn't take place.
 Is there something we can do to speed it up? Sure, and this recipe will tell you how to.
 The solution to the situation is very simple – just add the commit operation every now and then.
 But as you may have noticed, I mentioned that our data is written in a single XML file.
+So, how do we add the commit operation to that kind of data? Send it in parallel to the indexing process? No, we need to enable the auto commit mechanism.
 If you start the indexing described in the indexing process, you will notice that a commit command will be sent once a minute while the indexing process is takes place.
 Solr tends to slow down the indexing process when indexing a vast amount of data without the commit commands being sent once in a while.
 This behavior is completely understandable and is bound to the memory and how much of it Solr can use.
@@ -1654,9 +1672,11 @@ Analyzing query performance Somewhere along the experience with Apache Solr (and
 Of course, such a situation is not desirable and we have to do something to make those queries run faster.
 But how do we know which part of the query is the one we should look at ? This recipe will tell you what information you can get from Solr.
 Let's start with the assumption that we have a query that has parts that are not as fast as we would like it to be.
+In order to get the information we want, we need to add the debugQuery=true parameter to our query, so that it looks similar to the following code snippet: http://localhost:8983/solr/select?q=metal&facet=true&facet.
 The response from Solr is as follows (I've cut some parts of the response, because it is quite large and we are only interested in the last section):
 As you can see in the preceding response, there is some information about query time.
 Let's not concentrate on the query, because it is only an example that allows us to discuss what we want to achieve.
+We've added a single parameter to the query – debugQuery=true.
 This parameter turns on the debug mode in Solr, as you can see in the response.
 The first few entries let you see how the query parser parses your query and how it is passed to Lucene, but it's beyond the scope of this chapter to explain this.
 You can see that nested inside those lists are components and their time.
@@ -1685,11 +1705,11 @@ Forgive me, but I have to say it once again—please remember that the cost attr
 Let's assume we have the Apache Solr 4.0 deployment where we use range queries.
 Some of those are run against string fields, while others are run against numerical fields.
 Using different techniques, we identified that our numerical range queries execute slower than we would like.
+The usual question arises – is there something that we can do ? Of course, and this recipe will show you what.
 The following steps will explain how we can control the order of execution of numerical range queries:
 So, our field type definition would look similar to the following code snippet:
 After the preceding change, you will have to re-index your data and your numerical queries should be run faster.
 As you can see, in the preceding examples, we used a simple float-based field to run numerical range queries.
-Before the changes, we specified precisionStep on our field type as 8
 This attribute (specified in bits) tells Lucene (which Solr is built on top of) how many tokens should be indexed for a single value in such a field.
 However, please remember that decreasing the precisionStep value will lead to slightly larger indices.
 Also, setting the precisionStep value to 0 turns off indexing of multiple tokens per value, so don't use that value if you want your range queries to perform faster.
@@ -1721,13 +1741,13 @@ As you can see, all the other commands are similar to the ones you used while ru
 The only difference is that we specify one additional parameter, -DzkHost, which tells Solr where to look for the ZooKeeper server on the cluster.
 When setting up the SolrCloud cluster, please remember to choose the number of shards wisely, because you can't change that for your existing cluster, at least not right now.
 You can add replicas to an already created cluster, but the number of shards will remain constant.
+There is one more thing that I would like to mention – the possibility of running a ZooKeeper server embedded into Apache Solr 4.0
 Starting the embedded ZooKeeper server You can also start an embedded ZooKeeper server shipped with Solr for your test environment.
 So the final command should look similar to the following code snippet:
 Imagine that you would like to have more than a single collection inside the same Apache Solr 4.0 cluster.
 For example, you would like to store books in one collection and users in the second one.
 SolrCloud allows that, and this recipe will show you how to do it.
 Getting ready Before continuing, I advise you to read the Installing standalone ZooKeeper recipe in Chapter 1, Apache Solr Configuration, because this recipe assumes that we already have ZooKeeper up and running.
-We assume that ZooKeeper is running on localhost and is listening on port 2181
 On both instances of Solr, the solr.xml file should look similar to the following code snippet:
 Now, we need to add the configuration files, which we want to create collections with, to ZooKeeper.
 We have pushed our configurations into the ZooKeeper, so we can now create the collections we want.
@@ -1753,6 +1773,7 @@ The first is to delete our collection and the second one is to reload the whole 
 Along with the ability to create new collections, we are able to dynamically manage our cluster.
 This recipe will show you how to use the delete and reload operations and where they can be useful.
 Getting ready The content of this recipe is based on the Setting up two collections inside a single cluster recipe in this chapter.
+I assume that we already have two collection deployed on our cluster –bookscollection and userscollection – the same ones that we configured in the Setting up two collections inside a single cluster recipe in this chapter.
 So our cluster view looks similar to the following screenshot:
 The original file looks similar to the following code snippet:
 After the update, it will look similar to the following code snippet:
@@ -1818,7 +1839,6 @@ As you can see, we got documents from each shard that builds our cluster, so it 
 As you can see, as shown in the previous screenshot, our test cluster created for the purpose of this recipe contains thee Solr instances, where each of them contains a single shard of the collection deployed on the cluster.
 This means that the data indexed to any of the shards will be automatically divided and distributed among the shards.
 In order to choose which shard the document should go to, Solr uses a hash value of the identifier of the document.
-During indexing, we sent the documents to the Solr instance that is working on port 8983
 However, as our example queries show, when querying only a particular shard (the distrib=false parameter), each of them hosts different amount of documents, which is expected.
 If we had many more documents, the amount of documents on each shard would be probably almost the same if not equal.
 As you must have guessed by now, the distrib=false parameter forces the query to be run on the Solr server that it was sent to in a non-distributed manner, and we want such behavior to see how many documents are hosted on each of the shards.
@@ -1830,6 +1850,7 @@ The information about shards (and replicas, if they exist) is fetched from ZooKe
 Increasing the number of replicas on an already live cluster.
 If you used Solr before the release of the 4.0 version, you are probably familiar with replication.
 The way deployments usually worked is that there was a single master server and multiple slave servers that were pulling the index from the master server.
+In Solr 4.0, we don't have to worry about replication and pulling interval – it's done automatically.
 We can also set up our instances in a way to achieve a similar setup as that of multiple replicas of a single shard where data is stored.
 Getting ready If you are not familiar with setting up a SolrCloud cluster, please refer to the Creating a new SolrCloud cluster recipe in this chapter.
 For the purpose of this recipe, I'll assume that we want to have a cluster with a single shard running just like the usual Solr deployment, and we want to add two additional replicas to that shard.
@@ -1862,7 +1883,6 @@ In such cases, automatic documents distribution based on the documents identifie
 Solr allows us to turn off automatic document distribution and this recipe will show you how to do that.
 Getting ready If you are not familiar with setting up the SolrCloud cluster, please refer to the Creating a new SolrCloud cluster recipe in this chapter.
 If you are not familiar with how to modify the returned documents using the fl parameter, please read the Modifying the returned documents recipe in Chapter 4, Querying Solr.
-Let's assume that we have the following index structure (schema.xml) defined,
 In order to be able to stop the automatic document distribution between shards, we need the following update request processor chain to be defined in the solrconfig.xml file:
 I assume that we already have a cluster containing at least two nodes up and running, these nodes use the preceding configuration files, and that our collection name is collection1
 As we discussed earlier, we want to manually distribute the data to Solr instances.
@@ -1886,7 +1906,6 @@ In addition to that we will see how to use the Solr grouping mechanism in order 
 Getting more documents similar to those returned in the results list.
 Imagine a situation where you want to show similar documents to those returned by Solr.
 Let's imagine a situation where you have an e-commerce library shop, and you want to show users the books similar to the ones they found while using your application.
-Let's start with the following index structure (just add this to your schema.xml file,
 Let's assume that our hypothetical user wants to find books that have cookbook and second in their names.
 The results returned by Solr for the preceding query are as follows:
 As you can see the index structure and the data are really simple.
@@ -1896,7 +1915,6 @@ As you can see, we added some additional parameters besides the standard q one (
 The parameter mlt=true says that we want to add the more like this component to the result processing.
 The mlt.fl parameter specifies which fields we want to use with the more like this component.
 The mlt.mintf parameter asks Solr to ignore terms from the source document (the ones from the original result list) with the term frequency below the given value.
-In our case we don't want to include the terms that will have a frequency lower than 1
 The last parameter, mlt.mindf, tells Solr that words appearing less than the value of the parameter documents should be ignored.
 In our case we want to consider words that appear in at least one document.
 For each document in the results there is one more like this section added to the response.
@@ -1940,8 +1958,6 @@ Sorting results by a function value Let's imagine that you have an application t
 You would like to add an additional feature to your application to sort the results on the basis of the distance of a certain geographical point.
 Is this possible with Solr? Yes, and this recipe will show you how to do that.
 If you are not familiar with geographical search in Solr please read the Storing geographical points in the index recipe in Chapter 3, Analyzing Your Text Data.
-Let's start with the following index structure (just add this to your schema.xml file,
-So, in order to show the results of the query and sort them by the distance from the given point, we send the following query to Solr: http://localhost:8983/solr/select?q=name:company&sort=geodist(geo,
 As you can see, everything is working as it should be.
 We have four fields – one for holding the unique identifier (the id field), one for holding the name of the company (the name field), and one field responsible for the geographical location of the company (the geo field)
 The last field, the dynamic one, is needed for the location type to work.
@@ -1958,7 +1974,6 @@ Searching words by how they sound One day your boss comes to your office and say
 You tried to say something, but your boss is already at the other side of the door to your office.
 So, you wonder if this kind of functionality is available in Solr.
 I think you already know the answer – yes it is, and this recipe will show you how to configure it and use with Solr.
-We start with the following index structure (just add this to your schema.xml file,
 Now let's assume that our user wants to find documents that have the word that sounds like fon.
 So, the filter worked! We got two documents in the results list.
 As you can see we have two fields, the id field responsible for holding the unique identifier of the product and the name field responsible for holding the name of the product.
@@ -1972,13 +1987,12 @@ But take into consideration that this is only an algorithm, so some words that y
 Ignoring defined words Imagine a situation where you would like to filter the words that are considered vulgar from the data we are indexing.
 Of course, by accident, such words can be found in your data and you don't want them to be searchable thus you want to ignore them.
 Can we do that with Solr? Of course we can, and this recipe will show you how to do that.
-Let's start with the following index structure (just add this to your schema.xml file,
 In the standard situation there shouldn't be any results because we don't have a document that matches the two given words.
 But let's look at what Solr returned to us as the preceding query's result:
 To be perfectly sure, let's look at the analysis page found at the administration interface, as shown in the following screenshot:
 As you can see the word vulgar was cut and thus ignored.
 As you can see we have two fields, the id field responsible for holding the unique identifier of the product and the name field responsible for holding the name of the product.
-The name field is the one we will use to mention the ignoring functionalities of Solr – StopFilterFactory.
+The name field is the one we will use to mention the ignoring functionalities of Solr StopFilterFactory.
 As you can see the text_ignored type definition is analysed the same way both in the query and index time.
 The words attribute of the filter definition specifies the name of the file, encoded in UTF-8, which consists of words (a new word at every file line) that should be ignored.
 The defined file should be placed in the same directory in which we placed the schema.xml file.
@@ -1987,7 +2001,6 @@ As you can see in the query, our hypothetical user queried Solr for two words wi
 But, the filter we added cut the word vulgar and thus the results list consists of the document that has only one of the words.
 The same situation occurs when you are indexing your data.
 The words defined in the ignored.txt file will not be indexed.
-If you look at the provided screenshot from the analysis page of the Solr administration interface (refer to step 6 of the How to do it...
 Computing statistics for the search results Imagine a situation where you want to compute some basic statistics about the documents in the results list.
 For example, you have an e-commerce shop where you want to show the minimum and the maximum price of the documents that were found for a given query.
 Of course you could fetch all the documents and count them by yourself, but imagine Solr doing it for you.
@@ -1998,6 +2011,7 @@ As you can see, in addition to the standard results list, there was an additiona
 It contains three fields – one for holding the unique identifier (the id field), one for holding the name (the name field), and one for holding the price (the price field)
 The file that contains the example data is simple, so I'll skip discussing it.
 In addition to the q parameter we have two new parameters.
+The first one, stats=true, tells Solr that we want to use StatsComponent – the component which will calculate the statistics for us.
 In our case, we told Solr to use the price field.
 As you can see, StatsComponent, added an additional section to the results.
 The section contains the statistics generated for the field that we told Solr we wanted the statistics for.
@@ -2090,7 +2104,6 @@ So, let's start with setting the opened files' limit higher.
 The probable cause of the "too many files opened" exception is the number of files the index is built of.
 The more segments the index is built of, the more files will be used.
 The next thing sometimes worth considering is lowering the mergeFactor parameter.
-To make things simple, the lower the mergeFactor setting, the fewer files will be used to construct the index (please read the How it works...
 We modify the following line in the solrconfig.xml file and set it with the appropriate value (2 in our case):
 After we set that configuration value, we need to run the optimization of the index.
 We don't discuss the operating system's internal working in this book, but in this section we will make an exception.
@@ -2170,10 +2183,12 @@ When the indexed attribute is set to false, the information in that field is not
 Of course you can't set this attribute to false if you need this field to be searchable.
 The second requirement tells us what fields we are obligated to show in the search results.
 Those field are the ones that need the stored attribute set to true, and the rest can have this attribute set to false.
+When we set this attribute to false, we tell Solr that we don't want to store the original value—the one before analysis—thus we don't want this field to be included in the search results.
 Setting this attribute to true on many fields will increase the index size substantially.
 The last requirement is actually information; we don't need to worry about highlighting functionality so we can reduce the index size in a greater way.
 By doing that we tell Solr not to store any information about terms in the index.
 This basically means that we can't use the highlighting functionalities of Solr, but we have reduced our index size substantially and we don't need highlighting.
+If we don't need index time boosting and we do not care about length normalization, we could also turn on the omitting of that factor (the omitNorms="true" attribute) for the fields based on the text type (for primitive types such as string, integer, and so on it's turned on by default in Solr 4.0)
 This would shrink the index a bit more and in addition to that save us some memory during queries.
 Every time you think about reducing the index size, first do the optimization, then look at your schema.xml file and see if you need all those fields.
 Then check which fields shouldn't be stored and which you can omit when indexing.
@@ -2287,6 +2302,7 @@ One final thing is the text_lowercase type definition, which should be placed in
 As you can see, we have two categories, each containing a single product.
 We have three fields for each of our documents – one for the identifier fields, one for holding the name of the document, and one for its category.
 We will use the category field to do the autocomplete functionality, and we will use faceting for it.
+If you look at the index structure, for the category field, we use a special type – the text_ lowercase one.
 This is because we want to send the lowercased queries while using faceting.
 One of of the most important parameters in the query is facet.prefix – using it we can return on those results in faceting that start with the prefix defined by the mentioned parameter, which can be seen in the results.
 How to use different query parsers in a single query.
@@ -2305,6 +2321,7 @@ In order to do this, let's index the following document (which we've stored in t
 In order to do this, we run the following query: curl 'http://localhost:8983/solr/select?q=id:1'
 As you can imagine, we didn't get any documents returned, because we didn't send any commit command – not even the soft commit one.
 As you can see, our document is returned by our get handler.
+Our index structure is simple, and there is only one relevant piece of information there – the _version_ field.
 The real-time get functionality needs that field to be present in our documents, because the transaction log relies on it.
 However, as you can see in the provided example data, we don't need to worry about this field, because its filled and updated automatically by Solr.
 But let's backtrack a bit and discuss the changes made to the solrconfig.xml file.
@@ -2326,9 +2343,11 @@ In order to achieve this, Solr exposes the soft commit functionality, and this r
 This recipe will show how we can search for data in a near real-time manner.
 In addition to this, we need to set up the hard and soft automatic commits, for which we will need to add the following section to the updateHandler section in the solrconfig.xml file:
 In order to do this, let's index the following document (which we've stored in the data.xml file):
+We didn't send any commit command, so we shouldn't see any documents, right? I think there will be one available – the one we've just send for indexation.
 But, let's check that out by running the following simple search command: curl 'http://localhost:8983/solr/select?q=id:1'
 As you may know, the standard commit operation is quite resource-intensive – it flushes the changes since the last commit to the disk to the new segment.
 If you would like to do that every second, we could run into a problem of a very high amount of I/O writes and thus our searches would suffer (of course, this depends on the situation)
+That's why, with Lucene and Solr 4.0, the new commit type was introduced – the soft commit, which doesn't flush the changes to disk, but just reopens the searcher object and allows us to search the data that is stored in the memory.
 As we are usually lazy and don't want to remember when it's time to send the commit and when to use soft commit, we'll let Solr manage that so we properly need to configure the update handler.
 First, we add the standard auto commit by adding the autoCommit section and saying that we want to commit after every 60 seconds (the maxTime property is specified in milliseconds), and that we don't want to reopen the searcher after the standard commit (the openSearcher property is set to false)
 The next thing is to configure the soft auto commit functionality by adding the softAutoCommit section to the update handler configuration.
@@ -2370,6 +2389,7 @@ This recipe will show how we can boost documents based on their publishing date.
 Let's begin with the following index structure (add it to the field section in your schema.xml file):
 As you can see, the newest document is the second one, which we want to avoid.
 Our index structure consists of three fields; one responsible for holding the identifier of the document, one for the name of the document, and the last one; the one which we will be most interested in, in which we hold the publishing date.
+The published field has one nice feature – if we don't define it in the document and send it for indexation, then it will get the value of the date and time when it is processed (the default="NOW" attribute)
 As you can see, the first query that we sent to Solr returned results not in a way we would like them to be sorted.
 Of course, we could have sorted them by date, but we don't want to do that, because we would like to have the most recent and the most relevant documents at the top, not only the newest ones.
 In order to achieve this, we use the bf (boost function) parameter.

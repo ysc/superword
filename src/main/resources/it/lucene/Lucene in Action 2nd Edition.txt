@@ -7,7 +7,6 @@ The careful exposure of its indexing and searching API is a sign of the well-des
 Consequently, you don’t need in-depth knowledge about how Lucene’s information indexing and retrieval work in order to start using it.
 Moreover, Lucene’s straightforward API requires using only a handful of classes to get started.
 In this chapter we cover the overall architecture of a typical search application, and where Lucene fits.
-It’s crucial to recognize that Lucene is simply a search library, and you’ll need to handle the other components of a search application (crawling, document filtering, runtime server, user interface, administration, etc.) yourself as your application requires.
 We show you how to perform basic indexing and searching with Lucene with ready-to-use code examples.
 We’ll start next with the very modern problem of information explosion, to understand why we need powerful search functionality in the first place.
 By the time you’re reading this, likely Lucene’s APIs and features will have changed.
@@ -19,6 +18,7 @@ Although we can classify data, trawling through hundreds or thousands of categor
 The need to quickly locate certain specific information you need out of the sea of data isn’t limited to the Internet realm—desktop computers store increasingly more data.
 Changing directories and expanding and collapsing hierarchies of folders isn’t an effective way to access stored documents.
 Furthermore, we no longer use computers just for their raw computing abilities: They also serve as communication devices, multimedia players and media storage devices.
+Those uses for computers require the ability to quickly find a specific piece of data; what’s more, we need to make rich media—such as images, video, and audio files in various formats—easy to locate.
 With this abundance of information, and with time being one of the most precious commodities for most people, we need to be able to make flexible, free-form, ad-hoc queries that can quickly cut across rigid category boundaries and find exactly what we’re after while requiring the least effort possible.
 To illustrate the pervasiveness of searching across the Internet and the desktop, figure 1.1 shows a search for lucene at Google.
 The figure includes a context menu that lets us use Google to search for the highlighted text.
@@ -46,12 +46,14 @@ It concerns itself with text indexing and searching, and it does those things ve
 Lucene lets your application deal with business rules specific to its problem domain while hiding the.
 You can think of Lucene as the core that the application wraps around, as shown figure 1.4
 A number of full-featured search applications have been built on top of Lucene.
+If you’re looking for something prebuilt or a framework for crawling, document handling, and searching, consult the Lucene Wiki “powered by” page (http://wiki.apache.org/lucene-java/PoweredBy) for many options.
 We also describe some of these options in section 1.3.4
 Lucene allows you to add search capabilities to your application.
 Lucene can index and make searchable any data that you can extract text from.
 As you can see in figure 1.4, Lucene doesn’t care about the source of the data, its format, or even its language, as long as you can derive text from it.
 This means you can index and search data stored in files: web pages on remote web servers, documents stored in local file systems, simple text files, Microsoft Word documents, XML or HTML or PDF files, or any other format from which you can extract textual information.
 Similarly, with Lucene’s help you can index data stored in your databases, giving your users full-text search capabilities that many databases don’t provide.
+Once you integrate Lucene, users of your applications can perform searches by entering queries like +George +Rice -eat -pudding, Apple pie +Tiger, animal:monkey AND food:banana, and so on.
 With Lucene, you can index and search email messages, mailing-list archives, instant messenger chats, your Wiki pages … the list goes on.
 Lucene was originally written by Doug Cutting;2 it was initially available for download from its home at the SourceForge web site.
 It now has a number of sub-projects, which you can see at http://lucene.apache.org.
@@ -64,8 +66,8 @@ Lucene’s popularity can be seen by its diverse usage and numerous ports to oth
 Lucene is in use in a surprisingly diverse and growing number of places.
 In addition to those organizations mentioned on the Powered by Lucene page on Lucene’s Wiki, a number of other large, wellknown, multinational organizations are using Lucene.
 One way to judge the success of open source software is by the number of times it’s been ported to other programming languages.
+Using this metric, Lucene is quite a success! Although Lucene is written in Java, as of this writing there are Lucene ports and bindings in many other programming environments, including Perl, Python, Ruby, C/C++, PHP, and C# (.NET)
 This is excellent news for developers who need to access Lucene indices from applications written in diverse programming languages.
-You can learn more about some of these ports in chapter 9
 In order to understand exactly how Lucene fits into a search application, including what Lucene can and cannot do, we will now review the architecture of a “typical” modern search application.
 Figure 1.4 Typical components of search application; the shaded components show which parts Lucene handles.
 Some run quietly, as a small component deeply embedded inside an existing tool, searching a very specific set of content (local files, email messages, calendar entries, etc)
@@ -90,7 +92,6 @@ When you look closer, indexing in fact consists of a sequence of logically disti
 First you must somehow gain access to the content you need to search.
 This process, which is often referred to as a crawler or spider, gathers and scopes the content that needs to be indexed.
 That may be trivial, for example if you are indexing a set of XML files that reside in a specific directory in the file system or if all your content resides in a well-organized database.
-Alternatively, it may be horribly complex and messy, if the content is scattered in all sorts of places (file systems, content management systems, Microsoft Exchange, Lotus Domino, various web sites, databases, local XML files, CGI scripts running on intranet servers, etc.)
 Entitlements, which means only allowing certain authenticated users to see certain documents, can complicate content acquisition, as it may require “superuser” access when acquiring the content.
 Furthermore, the access rights or ACLs must be acquired along with the document’s content, and added to the document as additional fields that are used during searching to properly enforce the entitlements.
 For large content sets, it’s important this component is efficiently incremental, so that it can visit only changed documents since it was last run.
@@ -105,23 +106,27 @@ The document typically consists of several separately named fields with values, 
 Often the approach is obvious, for example one email message becomes one document, or one PDF file or web page is one document.
 But sometimes it's less so: how should you handle attachments on an email message?  Should you glom together all text extracted from the attachments into a single document, or, make separate documents for them, somehow linked back to the original email message, for each attachment? Once you have worked out this design you’ll need to extract text from the original raw content for each document.
 If your content is already textual in nature, this is nearly a no op.
-But more often these days documents are binary in nature (PDF, Microsoft Office, Open Office, Adobe Flash, streaming video and audio multimedia files, etc.) or contain substantial markups which you must remove before indexing (RDF, XML, HTML)
 You’ll need to run document filters to extract text from such content, before creating the search engine document.
 Often interesting business logic may also apply during this step, to create additional fields.
+For example, if you have a large “body text” field you might run semantic analyzers to pull out proper names, places, dates, times, locations, etc, into separate fields in the document.
 Or perhaps you tie in content available in a separate store (for example a database) and merge this together for a single document to the search engine.
 Another common part of building the document is to inject boosts to individual documents and fields that are deemed more or less important.
+Perhaps you’d like your press releases to come out ahead of all other documents, all things being equal?  Perhaps recently modified documents are more important than older documents?  Boosting may be done statically (per document and field) at indexing time, which we cover in detail in section 2.6, or dynamically during searching, which we cover in section 5.7
 Nearly all search engines, including Lucene, automatically statically boost fields that are shorter over fields that are longer.
 While Lucene provides an API for building fields and documents, it does not provide any logic to build a document because it’s entirely application specific.
 It also does not provide any document filters, although Lucene has a sister project at Apache, Tika, which handles document filtering very well.
 The textual fields in a document cannot be indexed by the search engine, yet.
 In order to do that, the text must first be analyzed.
 Each token corresponds roughly to a “word” in the language, and this step determines how the textual fields in the document are divided into a series of tokens.
+There are all sorts of interesting questions here: how do you handle compound words?  Should you apply spell correction (if your content itself has typos)?  Should you inject synonyms inlined with your original tokens, so that a search for “laptop” also returns products mentioning “notebook”?  Should you collapse singular and plural forms to the same token?  Often a stemmer, such as Dr Martin Porter’s Snowball stemmer (covered in Section 8.3.1) is used to derive roots.
+Should you preserve or destroy differences in case?  For non-Latin languages, how can you even determine what a “word” is?  This component is so important that we have a whole chapter, chapter 4 Analysis, describing it.
 Lucene provides a wide array of built-in analyzers that allow you fine control over this process.
 It’s also straightforward to build your own analyzer, or create arbitrary analyzer chains combining Lucene’s tokenizers and token filters, to customize how tokens are created.
 Finally, you’ll be happy to know, your content is finally in a state where Lucene can index it.
 Lucene of course provides everything necessary for this step, and works quite a bit of magic under a surprisingly simple API.
 Chapter 2 takes you through all the nitty gritty steps for how to tune how Lucene indexes your documents.
 We’re done reviewing the typical indexing steps for a search application.
+It’s important to remember that indexing is something of a “necessary evil” that you must undertake in order to provide a good search experience: you should design and customize your indexing process only to the extent that improves your users’ search experience.
 Searching is the process of looking up words in an index to find documents where they appear.
 The quality of a search is typically described using precision and recall metrics.
 Recall measures how well the search system finds relevant documents, whereas precision measures how well the system filters out the irrelevant documents.
@@ -164,6 +169,7 @@ Relevance, or similarity, between a query and a document is computed by a vector
 Probabilistic model -- Computes the probability that a document is a good match to a query using a full probabilistic approach.
 Lucene’s approach combines the vector space and pure Boolean models.
 Lucene returns documents which you next must render in a very consumable way for your users.
+Importantly, the user interface should also offer a clear path for follow-on searches or actions, such as clicking to the next page, refining the search in some way, finding document similar to one of the matches, etc, so that user never hits a “dead end”
 Lucene’s core doesn’t offer any components to fully render results, but the sandbox contains the highlighter package, described in section 8.xxx, for producing dynamic summaries and highlighting hits.
 We’ve finished reviewing the components of both the indexing and searching paths in a search application, but we are not yet done.
 Believe it or not, there is in fact still quite a bit more to a typical fully functional search engine, especially a search engine running on a web site.
@@ -202,6 +208,7 @@ For example, Solr, a sister open-source project under the Lucene Apache umbrella
 Lucene is the search library while Solr provides most components of an entire search application.
 Chapter XXX covers Solr, and we also include a case study of how Lucid Imagination uses Solr in chapter XXX.
 Nutch takes scaleout even further, and is able to build indexes to handle Web-sized content collections.
+Projects like DBSight, Hibernate Search, LuSQL, Compass and Oracle/Lucene make searching database content very simple by handling the “Acquire Content” and “Build Document” steps seamlessly, as long as your content resides in a database.
 Many open-source document filters exist, for deriving textual content from binary document types.
 Most of the raw ingredients are there for you to pull together a powerful, fully open source search application!
 Now let’s dive down and see a concrete example of using Lucene for indexing and searching.
@@ -215,7 +222,7 @@ In the chapters that follow, we’ll describe each aspect of Lucene’s use in m
 Before we can search with Lucene, we need to build an index, so we start with our Indexer application.
 In this section you’ll see a simple class called Indexer which indexes all files in a directory ending with the .txt extension.
 When Indexer completes execution it leaves behind a Lucene index for its sibling, Searcher (presented next in section 1.4.2)
-We don’t expect you to be familiar with the few Lucene classes and methods used in this example— we’ll explain them shortly.
+We don’t expect you to be familiar with the few Lucene classes and methods used in this examplewe’ll explain them shortly.
 After the annotated code listing, we show you how to use Indexer; if it helps you to learn how Indexer is used before you see how it’s coded, go directly to the usage discussion that follows the code.
 This example intentionally focuses on plain text files with .txt extensions to keep things simple, while demonstrating Lucene’s usage and power.
 In chapter 7, we’ll show you how to index other common document types using the Tika framework.
@@ -224,11 +231,11 @@ You’ll first have to unpack the zip file containing source code with this book
 If you don’t see the file build.xml in your working directory, then you’re not in the right directory.
 If this is the first time you’ve run any targets, ant will compile all the example sources, build the test index, and finally run Indexer, prompting you for the index and document directory, in case you’d like to change the defaults.
 It’s also fine to run Indexer using java from the command-line; just ensure your CLASSPATH includes the jars under the lib subdirectory as well as the build/classes directory.
+Go ahead and type “ant Indexer”, and you should see output like this:
 Indexer prints out the names of files it indexes, so you can see that it indexes only files with the .txt.
 When it completes indexing, Indexer prints out the number of files it indexed and the time it took to do so.
 Because the reported time includes both file-directory listing and indexing, you shouldn’t consider it an official performance measure.
 In our example, each of the indexed files was small, but roughly 0.8 seconds to index a handful of text files is reasonably impressive.
-Indexing throughput is clearly important, and we cover it extensively in chapter 10
 But generally, searching is far more important since an index is built once but searched many times.
 For now, let’s look at Searcher, a command-line program that we’ll use to search the index created by Indexer.
 Keep in mind that our Searcher serves the purpose of demonstrating the use of Lucene’s search API.
@@ -238,6 +245,7 @@ The index, in this example, resides in a directory of its own on the file system
 We instructed Indexer to create a Lucene index in the indexes/MeetLucene directory, relative to the directory from which we invoked Indexer.
 As you saw in listing 1.1, this index contains the indexed contents of each file, along with the absolute path.
 Now we need to use Lucene to search that index in order to find files that contain a specific piece of text.
+For instance, we may want to find all files that contain the keyword patent or redistribute, or we may want to find files that include the phrase “modified version”
 Searcher, like its Indexer sibling, is quite simple and has only a few lines of code dealing with Lucene:
 We use Lucene’s IndexSearcher class to open our index for searching.
 We use QueryParser to parse a human-readable search text into Lucene’s Query class.
@@ -247,6 +255,7 @@ Note that the TopDocs object contains only references to the underlying document
 That call returns a Document object from which we can then retrieve individual field values.
 Because Indexer stores files’ absolute paths in the index, Searcher can print them out.
 It’s worth noting that storing the file path as a field was our decision and appropriate in this case, but from Lucene’s perspective, it’s arbitrary meta-data attached to indexed documents.
+Of course, you can use more sophisticated queries, such as ’patent AND freedom' or 'patent AND NOT apache' or '+copyright +developers', and so on.
 Our example indexing and searching applications demonstrate Lucene in a lot of its glory.
 The bulk of the code (and this applies to all applications interacting with Lucene) is plumbing relating to the business purpose—in this case, Indexer’s parsing of command line arguments and directory listing to look for text file and Searcher’s code that prints matched filenames.
 But don’t let this fact, or the conciseness of the examples, tempt you into complacence: There is a lot going on under the covers of Lucene.
@@ -269,13 +278,13 @@ Of course, the performance difference between RAMDirectory and FSDirectory is le
 You’ll see both Directory implementations used in code snippets in this book.
 IndexWriter can’t index text unless it’s first been broken into separate words, using an Analyzer.
 The analysis process requires a Document, containing separate fields to be indexed.
+You can think of it as a virtual document—a chunk of data, such as a web page, an email message, or a text file—that you want to make retrievable at a later time.
 Fields of a document represent the document or meta-data associated with that document.
 The original source (such as a database record, a Word document, a chapter from a book, and so on) of document data is irrelevant to Lucene.
 It’s the text that you extract from such binary documents, and add as a Field, that Lucene processes.
 The meta-data such as author, title, subject, date modified, and so on, are indexed and stored separately as fields of a document.
 When we refer to a document in this book, we mean a Microsoft Word, RTF, PDF, or other type of a document; we aren’t talking about Lucene’s Document class.
 Although various types of documents can be indexed and made searchable, processing them isn’t as straightforward as processing purely textual content that can easily be converted to a String or Reader Java type.
-You’ll learn more about handling nontext documents in chapter 7
 So, for each text file we find, we create a new instance of the Document class, populate it with Fields (described next), and add that Document to the index, effectively indexing the file.
 Similarly, in your application, you must carefully design how a Lucene document and its fields will be constructed to match specific needs of your content sources and application.
 A Document is simply a container for multiple Fields, which is the class that actually holds the textual content to be indexed.
@@ -316,7 +325,6 @@ We then briefly described each of the Lucene classes used in these two applicati
 Search is everywhere, and chances are that if you’re reading this book, you’re interested in search being an integral part of your applications.
 Depending on your needs, integrating Lucene may be trivial, or it may involve challenging architectural considerations.
 We’ve organized the next couple of chapters as we did this chapter.
-The first thing we need to do is index some documents; we discuss this process next in detail in chapter 2
 So you want to search files stored on your hard disk, or perhaps search your email, web pages, or even data stored in a database.
 However, before you can search something, you have to index it, and that’s what you’ll learn to do in this chapter.
 This chapter goes further and teaches you about index updates, parameters you can use to tune the indexing process, and more advanced indexing techniques that will help you get the most out of Lucene.
@@ -324,12 +332,14 @@ Here you’ll also find information about the structure of a Lucene index, impor
 Despite the great detail we’ll now take you through on how Lucene indexes documents, don’t forget the big picture: indexing is simply a means to an end.
 What really matters is the search experience your applications present to its users; indexing is “merely” the necessary evil you must go through in order to enable a strong user search experience.
 So while there are great fun details here about indexing, your time is generally better spent working on how to improve the search experience.
+That being said, clearly there are many important search metrics that require you to “do the right thing” during indexing in order to enable the search functionality.
 Before we dive into the specifics of Lucene’s indexing API, let’s first walk through its conceptual approach to modeling content.
 We’ll start with Lucene's fundamental units of indexing and searching, Documents and Fields, and then move on to some important differences between Lucene and the more structured model of modern databases.
 A Document is Lucene’s atomic unit of indexing and searching.
 It’s actually just a container that holds one or more Fields, which in turn contain the “real” content.
 Each Field has a name to identify it, a text or binary value, and a series of detailed options that describes what Lucene should do with the Field’s value when you add the document to the index.
 In order to index your raw content sources, you must first translate it into Lucene’s Documents and Fields.
+Then, at search time, the field values are searched; for example users could search for “title:lucene” to find all documents whose title field value contains the terms “lucene”
 At a high level, there are three things Lucene can do with each field:
 A field must be indexed if you intend to search on it.
 Only text fields may be indexed (binary valued fields may only be stored)
@@ -376,6 +386,7 @@ The text in the fields is then analyzed, to produce a stream of tokens.
 Finally, those tokens are added to the index in a segmented architecture.
 To index data with Lucene, you must extract plain text from it, the format that Lucene can digest, and then create a Lucene Document.
 In chapter 1, we limited our examples to indexing and searching .txt files, which allowed us to easily slurp their content and use it to populate Field instances.
+However, things aren’t always that simple: the “Build Document” step from Figure 1.4 has quite a bit of work hidden behind it.
 Suppose you need to index a set of manuals in PDF format.
 To prepare these manuals for indexing, you must first find a way to extract the textual information from the PDF documents and use that extracted text to create Lucene Documents and their Fields.
 No methods would accept a PDF Java type, even if such a type existed.
@@ -389,7 +400,7 @@ Typically it’s also desirable to remove all stop words, which are frequent but
 Similarly, it’s common to process input tokens to reduce them to their roots, for example by using PorterStemFilter for English text (similar classes exist in Lucene’s contrib packages for other languages)
 The combination of an original source of tokens followed by the series of filters that modify the tokens produced by that source, together make up the Analyzer.
 You are also free to build up your own analyzer by chaining together Lucene’s token sources and filters, or your own, in customized ways.
-The input to Lucene can be analyzed in so many interesting and useful ways that we cover this process in detail in chapter 4
+This very important step, covered under the “Analyze Document” step in Figure 1.4, is called analysis.
 The analysis process produces a stream of tokens that are then written into the files in the index.
 After the input has been analyzed, it’s ready to be added to the index.
 Lucene stores the input in a data structure known as an inverted index.
@@ -405,9 +416,10 @@ Every Lucene index consists of one or more segments, as depicted in Figure 2.2
 Each segment is actually a standalone index itself, holding a subset of all indexed documents.
 A new segment is created whenever the writer flushes buffered added and deleted documents into the Directory.
 At search time, each segment is visited separately and the results are combined together.
-There are separate files to hold the different parts of the index (term vectors, stored fields, inverted index, etc.)
 This reduces the number of open file descriptors during searching, at a small cost of searching and indexing performance.
+There is one special file, often referred to as “the segments file”, and named segments_<N> that references all live segments.
 This file is important!  Lucene first opens this file, and then opens each segment referenced by it.
+The value <N>, called “the generation”, is an integer that increases by one every time a change is committed to the index.
 Naturally, over time the index will accumulate many segments, especially if you open and close your writer frequently.
 Periodically, IndexWriter will select segments and coalesce them by merging all of them into a single new segment.
 The selection of segments to be merged is governed by a separate MergePolicy.
@@ -417,6 +429,7 @@ We’ve covered Lucene’s conceptual approach to modeling documents, and then w
 Now it’s time to look at some real code, using Lucene’s APIs to add, remove and update documents.
 We start with adding documents to an index since that is the most frequent operation.
 Let’s look at how to create a new index and add documents to it.
+But be careful!  In order for searches to work correctly you need the analyzer used at search time to “match” the tokens produced by the analyzers at indexing time.
 The code in listing 2.1 shows all steps necessary to create a new index, and add two tiny documents.
 In this simplistic example, the content for the documents is contained entirely in the source code as Strings, but in the real world the content for your documents would typically come from an external source.
 The setUp() method is called by the JUnit framework before every test.
@@ -464,7 +477,6 @@ For example, if your documents are crawled from a web server, then one way to de
 If it’s different from when you last indexed the document, then there have been some changes to the content and you should update the document in the index.
 The updateDocument methods are probably the most common way to do deletion since they are typically used to replace a single document in the index that has changed.
 Since updateDocument uses deleteDocuments under the hood, the same caveat applies: be sure.
-We create a new document that will replace the original document with id 1
 We have effectively updated one of the Documents in the index.
 We’ve covered the basis on how to add, delete and update documents.
 Field is perhaps the most important class when indexing documents: it is the actual class that holds each value to be indexed.
@@ -475,7 +487,6 @@ After describing those, we enumerate some other values (besides String) that you
 Finally we enumerate the common combinations of field options, in practice.
 Let’s start with the options to control how the Field’s value is added to the inverted index.
 Index.ANALYZED – use the analyzer to break the Field’s value into a stream of separate tokens and make each token searchable.
-This is useful for normal text fields (body, title, abstract, etc.)
 Instead, treat the Field’s entire value as a single token and make that token searchable.
 This is useful for fields that you would like to search on, but should not be broken up, such as URLs, file system paths, dates, personal names, Social Security numbers, telephone numbers, and so on.
 We indexed the file system path in Indexer (listing 1.1) using this option.
@@ -498,6 +509,7 @@ If the field values are small, compression is rarely worthwhile.
 Finally, let’s visit options for controlling how term vectors are indexed.
 Sometimes, when you index a document you’d like to retrieve all of its unique terms at search time.
 One common use is to speed up highlighting the matched tokens in stored fields.
+Another use is to enable a link “Find similar documents” that when clicked runs a new search using the salient terms in an original document.
 Section 5.7 show concrete examples of using term vectors, once they are in your index.
 But what exactly are term vectors?  Term vectors are something a mix of between an indexed field and a stored field.
 They are similar to a stored field because you can quickly retrieve all term vector fields for a given document: term vectors are keyed first by document ID.
@@ -516,6 +528,7 @@ Let’s see how these options are typically combined in practice.
 Table 2.2 provides a summary of different field characteristics, showing you how fields are created, along with common usage examples.
 You’ve now seen all the options for the three categories (indexing, storing and term vectors) you can use to control how Lucene handles a field.
 These options can nearly be set independently, resulting in a number of possible combinations.
+Table 2.2 lists some commonly used options and their example usage, but remember you are free to set the options however you’d like!
 Now that we’re done with the exhaustive indexing options for fields, we’ll change gears and talk about how to handle a field that has more than one value.
 Suppose your documents have an author field, but sometimes there’s more than one author for a document.
 One way to handle this would be to loop through all the authors, appending them into a single String, which you could then use to create a Lucene Field.
@@ -528,6 +541,7 @@ Not all Documents and Fields are created equal—or at least you can make sure t
 Imagine you have to write an application that indexes and searches corporate email.
 Perhaps the requirement is to give company employees’ emails more importance than other email messages when sorting search results.
 Document boosting is a feature that makes such a requirement simple to implement.
+By default, all Documents have no boost—or, rather, they all have the same boost factor of 1.0
 By changing a Document’s boost factor, you can instruct Lucene to consider it more or less important with respect to other Documents in the index, when computing relevance.
 The API for doing this consists of a single method, setBoost(float), which can be used as follows (note that certain methods below, like getSenderEmail and isImportant, are not defined in this fragment, but are included in the full examples sources available for download on http://manning.com):
 In this example, we check the domain name of the email message sender to determine whether the sender is a company employee.
@@ -544,7 +558,9 @@ Boosting is, in general, an advanced feature that many applications can work ver
 Document and Field boosting come into play at search time, as you’ll learn in section 3.5.9
 Lucene’s search results are ranked according to how closely each Document matches the query, and each matching Document is assigned a score.
 Lucene’s scoring formula consists of a number of factors, and the boost factor is one of them.
+Alternatively, you may want to boost only at search time, as described in Section 6.1 “custom sorting”
 The benefit of this approach is it’s far more dynamic (every search could choose to boost or not to boost)
+At search time, you can even expose the choice to the user, such as a checkbox that asks “boost recently modified documents?”
 Still, you should be careful: too much boosting, especially without corresponding transparency in the search user interface explaining that certain documents were boosted, can quickly and.
 But how are these boosts stored in the index?  This is what norms are for.
 During indexing, all sources of index-time boosts are combined together into a single floating point number for each indexed field in the document.
@@ -613,6 +629,7 @@ However, any documents already indexed will have been truncated at the previous 
 If there are multiple Field instances by the same name, the truncation applies separately to each of them, meaning each field has its first N terms indexed.
 Think carefully before using any field truncation!  It means that only the first N terms are available for searching, and any text beyond the Nth term is completely ignored.
 Eventually users will notice that your search engine fails to find certain document in certain situations.
+There have been many times when someone asks the Lucene user’s list “why doesn’t this search find this document”, and the answer is inevitably “you’ll have to increase your maxFieldLength”
 Use maxFieldLength sparingly!  Since truncation means some documents’ text will be completely ignored, your users will eventually discover that your search fails to find some documents.
 User trust is the most important thing to protect in your application.
 We’re done visiting all the interesting things you can do with Fields.
@@ -775,6 +792,7 @@ It reduces the number of segments in the index because once the merge completes,
 This makes searching faster since there are fewer segments to search, and also prevents hitting the file descriptor limit enforced by the operating system.
 For example, if there were deletes pending on the merged segments, the merging process frees up the bytes consumed by deleted documents.
 Even if there are no pending deletions, a single merged segment will generally use fewer bytes to represent exactly the same set of indexed documents.
+So when exactly is a merge necessary?  What specifically does “too many segments” mean?  That is decided by the MergePolicy.
 But, MergePolicy only decides which merges should be done; it’s up to MergeScheduler to actually carry out these merges.
 Whenever new segments are flushed, or a previously selected merge has completed, the MergePolicy is consulted to determine if a merge is now necessary, and if so, precisely which segments will be merged.
 Besides picking “normal” segment merges to do, the MergePolicy also selects merges necessary to optimize the index and to run expungeDeletes.
@@ -817,7 +835,9 @@ The NFS file system, or Networked File System, is ubiquitous and very useful on 
 One common approach is to have one computer create and update the index on a directory which is then shared over NFS to multiple computers that do the searching.
 While this is convenient, since it avoids having to replicate copies of the index out to multiple computers, NFS presents certain challenges for Lucene that you must work around.
 The core challenge with using Lucene over NFS is how NFS handles deletion of files that are still held open on other computers.
+For example, Windows simply disallows deletion of an open file, whereas most native Unix file systems allow the deletion to proceed, but the actual bytes of the file remain allocated on disk until all open file handles are closed (this is called “delete on last close” semantics)
 In both approaches, an open file handle can still be used to read all bytes in the file after the file deletion is attempted.
+Alternatively, on hitting the “Stale NFS file handle” during searching, you could at that moment reopen your searcher and then redo the search.
 This is a viable approach only if reopening a searcher is not too time consuming.
 Otherwise, the unlucky query that hit the error will take unacceptably long to get results.
 Finally, realize that performance over NFS is not great, because the bytes must cross the wires to get to the computer doing the searching.
@@ -843,7 +863,9 @@ Finally we covered a number of advanced topics: how and why to delete documents 
 Much of this advanced functionality will not be needed by the vast majority of search applications; in fact a few of IndexWriter’s APIs are enough to build a solid search application.
 By now you should be dying to learn how to search with Lucene, and that’s what you’ll read about in the next chapter.
 Even if we have indexed documents, our effort is wasted unless it pays off by providing a reliable and fast way to find those documents.
+Give me a list of all books published in the last 12 months on the subject of “Java” where “open source” or “Jakarta” is mentioned in the contents.
 Restrict the results to only books that are on special.
+Oh, and under the covers, also ensure that books mentioning “Apache” are picked up, because we explicitly specified “Jakarta”
 And make it snappy, on the order of milliseconds for response time.
 Do you have a repository of hundreds, thousands, or millions of documents that needs similar search capability? Providing search capability using Lucene’s API is straightforward and easy, but lurking under the covers is a sophisticated mechanism that can meet your search requirements, such as returning the most relevant documents first and retrieving the results incredibly quickly.
 This chapter covers common ways to search using the Lucene API.
@@ -861,7 +883,6 @@ In this chapter, we’ll limit our discussion to the primary classes in Lucene�
 All searches come through an IndexSearcher instance using any of the several overloaded search methods.
 Query (and subclasses) Concrete subclasses encapsulate logic for a particular query type.
 QueryParser Processes a human-entered (and readable) expression into a concrete Query object.
-When you’re querying a Lucene index, a TopDocs instance, containing an ordered array of ScoreDoc,
 Lucene computes a score (a numeric value of relevance) for each document, given a query.
 The ScoreDocs themselves aren’t the actual matching documents, but rather are references, via an integer document ID, to the documents matched.
 In most applications that display search results, users access only the first few documents, so it isn’t necessary to retrieve the actual documents for all results; you need to retrieve only the documents that will be presented to the user.
@@ -886,13 +907,16 @@ This example programmatically constructed a very simple query (a single term)
 Next, we discuss how to transform a user-entered query expression into a Query object.
 Figure 3.XXX Using QueryParser to search using a textual expression.
 Two more features round out what the majority of searching applications require: sophisticated query expression parsing and access to the documents returned.
+Parsing a query expression is the act of turning a user-entered textual query such as “mock OR junit” into an appropriate Query object instance1; in this case, the Query  object would be an instance of BooleanQuery  with two non-required clauses, one for each term.
 The following code parses two query expressions and asserts that they worked as expected.
 After returning the hits, we retrieve the title from the first document found:
+It parses rich expressions such as the two shown ("+JUNIT +ANT -MOCK" and "mock OR junit") into one of the Query implementations.
 The resulting Query instances can be very rich and complex!  Dealing with human-entered queries is the primary purpose of the QueryParser.
 As you can see in Figure 3.1, QueryParser requires an analyzer to break pieces of the query text into terms.
 The terms of the contents field, however, were lowercased when indexed.
 QueryParser, in this example, uses SimpleAnalyzer, which lowercases the terms before constructing a Query object.
-Analysis is covered in great detail in the next chapter, but it’s intimately intertwined with indexing text and searching with QueryParser.) The main point regarding analysis to consider in this chapter is that you need to be sure to query on the actual terms indexed.
+Analysis is covered in great detail in the next chapter, but it’s intimately intertwined with indexing text and searching with QueryParser.
+The main point regarding analysis to consider in this chapter is that you need to be sure to query on the actual terms indexed.
 QueryParser is the only searching piece that uses an analyzer.
 Querying through the API using TermQuery and the others discussed in section 3.4 doesn’t use an analyzer but does rely on matching terms to what was indexed.
 Therefore, if you construct queries entirely programmatically you must ensure the Terms included in all of your queries match the Tokens produced by the analyzer used.
@@ -904,6 +928,7 @@ QueryParser is instantiated with a field name (String) and an Analyzer, which it
 We discuss analyzers in detail in the next chapter and then cover the interactions between QueryParser and the analyzer in section 4.1.2:
 The provided field name is the default field against which all terms will be searched, unless the search.
 Then, the QueryParser instance has a parse() method to allow for the simplest use:
+The query String is the expression to be parsed, such as “+cat +dog”
 If the expression fails to parse, a ParseException is thrown, a condition that your application should.
 ParseException’s message gives a reasonable indication of why the parsing failed; however, this description may be too technical for end users.
 The parse() method is quick and convenient to use, but it may not be sufficient.
@@ -933,6 +958,7 @@ In order to see the new documents, you must commit the changes from IndexWriter 
 Most of IndexSearcher’s search methods return TopDocs, which we cover next, to represent the returned results.
 Now that we’ve called search(Query, n), we have a TopDocs object at our disposal which we use for efficient access to the search results.
 Typically, you’ll use one of the search methods that return a TopDocs object, as shown in table 3.3
+Results are ordered by relevance—in other words, by how well each document matches the query (sorting results in other ways is discussed in section 5.1)
 There are only three attributes and methods on a TopDocs instance; they’re listed in table 3.4
 A matching document is one with a score greater than zero, as defined by the scoring formula covered in section 3.3
 The matches, by default, are sorted in decreasing score order.
@@ -978,6 +1004,7 @@ Boosting a Query instance is sensible only in a multiple-clause query; if only a
 In a multiple-clause boolean query, some documents may match one clause but not another, enabling the boost factor to discriminate between matching documents.
 Most of these scoring formula factors are controlled and implemented as a subclass of the abstract Similarity class.
 More computations are performed under the covers of DefaultSimilarity; for example, the term frequency factor is the square root of the actual frequency.
+Because this is an “in action” book, it’s beyond the book’s scope to delve into the inner workings of these calculations.
 In practice, it’s extremely rare to need a change in these factors.
 Should you need to change these factors, please refer to Similarity’s Javadocs, and be prepared with a solid understanding of these factors and the effect your changes will have.
 It’s important to note that a change in index-time boosts or the Similarity methods used during indexing, such as lengthNorm, require that the index be rebuilt for all factors to be in sync.
@@ -1052,12 +1079,14 @@ These attributes allow for logical AND, OR, and NOT combinations.
 You add a clause to a BooleanQuery using this API method:
 A BooleanQuery can be a clause within another BooleanQuery, allowing for sophisticated groupings.
 First, here’s an AND query to find the most recent books on one of our favorite subjects, search:
+Note that this could also be done with a "2004" PrefixQuery.
 BooleanQuerys are restricted to a maximum number of clauses; 1,024 is the default.
 This limitation is in place to prevent queries from accidentally adversely affecting performance.
 A TooManyClauses exception is thrown if the maximum is exceeded.
 It may seem that this is an extreme number and that constructing this number of clauses is unlikely, but under the covers Lucene does some of its own query rewriting for queries like RangeQuery and turns them into a BooleanQuery with nested optional (not required, not prohibited) TermQuerys.
 The next query, PhraseQuery, differs from the queries we covered so far in that it pays attention to the positional details of multiple term occurrences.
 PhraseQuery uses this information to locate documents where terms are within a certain distance of one another.
+For example, suppose a field contained the phrase “the quick brown fox jumped over the lazy dog”
 Without knowing the exact phrase, you can still find this document by searching for documents with fields having quick and fox near each other.
 Sure, a plain TermQuery would do the trick to locate this document knowing either of those words; but in this case we only want documents that have phrases where the words are either exactly side by side (quick fox) or have one word in between (quick [irrelevant] fox)
 The maximum allowable positional distance between terms to be considered a match is called slop.
@@ -1070,6 +1099,7 @@ By default, a PhraseQuery has its slop factor set to zero, specifying an exact p
 With our setUp() and helper matched method, our test case succinctly illustrates how PhraseQuery behaves.
 Terms added to a phrase query don’t have to be in the same order found in the field, although order does impact slop-factor considerations.
 For example, had the terms been reversed in the query (fox and then quick), the number of moves needed to match the document would be three, not one.
+To visualize this, consider how many moves it would take to physically move the word fox two slots past quick; you’ll see that it takes one move to move fox into the same position as quick and then two more to move fox beyond quick sufficiently to match “quick brown fox”
 Figure 3.2 shows how the slop positions work in both of these phrase query scenarios, and this test case shows the match in action:
 Regardless of how many terms are used for a phrase, the slop factor is the maximum total number of moves allowed to put the terms in order.
 Let’s look at an example of a multiple-term phrase query:
@@ -1081,6 +1111,7 @@ The slop factor defaults to zero, but you can adjust the slop factor by adding a
 There are additional details about PhraseQuery and the slop factor in section 3.5.6
 Phrases are analyzed by the analyzer passed to the QueryParser, adding another layer of complexity, as discussed in section 4.1.2
 Wildcard queries let you query for terms with missing pieces but still find matches.
+Two standard wildcard characters are used: * for zero or more characters, and ? for zero or one character.
 You can think of WildcardQuery as a more general PrefixQuery because the wildcard doesn’t have to be at the end.
 Note how the wildcard pattern is created as a Term (the pattern to match) even though it isn’t explicitly used as an exact term under the covers.
 Internally, it’s used as a pattern to match terms in the index.
@@ -1112,17 +1143,18 @@ MatchAllDocsQuery, as the name implies, simply matches every document in your in
 By default, it assigns a constant score, the boost of the query (default 1.0), to all documents that match, so if you use this as your toplevel query, it’s best to sort by a field other than the default relevance sort.
 It’s also possible to have MatchAllDocsQuery assign as document scores the boosting recorded in the index, for a specified field, like so:
 If you do this, documents are scored according to how the specified field was boosted (as described in section 2.xxx)
+We’re done reviewing Lucene’s basic core Query classes!  Chapter 5 covers more advanced Query classes.
 Now we’ll move onto using QueryParser to construct queries from a user’s textual query.
 Although API-created queries can be powerful, it isn’t reasonable that all queries should be explicitly written in Java code.
 Using a human-readable textual query representation, Lucene’s QueryParser constructs one of the previously mentioned Query subclasses.
 This constructed Query instance could be a complex entity, consisting of nested BooleanQuerys and a combination of almost all the Query types mentioned, but an expression entered by the user could be as readable as this:
-This query searches for all books about Java that also include Jakarta or Apache in their contents and were published in 2004
 Whenever special characters are used in a query expression, you need to provide an escaping mechanism so that the special characters can be used in a normal fashion.
 QueryParser uses a backslash (\) to escape special characters within terms.
 The following sections detail the expression syntax, examples of using QueryParser, and customizing QueryParser’s behavior.
 The discussion of QueryParser in this section assumes knowledge of the query.
 We begin with a handy way to glimpse what QueryParser does to expressions.
 Seemingly strange things can happen to a query expression as it’s parsed with QueryParser.
+How can you tell what really happened to your expression? Was it translated properly into what you intended? One way to peek at a resultant Query instance is to use the toString() method.
 All concrete core Query classes we’ve discussed in this chapter have a special toString() implementation.
 Calling the no-arg toString() method uses an empty default field name, causing the output to explicitly use field selector notation for all terms.
 The toString() methods (particularly the String-arg one) are handy for visual debugging of.
@@ -1162,6 +1194,7 @@ For example, in a web application, the HttpServletRequest object contains the lo
 You can use this locale to control the locale used by date parsing in QueryParser, as shown in listing 3.3
 Text analysis is another, more important, place where such concerns are handled.
 The text between the quotes is analyzed; thus the resultant PhraseQuery may not be exactly the phrase originally specified.
+For example, the query "This is Some Phrase*", when analyzed by the StandardAnalyzer, parses to a PhraseQuery using the phrase “some phrase”
 The StandardAnalyzer removes the words this and is because they match the default stop word list (more in section 4.3.2 on StandardAnalyzer)
 A common question is why the asterisk isn’t interpreted as a wildcard query.
 Keep in mind that surrounding text with double quotes causes the surrounded text to be analyzed and converted into a PhraseQuery.
@@ -1221,11 +1254,12 @@ Each token is shown between square brackets to make the separations apparent.
 During indexing, the tokens extracted during analysis are the terms indexed.
 And, most important, it’s only the terms that are indexed that are searchable!
 Only the tokens produced by the analyzer will be searched.
+Analyzing "The quick brown fox jumped over the lazy dogs" WhitespaceAnalyzer : [The] [quick] [brown] [fox] [jumped] [over] [the] [lazy] [dogs]
+SimpleAnalyzer : [the] [quick] [brown] [fox] [jumped] [over] [the] [lazy] [dogs]
 The code that generated this analyzer output is shown later, in listing 4.2
 Section 4.2.3 explains more of the details of what happened, but here’s a quick summary of each of these analyzers:
 SimpleAnalyzer first splits tokens at non-letter characters, then lowercases each token.
 StopAnalyzer is the same as SimpleAnalyzer, except it removes common words (called stop words, described more in section XXX)
-By default it removes common words in the English language (the, a, etc.), though you can pass in your own set.
 It has quite a bit of logic to identify certain kinds of tokens, such as company names, email addresses, and host names.
 Lucene doesn’t make the results of the analysis process visible to the end user.
 Terms pulled from the original text are immediately added to the index.
@@ -1246,6 +1280,7 @@ You must provide an analyzer when you instantiate the QueryParser:
 The analyzer receives individual contiguous text pieces of the expression, not the expression as a.
 QueryParser analyzes all text equally, without knowledge of how it was indexed.
 This is a particularly thorny issue when you’re querying for fields that were indexed without tokenization.
+Should you use the same analyzer with QueryParser that you used during indexing? The short, most accurate, answer is, “it depends.” If you stick with the basic built-in analyzers, then you’ll probably be fine.
 However, when you’re using more sophisticated analyzers, quirky cases can come up in which using different analyzers between indexing and QueryParser is best.
 We discuss this issue in more detail in section 4.6
 Now we draw the difference between parsing and analyzing a document.
@@ -1269,6 +1304,7 @@ In the following sections, we take a detailed look at each of the major players 
 We’ll also show you how to visualize what an analyzer is actually doing, and describe the important of the order of Tokenizers.
 Lets begin with the basic unit of analysis, the Token.
 During indexing, fields designated for tokenization are processed with the specified analyzer, and each token is then written into the index.
+For example, let’s analyze the text “the quick brown fox”
 A token carries with it a text value (the word itself) as well as some meta-data: the start and end character offsets in the original text, a token type, and a position increment.
 Figure 4.1 shows the details of the token stream analyzing this phrase with the SimpleAnalyzer.
 The start offset is the character position in the original text where the token text begins, and the end offset is the position just after the last character of the token text.
@@ -1337,7 +1373,6 @@ The AnalyzerDemo application lets you specify one or more strings from the comma
 Let’s now look deeper into what makes up a Token.
 We display all token information on the example phrase using SimpleAnalyzer:
 We present a similar, but simpler, visualization of token position increments in section 4.6.1, and we provide a visualization of tokens sharing the same position.
-Instead, it extends the AttributeSource class, which you use to obtain the different attributes (text, offsets, position increments, etc.) of interest.
 Past versions of Lucene did use a Token object, but in order to be more extensible, and to provide better analysis performance through reuse, Lucene switched to the AttributeSource API as of 2.9
 This method returns true if there is a new token and false if you’ve exhausted the stream.
 You obtain the attributes of interest by calling the addAttribute method, which will return a subclass of Attribute.
@@ -1357,6 +1392,7 @@ In this case, the stored offsets hold the start and end character offset in the 
 It’s also possible to re-analyze the text to do highlighting without storing TermVectors, in which case the start and end offsets are used in real-time.
 TOKEN-TYPE USEFULNESS You can use the token-type value to denote special lexical types for tokens.
 Under the covers of StandardAnalyzer is a StandardTokenizer that parses the incoming text into different types based on a grammar.
+Analyzing the phrase “I’ll e-mail you at xyz@example.com” with StandardAnalyzer produces this interesting output:
 StandardAnalyzer is the only built-in analyzer that leverages the token-type data.
 The order of events can be critically important during analysis.
 Each step may rely on the work of a previous step.
@@ -1369,6 +1405,7 @@ The StopFilter presumes all tokens have already been lowercased and does a case-
 Another test case shows that The was not removed (it’s the first token of the analyzer output), yet it was lowercased:
 For example, the StandardFilter is designed to be used in conjunction with StandardTokenizer and wouldn’t make sense with any other TokenStream feeding it.
 There may also be performance considerations when you order the filtering process.
+Consider an analyzer that removes stop words and also injects synonyms into the token stream—it would be more efficient to remove the stop words first so that the synonym injection filter would have fewer terms to consider (see section 4.6 for a detailed example)
 Now that we’ve seen in great detail all elements of the Token and Analyzer classes, let’s see which out-of-the-box analyzers Lucene provides.
 Lucene includes several built-in analyzers, created by chaining together the built-in Tokenizers and TokenFilters.
 StopAnalyzer  Divides text at nonletter characters, lowercases, and removes stop words.
@@ -1439,10 +1476,12 @@ We’ll use Lucene’s KeywordAnalyzer to tokenize the part number as a single t
 First let’s look at the KeywordAnalyzer in action as it fixes the situation:
 We apply the KeywordAnalyzer only to the partnum field, and we use the SimpleAnalyzer for all other fields.
 Note that the query now has the proper term for the partnum field, and the document is found as expected.
+Have you ever played the game Charades, cupping your hand to your ear to indicate that your next gestures refer to words that “sound like” the real words you’re trying to convey? Neither have we.
 Suppose, though, that a high-paying client has asked you to implement a search engine accessible by J2ME-enabled devices, such as a cell phone, to help during those tough charade matches.
 In this section, we’ll implement an analyzer to convert words to a phonetic root using an implementation of the Metaphone algorithm from the Jakarta Commons Codec project.
 We chose the Metaphone algorithm as an example, but other algorithms are available, such as Soundex.
 Let’s start with a test case showing the high-level goal of our search experience:
+It seems like magic! The user searched for “kool kat”
 Neither of those terms was in our original document, yet the search found the desired match.
 Searches on the original text would also return the expected matches.
 Because the Metaphone algorithm expects words that only include letters, the LetterTokenizer is used to feed our metaphone filter.
@@ -1450,13 +1489,16 @@ The tokens emitted are replaced by their metaphone equivalent, so lowercasing is
 This new token is set with the same position offsets as the original, because it’s a replacement in the same position.
 The last line before returning the token sets the token type.
 Each token can be associated with a String indicating its type, giving meta-data to later filtering in the analysis process.
+The StandardTokenizer, as discussed in “Token type usefulness” under section 4.2.3, tags tokens with a type that is later used by the StandardFilter.
 The METAPHONE type isn’t used in our examples, but it demonstrates that a later filter could be Metaphone-token aware by calling Token’s type() method.
 Unless otherwise specified, the type word is used for tokens by default.
 As always, it’s good to view what an analyzer is doing with text.
 Using our AnalyzerUtils, two phrases that sound similar yet are spelled completely differently are tokenized and displayed:
 We get a sample of the Metaphone encoder, shown here:
+Wow—an exact match! In practice, it’s unlikely you’ll want sounds-like matches except in special places; otherwise, far too.
 One implementation approach to this idea could be to run all text through a sounds-like analysis and build a cross-reference lookup to consult when a correction is needed.
 Now we walk through an Analyzer that can handle synonyms during indexing.
+How often have you searched for “spud” and been disappointed that the results did not include “potato”? OK, maybe that precise example doesn’t happen often, but you get the idea: natural languages for some reason have evolved many ways to say the same thing.
 Such synonyms must be handled during searching, or else your users won’t find their documents.
 Our next custom analyzer injects synonyms of words into the outgoing token stream, but places the synonyms in the same position as the original word.
 By adding synonyms during indexing, searches will find documents that may not contain the original search terms but match the synonyms of those words.
@@ -1466,6 +1508,8 @@ Erik imagines that a “sounds-like” feature in search engines designed for ch
 Notice that our unit test shows not only that synonyms for the word jumps are emitted from the SynonymAnalyzer but also that the synonyms are placed in the same position (increment of zero) as the original word.
 Let’s see what the SynonymAnalyzer is doing; then we’ll explore the implications of position increments.
 TokenFilters; in fact, this is the StandardAnalyzer wrapped with an additional filter.
+See table 4.1 for more on these basic analyzer building blocks.
+The final TokenFilter in the chain is the new SynonymFilter (listing 4.6), which gets to the heart of the current discussion.
 The code successively pops the stack of buffered synonyms from the last streamed-in token until it’s empty.
 After all previous token synonyms have been emitted, we read the next token.
 We push all synonyms of the current token onto the stack.
@@ -1480,6 +1524,7 @@ You should only modify increments knowing of some odd cases that arise in search
 Since synonyms are indexed just like other terms, TermQuery works as expected.
 Also, PhraseQuery works as expected when we use a synonym in place of an original word.
 We perform the analysis with a custom SynonymAnalyzer, using MockSynonym-Engine.
+A TermQuery for hops succeeded, as did an exact PhraseQuery for “fox hops”
 The first one creates QueryParser using our SynonymAnalyzer, and the second one using StandardAnalyzer:
 Both analyzers find the matching document just fine, which is great.
 With SynonymAnalyzer, "fox jumps" parses to "fox (jumps hops leaps)" With StandardAnalyzer, "fox jumps" parses to "fox jumps"
@@ -1503,11 +1548,14 @@ The Porter stemming algorithm (or ‘Porter stemmer’) is a process for removin
 Its main use is as part of a term normalisation process that is usually done when setting up Information Retrieval systems.4
 In other words, the various forms of a word are reduced to a common root form.
 For example, the words breathe, breathes, breathing, and breathed, via the Porter stemmer, reduce to breath.
-See section 8.3.1, page XXX, for coverage of an extension to Lucene that implements the Snowball algorithm (also created by Dr.
 KStem is another stemming algorithm that has been adapted to Lucene (search Google for KStem and Lucene)
 We first show how to use StopFilter to leave holes whenever it removes a word.
 Then we’ll describe the full analyzer and finally we’ll talk about what to do about the missing positions.
+Stopword removal brings up an interesting issue: what happens to the holes left by the words removed? Suppose you index “one is not enough”
 The tokens emitted from StopAnalyzer will be one and enough, with is and not thrown away.
+By default, StopAnalyzer does not account for words removed, so the result is exactly as if you indexed “one enough”
+If you were to use QueryParser along with StopAnalyzer, this document would match phrase queries for “one enough”, “one is enough”, “one but not enough”, and the original “one is not enough”
+Remember, QueryParser also analyzes phrases, and each of these reduces to “one enough” and matches the terms indexed.
 Since StopAnalyzer does not expose this option, this is a good reason to create your own analyzer.
 This custom analyzer uses a stop-word removal filter, enabled to keep positional gaps, and fed from a LowerCaseTokenizer.
 The results of the stop filter are fed to the Porter stemmer.
@@ -1516,11 +1564,13 @@ Leaving gaps when stop words are removed makes logical sense but introduces new 
 As you saw with the SynonymAnalyzer, messing with token position information can cause trouble during searching.
 Exact phrase matches now fail, as illustrated in our test case:
 The difficulty lies deeper inside PhraseQuery and its current inability to deal with positional gaps.
+All terms in a PhraseQuery must be side by side, and in our test case, the phrase it’s searching for is “over lazi” (stop word removed with remaining words stemmed)
 Setting the slop to 1 allows the query to effectively ignore the single gap:
 The value of the phrase slop factor, in a simplified definition for this case, represents how many stop words could be present in the original text between indexed words.
 Introducing a slop factor greater than zero, however, allows even more inexact phrases to match.
 With stop-word removal in analysis, doing exact phrase matches is, by definition, not possible: The words removed aren’t there, so you can’t know what they were.
 The slop factor addresses the main problem with searching using stop-word removal that leaves holes; you can now see the benefit our analyzer provides, thanks to the stemming:
+Both laziness and the phrase “fox jumped” matched our indexed document, allowing users a bit of flexibility in the words used during searching.
 Slop is not a great solution for this problem, since it fuzzes up all phrase matching.
 A better solution is to use shingles, which are compound tokens created from multiple adjacent tokens.
 Lucene has a sandbox module that simplifies adding shingles to your index, described in section 8.3.2
@@ -1528,6 +1578,7 @@ With shingles, stop words are combined with adjacent words to make new tokens, s
 This enables precise phrase matching, because the stop words are not in fact discarded, yet has good search performance because the number of documents containing the-quick is far fewer than the number containing the stopword the in any context.
 Nutch’s document analysis, described in section 4.9, also uses shingles.
 Dealing with languages in Lucene is an interesting and multifaceted issue.
+How can text in various languages be indexed and subsequently retrieved? As a developer building I18N-friendly applications based on Lucene, what issues do you need to consider?
 You must contend with several issues when analyzing text in various languages.
 The first hurdle is ensuring that character-set encoding is done properly such that external data, such as files, are read into Java properly.
 During the analysis process, different languages have different sets of stop words and unique stemming algorithms.
@@ -1571,6 +1622,7 @@ Words that consist of multiple Chinese characters are split into terms for each 
 The StandardAnalyzer is still the best built-in general-purpose analyzer, even accounting for CJK characters; however, the Sandbox CJKAnalyzer seems better suited for Asian language analysis.
 When you’re indexing documents in multiple languages into a single index, using a per-Document analyzer is appropriate.
 You may also want to add a field to documents indicating their language; this field.
+In “Controlling date parsing locale” in section 3.5.5, we show how to retrieve the locale from a user’s web browser; this could be automatically used in queries.
 This, like character encodings, is outside the scope of Lucene, but it may be important to your application.
 We don’t cover language-detection techniques in this book, but it’s an active area of research with several implementations to choose from (see appendix C)
 We don’t have the source code to Google, but we do have the open-source project Nutch, created by Lucene’s creator Doug Cutting.
@@ -1578,9 +1630,11 @@ Nutch takes an interesting approach to analyzing text, specifically how it handl
 If all words are indexed, an enormous number of documents become associated with each common term, such as the.
 Querying for the is practically a nonsensical query, given that the majority of documents contain that term.
 When common terms are used in a query, but not within a phrase, such as the quick brown with no other adornments or quotes, common terms are discarded.
+However, if a series of terms is surrounded by double-quotes, such as “the quick brown”, a fancier trick is played, which we detail in this section.
 Nutch combines an index-time analysis bigram (grouping two consecutive words as a single token) technique with a query-time optimization of phrases.
 This results in a far smaller document space considered during searching; for example, far fewer documents have the quick side by side than contain the.
 Using the internals of Nutch, we created a simple example to demonstrate the Nutch analysis trickery.
+The analyzer output shows how “the quick” becomes a bigram, but the word the isn’t discarded.
 The bigram resides in the same token position as the:
 Because additional tokens are created during analysis, the index is larger, but the benefit of this trade-off is that searches for exact-phrase queries are much faster.
 And there’s a bonus: No terms were discarded during indexing.
@@ -1593,6 +1647,7 @@ You can use the shingles sandbox package, covered in section 8.XXX, to take the 
 Analysis, while only a single facet of using Lucene, is the aspect that deserves the most attention and effort.
 The words that can be searched are those emitted during indexing analysis: nothing more, nothing less.
 Sure, using StandardAnalyzer may do the trick for your needs, and it suffices for many applications.
+Users who take analysis for granted often run into confusion later when they try to understand why searching for “to be or not to be” returns no results (perhaps due to stop-word removal)
 It takes less than one line of code to incorporate an analyzer during indexing.
 Many sophisticated processes may occur under the covers, such as stop-word removal and stemming of words.
 Removing words decreases your index size but can have a negative impact on precision querying.
@@ -1600,7 +1655,6 @@ Because one size doesn’t fit all when it comes to analysis, you may need to tu
 Lucene’s elegant analyzer architecture decouples each of the processes internal to textual analysis, letting you reuse fundamental building blocks to construct custom analyzers.
 When you’re working with analyzers, be sure to use our AnalyzerUtils, or something similar, to see first-hand how your text is tokenized.
 If you’re changing analyzers, you should rebuild your index using the new analyzer so that all documents are analyzed in the same manner.
-Many applications that implement search with Lucene can do so using the API introduced in chapter 3
 Some projects, though, need more than the basic searching mechanisms.
 In this chapter, we explore the more sophisticated searching capabilities built into Lucene.
 Sometimes you need fast access to a certain field’s value for every document.
@@ -1698,16 +1752,20 @@ There are two overloaded SortField constructors for use when you need to specify
 Both of these constructors imply the SortField.STRING type because locale applies only to string-type sorting, not to numerics.
 Sorting by field value (ie, anything except relevance and document order) uses the field cache to retrieve values.
 This means the first query sorting by a given field and reader will be slower, and memory will be consumed holding onto the cache entries.
+If the first query is too slow, it’s best to first “warm” your IndexSearcher before putting it into production, as described in 10.X.
 Sorting by String, especially for fields with many unique values, will consume the most memory.
 The built-in MultiPhraseQuery is definitely a niche query, but it’s potentially useful.
 MultiPhraseQuery allows multiple terms per position, effectively the same as a BooleanQuery  on.
 For example, suppose we want to find all documents about speedy foxes, with quick or fast followed by fox.
 One approach is to do a "quick fox" OR "fast fox" query.
 In our example, two documents are indexed with similar phrases.
+One document with uses “the quick brown fox jumped over the lazy dog”, and the other uses “the fast fox hopped over the hound” as shown in our test setUp() method:
 Knowing that we want to find documents about speedy foxes, MultiPhraseQuery lets us match phrases very much like PhraseQuery, but with a twist: each term position of the query can have multiple terms.
 This has the same set of hits as a BooleanQuery consisting of multiple PhraseQuerys combined with an OR operator.
 The following test method demonstrates the mechanics of using the MultiPhraseQuery API by adding one or more terms to a MultiPhraseQuery instance in order:
 Any of these terms may be in first position to match #2 Only one in second position.
+In testBasic(), the slop is used to match “quick brown fox” in the second search; with the default slop of zero, it doesn’t match.
+For completeness, here is a test illustrating the described BooleanQuery, with a slop set for the phrase “quick fox”:
 Of course, hard-coding the terms wouldn’t be realistic, generally speaking.
 One possible use of a MultiPhraseQuery would be to inject synonyms dynamically into phrase positions, allowing for less precise matching.
 For example, you could tie in the WordNet-based code (see section 8.6 for more on WordNet and Lucene)
@@ -1867,6 +1925,7 @@ And if these filtering options aren’t enough, Lucen e adds another interesting
 The FilteredQuery filters a query, like IndexSearcher’s search(Query, Filter, int) can, except it is itself a query: Thus it can be used as a single clause within a BooleanQuery.
 Our next topic is function queries, which give you custom control over how documents are scored.
 Lucene’s relevance scoring formula, which we discussed in Chapter 3, does a good job assigning relevance to each document based on how well the document matches the query.
+But what if you’d like to modify or override how this scoring is done?  In section 5.1 we saw how you could change the default relevance sorting to sort by an arbitrary field, but what if you need even more flexibility?  This is where function queries come in.
 For example, FieldScoreQuery derives each document’s score statically from a specific indexed field.
 The field should be numbers, indexed without norms and with a single token per document.
 First, include the field “score” in your documents like this:
@@ -1894,7 +1953,6 @@ In computing daysAgo, we pretend today is 10/1/2004 to better show the recency e
 In a production use you should use the current day.
 If instead you run the commented out line, which runs the original unboosted query, you’ll see this:
 You can see that in the un-boosted query, the top 3 results were tied based on relevance.
-But after factoring in recency boosting, the scores were very different and the sort order changed (for the better, we might add!)
 If your architecture consists of multiple Lucene indexes, but you need to search across them using a single query with search results interleaving documents from different indexes, MultiSearcher is for you.
 In high-volume usage of Lucene, your architecture may partition sets of documents into different indexes.
 With MultiSearcher, all indexes can be searched with the results merged in a specified (or descendingscore) order.
@@ -1928,7 +1986,6 @@ These results point out that performance testing is tricky business, but it’s 
 Because of the strong effect your environment has on performance, we urge you to perform your own tests with your own environment.
 Performance testing is covered in more detail in section 6.5
 If you choose to expose searching through RMI in this manner, you’ll likely want to create a bit of infrastructure to coordinate and manage issues such as closing an index and how the server deals with index updates (remember, the searcher sees a snapshot of the index and must be reopened to see changes)
-We switch things up now and talk about term vectors, a topic you’ve already seen on the indexing side, in chapter 2
 Most of us probably can’t envision vectors in hyperdimensional space, so for visualization purposes, let’s look at two documents that contain only the terms cat and dog.
 Plotting the term frequencies of each document in X, Y coordinates looks something like figure 5.6
 What gets interesting with term vectors is the angle between them, as you’ll see in more detail in section 5.7.2
@@ -1960,6 +2017,7 @@ We’ve only used the convenience of getting the terms for a given field.
 Without term vectors, the subject field could have been reanalyzed or indexed such that individual subject terms were added separately in order to get the list of terms for that field (see section 8.4 for discussion of how the sample data was indexed)
 Our next example also uses the frequency component to a term vector in a much more sophisticated manner.
 The sandbox contains a useful Query implementation, MoreLikeThisQuery, doing the same thing as our BooksLikeThis class, but more generically.
+BooksLikeThis is clearly hardwired to fields like “subject” and “author”, from our books index.
 But MoreLikeThis makes this generic so it works well on.
 Another Sandbox package, the Highlighter, described in Section 8.7, also uses of term vectors to find term occurrences for highlighting.
 Let’s see another example usage of term vectors: automatic category assignment.
@@ -1972,6 +2030,7 @@ Our code builds category vectors by walking every document in the index and aggr
 Category vectors are stored in a Map, keyed by category name.
 The value of each item in the category map is another map keyed by term, with the value an Integer for its frequency:
 A book’s term frequency vector is added to its category vector in addTermFreqToMap.
+That was the easy part—building the category vector maps—because it only involved addition.
 In the simplest two-dimensional case, as shown earlier in figure 5.6, two categories (A and B) have unique term vectors based on aggregation (as we’ve just done)
 The closest category, angle-wise, to a new book’s subjects is the match we’ll choose.
 Figure 5.8 shows the equation for computing an angle between two vectors.
@@ -1981,7 +2040,6 @@ The smallest angle is the closest match, and the category name is returned:
 The angle computation takes these assumptions into account to simplify a part of the computation.
 Finally, computing the angle between an array of words and a specific category is done in computeAngle, shown in listing 5.1.2
 Listing 5.13 Computing term vector angles for a new book against a given category.
-The calculation is optimized with the assumption that each word in the words array has a frequency of 1
 We multiply the square root of N by the square root of N is N.
 This shortcut prevents a precision issue where the ratio could be greater than 1 (which is an illegal value for the inverse cosine function)
 It requires square-root and inverse cosine calculations and may be prohibitive in high-volume indexes.
@@ -2013,6 +2071,7 @@ Function queries let you programmatically customize how documents are scored.
 Filters constrain document search space, regardless of the query, and you can either create your own Filter (described in section 6.4), or use one of Lucene’s many built-in ones.
 We saw how to wrap a Query as a Filter, and vice versa, as well as how to cache filters for fast reuse.
 Lucene includes support for multiple (including parallel) and remote index searching, giving developers a head start on distributed and scalable architectures.
+The term vectors enable interesting effects, such as “like this” term vector angle calculations.
 Finally we showed how to fine-tune the loading of term vectors and stored fields by using TermVectorMapper and FieldSelector.
 Is this the end of the searching story? Not quite.
 Lucene also includes several ways to extend its searching behavior, such as custom sorting, positional payloads, filtering, and query expression parsing, which we cover in the following chapter.
@@ -2024,7 +2083,6 @@ Custom filters allow information from outside the index to factor into search co
 Custom sorting implementations are most useful in situations when the sort criteria can’t be determined during indexing.
 An interesting idea for a custom sorting mechanism is to order search results based on geographic distance from a given location.1 The given location is only known at search time.
 Thanks to Tim Jones (the contributor of Lucene’s sort capabilities) for the inspiration.
-These are real (tasty!) restaurants in Tucson, Arizona, a city Erik used to call home.
 The test data is indexed as shown in listing 6.1, with each place given a name, location in X and Y coordinates, and a type.
 The type field allows our data to accommodate other types of businesses and could allow us to filter search results to specific types of places.
 The coordinates are indexed into a single location field as a string x, y.
@@ -2161,6 +2219,7 @@ While you could use field boosting to achieve this, that’d require you to sepa
 Payloads lets you solve this by boosting on a term by term basis within a single field.
 The first step is to create an analyzer that attaches payloads to certain tokens.
 It’s perfectly fine to set a null payload for some tokens.
+In fact, for application where there is a common “default value”, it’s best to represent that default value as a null payload, instead of a payload with the default value encoded into it, to save space in your index.
 Lucene simply records that there is no payload available at that position.
 The sandbox, under contrib/analyzers, includes several useful TokenFilters, as shown in Table 6.2
 These classes simply translate certain existing attributes of a Token, such as type and start/end offset, into a corresponding payload.
@@ -2168,12 +2227,15 @@ PayloadHelper Static methods to encode and decode ints and floats into byte arra
 Quite often, as is the case in our example, the logic you need to create a payload requires more.
 In our case, we want to create a payload for those term occurrences that should be boosted, containing the boost score, and set no payload for all other terms.
 Fortunately, it’s straightforward to create your own TokenFilter to implement such logic.
+Our logic is quite simple: if the document is a bulletin, which is simplistically determined by checking whether the contents start with the prefix “Bulletin:”, then we attach a payload that encodes a float boost to any occurrence of the term “warning”
 We use PayloadHelper to encode the float into a byte array.
+Listing 6.8 Custom filter and analyzer to attach payloads to the token “warning” inside bulletin documents.
 If document is a bulletin, and term is warning, record payload boost #2 Clear payload to get no boost.
 Using this analyzer, we can get our payloads into the index.
 Let’s create our own Similarity class, subclassing DefaultSimilarity, that overrides scorePayload:
 We again use PayloadHelper, this time to decode the byte array back into a float.
 Now that we have all the pieces, let’s pull it together into a test case as shown in Listing 6.9
+The first search is a normal TermQuery, which should return the 2nd document as the top result, because it contains two occurrences of the term “warning”
 Indeed, BoostingTermQuery caused the two bulletins to get much higher scores, bringing them to the top of the results!
 While BoostingTermQuery is the simplest way to use payloads to alter scoring of documents, the SpanQuery classes have also been extended on an initial, experimental basis, to include payloads.
 Each SpanQuery class implements the method getPayloadSpans, to retrieve all matching spans for the query, along with the payloads contained within each span that matched.
@@ -2186,14 +2248,17 @@ Note that once you’ve called getPayload() you cannot call it again until you�
 Payloads are still under active development and exploration, in order to provide more core support to.
 Until the core support is fully fleshed out, you’ll need to use the extension points described here to take advantage of this powerful feature.
 Next we show some tools to evaluate search performance using the JUnitPerf framework.
+But how fast is it? Is it fast enough? Can you guarantee that searches are returned within a reasonable amount of time? How does Lucene respond under load?
 If your project has high performance demands, you’ve done the right thing by choosing Lucene, but don’t let performance numbers be a mystery.
 There are several ways Lucene’s performance can be negatively impacted by how you use it—like using fuzzy or wildcard queries or a range query, as you’ll see in this section.
 We’ve been highlighting unit testing throughout the book using the basics of JUnit.
 JUnitPerf, a JUnit decorator, allows JUnit tests to be measured for load and speed.
 We’ve discussed how FuzzyQuery and WildcardQuery have the potential to get out of control.
 In a similar fashion, RangeQuery can, too: As it enumerates all the terms in the range, it forms a BooleanQuery that can potentially be large.
+The infamous Mike “addicted to the green bar” Clark has graciously donated some Lucene performance tests to us.7 Let’s examine a concrete example in which we determine that a searching performance issue is caused by how we index, and find out how we can easily fix this issue.
 We rely on JUnitPerf to identify the issue and ensure that it’s fixed and stays fixed.
 Let’s create a test up front to ensure that our search is returning the expected results by searching over a timestamp range that encompasses all documents indexed:
+See the “about this book” section at the beginning of the book for details on obtaining the full source code.
 We’ve indexed 1,000 documents and found them all using an encompassing date RangeQuery.
 Our dataset is only 2,000 documents, which is in general no problem for Lucene to handle.
 But, by default a RangeQuery internally rewrites itself to a BooleanQuery with a SHOULD clause for every term in the range.
@@ -2283,7 +2348,6 @@ Building Tika from sources is also straightforward, although you should check Ge
 Then run "mvn install" from within the Tika source directory you unpacked above.
 That command will download a bunch of dependencies into your Maven area, compile Tika's sources, run tests, and finally produce these two build artifacts in the subdirectory "target":
 This uses the http://retrotranslator.sourceforge.net software, run on the first build artifact.
-This is very useful if you intend to run Tika outside of Maven 2
 If all goes well, you’ll see "BUILD SUCCESSFUL" printed at the end.
 Now that we’ve built Tika, it’s time to finally extract some text!  We’ll start with Tika’s built-in text extraction tool.
 Tika comes with a simple built-in tool allowing you to extract text from documents in the local filesystem or via URL.
@@ -2292,16 +2356,19 @@ The tool can run either with a dedicated graphical user interface (GUI), or in a
 This brings up a simple GUI window, to which you can drag and drop files in order to test how the filters work with them.
 Figure 7.1 shows the window after dragging a draft of this chapter (as a Microsoft Word document) onto the window.
 The window has multiple tabs showing different text extracted during filtering:
+Plain text shows only the text and whitespace parts, extracted from the XHTML document.
 While the GUI tool is a great way to quickly test Tika on a document, it’s often more useful to use the commandline only invocation, for example like this:
 This tool accepts various command-line options to change its behavior:
 This corresponds to the Plain text tab from the GUI.
 You could use Tika’s command-line tool as the basis of your text extraction solution.
 But if you need more control over which parts of the text are used, or which metadata fields to keep, you’ll need to use Tika’s programmatic API, which we cover next.
 We’ve seen Tika’s simple parse API, which is the core of any text extraction based on Tika.
+But what about the rest of the text extraction process?  How can you build a Lucene document from a SAX ContentHandler?  That’s what we’ll now do in this section.
 You have a source for the document, which you must open as an InputStream.
 Then you create an appropriate ContentHandler for your application, or use one of the utility classes provided with Tika.
 Finally, you build the Lucene Document instance from the metadata and text encountered by the ContentHandler.
 Let’s make this all concrete: recall that the Indexer tool from Chapter 1 has the limitation that it can only index plain text files (with the extension .txt)
+TikaIndexer, shown in Listing 7.1, now fixes that!  Let’s walk through the approach:
 Subclass the original Indexer and override two methods: the acceptFile method is changed to always return true, so that we attempt to index all files encountered; the getDocument method is changed to use Tika to extract the text.
 In getDocument, we create a Metadata instance and record the filename in it so AutoDetectParser can use the file's extension to aid in choosing the right parser.
 Use the utility class BodyContentHandler to get the text from the body of the document.
@@ -2366,7 +2433,9 @@ But today, we have Tika, which makes text extraction surprisingly simple.
 We’ve seen Tika’s command-line tool, which could be the basis of a quick integration with your application, as well as an example using Tika’s APIs that with some small modifications could easily be the core of text extraction for your search application.
 Using Tika to handle text extraction allows you to spend more time on the truly important parts of your search application.
 In the next chapter we’ll look at ports of Lucene to other programming languages and environments.
+You’ve built an index, but can you browse or query it without writing code? Absolutely! In this chapter, we’ll discuss three tools to do this.
 Do you need analysis beyond what the built-in analyzers provide? Several specialized analyzers for many languages are available in Lucene’s Sandbox.
+How about providing term highlighting in search results? We’ve got that, too!
 This chapter examines third-party (non-core-Lucene) software as well as several Sandbox projects.
 Apache hosts a separate subversion directory, contrib, where add-ons to Lucene are kept.
 Deliberate care was taken with the design of Lucene to keep the core source code cohesive yet extensible.
@@ -2384,6 +2453,7 @@ There are a few more Sandbox components than those we cover in this chapter.
 Refer to the Sandbox directly to dig around and to see any new goodies since this was printed.
 The benchmark package is so useful we dedicate a separate appendix (D) to it.
 We begin with some useful tools for peeking into your Lucene index.
+Now what? Wouldn’t it be nice to browse the index and perform ad hoc queries? You will, of course, write Java code to integrate Lucene into your applications, and you could fairly easily write utility code as a JUnit test case, a command-line utility, or a web application to interact with the index.
 Thankfully, though, some nice utilities have already been created to let you interact with Lucene file system indexes.
 We’ll explore three such utilities, each unique and having a different type of interface into an index:
 Rather than write code to interact with an index, it can be easier to do a little command-line tap dancing for ad-hoc searches or to get a quick explanation of a score.
@@ -2396,6 +2466,7 @@ Example: search foo terms: Show the first 100 terms in this index.
 Supply a field name to only show terms in a specific field.
 Example: terms tokens: Does a search and shows the top 10 tokens for each document.
 Lucli is a fairly simple tool, but it has enough functionality to be very useful, especially if you’re running through a limited terminal connection and unable to run the full user-interface that tools like Luke require.
+This gem provides an intimate view inside a file system–based index from an attractive desktop Java application (see figure 8.1)
 We highly recommend having Luke handy when you’re developing with Lucene because it allows for ad-hoc querying and provides insight into the terms and structure in an index.
 Luke has become a regular part of our Lucene development toolkit.
 Its tabbed and well integrated user interface allows for rapid browsing and experimentation.
@@ -2407,23 +2478,27 @@ The usual issues of Lucene version and index compatibility apply.
 Luke’s interface is nicely interconnected so that you can jump from one view to another in the same context.
 The Tools menu provides options to optimize the current index, undelete any documents flagged for deletion, and switch the index between compound and standard format.
 OVERVIEW: SEEING THE BIG PICTURE Luke’s Overview tab shows the major pieces of a Lucene index, including the number of fields, documents, and terms (figure 8.3)
+The top terms in one or more selected fields are shown in the “Top ranking terms” pane.
 Double-clicking a term opens the Documents tab for the selected term, where you can browse all documents containing that term.
+Right-clicking a term brings up a menu with three options: “Show all term docs” opens the Search tab for that term so all documents appear in a list, “Browse term docs”
 Figure 8.3 Luke: index overview, allowing you to browse fields and terms.
 Browsing by document number is straightforward; you can use the arrows to navigate through the documents sequentially.
 The table at the bottom of the screen shows all stored fields for the currently selected document.
 Browsing by term is trickier; you can go about it several ways.
 Clicking First Term navigates the term selection to the first term in the index.
 You can scroll through terms by clicking the Next Term button.
+The number of documents containing a given term is shown as the “Doc freq of this term” value.
 To select a specific term, type all but the last character in the text box, click Next Term, and navigate forward until you find the desired term.
 Just below the term browser is the term document browser, which lets you navigate through the documents containing the term you selected.
 The First Doc button selects the first document that contains the selected term; and, as when you’re browsing terms, Next Doc navigates forward.
-The selected document, or all documents containing the selected term, can also be deleted from this screen (use caution if this is a production index, of course!)
+Another feature of the Documents tab is the “Copy text to Clipboard” feature.
 All fields shown, or the selected fields, may be copied to the clipboard.
 For example, copying the entire document to the clipboard places the following text there:
 Luke can only work within the constraints of a Lucene index, and unstored fields don’t have the text available in its original form.
 The terms of those fields, of course, are navigable with Luke, but those fields aren’t available in the document viewer or for copying to the clipboard (for example, our contents field in this case)
 Clicking the Show All Docs button shifts the view to the Search tab with a search on the selected term, such that all documents containing this term are displayed.
 If a field’s term vectors have been stored, the Field’s Term Vector button displays a window showing terms and frequencies.
+One final feature of the Documents tab is the “Reconstruct & Edit” button.
 Clicking this button opens a document editor allowing you to edit (delete and re-add) the document in the index or add a new document.
 Luke reconstructs fields that were tokenized but not stored, by aggregating in position order all the terms that were indexed.
 Reconstructing a field is a potentially lossy operation, and Luke warns of this when you view a reconstructed field (for example, if stop words were removed or tokens were stemmed during the analysis process then the original value cannot be reconstructed)
@@ -2432,7 +2507,6 @@ Click Search when the expression and other fields are as desired.
 The bottom table shows all the documents from the search hits, as shown in figure 8.6
 Figure 8.6 Searching: an easy way to experiment with QueryParser.
 Double-clicking a document shifts back to the Documents tab with the appropriate document preselected.
-It’s useful to interactively experiment with search expressions and see how QueryParser reacts to them (but be sure to commit your assumptions to test cases, too!)
 Luke shows all analyzers it finds in the classpath, but only analyzers with no-arg constructors may be used with Luke.
 Luke also provides insight into document scoring with the explanation feature.
 To view score explanation, select a result and click the Explanation button; an example is shown in figure 8.7
@@ -2490,9 +2564,12 @@ If your project demands stemming, we recommend that you give the Snowball analyz
 And, as already mentioned but worth repeating, you may want to use the clever piece of this analyzer (the SnowballFilter) wrapped in your own custom analyzer implementation.
 Several sections in chapter 4 discuss writing custom analyzers in great detail.
 However, while the ngram tokenizers operate on letters, shingles operate on whole words.
+For example the sentence “please divide this sentence into shingles” might be tokenized into the shingles “please divide”, “divide this”, “this sentence”, “sentence into” and “into shingles”
 Why would you ever want to do such a thing?  One common reason is to speed up phrase searches, especially for phrases involving common terms.
+For example, consider a search for the exact phrase “Wizard of Oz”
 Since the word “of” is incredibly common, including it in the phrase search will require.
 Lucene to visit and filter out a great many occurrences that do not match the phrase, which is costly.
+If, instead, you had indexed the tokens “wizard of” and “of oz”, those tokens occur far less frequently and your phrase search can run very quickly.
 The Nutch search engine, covered in Section 4.9, creates shingles for exactly this reason.
 You could also simply discard such common terms as stop words, using a StopFilter during analysis.
 But then you must take care to add slop into your phrase searches, as covered in section 4.7.3
@@ -2575,6 +2652,7 @@ Figure 8.14 shows the results of searching for search at the WordNet site.
 Interestingly, this is the same George Miller who reported on the phenomenon of seven plus or minus two chunks in immediate memory.
 Figure 8.15 Caught in the WordNet: word interconnections for search.
 What does all this mean to developers using Lucene? With Dave Spencer’s contribution to Lucene’s Sandbox, the WordNet synonym database can be churned into a Lucene index.
+This allows for rapid synonym lookup—for example, for synonym injection during indexing or querying (see section 8.6.2 for such an implementation)
 We first see how to build an index containing WordNet’s synonyms, then how to use these synonyms during analysis, and finally an unusual example of what you can do with a WordNet index.
 Obtain the binary (or build from source; see section 8.10) of the Sandbox WordNet package.
 It should produce a subdirectory, prolog, that has many files.
@@ -2599,6 +2677,7 @@ A series of numbers logically corresponds to a subset of sensible words.
 Many thanks to Dave Engler for building the base Swing application framework.
 We omit norms and set omitTf on the word and length fields, since they are only used for sorting.
 For the t9 field we omit norms because every field has the same length.
+The t9 method is not shown, but it can be obtained from the book’s source code distribution (see the “About this book” section)
 The query uses a boosted TermQuery on the exact digits (to ensure that exact matches come first) and wildcard queries matching words with one or two more characters more.
 The search results are sorted first by score, then by length, and finally alphabetically within words of the same length:
 A unit of astronomical length based on the distance from Earth at which stellar parallax is 1 second of arc;
@@ -2712,6 +2791,7 @@ Andi created a Lucene directory implementation that uses Berkeley DB as the unde
 An interesting side-effect of having a Lucene index in a database is the transactional support it provides.
 Andi donated his implementation to the Lucene project, and it’s maintained in the contrib/db/bdb area of the Sandbox.
 Berkeley DB, at release 4.7.25 as of this writing, is written in C, but provides full Java API access via JNI.
+Berkeley DB also has a “Java edition”, which is written entirely in Java, so no JNI access is required and the code exists in a single JAR file.
 The example below shows how to use the Java edition version of Berkeley DB but the API for the original Berkeley DB is very similar.
 We provide the corresponding examples for both indexing and searching with the source code that comes with this book.
 JEDirectory, which is a Directory implementation that stores its files in the Berkeley DB Java Edition, is more involved to use than the built-in RAMDirectory and FSDirectory.
@@ -2731,6 +2811,8 @@ Under the hood, both of these contributions represents all aspects of a Lucene i
 This makes searching much faster than RAMDirectory, at the expense of more RAM consumption.
 In many cases, especially if the index is small, the documents you’d like to search have very high turnover, short index to search delay is required, and you have plenty of RAM, one of these classes may be a perfect fit.
 Spell correction is something users now take for granted in today’s search engines.
+Enter a mis-spelled word into Google and you’ll get back a helpful “Did you mean…?” with your typo corrected as a hyperlink.
+You can then conveniently click it to express “yes, indeed, I did!”
 Google’s spell correction is so effective that you can rely on it to correct your typos!  Spelling correction is such a wonderfully simple and intuitive must-have feature to the end user.
 But, as a developer, just how do you implement it?  Fortunately, Lucene has the spellchecker Sandbox contribution, created by David Spencer, for just this purpose.
 Web search engines spend a lot of energy tuning their spell correction algorithms, and it shows.
@@ -2740,13 +2822,17 @@ Along the way we’ll see how the spellchecker sandbox package tackles each.
 You might assume the very first step is to decide whether or not spell correction is even necessary.
 But that’s hard to determine up front, and it’s usually more effective to simply always run through the steps and then use the score of each potential suggestion to decide whether they should be presented to the user.
 The first step is to generate a raw set of possible suggestions.
+The spellchecker module works with one term at a time, so if the query has multiple terms you’ll have to consider each, separately (though see “Further things to try” below for some ideas on handling multi-term queries)
 You could try to find a generic known accurate dictionary, but it’s hard to find such dictionaries that will exactly match your search domain and it’s even harder to keep such a dictionary current over time.
 A more powerful means of deriving a dictionary is to use your search index to gather all unique terms seen during indexing from a particular field.
+You could use a phonetic approach, such as the “sounds like” matching we explored in section 4.5
 Another approach, which is the one used by spellchecker, is to use letter ngrams to identify similar words.
 A letter ngram is all sub-sequences of N letters in length, where N varies between a min and max size.
 Using this approach, the ngrams for all words in the dictionary are indexed into a separate spellchecker index.
 This is usually a fast operation, and so the application’s indexing process would rebuild the entire spell check index whenever the main index is updated.
+Next, imagine the user searches for “letuce”, whose ngrams are shown in Table 8.21
 To find the suggestions, the ngrams for “letuce” are used to run a search against the spellcheck index.
+Since many of the ngrams are shared (“let”, “tuc”, “uce” and “tuce”) the correct word “lettuce” will be returned with a high relevance score.
 Listing 8.9 shows how to do so, using the terms from an existing lucene index.
 Create SpellChecker on its directory #2 Open IndexReader containing words to add to spell dictionary.
 Add all words from the specified fields into the spell checker index.
@@ -2766,10 +2852,12 @@ It also has a setAccuracy method to set the minimum relevance of each suggestion
 You could also run the original search, and then if it returns 0, or very few results, try the respelled search to see if it returns more, and use that to bias the decision.
 Next, assuming you have a suggestion worth presenting, what exactly should your application do? One option, if you are very confident of the respelling, is to automatically respell the term.
 But be sure to clearly tell the user at the top of the search results that this was done, and give the user a quick link to forcefully do the original search.
+Alternatively, you could search exactly as the user requested but present a “Did you mean…” with the respelling.
 Finally, you could search for both the original query plus the respelled query, or’d together perhaps with different boosts.
 Typically a search application will choose up-front one of these options.
 But modern Web search engines seem to make this choice dynamically, per query, depending on some measure of confidence of the respelling.
 Go ahead and try some searches in http://google.com and http://search.live.com.
+For example, on Google a search for the mis-spelled “Levenstein distance” will silently also search for the proper spelling “Levenshtein distance” plus the original mis-spelled term.
 If instead you search for “hippopatomus” (misspelled), Google will faithfully search for your mis-spelled term, which has thousands.
 Curiously, the same two searches on http://search.live.com have the opposite behavior.
 Of course by the time you read this likely you’ll see different behavior.
@@ -2782,10 +2870,12 @@ In applications whose dictionary changes quickly with time, such as a news searc
 Instead of respelling each term separately, consider factoring in the other terms to bias the suggestions of each term.
 One way is to compute term co-occurrence statistics up front for every pair of terms X and Y, to measure how many documents contain both terms X and Y.
 Then, when sorting the suggestions take these statistics into account with the other terms in the user’s query.
+If a user enters the misspelled query “harry poter” you’d really like to suggest “harry potter” instead of other choices like “harry spotter”
 The dictionary you use for spell correction is very important.
 When you use terms from an existing index, you can easily import mis-spellings from the content you had indexed if the content is “dirty”
 You can also accidentally import terms that you may never want to suggest, for example SKU numbers or stock ticker symbols.
 Try to filter such terms out, or only accepting terms that occurred above a certain frequency.
+If you high search traffic, you can train your spellchecker according to how users click on the “Did you mean…” link, biasing future suggestions based on how users have accepted suggestions in the past.
 If your search application has entitlements (restricting which content a user can see based on her entitlement) then take care to keep the spellchecker dictionary separate for different user classes.
 A single global dictionary can accidentally “leak” information across entitlement classes which could cause real problems.
 The spellcheck module currently relies entirely on the StringDistance score for this, but you could imagine improving this by combining StringDistance with the frequency of this tem in the index to get a better confidence.
@@ -2823,6 +2913,7 @@ But, fear not!  In a real index, that has additional text fields and a larger se
 Normally the amazing gain in search performance more than makes up for this.
 The first one is a normal Lucene index, which we use for running RangeQuery.
 You can see that we had to zero-pad the numbers, using DecimalFormat, to ensure their lexicographic sort matches the numeric sort, as described in section 2.8
+As you can see, we handle our numeric field like a tokenized text by supplying a special TokenStream (see [chapter about analyzers]) to the Field constructor to index our long value:
 The precisionStep controls how many ranges should be created; a larger value makes fewer ranges, which reduces the size of the index but makes searching slower.
 Just set the new numeric value using setValue(long value) and consume the stream again.
 When you need to query a range at search time, simply create LongTrieRangeQuery with the same arguments that you’d pass to RangeQuery, except for a new integer argument (precisionStep) passed after the field name.
@@ -2837,6 +2928,7 @@ As you can see, the field values are unreadable!  Don’t worry, that’s expect
 All that really matters is that the Trie queries and SortField parsers know how to read them.
 You’ll see similar values if you look at your index with Luke, for example.
 Our next package, XML Query Parser, is another option for building your search user interface.
+The standard Lucene QueryParser is ideal for creating the classic "onebox" search interface provided by web search engines, such as Google.
 However, many search applications are more complex than this and require a custom search form to capture criteria with widgets such as:
 All of the criteria from these HTML form elements must be brought together somehow to form a Lucene search request.
 Figure 8.22: Three common options for building a Lucene query from a search user interface.
@@ -2852,17 +2944,21 @@ But how can you produce this XML from a Web search UI in the first place?  There
 This example is derived from the web demo available in the XmlQueryParser sandbox sources.
 Figure 8.23 An example search user interface for a job search site.
 Consider the Web-based form user interface shown in Figure 8.23
+Let’s create a servlet that can handle this “job search” form.
 The good news is this code should also work, unchanged, with your own choice of form.
 Our method (not shown here) simply opens a standard IndexSearcher and caches this in our servlet's instance data.
 This class will be used later to help construct queries.
 Having initialized our servlet we now add code to handle search requests:
 The XML document is then passed to the query parser to create a Query object for use in searching.
 The remainder of the method is typical Servlet code used to package results and pass them on to a JSP for display.
+Having set up our servlet we can now take a closer look at the custom query logic we need for our “job search” and how this is expressed in the “query.xsl” query template.
 The XSL language in the query template allows us to perform the following operations:
 Test for the presence of input values with “if” statements.
+Loop around sections of content using “for each” statements We will not attempt to document all of the XSL language here but clearly the shortlist above lets us.
 The XSL statements that control the construction of our query clauses can be differentiated from the query clauses because they are all prefixed with the <xsl: tag.
 The above template conditionally outputs clauses depending on the presence of user input.
 The logic behind each of the clauses is as follows:
+Job Type: as a field with only two possible values (“permanent” or “contract”) this can be an expensive query clause to run because a search will typically match half of all the documents in our search index.
 If our index is very large then this can involve reading millions of  document ids from the disk.
 For this reason we use a cached filter for these search terms.
 Any filter can be cached in memory for reuse simply by wrapping it in a <CachedFilter> tag.
@@ -2886,6 +2982,8 @@ The AgoFilterBuilder class is a simple object which is used to parse any XML tag
 For those familiar with the XML DOM interface the code presented below should be straight-forward.
 Our AgoFilterBuilder is called by the XML parser every time an “Ago” tag is encountered and it is expected to return a Lucene Filter object given an XML DOM element.
 The class DOMUtils simplifies the code involved in extracting parameters.
+Our AgoFilterBuilder reads the “to”, “from” and “timeUnit” attributes using DOMUtils to provide default values if no attributes are specified.
+Our code simplifies application logic for specifying “to” and “from” values by swapping the values if they are out of order.
 An important consideration in coding Builder classes is that they should be thread-safe.
 For this reason our class creates a SimpleDateFormat object for each request rather than holding a single object in instance data as SimpleDateFormat is not thread-safe.
 Our Builder is relatively simple because the XML tag does not permit any child queries or filters to be nested inside it.
@@ -2893,10 +2991,15 @@ Next we look at an alternate QueryParser that can produce span queries.
 As we saw in section 5.XXX, span queries offer some advanced possibilities for positional matching.
 The Surround QueryParser defines an advanced textual language to describe span queries.
 Let’s walk through an example to get a sense of the query language accepted by the Surround QueryParser.
+Suppose a meteorologist wants to find documents on “temperature inversion”
+In the documents this “inversion” can also be expressed as “negative gradient”, and each word can occur in various inflected forms.
 But this will not match the following text, because there's nothing to match “gradient”:
+This shows the power of spans: they allow word combinations in proximity (“negative gradient”) to be.
 You’ll notice the Surround syntax is very different from Lucene’s built-in QueryParser.
 The parentheses for the prefix form gave the name Surround to the language, as they surround the underlying Lucene spans.
 The 3n operator is used in infix notation, meaning it’s written in-between the two subqueries.
+If you replace “n” with “w” then an ordered SpanNearQuery is created.
+Continuing the example, suppose the meteorologist wants to find documents that match the above “negative gradient” and two more concepts, "low pressure", and "rain"
 In the documents these concepts can be also expressed in plural or verb form and by synonyms such as "depression" for "low pressure" and "precipitation" for "rain"
 Also all three concepts should occur at most 50 words away from each other:
 When the temperature has a negative height gradient above a depression no precipitation is expected.
@@ -2931,6 +3034,7 @@ But because distance is a very dynamic value, changing with every query as the o
 We’ll visit this logic here, as well as touch on some of the performance consideration implied by spatial Lucene’s approach.
 Let’s first see how to index documents for spatial search.
 In order to use spatial lucene, you must first geo-code locations in your documents.
+This means a textual location, such as "77 Massachusetts Ave" or “the Louvre” must be translated into its corresponding latitude and longitude.
 This process must be done outside of spatial lucene, which only operates on locations represented as latitudes and longitudes.
 Now what does spatial lucene do with each location?  One simple way approach would be to load each document's location, compute its distance on the fly, and use that for filtering, sorting or boosting.
 This approach will work, but it results in rather poor performance.
@@ -2950,6 +3054,7 @@ For instance, imagine you have 1 million documents representing different parts 
 If you were storing just the raw document locations, you would have to iterate through every one of those million documents to if its location is inside your search radius.
 Two term retrievals versus 1 million iterations is a major cost and time savings.
 Listing 8.XXX shows how to index documents with spatial lucene.
+String latField = "lat"; String lngField = "lon"; String tierPrefix = "_localTier";
 The most important part is the loop that creates the tiers for each location to be indexed.
 This provides a very rapid method for looking up values in an area, and finding its nearest neighbors.
 Once you have your data indexed, you’ll need to retrieve it.
@@ -2960,6 +3065,7 @@ If you need precisely filtered results, or you intend to sort by distance, you m
 Note that the field name (“foo” in our example) is completely unused because DistanceSortSource provides the sorting information.
 Let’s put the finishing touches on it, combining what we’ve done so far with some actual spatial data, seen in Listing 8.XXX.
 We’ve added an addData method, to enroll a bunch of bars, clubs and restaurants into the index, plus main function that creates the index and then does a search for the nearest restaurant.
+You can run this by entering “ant SpatialLucene” at the command prompt.
 As our final topic, let’s look at the performance of spatial Lucene.
 Unlike standard text search, which relies heavily on an inverted index where duplication in words actually reduces the size of an index and improves retrieval time, spatial locations have a tendency to be very unique.
 The introduction of a Cartesian grid with tiers provides the ability to bucketize the locations into non-unique grids of different size, thus improving retrieval time.
@@ -3022,7 +3128,7 @@ We’re all more than grateful for Doug Cutting’s generosity for open-sourcing
 By also contributing, you benefit from a large number of skilled developers who can help review, debug, and maintain it; and, most important, you can rest easy knowing you have made the world a better place!
 Today, Lucene is the de facto standard open-source IR library.
 Although Java is certainly a very popular programming language, not everyone uses it.
-Many people prefer dynamic languages (Python, Ruby, Perl, PHP, etc.)
+What do you do if you love Lucene but not Java?  Fear not: you are in good company!  Luckily, a number of options are available for accessing Lucene functionality from different languages.
 In this chapter we discuss different options for accessing Lucene's functionality from programming languages other than Java.
 We’ll provide brief examples of the ports’ use, but keep in mind that each port is an independent project with its own mailing lists, documentation, tutorials, user, and developer community that will be able to provide more detailed information.
 We begin with our rather loose interpretation of what a port is.
@@ -3053,6 +3159,7 @@ The reverse native port is a compelling option, assuming the runtime environment
 By using JRuby, you write ruby code that has access to any Java code, but will generally lose access to Ruby extensions that are implemented in C.
 This option is also lightweight at runtime, since it runs in a single process and with a single (JVM) runtime environment.
 The wrapper approach is similarly a single process, but it embeds a JVM (to run the compiled Java bytecode from Lucene) as well as running the target environment’s runtime, side by side, so it's somewhat heavier weight.
+The important tradeoff is that much less work is required to stay current with Lucene’s releases: only the API changes need to be ported, and not Lucene’s entire implementation, so the work is in proportion to the net API “surface area” and the release delay can be much less.
 With PyLucene in particular, which auto-generates the wrapper code using JCC, the delay is essentially zero because the computer does all the work!  If only other wrappers could use JCC.
 Because a separate server runs and exposes Lucene’s APIs via a standard network protocol, you can now share this server amongst multiple clients, possibly with different programming languages.
 But one potential downside is you now must manage a new standalone process or server, entirely different from your main application.
@@ -3083,11 +3190,13 @@ If your application can accept the addition of a standalone server, Solr is like
 Although his studies aren’t in a technology-related field, he has strong interest in Information Retrieval.
 While Ben was the original creator, many other active developers now participate in this port.
 Ben was kind enough to provide this overview of CLucene.
+CLucene is a native port to C++: the file format and API are exactly the same as Lucene 1.9, in its latest stable release.
 The unstable release is actively working towards compatibility with Lucene’s 2.3.1 release, and development is proceeding on a source code branch towards making this a stable release.
 Despite being officially marked unstable, the 2.3.1 branch seems to be quite stable and is commonly used, although the APIs are still changing as of this writing.
 The distribution package of CLucene includes many of the same components as Lucene, such as tests and demo examples.
 CLucene contains wrappers that allow it to be used with other programming languages.
 Currently there are wrappers for PHP, .NET (read-only), and a Dynamic Link Library (DLL) that can be shared between different programs, and separately developed wrappers for Python and Perl.
+CLucene was initially developed in Microsoft Visual Studio, but now it also compiles in GCC, MinGW32, and (reportedly) the Borland C++ compiler (although no build scripts are currently being distributed)
 The CLucene team is making use of SourceForge’s multiplatform compile farm to ensure that CLucene compiles and runs on as many platforms as possible.
 The activity on the CLucene developers’ mailing lists indicates that support for AMD64 architecture and FreeBSD is being added.
 This means that code written in Java can be converted to C++ fairly easily.
@@ -3126,8 +3235,10 @@ Beagle seems to be well adopted by Linux desktop environments as their standard 
 Larry Wall has stated one of his goals in Perl is to offer many ways to accomplish a given task.
 Larry would be proud, as there are quite a few choices for accessing Lucene’s functionality from Perl.
 After that we touch on Lucy, which is still under active development and hasn’t had any releases yet but is nevertheless interesting.
+KinoSearch, created and actively maintained by Marvin Humphrey, is a C and Perl “loose port” of Lucene.
 This means its approach, at a high level, is similar to Lucene, but the architecture, APIs and index file format are not identical.
 The summary of its current status is shown in Table 9.6
+Marvin took the time to introduce interesting innovations to KinoSearch while porting to Perl and C; some of these innovations have inspired corresponding improvements back to Lucene, which is one of the delightful and natural “cross fertilization” effects of open source development.
 Web site http://www.rectangular.com/kinosearch/ Development Status Alpha (though widely used and quite stable)
 Last stable release 0.163 Matching Lucene release N/A (loose port)
 KinoSearch is technically in the alpha stage of its development, but in practice is nevertheless extremely.
@@ -3136,6 +3247,7 @@ It’s hard to gauge usage, but at least two wellknown web sites, Slashdot.org a
 When users find issues and post questions to the mailing lists, Marvin is always very responsive.
 KinoSearch also learned important lessons from an earlier port of Lucene to Perl, PLucene.
 PLucene, which has stopped development, suffered from performance problems, likely because it was implemented entirely in Perl; KinoSearch instead wraps Perl bindings around a C core.
+This allows the C core to do all the “heavy lifting”, which results in much better performance.
 Early testing of KinoSearch showed its indexing performance to be close to Lucene’s 1.9.1 release.
 However both KinoSearch and Lucene have changed quite a bit since then, so it’s not clear how they compare today.
 Probably the largest architectural difference is that KinoSearch requires you to specify field definitions up front when you first create the index (similarly to how you create a database table)
@@ -3150,10 +3262,13 @@ It may very well be that Lucy is realized as the 2.0 release of KinoSearch.
 Like Ferret and KinoSearch, Lucy is inspired by Lucene and derives much of its design from those two projects, aiming to achieve the best of both.
 Eventually other programming languages should be able to wrap Lucy’s C core.
 There are other ways to access Lucene’s functionality from Perl.
+There are at least 2 clients for Solr: Solr.pm (available at http://search.cpan.org/perldoc?Solr and separately developed from the Solr effort), and SolPerl which is developed and distributed with Solr.
 If you have a strong preference for API and index compatible ports, and don’t like that KinoSearch is a “loose” port, have a look at CLucene’s Perl bindings, which is also a native port of Lucene but with matching APIs and index file formats.
 Let’s move next to another popular dynamic language starting with the letter P.
 This section was gratefully contributed by the creator of PyLucene, Andi Vajda.
+PyLucene takes the “local wrapper” approach, by adding Python bindings to the actual Lucene source code.
 The PyLucene Python extension, a Python module called “lucene”, is machine-generated by a package called JCC, also included with the PyLucene sources.
+Once it knows that API, it generates the appropriate C++ code that enables access to that API from Python through JNI (Java’s Native Interface), using C++ as the common “bridge” language.
 Because JCC auto-generates all wrappers by inspecting Lucene’s JAR file, the release latency is near zero.
 It was recently (Jan 2009) folded into Apache as a sub-project of Lucene.
 Hence all public APIs in all public classes available from Lucene are available from PyLucene.
@@ -3172,7 +3287,6 @@ Lucene issues while using PyLucene are usually handled on the Lucene user mailin
 While PyLucene is our favorite option for using Lucene from Python, there are other choices with different tradeoffs:
 If you prefer a native port, CLucene offers Python bindings.
 Beagle, described briefly in section 9.4.4, also includes Python bindings.
-If you prefer a reverse port, you could simply use Jython, a port of the Python language to run on a JVM,
 As you’ve seen, there are a number of ways to access Lucene from Python, the most popular being PyLucene.
 Fortunately, you can access Lucene from Ruby in various ways.
 The most popular port is Ferret, summarized in Table 9.9
@@ -3190,7 +3304,6 @@ There is even a Common Lisp port called Montezuma, at http://code.google.com/p/m
 Development seems to have stopped, after an initial burst of activity.
 In fact, Montezuma is a port of Ferret, which in turn is a port of Lucene to Ruby (described in section 9.7)
 Finally, another compelling option is to use JRuby, which is a reverse port of the Ruby language to run on a JVM.
-You still write Ruby code, but it’s a JVM that’s running your Ruby code, and thus any JAR, including Lucene,
 The one downside to JRuby is that it cannot run a Ruby extension that’s implemented in C.
 Let’s switch gears now to another popular Web application dynamic language, PHP.
 There are several interesting options if you’d like to use PHP.
@@ -3258,6 +3371,7 @@ It can also add complexity to your application, which may introduce bugs, making
 Ask yourself, honestly (use a mirror, if necessary): could your time be better spent improving the user interface or tuning relevance?  You can always improve performance by simply rolling out more or faster hardware, so always consider that option first.
 Never sacrifice user experience in exchange for performance: keeping users happy, by providing the best experience humanly and computerly possible, should always be your top priority.
 These are the costs of performance tuning so before you even start make sure you do need really better performance.
+So you still have your heart set on tuning performance?  No problem: read on!
 First, set up a simple repeatable test that allows you to measure the specific metrics you want to improve.
 Without this you can't know if you're actually improving things.
 Try to use true documents and searches from your search logs, if available.
@@ -3321,6 +3435,7 @@ There is a built-in WriteLineDoc task for exactly this purpose, which works for 
 You can also download a snapshot of this file from here:
 This algorithm uses the built-in EnwikiDocMaker, which knows how to parse the XML format from Wikipedia, to produce one document at a time.
 Sit back and enjoy the sound of hard drives seeking away doing all the hard work for you!  That is, if you are not using a solid-state drive.
+Great!  Wasn't that easy? Now that we're done with the one-time setup, let's run a real test, using the efficient LineDocMaker as our document maker.
 This algorithm builds an index with the first 200,000 Wikipedia articles, three times, using StandardAnalyzer.
 At the end it prints a one-line summary of each run.
 If you were building a real index for Wikipedia, you should use an analyzer base on the Wikipedia tokenizer under contrib/wikipedia.
@@ -3328,6 +3443,7 @@ This tokenizer understands the custom elements of Wikipedia's document format su
 Since we are only measuring indexing throughput here, StandardAnalyzer is fine for our purposes.
 You should see something like this as your final report:
 Discarding the slowest and fastest run, our baseline indexing throughput is 557.3 documents/second.
+Not too shabby!  As of Lucene 2.3, the "out of the box" default indexing throughput has improved substantially.
 Here are some specific things to try to further improve your application's indexing throughput:
 This could be the single biggest impact change you can make, especially if your computer's hardware has a lot of concurrency.
 Set IndexWriter to flush by memory usage and not document count.
@@ -3358,10 +3474,10 @@ This number is actually very low, because we are using LineDocMaker as our docum
 In a real application, creating, filtering, and tokenizing the document would be much more costly.
 Try it with your own DocMaker! Let's combine the suggestions above.
 We'll index the same 200,000 documents from Wikipedia, but changing the settings to try to improve indexing throughput.
+Wow, the performance is even better: 899.7 documents per second!  Of course in your testing you should test each of these changes above, one at a time, and keep only those that help.
 Well there you have it!  As we've seen, Lucene's "out of the box" indexing throughput is excellent.
 But with some simple tuning ideas, you can make it even better.
 Search latency and throughput are two sides of one coin: changes that improve search latency will also improve your search throughput, on the same hardware.
-This is assuming you are running enough threads to take full advantage of the computer's concurrency (which you should!)
 The best way to measure your search latency and throughput is with a standalone load testing tool, such as Grinder.
 These tools do a great job simulating multiple users and reporting latency and throughput results.
 They also test your application end-to-end, which is what a real user experiences when using your web site.
@@ -3393,11 +3509,11 @@ Hard drives accept many IO requests at once and re-order them to make more effic
 Even solid state disks do the same, and then go further by using multiple channels to concurrently access the raw storage.
 Then, there is concurrency across these resources: when one thread is stuck waiting for an IO request to complete, another thread can use the CPU, and you will gain concurrency.
 Therefore, it's critical to use threads for indexing and searching.
+It's like buying a Corvette and driving it no faster than 20 mph!  Likely, switching to using threads is the single change you can make that will increase performance the most.
 You'll have to empirically test, to find the right number of threads for your application and tradeoff search or indexing latency and throughput.
 Generally, at first, as you add more threads, you'll see latency stay about the same, but throughput will improve.
 Then when you hit the right number of threads, adding more will not improve throughput, and may hurt it somewhat due to context switching costs, but will increase the latency.
 Unfortunately, there is the dark side to threads, which if you've explored them in the past you've discovered: they add substantial complexity to your application.
-Suddenly you must take care to make the right methods synchronized (but not too many!), change your performance testing to use threads, manage thread pools, spawn and join threads at the right times, etc.
 Testing is difficult because the threads are scheduled at different times by the JVM every time you run a test.
 Yes, they are! Lucene has been carefully designed to work very well with many threads.
 Lucene is thread safe: sharing IndexSearcher, IndexReader, IndexWriter, etc, across multiple threads is perfectly fine.
@@ -3461,7 +3577,6 @@ How can you manage disk space when it has such wild swings?  Fortunately, there 
 Once you understand what's happening under the hood, you can predict and understand Lucene's disk usage.
 It's important to differentiate transient disk usage, while the index is being built (Figure 10.3), versus final disk usage, when the index is completely built and optimized to one.
 Here is a coarse formula to estimate the final size based on the size of all text from the documents:
-For example if your documents have a single field that is indexed, with stored and has term vectors turned on,
 For example, documents with unusually diverse or unique terms, like a large spreadsheet that contains many unique product SKUs, will use more disk space.
 Figure 10.3 Disk usage while building an index of all Wikipedia documents, with optimize called in the end.
 As the index gets larger, the size of each saw tooth will get larger as bigger merges are being done.
@@ -3481,11 +3596,13 @@ If you don't, then the reader is holding references to files that IndexWriter ma
 If you are running a backup (see 10.4) then the files in the snapshot being copied will also consume disk space, until you release the snapshot.
 Note that on UNIX you may think disk space has been freed because the writer has deleted the old segments files, but in fact the files still consume disk space as long as those files are held open by an IndexReader.
 Windows does not allow deletion of open files so you'll still see the files when you look at the directory.
+Don't be fooled! So how can you make sense of all of this?  A good rule of thumb is to measure the total size of your index, called that X.
 Suppose you're happily tuning your application to maximize indexing throughput.
 You cranked up mergeFactor and got awesome speedups, so you want to push it even higher.
 Unfortunately, there is a secret cost to these changes: you are drastically increasing how many files Lucene must hold open at once.
 At first you're ecstatic about your changes, since everything seems fine.
 Then, as you add more documents index grows, Lucene will need more and more open files when one day -- BOOM! -- you hit the dreaded "Too many open files" IOException, and the OS stops you dead in your tracks.
+Faced with this silent and sudden risk, how can you possibly tune for the best indexing performance, while staying under this limit? Fortunately, there is hope!  With a few simple steps you can take control of the situation.
 When you run the test, it will always fail and then tell you how many files it was able to open before the OS cut it off.
 Next, increase the limit to the maximum allowed by the OS.
 The exact command for doing so varies according to OS and shell (hello Google my old friend)
@@ -3522,6 +3639,7 @@ You've surely hit OutOfMemoryError in your Lucene application in the past?  If y
 So you thought: no problem, just increase the JVMs' heap size, and move on.
 You do that, and things seem fine, but little do you know you actually really hurt the performance of your application because the computer has started swapping memory to disk.
 And perhaps a few weeks later you hit the same error again.
+What's going on?  How can you control this devious error and still keep your performance gains?
 Managing memory usage is especially exciting, because there are two very different levels of memory.
 First, you must control how the JVM uses memory from the OS.
 Second, you must control how Lucene uses memory from the JVM.
@@ -3529,14 +3647,11 @@ Once you understand these levels you'll have no trouble preventing memory errors
 You manage the JVM by telling it how large its heap should be.
 The option -Xms size sets the starting size of the heap and the option -Xmx size sets the maximum allowed size of the heap.
 In a production server environment, you should set both of these sizes to the same value, so the JVM does not spend time growing and shrinking the heap.
-Also, if there will be problems reaching the max (e.g.
 The heap size should be large enough to give Lucene the RAM that it needs, but not so large that you force the computer to swap excessively.
 Generally you shouldn't just give all RAM to the JVM: it's beneficial to leave excess RAM free to allow the OS to use as its IO cache.
 How can you tell if the computer is excessively swapping?  Here are some clues:
 Check for high numbers in these columns (say greater than 50)
 Ordinary interactive processes, like a shell or command prompt, or a text editor, or Windows explorer, are.
-Check if the free number and the buffers number are both near 0
-Check if the Available and System Cache numbers, under Physical Memory, are both near 0
 The numbers tell you how much RAM the computer is using for its IO cache.
 Note that modern OSs happily swap out processes that seem idle in order to use the RAM for the IO cache.
 But, excessive swapping, especially while you are indexing or searching, is not good.
@@ -3572,6 +3687,7 @@ Run the algorithm, adding -Dtask.mem=145M, and you should see something like thi
 You can see the importance of giving Lucene enough RAM!
 So, it's 2 AM, and you're having a pleasant dream about all the users who love your Lucene search application when, suddenly, you wake up to the phone.
 It's an emergency call saying your search index is corrupt.
+No problem, you answer: restore from the last backup! You do back up your search index, right?
 Things will inevitably go wrong: a power supply fails, a hard drive crashes, your RAM becomes random.
 These events can suddenly render your index completely unusable, almost certainly at the worst possible time.
 Your final line of protection against such failures is a periodic backup of the index along with simple, accessible steps to restore it.
@@ -3646,7 +3762,7 @@ So far, we have treated the Lucene index more or less as a black box and have co
 Although you don’t need to understand index structure details in order to use Lucene, you may be curious about the “magic.” Lucene’s index structure is a case study in itself of highly efficient data structures and clever arrangement to maximize performance and minimize resource usage.
 You may see it as a purely technical achievement, or you can view it as a masterful work of art.
 There is something innately beautiful about representing rich structure in the most efficient manner possible.
-Consider the information represented by fractal formulas or DNA as nature’s proof.)
+Consider the information represented by fractal formulas or DNA as nature’s proof.
 In this appendix, we’ll look at the logical view of a Lucene index, where we’ve fed documents into Lucene and retrieved them during searches.
 Then, we’ll expose the inner structure of Lucene’s inverted index.
 B.1 Logical index view Let’s first take a step back and start with a quick review of what you already know about Lucene’s index.
@@ -3658,6 +3774,7 @@ The results are matching Documents represented by the Hits object.
 Figure B.1 The logical, black-box view of a Lucene index.
 We have also used Indexer, a program for indexing text files, shown in listing 1.1
 Recall that we specified several arguments when we invoked Indexer from the command line and that one of those arguments was the directory in which we wanted Indexer to create a Lucene index.
+What does that directory look like once Indexer is done running? What does it contain? In this section, we’ll peek into a Lucene index and explain its structure.
 Before we start, though, you should know that the index file format often changes between releases.
 It’s free to change without breaking backwards compatibility because the classes that access the index can detect when they are interacting with an older format index and act accordingly.
 Lucene supports two index structures: multifile indexes and compound indexes.
@@ -3737,6 +3854,7 @@ Regardless of whether you’re working with a RAMDirectory, an FSDirectory, or a
 FSDirectory literally represents an index as a file-system directory, as described earlier in this appendix.
 The compound file mode (added in Lucene 1.3) adds an additional twist regarding the files in a Directory.
 When an IndexWriter is set for compound file mode, the “files” are written to a single .cfs file, which alleviates the common issue of running out of file handles.
+See the section “Compound index files” in this appendix for more information on the compound file mode.
 B.4.1 Inside the index The Lucene index format is detailed in all its gory detail on the Lucene web site at http://jakarta.apache.org/lucene/docs/fileformats.html.
 It would be painful for us, and tedious for you, if we repeated this detailed information here.
 Rather, we have chosen to summarize the overall file structure using our sample book data as a concrete example.
@@ -3758,6 +3876,7 @@ Figure B.3 shows only a sampling of the terms in our index, one or more from eac
 Note that the url field is missing because it was added as an unindexed field, which is stored only and not available as terms.
 Not shown is the .tii file, which is a cross-section of the .tis file designed to be kept in physical memory for random access to the .tis file.
 For each term in the .tis file, the .frq file contains entries for each document containing the term.
+In our sample index, Java Development with Ant (document ID 5) has the value “junit” once in the contents field.
 JUnit in Action has the value “junit” twice, provided once by the title and once by the subject.
 Our contents field is an aggregation of title, subject, and author.
 The frequency of a term in a document factors into the score calculation (see section 3.3) and typically boosts a document’s relevance for higher frequencies.
@@ -3765,6 +3884,7 @@ For each document listed in the .frq file, the positions (.prx) file contains en
 The position information is used when queries demand it, such as phrase queries and span queries.
 Position information for tokenized fields comes directly from the token position increments designated during analysis.
 Figure B.3 shows three positions, for each occurrence of the term junit.
+In the case of document 5, the field value (after analysis) is “java development ant apache jakarta ant build tool junit java development erik hatcher steve loughran”
 We used the StandardAnalyzer; thus stop words (with in Java Development with Ant, for example) are removed and aren’t accounted for in positional information (see section 4.7.3 for more on stop word removal and positional information)
 The .fdx file contains simple index information, which is uses to resolve document number to.
 We’re indebted to Luke, the fantastic index inspector, for allowing us to easily gather some of the data provided about the index structure.
@@ -3812,6 +3932,7 @@ First, benchmark prints all the settings you are running with.
 It's best to look this over and verify the settings.
 For each round, it includes the number of records (added documents in this case), records per second, elapsed seconds, and memory usage.
 The average used memory is computed by subtracting freeMemory() from totalMemory()
+What exactly is a "record"?  In general, most tasks count as +1 on the record count.
 To prevent the record count from incrementing, you prefix the task with a "-" as we have done above for CreateIndex and CloseIndex.
 This allows us to include the cost (time & memory usage) of creating and closing the index yet correctly amortize that total cost across all added documents.
 So that was pretty simple, right?  From this you could probably poke around and make your own algorithms.
@@ -3938,11 +4059,14 @@ RepSumByPref prefix all records for tasks whose name start with prefixWord aggre
 RepSumByNameRound name all statistics, aggregated by name and by round.
 See more about rounds in the NewRound task description below.
 RepSumByPrefRound prefix similar to RepSumByNameRound,  except only tasks whose name starts with prefixWord are included.
+D.5 Evaluating search quality How do you test the relevance or quality of your search application?  Relevance testing is crucial because, at the end of the day, your users will not be satisfied if they don’t get relevant results.
 Many small changes to how you use Lucene, from the analyzer chain, to which fields you index, to how you build up a Query, to how you customize scoring, can have large impacts on relevance.
 Being able to properly measure such effects allows you to make changes that improve your relevance.
 Yet, despite being the most important aspect of a search application, quality is devilishly difficult to pin down.
 You could run a controlled user trial, or you can play with the application yourself.
+What do you look for?  Besides checking if the returned documents are relevant, there are many other things to check: are the excerpts accurate?  Is the right metadata presented?  Is the UI easily consumed on quick glance?  No wonder so few applications are tuned for their relevance! That said, if you’d like to objectively measure the relevance of returned documents, you’re in luck: recent additions to the benchmark framework, under the quality package, allow you to do so.
 These classes provide concrete implementations based on the formats from the TREC corpus, but you can also implement your own.
+You’ll need a “ground truth” transcribed set of queries, where each query lists the documents that are relevant to it.
 This approach is entirely binary: a given document from the index is either relevant or not.
 D.5.1 Precision and recall Precision and recall are standard metrics in the information retrieval community for objectively measuring relevance of search results.
 Precision measures what subset of the documents returned for each query were relevant.
@@ -3966,7 +4090,6 @@ Next, the ground truth is represented with the simple Judge interface.
 Finally, QualityBenchmark tests the queries by running them against a provided IndexSearcher.
 It returns and array of QualityStats, one each for each of the queries.
 When you run the code in Listing D.1, by entering ant PrecisionRecall at the command line within the book’s source code directory, it will produce something like this:
-Note that this test uses the MeetLucene index, so you’ll need to run ant MeetLucene if you skipped over that in chapter 1
 Precision then gets worse beyond the top 3 results because any further document is incorrect.
 Recall is perfect (1.0) because all three correct documents were returned.
 For ideas on how to improve relevance, have a look at this recently added page on the Lucene wiki:

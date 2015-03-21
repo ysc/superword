@@ -12,6 +12,7 @@ And soon after that you realize that you’re locked into the schema you modeled
 Why? Because there’s so much data in your clusters now that altering the schema will take a long time and involve a lot of precious DBA time.
 This can keep a small team of developers busy for many months.
 In the end, you’ll always find yourself wondering if there’s a better way—or why more of these features are not built into the core database server.
+Keeping with tradition, the Open Source community has created a plethora of “better ways” in response to the ballooning data needs of modern web applications.
 They span the spectrum from simple in-memory key/value stores to complicated SQL-speaking MySQL/InnoDB derivatives.
 But the sheer number of choices has made finding the right solution more difficult.
 Instead it strikes the right balance between features and complexity, with a clear bias toward making previously difficult tasks far easier.
@@ -75,6 +76,7 @@ It combines the ability to scale out with features such as secondary indexes, ra
 This chapter covers the major design decisions that made MongoDB what it is.
 Ease of Use MongoDB is a document-oriented database, not a relational one.
 The primary reason for moving away from the relational model is to make scaling out easier, but there are some other advantages as well.
+A document-oriented database replaces the concept of a “row” with a more flexible model, the “document.” By allowing embedded documents and arrays, the documentoriented approach makes it possible to represent complex hierarchical relationships with a single record.
 This fits naturally into the way developers in modern objectoriented languages think about their data.
 There are also no predefined schemas: a document’s keys and values are not of fixed types or sizes.
 Without a fixed schema, adding or removing fields as needed becomes easier.
@@ -93,6 +95,7 @@ This allows developers to focus on programming the application, not scaling it.
 When a cluster need more capacity, new machines can be added and MongoDB will figure out how the existing data should be spread to them.
 Tons of Features… MongoDB is intended to be a general-purpose database, so aside from creating, reading, updating, and deleting data, it provides an ever-growing list of unique features: Indexing.
 MongoDB supports generic secondary indexes, allowing a variety of fast queries, and provides unique, compound, geospatial, and full-text indexing capabilities as well.
+Aggregation MongoDB supports an “aggregation pipeline” that allows you to build complex aggregations from simple pieces and allow the database to optimize it.
 Special collection types MongoDB supports time-to-live collections for data that should expire at a certain time, such as sessions.
 It also supports fixed-size collections, which are useful for holding recent data, such as logs.
 File storage MongoDB supports an easy-to-use protocol for storing large files and file metadata.
@@ -129,14 +132,16 @@ Drivers for those languages usually have some mechanism for specifying documents
 If a document is the MongoDB analog of a row in a relational database, then a collection can be thought of as the analog to a table.
 This means that the documents within a single collection can have any number of different “shapes.” For example, both of the following documents could be stored in a single collection:
 Note that the previous documents not only have different types for their values (string versus integer) but also have entirely different keys.
+Because any document can be put into any collection, the question often arises: “Why do we need separate collections at all?” It’s a good question—with no need for separate schemas for different kinds of documents, why should we use more than one collection? There are several good reasons:
 Keeping different kinds of documents in the same collection can be a nightmare for developers and admins.
 Developers need to make sure that each query is only returning documents of a certain type or that the application code performing a query can handle documents of different shapes.
 If we’re querying for blog posts, it’s a hassle to weed out documents containing author data.
 It is much faster to get a list of collections than to extract a list of the types in a collection.
+For example, if we had a "type" field in each document that specified whether the document was a “skim,” “whole,” or “chunky monkey,” it would be much slower to find those three values in a single collection than to have three separate collections and query the correct collection.
 Grouping documents of the same kind together in the same collection allows for data locality.
 Getting several blog posts from a collection containing only posts will likely require fewer disk seeks than getting the same posts from a collection containing posts and author data.
 We begin to impose some structure on our documents when we create indexes.
-This is especially true in the case of unique indexes.) These indexes are defined per collection.
+This is especially true in the case of unique indexes.
 By putting only documents of a single type into the same collection, we can index our collections more efficiently.
 As you can see, there are sound reasons for creating a schema and for grouping related types of documents together, even though MongoDB does not enforce it.
 Collection names can be any UTF-8 string, with a few restrictions:
@@ -148,6 +153,7 @@ The various drivers available for the database do support using $ in collection 
 You should not use $ in a name unless you are accessing one of these collections.
 One convention for organizing collections is to use namespaced subcollections separated by the.
 For example, an application containing a blog might have a collection named blog.posts and a separate collection named blog.authors.
+This is for organizational purposes only—there is no relationship between the blog collection (it doesn’t even have to exist) and its “children.”
 Although subcollections do not have any special properties, they are useful and incorporated into many MongoDB tools:
 GridFS, a protocol for storing large files, uses subcollections to store file metadata separately from content chunks (see Chapter 6 for more information about GridFS)
 Most drivers provide some syntactic sugar for accessing a subcollection of a given collection.
@@ -176,11 +182,9 @@ When run with no arguments, mongod will use the default data directory, /data/db
 If the data directory does not already exist or is not writable, the server will fail to start.
 It is important to create the data directory (e.g., mkdir -p /data/db/) and to make sure your user has permission to write to the directory before starting MongoDB.
 On startup, the server will print some version and system information and then begin waiting for connections.
-By default MongoDB listens for socket connections on port 27017
 The server will fail to start if the port is not available—the most common cause of this is another instance of MongoDB that is already running.
 This means that you can get some administrative information about your database by opening a web browser and going to http://local host:28017
 You can safely stop mongod by typing Ctrl-C in the shell that is running the server.
-For more information on starting or stopping MongoDB, see Chapter 20
 Introduction to the MongoDB Shell MongoDB comes with a JavaScript shell that allows interaction with a MongoDB instance from the command line.
 The mongo shell is a crucial tool for using MongoDB and is used extensively throughout the rest of the text.
 Running the Shell To start the shell, run the mongo executable:
@@ -213,6 +217,8 @@ The shell will automatically display up to 20 documents matching a find, but mor
 If we would like to modify our post, we can use update.
 Suppose we decide to enable comments on the blog post we created earlier.
 We’ll need to add an array of comments as the value for a new key in our document.
+The first step is to modify the variable post and add a "comments" key: > post.comments = [] [  ]
+Then we perform the update, replacing the post titled “My Blog Post” with our new version of the document:
 Called with no parameters, it removes all documents from a collection.
 It can also take a document specifying criteria for removal.
 For example, this would remove the post we just created:
@@ -230,7 +236,6 @@ There are also a few less common types that you may need, including: binary data
 Binary data is the only way to save non-UTF-8 strings to the database.
 There are a few types that are mostly used internally (or superseded by other types)
 For more information on MongoDB’s data format, see Appendix B.
-When creating a new Date object, always call new Date(...), not just Date(...)
 Calling the constructor as a function (that is, not including new) returns a string representation of the date, not an actual Date object.
 This is not MongoDB’s choice; it is how JavaScript works.
 If you are not careful to always use the Date constructor, you can end up with a mishmash of strings and dates.
@@ -238,7 +243,7 @@ Strings do not match dates and vice versa, so this can cause problems with remov
 For a full explanation of JavaScript’s Date class and acceptable formats for the constructor, see ECMAScript specification section 15.9
 Dates in the shell are displayed using local time zone settings.
 However, dates in the database are just stored as milliseconds since the epoch, so they have no time zone information associated with them.
-Time zone information could, of course, be stored as the value for another key.)
+Time zone information could, of course, be stored as the value for another key.
 Arrays Arrays are values that can be interchangeably used for both ordered operations (as though they were lists, stacks, or queues) and unordered operations (as though they were sets)
 As we can see from the example, arrays can contain different data types as values (in this case, a string and a floating-point number)
 In fact, array values can be any of the supported values for normal key/value pairs, even nested arrays.
@@ -254,10 +259,12 @@ For example, if we have a document representing a person and want to store his a
 The value for the "address" key in the previous example is an embedded document with its own key/value pairs for "street", "city", and "state"
 As with arrays, MongoDB “understands” the structure of embedded documents and is able to reach inside them to build indexes, perform queries, or make updates.
 We’ll discuss schema design in depth later, but even from this basic example we can begin to see how embedded documents can change the way we work with data.
+In a relational database, the previous document would probably be modeled as two separate rows in two different tables (one for “people” and one for “addresses”)
 With MongoDB we can embed the address document directly within the person document.
 When used properly, embedded documents can provide a more natural representation of information.
 The flip side of this is that there can be more data repetition with MongoDB.
 Suppose “addresses” were a separate table in a relational database and we needed to fix a typo in an address.
+When we did a join with “people” and “addresses,” we’d get the updated address for everyone who shares it.
 With MongoDB, we’d need to fix the typo in each person’s document.
 The "_id" key’s value can be any type, but it defaults to an ObjectId.
 In a single collection, every document must have a unique value for "_id", which ensures that every document in a collection can be uniquely identified.
@@ -277,6 +284,7 @@ This is not a strong guarantee but does have some nice properties, such as makin
 In these four bytes exists an implicit timestamp of when each document was created.
 Most drivers expose a method for extracting this information from an ObjectId.
 Because the current time is used in ObjectIds, some users worry that their servers will need to have synchronized clocks.
+Although synchronized clocks are a good idea for other reasons (see “Synchronizing Clocks” on page 383), the actual timestamp doesn’t matter to ObjectIds, only that it is often new (once per second) and increasing.
 The next three bytes of an ObjectId are a unique identifier of the machine on which it was generated.
 By including these bytes, we guarantee that different machines will not generate colliding ObjectIds.
 These first nine bytes of an ObjectId guarantee its uniqueness across machines and processes for a single second.
@@ -306,6 +314,7 @@ This would execute the three scripts with db set to the foo database on server-1
 As shown above, any command line options for running the shell go before the address.
 You can print to stdout in scripts (as the scripts above did) using the print() function.
 This allows you to use the shell as part of a pipeline of commands.
+If you’re planning to pipe the output of a shell script to another command use the --quiet option to prevent the “MongoDB shell version...” banner from printing.
 Scripts have access to the db variable (as well as any other globals)
 However, shell helpers such as "use db" or "show collections" do not work from files.
 There are valid JavaScript equivalents to each of these, as shown in Table 2-1
@@ -336,7 +345,6 @@ Note that prompt functions should return strings and be very cautious about catc
 In general, your prompt function should include a call to getLastError.
 This catches errors on writes and reconnects you “automatically” if the shell gets disconnected (e.g., if you restart mongod)
 The .mongorc.js file is a good place to set your prompt if you want to always use a custom one (or set up a couple of custom prompts that you can switch between in the shell)
-Editing Complex Variables The multiline support in the shell is somewhat limited: you cannot edit previous lines, which can be annoying when you realize that the first line has a typo and you’re currently working on line 15
 Thus, for larger blocks of code or objects, you may want to edit them in an editor.
 To do so, set the EDITOR variable in the shell (or in your environment, but since you’re already in the shell):
 When you’re done making changes, save and exit the editor.
@@ -347,7 +355,9 @@ Another way of getting around invalid properties is to use array-access syntax: 
 This means that subcollections can be accessed using variables, not just literal names.
 Thus, if you needed to perform some operation on every blog subcollection, you could iterate through them with something like this:
 You must use the db.blog[i] syntax for i to be interpreted as a variable.
+Attempting to query db.@#&! would be illegal, but db[name] would work.
 This chapter covers the basics of moving data in and out of the database, including the following:
+Choosing the correct level of safety versus speed for all of these operations.
 Inserting and Saving Documents Inserts are the basic method for adding data to MongoDB.
 To insert a document into a collection, use the collection’s insert method:
 This will add an "_id" key to the document (if one does not already exist) and store it in MongoDB.
@@ -376,6 +386,7 @@ Suppose, for instance, that we want to remove everyone from the mailing.list col
 There is no way to undo the remove or recover deleted documents.
 Remove Speed Removing documents is usually a fairly quick operation, but if you want to clear an entire collection, it is faster to drop it (and then recreate any indexes on the empty collection)
 Now we’ll try to remove all of the documents we just inserted, measuring the time it takes.
+On a MacBook Air, this script prints “Remove took: 9676ms”
 The whole collection is dropped, and all of its metadata is deleted.
 Updating Documents Once a document is stored in the database, it can be changed using the update method.
 Updating a document is atomic: if two updates happen at the same time, whichever one reaches the server first will be applied, and then the next one will be applied.
@@ -389,7 +400,6 @@ A common mistake is matching more than one document with the criteria and then c
 The database will throw an error for this, and no documents will be updated.
 For example, suppose we create several documents with the same value for "name", but we don’t realize it:
 Now, if it’s Joe #2’s birthday, we want to increment the value of his "age" key, so we might say this:
-We’ll cover how indexing effects updates and other operations more in Chapter 5
 Using Modifiers Usually only certain portions of a document need to be updated.
 You can update specific fields in a document using atomic update modifiers.
 Update modifiers are special keys that can be used to specify complex update operations, such as altering, adding, or removing keys, and even manipulating arrays and embedded documents.
@@ -398,12 +408,14 @@ We can use update modifiers to do this increment atomically.
 Each URL and its number of page views is stored in a document that looks like this:
 Every time someone visits a page, we can find the page by its URL and use the "$inc" modifier to increment the value of the "pageviews" key:
 When using modifiers, the value of "_id" cannot be changed.
-Note that "_id" can be changed by using whole-document replacement.) Values for any other key, including other uniquely indexed keys, can be modified.
+Note that "_id" can be changed by using whole-document replacement.
+Values for any other key, including other uniquely indexed keys, can be modified.
 If the field does not yet exist, it will be created.
 This can be handy for updating schema or adding user-defined keys.
 For example, suppose you have a simple user profile stored as a document that looks something like the following:
 If the user wanted to store his favorite book in his profile, he could add it using "$set":
 If the user decides that he actually enjoys a different book, "$set" can be used again to change the value:
+For instance, if our fickle user decides that he actually likes quite a few books, he can change the value of the “favorite book” key into an array:
 If the user realizes that he actually doesn’t like reading, he can remove the key altogether with "$unset":
 Now the document will be the same as it was at the beginning of this example.
 You must always use a $-modifier for adding, changing, or removing keys.
@@ -413,13 +425,14 @@ It is very useful for updating analytics, karma, votes, or anything else that ha
 Suppose we are creating a game collection where we want to save games and update scores as they change.
 When a user starts playing, say, a game of pinball, we can insert a document that identifies the game by name and user playing it:
 When the ball hits a bumper, the game should increment the player’s score.
-As points in pinball are given out pretty freely, let’s say that the base unit of points a player can earn is 50
+If the ball lands in a “bonus” slot, we want to add 10,000 to the score.
 This can be accomplished by passing a different value to "$inc":
 The "score" key existed and had a numeric value, so the server added 10,000 to it.
 If it is used on any other type of value, it will fail.
 This includes types that many languages will automatically cast into numbers, like nulls, booleans, or strings of numeric characters:
 Also, the value of the "$inc" key must be a number.
 You cannot increment by a string, array, or other non-numeric value.
+Doing so will give a “Modifier "$inc" allowed for numbers only” error message.
 To modify other types, use "$set" or one of the following array operations.
 Arrays are common and powerful data structures: not only are they lists that can be referenced by index, but they can also double as sets.
 For example, suppose that we are storing blog posts and want to add a "comments" key containing an array.
@@ -430,7 +443,6 @@ This example would limit the array to the last 10 elements pushed.
 If the array was smaller than 10 elements (after the push), all elements would be kept.
 Thus, "$slice" can be used to create a queue in a document.
 Finally, you can "$sort" before trimming, so long as you are pushing subobjects onto the array:
-This will sort all of the objects in the array by their "rating" field and then keep the first 10
 You might want to treat an array as a set, only adding values if they are not present.
 This can be done using a "$ne" in the query document.
 For example, to push an author onto a list of citations, but only if he isn’t already there, use the following:
@@ -464,6 +476,7 @@ Subsequent documents are inserted with the padding factor in free space between 
 If moves do not occur on subsequent inserts, this padding factor will decrease.
 MongoDB has to free the space the document was in and write the document somewhere else.
 Thus, you should try to keep the padding factor as close to 1 as possible.
+You cannot manually set the padding factor (unless you’re compacting the collection: see “Compacting Data” on page 320), but you can design a schema that does not depend on documents growing arbitrarily large.
 A simple program demonstrates the speed difference between in-place updates and moves.
 The program below inserts a single key and increments its value 100,000 times:
 Now, let’s try it with a document with a single array key, pushing new values onto that array 100,000 times.
@@ -500,7 +513,6 @@ Not only is it more obvious what the update should be doing, but your program al
 Multiupdates are a great way of performing schema migrations or rolling out new features to certain users.
 Suppose, for example, we want to give a gift to every user who has a birthday on a certain day.
 We can use multiupdate to add a "gift" to their account:
-To see the number of documents updated by a multiupdate, you can run the getLastError database command (which you can think of as “return information about.
 The "n" key will contain the number of documents affected by the update:
 Returning Updated Documents You can get some limited information about what was updated by calling getLastError, but it does not actually return the updated document.
 It is handy for manipulating queues and performing other operations that need get-and-set style atomicity.
@@ -526,6 +538,7 @@ Boolean specifying whether or not this should be an upsert, and which defaults t
 Either "update" or "remove" must be included, but not both.
 If no matching document is found, the command will return an error.
 Setting a Write Concern Write concern is a client setting used to describe how safely a write should be stored before the application continues.
+By default, inserts, removes, and updates wait for a database response—did the write succeed or not?—before continuing.
 Generally, clients will throw an exception (or whatever the language’s version of an exception is) on failure.
 There are a number of options available to tune exactly what you want the application to wait for.
 The two basic write concerns are acknowledged or unacknowledged writes.
@@ -565,7 +578,8 @@ As you can see from the previous output, the "_id" key is returned by default, e
 You can also use this second parameter to exclude specific key/value pairs from the results of a query.
 For instance, you may have documents with a variety of keys, and the only thing you know is that you never want to return the "fatal_weakness" key:
 The value of a query document must be a constant as far as the database is concerned.
-It can be a normal variable in your own code.) That is, it cannot refer to the value of another key in the document.
+It can be a normal variable in your own code.
+That is, it cannot refer to the value of another key in the document.
 Then, every time someone buys an item, we decrement the value of the "in_stock" key by one.
 Finally, we can do a simple query to check which items are out of stock:
 Query Criteria Queries can go beyond the exact matching described in the previous section; they can match more complex criteria, such as ranges, OR-clauses, and negation.
@@ -573,6 +587,7 @@ They can be combined to look for a range of values.
 These types of range queries are often useful for dates.
 An exact match on a date is less useful, since dates are only stored with millisecond precision.
 Often you want a whole day, week, or month, making a range query necessary.
+To query for documents where a key’s value is not equal to a certain value, you must use another conditional operator, "$ne", which stands for “not equal.” If you want to find all users who do not have the username “joe,” you can query for them using this:
 If you have more than one possible value to match for a single key, use an array of criteria with "$in"
 To find all three of these documents, we can construct the following query:
 For example, if we are gradually migrating our schema to use usernames instead of user ID numbers, we can query for either by using this:
@@ -587,6 +602,7 @@ This generally holds true: conditionals are an inner document key, and modifiers
 Although these seem like contradictory conditions, it is possible to fulfill if the "x" field.
 Type-Specific Queries As covered in Chapter 2, MongoDB has a wide variety of types that can be used in a document.
 It does match itself, so if we have a collection with the following documents:
+However, null not only matches itself but also matches “does not exist.” Thus, querying for a key with the value null will return all documents lacking that key:
 If we only want to find keys whose value is null, we can check that the key is null and exists using the "$exists" conditional:
 Regular Expressions Regular expressions are useful for flexible string matching.
 For example, if we want to find all users with the name Joe or joe, we can use a regular expression to do caseinsensitive matching:
@@ -636,10 +652,10 @@ If possible, it’s usually a good idea to query for just a specific key or keys
 Then, if your schema changes, all of your queries won’t suddenly break because they’re no longer exact matches.
 Now, if Joe adds more keys, this query will still match his first and last names.
 This dot notation is the main difference between query documents and other document types.
+Query documents can contain dots, which mean “reach into an embedded document.” Dot notation is also the reason that documents to be inserted cannot contain the.
 Oftentimes people run into this limitation when trying to save URLs as keys.
 One way to get around it is to always perform a global replace before inserting or after retrieving, substituting a character that isn’t legal in URLs for the dot character.
 Embedded document matches can get a little tricky as the document structure gets more complicated.
-For example, suppose we are storing blog posts and we want to find comments by Joe that were scored at least a 5
 To correctly group criteria without needing to specify every key, use "$elemMatch"
 This vaguely-named conditional allows you to partially specify criteria to match a single embedded document in an array.
 As such, it’s only needed when you have more than one key you want to match on in an embedded document.
@@ -655,13 +671,13 @@ If the function returns true, the document will be part of the result set; if it
 Each document has to be converted from BSON to a JavaScript object and then run through the "$where" expression.
 Hence, you should use "$where" only when there is no other way of doing the query.
 You can cut down on the penalty by using other query filters in combination with "$where"
-Another way of doing complex queries is to use one of the aggregation tools, which are covered in Chapter 7
 Server-Side Scripting You must be very careful with security when executing JavaScript on the server.
 If done incorrectly, server-side JavaScript is susceptible to injection attacks similar to those that occur in a relational database.
 However, by following certain rules around accepting input, you can use JavaScript safely.
 Alternatively, you can turn off JavaScript execution altogether by running mongod with the --noscripting option.
 The security issues with JavaScript are all related to executing user-provided programs on the server.
 You want to avoid doing that, so make sure you aren’t accepting user input and passing it directly to mongod.
+For example, suppose you want to print “Hello, name!”, where name is provided by the user.
 A naive approach might be to write a JavaScript function such as the following:
 Now, if you run this code, your entire database will be dropped!
 To prevent this, you should use a scope to pass in the name.
@@ -762,11 +778,14 @@ Freeing these resources lets the database use them for other things, which is go
 There are a couple of conditions that can cause the death (and subsequent cleanup) of a cursor.
 First, when a cursor finishes iterating through the matching results, it will clean itself up.
 Another way is that, when a cursor goes out of scope on the client side, the drivers send the database a special message to let it know that it can kill that cursor.
+Finally, even if the user hasn’t iterated through all the results and the cursor is still in scope, after 10 minutes of inactivity, a database cursor will automatically “die.” This way, if a client crashes or is buggy, MongoDB will not be left with thousands of open cursors.
+This “death by timeout” is usually the desired behavior: very few applications expect their users to sit around for minutes at a time waiting for results.
 However, sometimes you might know that you need a cursor to last for a long time.
 In that case, many drivers have implemented a function called immortal, or a similar mechanism, which tells the database not to time out the cursor.
 If you turn off a cursor’s timeout, you must iterate through all of its results or kill it to make sure it gets closed.
 Otherwise, it will sit around in the database hogging resources until the server is restarted.
 Database Commands There is one very special type of query called a database command.
+Database commands do “everything else,” from administrative tasks like shutting down the server and cloning databases to counting documents in a collection and performing aggregations.
 Commands are mentioned throughout this text, as they are useful for data manipulation, administration, and monitoring.
 For example, dropping a collection is done via the "drop" database command:
 You might be more familiar with the shell helper, which wraps the command and provides a simpler interface:
@@ -786,9 +805,11 @@ Some commands require administrator access and must be run on the admin database
 If such a command is run on any other database, it will return an "access denied" error.
 If you’re working on another database and you need to run an admin command, you can use the adminCommand function, instead of runCommand:
 This chapter introduces MongoDB’s indexing, which allows you to optimize your queries and is even required for certain types of queries:
+What indexing is and why you’d want to use it.
 Choosing the right indexes for your collections is critical to performance.
 Introduction to Indexing A database index is similar to a book’s index.
 Instead of looking through the whole book, the database takes a shortcut and just looks at an ordered list that points to the content, which allows it to query orders of magnitude faster.
+A query that does not use an index is called a table scan (a term inherited from relational databases), which means that the server has to “look through the whole book” to find a query’s results.
 This process is basically what you’d do if you were looking for information in a book without an index: you start at page 1 and read through the whole thing.
 In general, you want to avoid making the server do table scans because it is very slow for large collections.
 If we do a query on this collection, we can use the explain() function to see what MongoDB is doing when it executes the query.
@@ -855,6 +876,7 @@ Whenever practical, use covered indexes in preference to going back to documents
 You can make your working set much smaller that way, especially if you can combine this with a right-balanced index.
 You may also have to index fields that you aren’t querying on, so you should balance your need for faster queries with the overhead this will add on writes.
 If you run an explain on a covered query, the "indexOnly" field will be true.
+If you index a field containing arrays, that index can never cover a query (due to the way arrays are stored in indexes, this is covered in more depth in “Indexing Objects and Arrays” on page 95)
 Even if you exclude the array field from the fields returned, you cannot cover a query using such an index.
 How $-Operators Use Indexes Some queries can use indexes more efficiently than others; some queries cannot using indexes at all.
 This section covers how various query operators are handled by MongoDB.
@@ -915,17 +937,18 @@ This doesn’t reflect how much work MongoDB did to answer the query: how many i
 Finally, if you were using a sort and MongoDB could not use an index for it, "scanAndOrder" would be true.
 This means that MongoDB had to sort the results in memory, which is generally quite slow and limited to a small number of results.
 Now that you know the basics, here is a breakdown of the all of the fields in more detail: "cursor" : "BtreeCursor age_1_username_1"
+If this query used a multikey index (see “Indexing Objects and Arrays” on page 95)
 This is the number of documents returned by the query.
 This is a count of the number of times MongoDB had to follow an index pointer to the actual document on disk.
 If the query contains criteria that is not part of the index or requests fields back that aren’t contained in the index, MongoDB must look up the document each index entry points to.
 The number of index entries looked at if an index was used.
 If this was a table scan, it is the number of documents examined.
+If MongoDB was able to fulfill this query using only the index entries (as discussed in “Using covered indexes” on page 90)
 The number of times this query yielded (paused) to allow a write request to proceed.
 If there are writes waiting to go, queries will periodically release their lock and allow them to do so.
 However, on this system, there were no writes waiting so the query never yielded.
 The number of milliseconds it took the database to execute the query.
 This field describes how the index was used, giving ranges of the index traversed.
-As the first clause in the query was an exact match, the index only needed to look at that value: 42
 The second index key was a free variable, as the query didn’t specify.
 If a query is not using the index that you want it to and you use a hint to change it, run an explain() on the hinted query before deploying.
 If you force MongoDB to use an index on a query that it does not know how to use an index for, you could end up making the query less efficient than it was without the index.
@@ -933,6 +956,7 @@ The Query Optimizer MongoDB’s query optimizer works a bit differently than any
 Basically, if an index exactly matches a query (you are querying for "x" and have an index on "x"), the query optimizer will use that index.
 Otherwise, there might be a few possible indexes that could work well for your query.
 MongoDB will select a subset of likely indexes and run the query once with each plan, in parallel.
+The first plan to return 100 results is the “winner” and the other plans’ executions are halted.
 This plan is cached and used subsequently for that query until the collection has seen a certain amount of churn.
 Once the collection has changed a certain amount since the initial plan evaluation, the query optimizer will re-race the possible plans.
 Plans will also be reevaluated after index creation or every 1,000 queries.
@@ -948,6 +972,7 @@ Let’s say we have an analytics system that collects statistics.
 Your application queries the system for all documents for a given account to generate a nice graph of all data from an hour ago to the beginning of time:
 When we first launch, this is a tiny result set and returns instantly.
 But after a couple weeks, it starts being a lot of data, and after a month this query is already taking too long to run.
+For most applications, this is probably the “wrong” query: do you really want a query that’s returning most of your data set? Most applications, particularly those with large data sets, do not.
 However, there are some legitimate cases where you may want most or all of your data: you might be exporting this data to a reporting system or using it for a batch job.
 In these cases, you would like to return this large proportion of the data set as fast as possible.
 One side effect of sorting by "$natural" is that it gives you results in on-disk order.
@@ -964,6 +989,7 @@ A unique index that you are probably already familiar with is the index on "_id"
 This is a normal unique index (aside from the fact that it cannot be dropped as other unique indexes can be)
 If a key does not exist, the index stores its value as null for that document.
 This means that if you create a unique index and try to insert more than one document that is missing the indexed field, the inserts will fail because you already have a document with a value of null.
+See “Sparse Indexes” on page 106 for advice on handling this.
 Index buckets are of limited size and if an index entry exceeds it, it just won’t be included in the index.
 This can cause confusion as it makes a document “invisible” to queries that use the index.
 All fields must be smaller than 1024 bytes to be included in an index.
@@ -1003,8 +1029,8 @@ Changing Indexes As your application grows and changes, you may find that your d
 Use the "name" field from the index description to specify which index to drop.
 By default, MongoDB will build an index as fast as possible, blocking all reads and writes on a database until the index build has finished.
 If you would like your database to remain somewhat responsive to reads and writes, use the background option when building an index.
+This forces the index build to occasionally yield to other operations, but may still have a severe impact on your application (see “Building Indexes” on page 222 for more information)
 If you have the choice, creating indexes on existing documents is slightly faster than creating the index first and then inserting all documents.
-There is more on the operational aspects of building indexes in Chapter 18
 This chapter covers the special collections and index types MongoDB has available, including:
 Capped Collections “Normal” collections in MongoDB are created dynamically and automatically grow in size to fit additional data.
 MongoDB also supports a different type of collection, called a capped collection, which is created in advance and is fixed in size (see Figure 6-1)
@@ -1023,6 +1049,7 @@ Thus, you should think carefully about the size of a large collection before cre
 When limiting the number of documents in a capped collection, you must specify a size limit as well.
 Age-out will be based on whichever limit is reached first: it cannot hold more than "max" documents nor take up more than "size" space.
 Another option for creating a capped collection is to convert an existing, regular collection into a capped collection.
+This can be done using the convertToCapped command—in the following example, we convert the test collection to a capped collection of 10,000 bytes:
 There is no way to “uncap” a capped collection (other than dropping it)
 Sorting Au Naturel There is a special type of sort that you can do with capped collections, called a natural sort.
 A natural sort returns the documents in the order that they appear on disk (see Figure 6-3)
@@ -1034,6 +1061,7 @@ Tailable Cursors Tailable cursors are a special type of cursor that are not clos
 They were inspired by the tail -f command and, similar to the command, will continue fetching output for as long as possible.
 Because the cursors do not die when they run out of results, they can continue to fetch new results as documents are added to the collection.
 Tailable cursors can be used only on capped collections, since insert order is not tracked for normal collections.
+Tailable cursors are often used for processing documents as they are inserted onto a “work queue” (the capped collection)
 Because tailable cursors will time out after 10 minutes of no results, it is important to include logic to re-query the collection if they die.
 The mongo shell does not allow you to use tailable cursors, but using one in PHP looks something like the following:
 The cursor will process results or wait for more results to arrive until the cursor dies (it will time out if there are no inserts for 10 minutes or someone kills the query operation)
@@ -1056,6 +1084,7 @@ You can have multiple TTL indexes on a given collection.
 They cannot be compound indexes but can be used like “normal” indexes for the purposes of sorting and query optimization.
 Full-Text Indexes MongoDB has a special type of index for searching for text within documents.
 In previous chapters, we’ve queried for strings using exact matches and regular expressions, but these techniques have some limitations.
+Searching a large block of text for a regular expression is slow and it’s tough to take linguistic issues into account (e.g., that “entry” should match “entries”)
 Full-text indexes give you the ability to search text quickly, as well as provide built-in support for multi-language stemming and stop words.
 While all indexes are expensive to create, full-text indexes are particularly heavyweight.
 Creating a full-text index on a busy collection can overload MongoDB, so adding this type of index should always be done offline or at a time when performance does not matter.
@@ -1068,6 +1097,7 @@ As of this writing, full text indexes are an “experimental” feature, so you 
 You can either start MongoDB with the --setParameter textSearch Enabled=true option or set it at runtime by running the setParameter command:
 Suppose we use the unofficial Hacker News JSON API to load some recent stories into MongoDB.
 Now, to use the index, we must use the text command (as of this writing, full text indexes cannot be used with “normal” queries):
+The matching documents are returned in order of decreasing relevance: “Ask HN” is first, then two “Show HN” partial matches.
 The "score" field before each object describes how closely the result matched the query.
 As you can see from the results, the search is case insensitive, at least for characters in [a-zA-Z]
 Full-text indexes use toLower to lowercase words, which is locale-dependant, so users of other languages may find MongoDB unpredictably case sensitive, depending on how toLower behaves on their character set.
@@ -1080,9 +1110,12 @@ You cannot change field weights after index creation (without dropping the index
 For some collections, you may not know which fields a document will contain.
 You can create a full-text index on all string fields in a document by creating an index on "$**": this not only indexes all top-level string fields, but also searches embedded documents and arrays for string fields:
 As the weights specify that you’re indexing all fields, MongoDB does not require you to give a field list.
+Search Syntax By default, MongoDB queries for an OR of all the words: “ask OR hn”
 This is the most efficient way to perform a full text query, but you can also do exact phrase searches and NOT.
+To search for the exact phrase “ask hn”, you can query for that by including the query in quotes:
 This is slower than the OR-type match, since MongoDB first performs an OR match and then post-processes the documents to ensure that they are AND matches, as well.
 This will search for exactly "ask hn" and, optionally, "ipod"
+This will return results that match “vc” and don’t include the word “startup”
 Full-Text Search Optimization There are a couple ways to optimize full text searches.
 If you can first narrow your search results by other criteria, you can create a compound index with a prefix of the other criteria and then the full-text fields:
 This is referred to as partitioning the full-text index, as it breaks it into several smaller trees based on "date" (in the example above)
@@ -1098,13 +1131,17 @@ Thus, text-type indexes allow a "default_language" option to be specified, which
 Then French would be used for stemming, unless otherwise specified.
 You can, on a per-document basis, specify another stemming language by having a "language" field that describes the document’s language:
 Geospatial Indexing MongoDB has a few types of geospatial indexes.
+A point is given by a two-element array, representing [longitude, latitude]:
 A polygon is specified the same way a line is (an array of points), but with a different "type":
 The "loc" field can be called anything, but the field names within its subobject are specified by GeoJSON and cannot be changed.
 For example, you can find documents that intersect the query’s location using the "$ge oIntersects" operator:
 This would find all point-, line-, and polygon-containing documents that had a point in the East Village.
+You can use "$within" to query for things that are completely contained in an area, for instance: “What restaurants are in the East Village?”
 Unlike our first query, this would not return things that merely pass through the East Village (such as streets) or partially overlap it (such as a polygon describing Manhattan)
 However, having an index on your geo field will speed up queries significantly, so it’s usually recommended.
 Compound Geospatial Indexes As with other types of indexes, you can combine geospatial indexes with other fields to optimize more complex queries.
+A possible query mentioned above was: “What restaurants are in the East Village?” Using only a geospatial index, we could narrow the field to everything in the East Village, but narrowing it down to only “restaurants” or “pizza” would require another field in the index:
+We can have the “vanilla” index field either before or after the "2dsphere" field, depending on whether we’d like to filter by the vanilla field or the location first.
 Choose whichever will filter out more results as the first index term.
 Thus, "2d" indexes should not be used with spheres unless you don’t mind massive distortion around the poles.
 Documents should use a two-element array for their 2d indexed field (which is not a GeoJSON document, as of this writing)
@@ -1117,6 +1154,7 @@ A default limit of 100 documents is applied if no limit is specified.
 If you don’t need that many results, you should set a limit to conserve server resources.
 Similarly, you can find all points within a circle with "$center", which takes an array with the center point and then a radius:
 This example would locate all documents containing points within the given triangle.
+The final point in the list will be “connected to” the first point to form the polygon.
 Storing Files with GridFS GridFS is a mechanism for storing large binary files in MongoDB.
 There are several reasons why you might consider using GridFS for file storage:
 If you’re already using MongoDB, you might be able to use GridFS instead of a separate tool for file storage.
@@ -1152,6 +1190,7 @@ The chunk’s position in the file, relative to the other chunks.
 The metadata for each file is stored in a separate collection, which defaults to fs.files.
 Each document in the files collection represents a single file in GridFS and can contain.
 In addition to any userdefined keys, there are a couple of keys that are mandated by the GridFS specification: "_id"
+A unique id for the file—this is what will be stored in each chunk as the value for the "files_id" key.
 The total number of bytes making up the content of the file.
 The size of each chunk comprising the file, in bytes.
 The default is 256K, but this can be adjusted if needed.
@@ -1205,8 +1244,10 @@ This returns a substring of the first argument, starting at the startOffset-th b
 Case-affecting operations are only guaranteed to work on characters from the Roman alphabet.
 It extracts the first initial and concatenates it with several constant strings and the "last Name" field:
 There are several operators that you can use for control statements.
+Finally, there are two control statements: "$cond" : [booleanExpr, trueExpr, falseExpr]
 If booleanExpr evaluates to true, trueExpr is returned; otherwise falseExpr is returned.
 If expr is null this returns replacementExpr; otherwise it returns expr.
+These operators let you include more complex logic in your aggregations by following different “code paths” depending on the shape of your data.
 Pipelines are particular about getting properly formed input, so these operators can be invaluable in filling in default values.
 The arithmetic operators will complain about nonnumeric values, date operators will complain about non-dates, string operators will complain about non-strings, and everything will complain about missing fields.
 If your data set is inconsistent, you can use this conditionals to detect missing values and populate them.
@@ -1219,6 +1260,7 @@ This adds value for each document and returns the result.
 Note that, although the example above used a literal (1), this can also take more complex values.
 For example, if we had a collection of sales made in a variety of countries, this would find the total revenue by country:
 For example, this would return the average revenue per country, plus the number of sales made:
+There are four operators to get the “edges” of a data set: "$max" : expr.
 This is only sensible to use when you know the order that the data is being processed in: that is, after a sort.
 Thus, these operators work well when you do not have sorted data and are a bit wasteful when data is sorted.
 For example, suppose that we had a set of student scores on a test.
@@ -1244,10 +1286,12 @@ If you can quickly whittle down the result set size with a selective "$match", y
 As pipelines need to include more documents and become more complex, it is less likely that you’ll be able to get realtime results from them.
 MapReduce MapReduce is a powerful and flexible tool for aggregating data.
 It can solve some problems that are too complex to express using the aggregation framework’s query language.
+MapReduce uses JavaScript as its “query language” so it can express arbitrarily complex logic.
 However, this power comes at a price: MapReduce tends to be fairly slow and should not be used for real-time data analysis.
 It splits up a problem, sends chunks of it to different machines, and lets each machine solve its part of the problem.
 When all the machines are finished, they merge all the pieces of the solution back into a full solution.
 It starts with the map step, which maps an operation onto every document in a collection.
+That operation could be either “do nothing” or “emit these keys with X values.” There is then an intermediary stage called the shuffle step: keys are grouped and lists of emitted values are created for each key.
 The reduce takes this list of values and reduces it to a single element.
 This element is returned to the shuffle step until each key has a list containing a single value: the result.
 We’ll go through a couple examples because MapReduce is an incredibly useful and powerful, but also somewhat complex, tool.
@@ -1259,7 +1303,6 @@ This example doesn’t include keys for embedded documents, but it would be a si
 This is the name of the collection the MapReduce results were stored in.
 This is a temporary collection that will be deleted when the connection that did the MapReduce is closed.
 We will go over how to specify a nicer name and make the collection permanent in a later part of this chapter.
-This embedded document is mostly used for debugging and contains three keys: "input" : 6
 The number of times emit was called in the map function.
 If we do a find on the resulting collection, we can see all the keys and their counts from our original collection:
 Each of the key values becomes an "_id", and the final result of the reduce step(s) becomes the "value"
@@ -1275,7 +1318,8 @@ Returning large result sets is less critical with MapReduce than group because t
 However, the information will be passed over the wire eventually, so finalize is a good chance to take averages, chomp arrays, and remove extra information in general.
 By default, Mongo creates a temporary collection while it is processing the MapReduce with a name that you are unlikely to choose for a collection: a dot-separated string containing mr, the name of the collection you’re MapReducing, a timestamp, and the job’s ID with the database.
 MongoDB will automatically destroy this collection when the connection that did the MapReduce is closed.
-You can also drop it manually when you’re done with it.) If you want to persist this collection even after disconnecting, you can specify keeptemp : true as an option.
+You can also drop it manually when you’re done with it.
+If you want to persist this collection even after disconnecting, you can specify keeptemp : true as an option.
 If you’ll be using the temporary collection regularly, you may want to give it a better name.
 You can specify a more human-readable name with the out option, which takes a string.
 If you specify out, you need not specify keeptemp : true, since it is implied.
@@ -1307,6 +1351,7 @@ However, complex groups may still require JavaScript and counts and distincts ca
 Counting the total number of documents in a collection is fast regardless of collection size.
 Counts can use indexes, but indexes do not contain enough metadata to make counting any more efficient than actually doing a query for the criteria.
 A common question at this point is if there’s a way to get all of the distinct keys in a collection.
+There is no built-in way of doing this, although you can write something to do it yourself using MapReduce (described in “MapReduce” on page 140)
 You choose a key to group by, and MongoDB divides the collection into separate groups for each value of the chosen key.
 For each group, you can create a result document by aggregating the documents that are members of that group.
 If you are familiar with SQL, group is similar to SQL’s GROUP BY.
@@ -1342,10 +1387,12 @@ We can use a "finalize" function to trim out all of the cruft from our results:
 Now, we’re only getting the information we want; the server will send back something like this:
 Sometimes you may have more complicated criteria that you want to group by, not just a single key.
 Suppose you are using group to count how many blog posts are in each category.
-Each blog post is in a single category.) Post authors were inconsistent, though, and categorized posts with haphazard capitalization.
+Post authors were inconsistent, though, and categorized posts with haphazard capitalization.
+So, if you group by category name, you’ll end up with separate groups for “MongoDB” and “mongodb.” To make sure any variation of capitalization is treated as the same key, you can define a function to determine documents’ grouping key.
 To define a grouping function, you must use a $keyf key (instead of "key")
 Using "$keyf" makes the group command look something like this:
 This chapter covers designing applications to work effectively with MongoDB.
+Trade-offs when deciding whether to embed data or to reference it.
 Normalization versus Denormalization There are many ways of representing data and one of the most important issues is how much you should normalize your data.
 Normalization is dividing up data into multiple collections with references between collections.
 Each piece of data lives in one collection although multiple documents may reference it.
@@ -1401,9 +1448,11 @@ Cardinality Cardinality is how many references a collection has to another colle
 Each post has a title, so that’s a one-to-one relationship.
 Each author has many posts, so that’s a one-to-many relationship.
 And posts have many tags and tags refer to many posts, so that’s a many-to-many relationship.
+When using MongoDB, it can be conceptually useful to split “many” into subcategories: “many” and “few.” For example, you might have a one-to-few cardinality between authors and posts: each author only writes a few posts.
 You might have many-to-few relation between blog posts and tags: your probably have many more blog posts than you have tags.
 However, you’d have a one-to-many relationship between blog posts and comments: each post has many comments.
 When you’ve determined few versus many relations, it can help you decide what to embed versus what to reference.
+Generally, “few” relationships will work better with embedding, and “many” relationships will work better as references.
 Friends, Followers, and Other Inconveniences Keep your friends close and your enemies embedded.
 Many social applications need to link people, content, followers, friends, and so on.
 Figuring out how to balance embedding and referencing this highly connected information can be tricky.
@@ -1422,6 +1471,7 @@ If you put this followers collection in another database, you can also compact i
 Regardless of which strategy you use, embedding only works with a limited number of subdocuments or references.
 If you have celebrity users, they may overflow any document that you’re storing followers in.
 The typical way of compensating this is to have a “continuation” document, if necessary.
+Then add application logic to support fetching the documents in the “to be continued” ("tbc") array.
 Optimizations for Data Manipulation To optimize your application, you must first know what its bottleneck is by evaluating its read and write performance.
 Optimizing reads generally involves having the correct indexes and returning as much of the information as possible in a single document.
 Optimizing writes usually involves minimizing the number of indexes you have and making updates as efficient as possible.
@@ -1443,10 +1493,12 @@ If your document has one field that grows, try to keep is as the last field in t
 It is slightly more efficient for MongoDB not to have to rewrite fields after "tags" if it grows.
 Removing Old Data Some data is only important for a brief time: after a few weeks or months it is just wasting storage space.
 There are three popular options for removing old data: capped collections, TTL collections, and dropping collections per time period.
+The easiest option is to use a capped collection: set it to a large size and let old data “fall off ” the end.
 However, capped collections pose certain limitations on the operations you can do and are vulnerable to spikes in traffic, temporarily lowering the length of time that they can hold.
 The second option is TTL collections: this gives you a finer-grain control over when documents are removed.
 However, it may not be fast enough for very high-write-volume collections: it removes documents by traversing the TTL index the same way a userrequested remove would.
 If TTL collections can keep up, though, they are probably the easiest solution.
+See “Time-To-Live Indexes” on page 114 for more information about TTL indexes.
 The final option is to use multiple collections: for example, one collection per month.
 Every time the month changes, your application starts using this month’s (empty) collection and searching for data in both the current and previous months’ collections.
 Once a collection is older than, say, six months, you can drop it.
@@ -1503,12 +1555,12 @@ This enforces your schema more rigorously: a document has to be valid for some v
 The final option is to migrate all of your data when the schema changes.
 Generally this is not a good idea: MongoDB allows you to have a dynamic schema in order to avoid migrates because they put a lot of pressure on your system.
 However, if you do decide to change every document, you will need to ensure that all documents were successfully updated.
-MongoDB does not support atomic multiupdates (either they all happen or.
 If MongoDB crashes in the middle of a migrate, you could end up with some updated and some non-updated documents.
 When Not to Use MongoDB While MongoDB is a general-purpose database that works well for most applications, it isn’t good at everything.
 Here are some tasks that MongoDB is not designed to do:
 MongoDB does not support transactions, so systems that require transactions should use another data store.
 There are a couple of ways to hack in simple transaction-like semantics, particularly on a single document, but there is no database enforcement.
+Thus, you can make all of your clients agree to obey whatever semantics you come up with (e.g., “Check the "locks" field before doing any operation”) but there is nothing stopping an ignorant or malicious client from messing things up.
 Joining many different types of data across many different dimensions is something relational databases are fantastic at.
 MongoDB isn’t supposed to do this well and most likely never will.
 Finally, one of the big (if hopefully temporary) reasons to use a relational database over MongoDB is if you’re using tools that don’t support MongoDB.
@@ -1533,7 +1585,6 @@ Start up a mongo shell with the --nodb option, which allows you to start a shell
 This tells the shell to create a new replica set with three servers: one primary and two secondaries.
 However, it doesn’t actually start the mongod servers until you run the following two commands:
 They will all be dumping their logs into the current shell, which is very noisy, so put this shell aside and open up a new one.
-PRIMARY" is the state of the member and "testReplSet" is an identifier for this set.
 You’ll learn how to choose your own identifier later; testRepl Set is the default name ReplSetTest uses.
 Use your connection to the primary to run the isMaster command.
 There are a bunch of fields in the output from isMaster, but the important ones indicate that you can see that this node is primary (the "ismaster" : true field) and that there is a list of hosts in the set.
@@ -1543,6 +1594,7 @@ Now check one of the secondaries and verify that they have a copy of all of thes
 Secondaries may fall behind the primary (or lag) and not have the most current writes, so secondaries will refuse read requests by default to prevent applications from accidentally reading stale data.
 Thus, if you attempt to query a secondary, you’ll get an error that it’s not primary:
 This is to protect your application from accidentally connecting to a secondary and reading stale data.
+To allow queries on the secondary, we set an “I’m okay with reading from secondaries” flag, like so:
 Note that slaveOk is set on the connection (conn2), not the database (secondaryDB)
 You can see that all of our documents are there.
 You can see that the secondary does not accept the write.
@@ -1550,17 +1602,17 @@ The secondary will only perform writes that it gets through replication, not fro
 There is one other interesting feature that you should try out: automatic failover.
 If the primary goes down, one of the secondaries will automatically be elected primary.
 Your primary may be the other server; whichever secondary noticed that the primary was down first will be elected.
+Thus, it does not use the replica set terminology consistently: it still calls the primary a “master.” You can generally think of “master” as equivalent to “primary” and “slave” as equivalent to “secondary.”
 When you’re done working with the set, shut down the servers from your first shell.
 This shell will be full of log output from the members of the set, so hit Enter a few times to get back to a prompt.
 Congratulations! You just set up, used, and tore down replication.
-Clients can send a primary all the same operations they could send a standalone server (reads, writes, commands, index builds, etc.)
-I’m reading from a secondary” setting, clients can read from secondaries.
 Now that you understand the basics, the rest of this chapter focuses on configuring a replica set under more realistic circumstances.
 Remember that you can always go back to ReplSetTest if you want to quickly try out a configuration or option.
 Configuring a Replica Set For actual deployments, you’ll need to set up replication across multiple machines.
 This section takes you through setting up a real replica set that could be used by your application.
 Let’s say that you already have a standalone mongod on server-1:27017 with some data on it.
-If you do not have any pre-existing data, this will work the same way, just with an empty data directory.) The first thing you need to do is choose a name for your set.
+If you do not have any pre-existing data, this will work the same way, just with an empty data directory.
+The first thing you need to do is choose a name for your set.
 Any string whatsoever will do, so long as it’s UTF-8
 Once you have a name for your replica set, restart server-1 with the --replSet name option.
 Now start up two more mongod servers with the replSet option and the same identifier (spock): these will be the other members of the set:
@@ -1609,6 +1661,7 @@ Now that the config document is correct, we need to send it to the database usin
 You can use it to make any legal configuration change you need: simply create the config document that represents your desired configuration and pass it to rs.reconfig.
 How to Design a Set To plan out your set, there are certain replica set concepts that you must be familiar with.
 The next chapter goes into more detail about these, but the most important is that replica sets are all about majorities: you need a majority of members to elect a primary, a primary can only stay primary so long as it can reach a majority, and a write is safe when it’s been replicated to a majority.
+This majority is defined to be “more than half of all members in the set,” as shown in Table 9-1
 What is a majority? Number of members in the set Majority of the set.
 Note that it doesn’t matter how many members are down or unavailable, as majority is based on the set’s configuration.
 For example, suppose that we have a five-member set and three members go down, as shown in Figure 9-1
@@ -1616,6 +1669,7 @@ These two members cannot reach a majority of the set (at least three members), s
 If one of them were primary, it would step down as soon as it noticed that it could not reach a.
 After a few seconds, your set would consist of two secondaries and three unreachable members.
 With a minority of the set available, all members will be secondaries.
+Many users find this frustrating: why can’t the two remaining members elect a primary? The problem is that it’s possible that the other three members didn’t go down, and that it was the network that went down, as shown in Figure 9-2
 In this case, the three members on the left will elect a primary, since they can reach a majority of the set (three members out of five)
 In the case of a network partition, we do not want both sides of the partition to elect a primary: otherwise the set would have two primaries.
 Then both primaries would be writing to the data and the data sets would diverge.
@@ -1649,8 +1703,6 @@ Often you’ll see messages about election results being 9,999 or similar if one
 If two members vetoed and one voted for, the election results would be 19,999, and so on.
 The member seeking election (the candidate) must be up to date with replication, as far as the members it can reach know.
 All replicated operations are strictly ordered by ascending timestamp, so the candidate must have operations later than or equal to any member it can reach.
-For example, suppose that the latest operation that the candidate has replicated is op 123
-It contacts the other members of the set and one of them has replicated up to operation 124
 The candidate will continue syncing and once it has synced operation 124, it will call for an election again (if no one else has become primary in that time)
 This time around, assuming nothing else is wrong with candidate, the member that previously vetoed the election will vote for the candidate.
 Assuming that the candidate receives “ayes” from a majority of voters, it will transition into primary state.
@@ -1672,6 +1724,7 @@ One other thing that arbiters are good for is breaking ties in larger clusters.
 If you have an even number of nodes, you may have half the nodes vote for one member and half for another.
 Note that, in both of the use cases above, you need at most one arbiter.
 You do not need an arbiter if you have an odd number of nodes.
+A common misconception seems to be that you should add extra arbiters “just in case.” However, it doesn’t help elections go any faster or provide any data safety to add extra arbiters.
 If you add an arbiter, you’ll have a four member set, so three members will be required to choose a primary.
 If you have an even number of nodes because you added an arbiter, your arbiters can cause ties, not prevent them.
 If you have a choice between a data node and an arbiter, choose a data node.
@@ -1679,7 +1732,8 @@ Using an arbiter instead of a data node in a small set can make some operational
 For example, suppose you are running a replica set with two “normal” members and one arbiter, and one of the data-holding members goes down.
 If that member is well and truly dead (the data is unrecoverable), you will have to get a copy of the data from the current primary to the new server you’ll be using as a secondary.
 Copying data can put a lot of stress on a server and, thus, slow down your application.
-Generally, copying a few gigabytes to a new server is trivial but more than a hundred starts becoming impractical.)
+Generally, copying a few gigabytes to a new server is trivial but more than a hundred starts becoming impractical.
+Conversely, if you have three data-holding members, there’s more “breathing room” if a server completely dies.
 You can use the remaining secondary to bootstrap a new server instead of depending on your primary.
 Thus, if possible, use an odd number of “normal” members instead of an arbiter.
 Priority Priority is how strongly this member “wants” to become primary.
@@ -1705,7 +1759,6 @@ Building Indexes Sometimes a secondary does not need to have the same (or any) i
 If you are using a secondary only for backup data or offline batch jobs, you might want to specify "buildIndexes" : false in the member’s configuration.
 This is a permanent setting: members that have "buildIndexes" : false specified can never be reconfigured to be “normal” index-building members again.
 If you want to change a non-index-building member to an index-building one, you must remove it from the set, delete all of its data, re-add it to the set, and allow it to resync from scratch.
-Again, this option requires the member’s priority to be 0
 This chapter covers how the pieces of a replica set fit together, including:
 Syncing Replication is concerned with keeping an identical copy of data on multiple servers.
 The way MongoDB accomplishes this is by keeping a log of operations, or oplog, containing every write that a primary performs.
@@ -1744,12 +1797,12 @@ It applies all of the operations that happened while indexes were building:
 At this point, the member finishes the initial sync process and transitions to normal syncing, which allows it to become a secondary:
 The best way to track an initial sync’s progress is by watching the server’s log.
 Doing an initial sync is very easy from an operator perspective: start up a mongod with a clean data directory.
-However, it is often preferable to restore from backup instead, as covered in Chapter 22
 Restoring from backup is often faster than copying all of your data through mongod.
 Many deployments end up with a subset of their data that’s frequently accessed and always in memory (because the OS is accessing it frequently)
 Performing an initial sync forces the member to page all of its data into memory, evicting the frequently-used data.
 This can slow down a member dramatically as requests that were being handled by data in RAM are suddenly forced to go to disk.
 However, for small data sets and servers with some breathing room, initial syncing is a good, easy option.
+In these cases, the new member can “fall off ” the end of sync source’s oplog: the new member gets so far behind the sync source that it can no longer catch up because the sync source’s oplog has overwritten the data the member would need to use to continue replicating.
 There is no way to fix this other than attempting the initial sync at a less-busy time or restoring from a backup.
 The initial sync cannot proceed if the member has fallen off of the sync source’s oplog.
 Handling Staleness If a secondary falls too far behind the actual operations being performed on the sync source, the secondary will go stale.
@@ -1838,10 +1891,12 @@ You do not have to list all members (although you can): when the driver connects
 When a primary goes down, the driver will automatically find the new primary (once one is elected) and will route requests to it as soon as possible.
 However, while there is no reachable primary your application will be unable to perform writes.
 There may be no primary available for a brief time (during an election) or for an extended period of time (if no reachable member can become primary)
+By default, the driver will not service any requests—read or write—during this period.
 A common desire is to have the driver hide the entire election process (the primary going away and a new primary being elected) from the user.
 However, this is not possible or desirable in many cases, so no driver handles failover this way.
 First, a driver can only hide a lack of primary for so long: a set could exist forever with no primary.
 Second, a driver often finds out that the primary went down because an operation failed, which means that the driver doesn’t know whether or not the primary processed the operation before going down.
+Thus, the driver leaves it to the user: Do you want to retry the operation on the new primary, if one is elected quickly? Assume it got through on the old primary? Check and see if the new primary has the operation? The strategy that makes sense will depend on your application.
 Waiting for Replication on Writes To ensure that writes will be persisted no matter what happens to the set, you must ensure that the write propagates to a majority of the members of the set, as mentioned in the previous chapter.
 Earlier, we used the getLastError command to check that writes were successful.
 We can use that same command to ensure that a write has been replicated to secondaries.
@@ -1855,7 +1910,7 @@ If getLastError times out, your application has to decide what to do next.
 Note that getLastError timing out doesn’t mean that the write failed.
 It merely means that it failed to replicate far enough in the time specified.
 The write is still present on any servers it made it to and will continue to propagate to the other members of the set as quickly as possible.
-A common way of preventing this is to periodically call getLastError with "w" set to something higher than 1
+MongoDB lets you write “too fast.” It will let you write to the primary so quickly that the secondaries cannot keep up.
 This forces writes on that particular connection to wait for replication.
 Note that it only blocks writes on that connection: writes can still occur on any other connection.
 If you wish to make your application behave sensibly and robustly, regularly call getLastError with "majority" and a reasonable timeout.
@@ -1929,7 +1984,6 @@ Suddenly you have a member down, a member lagging, and everything is too overloa
 If you have a good idea of how much load a server can take, you might feel like you can plan this out better: use five servers instead of four and the set won’t be overloaded if one goes down.
 However, even if you plan it out perfectly (and only lose the number of servers you expected), you still have to fix the situation with the other servers under more stress than they would be otherwise.
 A better choice is to use sharding to distribute load.
-We’ll cover how to set sharding up in Chapter 13
 Reasons to Read from Secondaries There are a few cases in which it’s reasonable to send application reads to secondaries.
 For instance, you may want your application to still be able to perform reads if the primary goes down (and you do not care if those reads are somewhat stale)
 The is the most common case for distributing reads to secondaries: you’d like a temporary readonly mode when your set loses a primary.
@@ -1986,6 +2040,7 @@ This prevents these members from casting positive votes in elections, although t
 Please do not alter votes if you can possibly avoid it.
 Votes have weird, non-intuitive implications for elections and consistency guarantees.
 Often, developers mistakenly think that a member having more votes will make it more likely to be primary (which it won’t)
+If you wish a member to be preferentially chosen as primary, use priorities (see “Priority” on page 183)
 Forcing Reconfiguration When you permanently lose a majority of the set, you may want to reconfigure the set while it doesn’t have a primary.
 This is a little tricky: usually you’d send the reconfig to the primary.
 In this case, you can force reconfigure the set by sending a reconfig command to a secondary.
@@ -2005,6 +2060,7 @@ If no other primary has been elected in that time period, it will be able to att
 If you would like it to remain a secondary for a longer or shorter amount of time, you can specify your own number of seconds for it to stay in SECONDARY state:
 Preventing Elections If you need to do some maintenance on the primary but don’t want any of the other eligible members to become primary in the interim, you can force them to stay secondaries by running freeze on each of them:
 Again, this takes a number of seconds to remain secondary.
+When you have finished whatever maintenance you are doing and want to “unfreeze” the other members you can run the command again, giving a timeout of 0 seconds:
 This will allow the member to hold an election, if it chooses.
 You can also unfreeze primaries that have been stepped down by running rs.freeze(0)
 Using Maintenance Mode Maintenance mode occurs when you perform a long-running op on a replica set member: it forces the member into RECOVERING state.
@@ -2021,6 +2077,7 @@ Make sure you know where the logs are being stored (and that they are being stor
 Getting the Status One of the most useful commands you can run is replSetGetStatus, which gets the current information about every member of the set (from the of view of the member you’re running it on)
 There is a helper for this command in the shell:
 This field is only present in the member rs.status() was run on, in this case, server-2
+See “Member States” on page 191 to see descriptions of the various states.
 The number of seconds a member has been reachable (or the time since this server was started for the "self" member)
 The last optime in each member’s oplog (where that member is synced to)
 Note that this is the state of each member as reported by the heartbeat, so the optime reported here may be off by a couple of seconds.
@@ -2032,7 +2089,6 @@ Any status message that the member chose to return in the heartbeat request.
 For example, the "errmsg" field in server-3 indicates that this server is in the process of initial syncing.
 The hexadecimal number 507e9a30:851 is the timestamp of the operation this member needs to get to to complete the initial sync.
 There are a several fields that give overlapping information: "state" is the same as "stateStr", it’s simply the internal id for the state.
-Similarly, "optime" and "optimeDate" are the same value represented in two ways: one represents milliseconds since the epoch ("t" : 135...) and the other is a more human-readable date.
 Note that this is report is from the point of view of whichever member of the set you run it on: it may be incorrect or out of date due to network issues.
 Visualizing the Replication Graph If you run rs.status() on a secondary, there will be a top-level field called "syncing To"
 This gives the host that this member is replicating from.
@@ -2045,6 +2101,7 @@ New secondaries will generally choose to sync from a member in the same data cen
 However, there are some downsides to automatic replication chaining: more replication hops mean that it takes a bit longer to replicate writes to all servers.
 For example, let’s say that everything is in one data center but, due to the vagaries of network speeds when you added members, MongoDB ends up replicating in a line, as shown in Figure 12-2
 As replication chains get longer, it takes longer for all members to get a copy of the data.
+It is, however, probably undesirable: each secondary in the chain will have to be a bit further behind than the secondary “in front” of it.
 You can fix this by modifying the replication source for a member using the replSetSyncFrom command (or the rs.syncFrom() helper)
 Connect to the secondary whose replication source you want to change and run this command, passing it the server you’d prefer this member to sync from:
 It may take a few seconds to switch sync sources, but if you run rs.status() on that member again, you should see that the "syncingTo" field now says "server0:27017"
@@ -2063,6 +2120,7 @@ Calculating Lag One of the most important metrics to track for replication is ho
 Lag is how far behind a secondary is, which means the difference in timestamp between the last operation the primary has performed and the timestamp of the last operation the secondary has applied.
 Note that these are both functions of db, not rs.
 This gives information about the size of the oplog and the date ranges of operations contained in the oplog.
+If this were a real deployment, the oplog should be much larger (see “Resizing the Oplog” on page 220 for instructions on changing oplog size)
 We want the log length to be at least as long as the time it takes to do a full resync.
 That way, we don’t run into a case where a secondary falls off the end of the oplog before finishing its initial sync.
 The log length is computed by taking the time difference between the first and last operation in the oplog once the oplog has filled up.
@@ -2070,6 +2128,7 @@ If the server has just started with nothing in the oplog, then the earliest oper
 In that case, the log length will be small, even though the oplog probably still has free space available.
 The length is a more useful metric for servers that have been operating long enough to write through their entire oplog at least once.
 In this case, the secondary is 12 seconds behind the primary.
+Remember that a replica set member’s lag is calculated relative to the primary, not against “wall time.” This usually is irrelevant, but on very low-write systems, this can cause phantom replication lag “spikes.” For example, suppose you do a write once an hour.
 Right after that write, before it’s replicated, the secondary will look like it’s an hour behind the primary.
 However, it’ll be able to catch up with that “hour” of operations in a few milliseconds.
 This can sometimes cause confusion when monitoring a lowthroughput system.
@@ -2095,29 +2154,28 @@ This is certainly easy, but your replica set will essentially be one rather over
 The other option may or may not work better, depending on your amount of data:
 Copy the delayed secondary’s data files to the other servers.
 Note that this will mean all the servers will have the same oplog size as the delayed secondary, which may not be what you want.
+Building Indexes If you send an index build to the primary, the primary will build the index normally and then the secondaries will build the index when they replicate the “build index” operation.
 Although this is the easiest way to build an index, index builds are resourceintensive operations that can make members unavailable.
 If all of your secondaries start building an index at the same time, almost every member of your set will be offline until the index build completes.
 Therefore, you may want to build an index on one member at a time to minimize impact on your application.
 When the index build is complete, restart the server as a member of the replica set.
 You should now have a set where every member other than the primary has the index built.
 Now there are two options, and you should choose the one that will impact your production system the least:
+If you have an “off ” time when you have less traffic, that would probably be a good time to build it.
 You also might want to modify read preferences to temporarily shunt more load onto secondaries while the build is in progress.
 The primary will replicate the index build to the secondaries, but they will already have the index so it will be a no-op for them.
 After its index build is complete, you can reintroduce it to the set.
 Note that you could also use this technique to build different indexes on a secondary than you have on the rest of the set.
-This could be useful for offline processing, but make sure a member with different indexes can never become primary: its priority should always be 0
 If you are building a unique index, make sure that the primary is not inserting duplicates or that you build the index on the primary first.
 Otherwise, the primary could be inserting duplicates that would then cause replication errors on secondaries.
 You will have to restart it as a stand alone, remove the unique index, and restart it.
 Replication on a Budget If it is difficult get more than one high-quality server, consider getting a secondary server that is strictly for disaster recovery, with less RAM, CPU, slower disk IO, etc.
 The good server will always be your primary and the cheaper server will never handle any client traffic (configure your clients to send all reads to the primary)
-Here are all the options to set for the cheaper box: "priority" : 0
 You do not want this server to ever become primary.
 You do not want clients ever sending reads to this secondary.
 This is optional, but it can decrease the load this server has to handle considerably.
 If you ever need to restore from this server, you’ll need to rebuild indexes.
 If you only have two machines, set the votes on this secondary to 0 so that the primary can stay primary if this machine goes down.
-If you have a third server (even just your application server), run an arbiter on that instead of setting votes to 0
 This will give you the safety and security of having a secondary without having to invest in two high-performance servers.
 How the Primary Tracks Lag Each member that has ever been a sync source keeps a collection called local.slaves, which holds information about which servers are syncing from it and how up to date they are.
 When you run a query using w, MongoDB looks through this information to decide if enough secondaries are up to date enough to proceed.
@@ -2136,6 +2194,7 @@ As the collection is merely a dumping ground for MongoDB to report on replicatio
 However, if you find the old entries confusing or cluttered, you can drop the whole collection.
 If you have secondaries that are chained, you may notice that the primary has several local.slaves documents for a certain server.
 This is because each secondary will “forward” any replication requests it gets to its sync target so that the primary knows where each secondary has synced to.
+These are called “ghost syncs” because the requests don’t actually request any ops back; they just inform the primary of where the secondaries have synced to.
 The local database is used for replication information because it is not replicated.
 Thus, if you have data that you want to be local to a certain machine, you can load it into collections in the local database.
 Master-Slave MongoDB originally supported a more traditional master-slave setup (no automatic failover and you declare who the master and slaves are)
@@ -2182,6 +2241,7 @@ This allows your application to grow beyond the resource limits of a standalone 
 Many people are confused about the difference between replication and sharding.
 Remember that replication creates an exact copy of your data on multiple servers, so every server is a mirror-image of every other server.
 To hide these details from the application, we run a routing process called mongos in front of the shards.
+This router keeps a “table of contents” that tells it which shard contains which data.
 Applications can connect to this router and issue requests normally, as shown in Figure 13-1
 The router, knowing what data is on which shard, is able to forward the requests to the appropriate shard(s)
 If there are responses to the request, the router collects them, merges them, and sends them back to the application.
@@ -2198,6 +2258,7 @@ You can get an overall view of your cluster by running sh.status()
 It will give you a summary of your shards, databases, and collections:
 As you can see from the sh.status() output, you have three shards and two databases (admin is created automatically)
 Your test database may have a different primary shard than shown above.
+A primary shard is a “home base” shard that is randomly chosen for each database.
 All of your data will be on this primary shard.
 MongoDB cannot automatically distribute your data yet because it doesn’t know how (or if) you want it to be distributed.
 You have to tell it, percollection, how you want it to distribute data.
@@ -2218,6 +2279,7 @@ Sharding splits this into smaller chunks based on the shard key, as shown in Fig
 These chunks can then be distributed across the cluster, as Figure 13-5 shows.
 Before a collection is sharded, it can be thought of as a single chunk from the smallest value of the shard key to the largest.
 Sharding splits the collection into many chunks based on shard key ranges.
+Similarly, $maxKey is like “positive infinity.” It is greater than any other value.
 Thus, you’ll always see these as the “caps” on your chunk ranges.
 These values are actually BSON types and should not be used in your application; they are mainly for internal use.
 If you wish to refer to them in the shell, use the MinKey and MaxKey constants.
@@ -2237,9 +2299,11 @@ Then run clus ter.stop() to cleanly shut down all of the servers:
 If you are ever unsure of what an operation will do, it can be helpful to use ShardingT est to spin up a quick local cluster and try it out.
 In the previous chapter, you set up a “cluster” on one machine.
 This chapter covers how to set up a more realistic cluster and how each piece fits, in particular:
+How to set up config servers, shards, and mongos processes.
 When to Shard Deciding when to shard is a balancing act.
 You generally do not want to shard too early because it adds operational complexity to your deployment and forces you to make design decisions that are difficult to change later.
 On the other hand, you do not want to wait too long to shard because it is difficult to shard an overloaded system without downtime.
+Read or write data with greater throughput than a single mongod can handle.
 Thus, good monitoring is important to decide when sharding will be necessary.
 Generally people speed toward one of these bottlenecks much faster than the others, so figure out which one your deployment will need to provision for first and make plans well in advance about when and how you plan to convert your replica set.
 As you add shards, performance should increase roughly linearly per shard up to hundreds of shards.
@@ -2295,11 +2359,13 @@ As before, --shardsvr has little practical effect (it changes the default port t
 You can also create stand-alone-mongod shards (instead of replica set shards), but this is not recommend for production (ShardingTest in the previous chapter did this)
 To add a single mongod as a shard simply specify the hostname of the standalone server in the call to addShard:
 If you plan to switch to replica sets later, start with one-member replica sets instead of standalone servers.
+Switching from a stand-alone-server shard to a replica set requires downtime (see “Server Administration” on page 285)
 Adding Capacity When you want to add more capacity, you’ll need to add more shards.
 To add a new, empty shard, create a replica set.
 Make sure it has a distinct name from any of your other shards.
 Once it is initialized and has a primary, add it to your cluster by running the addShard command through mongos, specifying the new replica set’s name and its hosts as seeds.
 If you have several existing replica sets that are not shards, you can add all of them as new shards in your cluster so long as they do not have any database names in common.
+For example, if you had one replica set with a “blog” database, one with a “calendar” database, and one with the “mail”, “tel”, and “music” databases, you could add each replica set as a shard and end up with a cluster with three shards and five databases.
 However, if you had a fourth replica set that also had a database named “tel”, mongos would refuse to add it to the cluster.
 Sharding Data MongoDB won’t distribute your data automatically until you tell it how to do so.
 You must explicitly tell both the database and collection that you want them to be distributed.
@@ -2361,10 +2427,12 @@ If you are in this situation, another way of getting more splits is to make the 
 This will prompt splits to happen at a lower threshold.
 You can turn off chunk splitting by starting every mongos with --nosplit.
 It regularly checks for imbalances between shards and, if it finds an imbalance, will begin migrating chunks.
+Although the balancer is often referred to as a single entity, each mongos plays the part of “the balancer” occasionally.
 Every few seconds, a mongos will attempt to become the balancer.
 If there are no other balancers active, the mongos will take a cluster-wide lock from the config servers and do a balancing round.
 Balancing doesn’t affect a mongos’s normal routing operations, so clients using that mongos should be unaffected.
 The balancer is the document with the "_id" of "balancer"
+The lock’s "who" field tells you which mon gos is—or was—balancing: router-23:27017 in this case.
 Once a mongos has become the balancer, it checks its table of chunks for each collection to see if any shards have hit the balancing threshold.
 This is when one shard has significantly more chunks than the other shards (the exact threshold varies: larger collections tolerate larger imbalances than smaller ones)
 If an imbalance is detected, the balancer will redistribute chunks until all shards are within one chunk of one another.
@@ -2380,6 +2448,7 @@ This is another reason why it is important to always have config servers up and 
 The most important and difficult task when using sharding is choosing how your data will be distributed.
 To make intelligent choices about this, you have to understand how MongoDB distributes data.
 This chapter helps you make a good choice of shard key by covering:
+Some alternative strategies if you want to customize how data is distributed.
 This chapter assumes that you understand the basic components of sharding as covered in the previous chapters.
 Taking Stock of Your Usage When you shard a collection you choose a field or two to use to split up the data.
 Once you have more than a few shards, it’s almost impossible to change your shard key, so it is important to choose correctly (or at least notice any issues quickly)
@@ -2389,8 +2458,11 @@ This section has lots of diagrams and explanations, but there is no substitute f
 For each collection that you’re planning to shard, start by answering the following questions:
 How many shards are you planning to grow to? A three-shard cluster has a great deal more flexibility than a thousand-shard cluster.
 As a cluster gets larger, you should not plan to fire off queries that can hit all shards, so almost all queries must include the shard key.
+Decreasing write latency usually involves sending requests to geographically closer or more powerful machines.
+Increasing throughput usually involves adding more parallelization and making sure that requests are distributed evenly across the cluster.
 Are you sharding to increase system resources (e.g., give MongoDB more RAM per GB of data)? If so, you want to keep working set size as small possible.
 Use these answers to evaluate the following shard key descriptions and decide whether the shard key you choose would work well in your situation.
+Does it give you the targeted queries that you need? Does it change the throughput or latency of your system in the ways you need? If you need a compact working set, does it provide that?
 Picturing Distributions There are three basic distributions that are the most common ways people choose to split their data: ascending key, random, and location-based.
 There are other types of keys that could be used, but most use cases fall into one of these categories.
 Ascending Shard Keys Ascending shard keys are generally something like a "date" field or ObjectId—anything that steadily increases over time.
@@ -2399,9 +2471,11 @@ Suppose that we shard on an ascending field, like "_id" on a collection using Ob
 These chunks will be distributed across our sharded cluster of, let’s say, three shards, as shown in Figure 15-2
 This is called the max chunk, as it is the chunk containing $maxKey.
 If we insert another document, it will also be in the max chunk.
+In fact, every subsequent insert will be into the max chunk! Every insert’s "_id" field will be closer to infinity than the previous (because ObjectIds are always ascending), so they will all go to into the max chunk.
 This has a couple of interesting (and often undesirable) properties.
 First, all of your writes will be routed to one shard (shard0002, in this case)
 This chunk will be the only one growing and splitting, as it is the only one that receives inserts.
+As you insert data, new chunks will “fall off ” of this chunk’s butt, as shown in Figure 15-3
 The max chunk continues growing and being split into multiple chunks.
 This pattern often makes it more difficult for MongoDB to keep chunks evenly balanced because all the chunks are being created by one shard.
 Therefore, MongoDB must constantly move chunks to other shards instead of correcting small imbalances that might occur in a more evenly distributed systems.
@@ -2441,6 +2515,7 @@ There are some limitations on what your shard key can be if you’re using a has
 As with other shard keys, you cannot use array fields.
 Hashed Shard Keys for GridFS Before attempting to shard GridFS collections, make sure that you understand how GridFS stores data (see Chapter 6 for an explanation)
 In the following explanation, the term “chunks” is overloaded since GridFS splits files into chunks and sharding splits collections into chunks.
+Thus, the two types of chunks are referred to as “GridFS chunks” and “sharding chunks” later in the chapter.
 However, if you create a hashed index on the "files_id" field, each file will be randomly distributed across the cluster.
 But a file will always be contained in a single chunk.
 This is the best of both worlds: writes will go to all shards evenly and reading a file’s data will only ever have to hit a single shard.
@@ -2462,6 +2537,7 @@ If you do not have a high-performance server to firehose into or you are not usi
 If you do, all writes will go to a single shard.
 Multi-Hotspot Standalone mongod servers are most efficient when doing ascending writes.
 This conflicts with sharding, in that sharding is most efficient when writes are spread over the cluster.
+This technique basically creates multiple hotspots—optimally several on each shard—so that writes are evenly balanced across the cluster but, within a shard, ascending.
 The first value in the compound key is a rough, random value with low-ish cardinality.
 You can picture each value in the first part of the shard key as a chunk, as shown in Figure 15-6
 This will eventually work itself out as you insert more data, although it will probably never be divided up this neatly (right on the $minKey lines)
@@ -2498,11 +2574,13 @@ Using a Cluster for Multiple Databases and Collections MongoDB evenly distribute
 However, if you have a log collection that is “lower-value” than your other data, you might not want it taking up space on your more expensive servers.
 Or, if you have one powerful shard, you might want to use it for only a realtime collection and not allow other collections to use it.
 You can set up separate clusters, but you can also give MongoDB specific directions about where you want it to put certain data.
+This says, “for negative infinity to infinity for this collection, store it on shards tagged ‘high’.” This means that no data from the important collection will be stored on any other server.
 Note that this does not effect how other collections are distributed: other collections will still be evenly distributed between this shard and the others.
 Assigning a tag range to a collection does not affect it instantly.
 It is an instruction to the balancer that, when it runs, these are the viable targets to move the collection to.
 As another example, perhaps we have a collection where we don’t want it on the shard tagged “high” but do want it on any other one.
 Now we can specify that we want this collection (call it "normal.coll") distributed across these five shards:
+You cannot assign collections dynamically, i.e., “when a collection is created, randomly home it to a shard.” However, you could have a cron job that went through and did it for you.
 If you make a mistake or change your mind, you can remove shard tags with sh.remov eShardTag():
 If you remove all tags described by a tag range (for example, if untagging the shard marked "high") the balancer won’t distribute the data anywhere because there aren’t any valid locations listed.
 All the data will still be readable and writable; it just won’t be able to migrate until you modify your tags or tag ranges.
@@ -2526,7 +2604,7 @@ If the balancer detects an uneven number of chunks it will simply reshuffle all 
 A sharded cluster is the most difficult type of deployment to administer.
 This chapter gives advice on performing administrative tasks on all parts of a cluster, including:
 Inspecting what the cluster’s state is: who its members are, where data is held, and what connections are open.
-How to add, remove, and change members of a cluster • Administering data movement and manually moving data.
+How to add, remove, and change members of a cluster.
 Seeing the Current State There are several helpers available to find out what data is where, what the shards are, and what the cluster is doing.
 Getting a Summary with sh.status sh.status() gives you an overview of your shards, databases, and sharded collections.
 If you have a small number of chunks, it will print a breakdown of which chunks are where as well.
@@ -2549,6 +2627,7 @@ The shard’s "_id" is picked up from the replica set name, so each replica set 
 When you update your replica set configuration (e.g., adding or removing members), the "host" field will be updated automatically.
 The databases collection keeps track of all of the databases, sharded and non, that the cluster knows about:
 If enableSharding has been run on a database, "partitioned" will be true.
+The "pri mary" is the database’s “home base.” By default, all new collections in that database will be created on the database’s primary shard.
 The collections collection keeps track of all sharded collections (non-sharded collections are not shown)
 In this case, it is a compound key on "x" and "y"
 This field is not displayed unless it is true (the shard key is unique)
@@ -2606,12 +2685,12 @@ Server Administration As your cluster grows, you’ll need to add capacity or ch
 This section covers how to add and remove servers from your cluster.
 Adding Servers You can add new mongos processes at any time.
 Make sure their --configdb option specifies the correct set of config servers and they should be immediately available for clients to connect to.
-To add new shards, use the "addShard" command as show in Chapter 14
 Changing Servers in a Shard As you use your sharded cluster, you may want to change the servers in individual shards.
 To change a shard’s membership, connect directly to the shard’s primary (not through the mongos) and issue a replica set reconfig.
 The cluster configuration will pick up the change and update config.shards automatically.
 The only exception to this is if you started your cluster with standalone servers as shards, not replica sets.
 Changing a shard from a standalone server to replica set.
+The easiest way to do this is to add a new, empty replica set shard and then remove the standalone server shard (see “Removing a Shard” on page 286)
 If you wish to turn the standalone server into a replica set the process is fairly complex and involves downtime:
 Shut down the standalone server (call it server-1) and all mongos processes.
 Restart the server-1 in replica set mode (with the --replSet option)
@@ -2626,6 +2705,7 @@ If you are regularly adding and removing shards, you are putting a lot more stre
 If you add too many shards it is better to let your system grow into it, not remove them and add them back later.
 The balancer will be tasked with moving all the data on this shard to other shards in a process called draining.
 Draining can take a long time if there are a lot of chunks or large chunks to move.
+If you have jumbo chunks (see “Jumbo Chunks” on page 292), you may have to temporarily raise the chunk size to allow draining to move them.
 If you want to keep tabs on how much has been moved, run removeShard again to give you the current status:
 You can run removeShard as many times as you want.
 Chunks may have to split to be moved, so you may see the number of chunks increase in the system during the drain.
@@ -2648,6 +2728,7 @@ This section covers how to enable and disable this automatic balancing as well a
 The Balancer Turning off the balancer is a prerequisite to nearly any administrative activity.
 With the balancer off a new balancing round will not begin, but it will not force an ongoing balancing round to stop immediately: migrations generally cannot stop on a dime.
 Thus, you should check the config.locks collection to see whether or not a balancing round is still in progress:
+See “The Balancer” on page 253 for an explanation of the balancer states.
 Balancing puts load on your system: the destination shard must query the source shard for all the documents in a chunk, insert them, and then the source shard must delete them.
 There are two circumstances in particular where migrations can cause performance problems:
 Using a hotspot shard key will force constant migrations (as all new chunks will be created on the hotspot)
@@ -2698,6 +2779,7 @@ Thus, one of the indicators that you have jumbo chunk problems is that one shard
 You can also look at sh.status() to see if you have jumbo chunks: they will be marked with a "jumbo" attribute:
 You can use the dataSize command to check chunk sizes.
 Be careful—the dataSize command does have to scan the chunk’s data to figure out how big it is.
+If you can, narrow down your search by using your knowledge of your data: were jumbo chunks created on certain date? For example, if there was a really busy day on November 1, look for chunks with that day in their shard key range.
 If you’re using GridFS and sharding by "files_id", you can look at the fs.files collection to find a file’s size.
 To fix a cluster thrown off-balance by jumbo chunks, you must evenly distribute them among the shards.
 This is a complex manual process, but should not cause any downtime (it may cause slowness, as you’ll be migrating a lot of data)
@@ -2723,11 +2805,13 @@ Refreshing Configurations As a final tip, sometimes mongos will not update its c
 If you ever get a configuration that you don’t expect or a mongos seems to be out of date or cannot find data that you know is there, use the flushRouterConfig command to manually clear all caches:
 If flushRouterConfig does not work, restarting all your mongos or mongod processes clears any possible cache.
 Once you have an application up and running, how do you know what it’s doing? This chapter covers how to figure out what kind of queries MongoDB is running, how much data is being written, and how to investigate what MongoDB is actually doing.
+Using command-line tools to give you a picture of what MongoDB is doing.
 Seeing the Current Operations An easy way to find slow operations is to see what is running.
 Anything slow is more likely to show up and have been running for longer.
 It’s not guaranteed, but it’s a good first step to see what might be slowing down an application.
 This displays a list of operations that the database is performing.
 Here are some of the more important fields in the output: "opid"
+You can use this number to kill an operation (see “Killing Operations” on page 301)
 If this field is false, it means the operation has yielded or is waiting for a lock.
 You can use this to find queries that are taking too long or sucking up database resources.
 Every log message related to this connection will be prefixed with [conn3], so you can use this to grep the logs for relevant information.
@@ -2769,6 +2853,7 @@ The profiler can give you tons of information about operations that are taking a
 Thus, you may only want to turn on the profiler periodically to capture.
 If your system is already heavily loaded, you may wish to use another technique described in this chapter to diagnose issues.
 By default, the profiler is off and does not record anything.
+Level 2 means “profile everything.” Every read and write request received by the database will be recorded in the system.profile collection of the current database.
 Profiling is enabled per-database and incurs a heavy performance penalty: every write has to be written an extra time and every read has to take a write lock (because it must write an entry to the system.profile collection)
 However, it will give you an exhaustive listing of what your system is doing:
 You can use the "client" field to see which users are sending which operations to the database.
@@ -2785,6 +2870,7 @@ If you turn on profiling and the system.profile collection does not already exis
 If you want to run the profiler for an extended period of time, this may not be enough space for the number of operations you need to record.
 You can make a larger system.profile collection by turning off profiling, dropping the system.profile collection, and creating a new system.profile capped collection that is the size you desire.
 Calculating Sizes In order to provision the correct amount of disk and RAM, it is useful to know how much space documents, indexes, collections, and databases are taking up.
+See “Calculating the Working Set” on page 348 for information on calculating your working set.
 Pass in any document to get the size it would be when stored in MongoDB.
 For example, you can see that storing _ids as ObjectIds is more efficient than storing them as strings:
 This shows you exactly how many bytes a document is taking up on disk.
@@ -2795,7 +2881,9 @@ Equivalently, if you take the "avgObjSize" and multiply it by "count", you’ll 
 As mentioned above, a total count of the documents’ bytes leaves out some important space a collection uses: the padding around each document and the indexes.
 Collections always have empty space at the “end” so that new documents can be added quickly.
 An index is not counted in "nindexes" until it finishes being built and cannot be used until it appears in this list.
+Each index is currently one “bucket” (8 KB), since the collection is so small.
 In general, indexes will be a lot larger than the amount of data they store, as there is a lot of free space to optimize adding new entries.
+You can minimize this free space by having rightbalanced indexes (as described in “Introduction to Compound Indexes” on page 84)
 As your collections get bigger, it may become difficult to read stats() output with sizes in the billions of bytes or beyond.
 For example, this would get the collection stats in terabytes:
 Databases Databases have a stats function that’s similar to collections’:
@@ -2807,7 +2895,6 @@ You should always have an empty (full of zeros) file for each database: as soon 
 Thus, this empty file (plus anything not being used yet in the previous files) is the difference between "fileSize" and "storageSize"
 Note that this does not include space on the free list, but it does include documents’ padding.
 Thus, the difference between this and the "storageSize" should be the size of documents deleted.
-If you call db.stats() on a nonexistent database, the "nsSizeMB" will be 0
 This is the size of the .ns file, which is essentially a database’s table of contents.
 Keep in mind that listing databases on a system with a high lock percent can be very slow and block other operations.
 Using mongotop and mongostat MongoDB comes with a few command-line tools that can help you determine what MongoDB is doing by printing stats every few seconds.
@@ -2876,15 +2963,14 @@ Any type of index can be built in the background.
 A foreground index build takes less time than a background index build but locks the database for the duration of the process.
 Thus, no other operations can read or write to the database while a foreground index is building.
 Background indexes yield the write lock regularly to allow other operations to go.
+This means that they can take longermuch longer on write-heavy servers—but the server can serve other clients while building an index.
 Creating an Index on a Replica Set The easiest way to create an index on a replica set is to create it on the primary and wait for it to be replicated to the secondaries.
 If you have a large collection, this can lead to the situation where all of your secondaries start building the index at the same time.
 Suddenly all of your secondaries will be unavailable for client reads and may fall behind in replication.
-Start it up as a standalone node, as described in Chapter 6
 When you have finished this process, only the primary should be left without an index.
 Now there are two options: you can either build the index on the primary in the background (which will put more strain on the primary) or you can step down the primary and then follow steps 1 through 4 to build the index on it as you did with the other members of the set.
 This involves a failover, which may be more or less preferable than adding load to the primary.
 You can also use this isolate-and-build technique to build an index on a member of the set that isn’t configured to build indexes (one that has the "buildIndexes" : false option set): start it as a standalone member, build the index, and add it back into the set.
-If you cannot use the rotation method for whatever reason, plan to build new indexes during an off time (at night, a holiday, a weekend, etc.)
 Creating an Index on a Sharded Cluster To create indexes on a sharded cluster, we want to follow the same procedure as described for replica sets and build the index on one shard at a time.
 Then follow the procedure outlined in the previous section for each shard, treating it as a individual replica set.
 Finally, run ensureIndex through the mongos and turn the balancer back on again.
@@ -2899,11 +2985,12 @@ Because of the way MongoDB uses memory, it is not usually an issue, but index cr
 If you are building an index and your mongod suddenly disappears, check /var/log/messages for notices from the OOM killer.
 Running a background index build or adding some swap space can prevent this.
 If you have administrative permissions on the machine, you may want to make MongoDB unkillable.
+See “The OOM Killer” on page 383 for more information.
 Preheating Data When you restart a machine or bring up a new server, it can take a while for MongoDB to get all the right data from disk into memory.
 If your performance constraints require that data be in RAM, it can be disastrous to bring a new server online and then let your application hammer it while it gradually pages in the data it needs.
 There are a couple of ways to get your data into RAM before officially bringing the server online, to prevent it from messing up your application.
 Thus, if the mongod process needs to be restarted it should not affect what data is in memory.
-However, mon god will report low resident memory until it has a chance to ask the OS for the data it needs.)
+However, mon god will report low resident memory until it has a chance to ask the OS for the data it needs.
 Moving Databases into RAM If you need a database in RAM, you can use the UNIX dd tool to load it before starting the mongod:
 Replace brains with the name of the database you want to load.
 If you load a database or set of databases into memory and it takes up more memory than you have, some of its data will fall back out of memory immediately.
@@ -2953,7 +3040,6 @@ To get rid of empty extents and repack collections efficiently, use the compact 
 Thus, the recommended procedure is similar to that of building indexes: compact data on each of the secondaries, then step down the primary and run the final compaction on it.
 When you run a compact on a secondary it will drop into recovering state, which means that it will return errors if sent read requests and it cannot be used as a sync source.
 When the compaction is finished, it will return to secondary state.
-Compaction fits documents as closely as it can, as though the padding factor was 1
 If you need a higher padding factor for the collection, you can specify it as an argument to compact:
 This does not permanently affect the padding factor, just how MongoDB rearranges documents.
 Once the compaction is finished, the padding factor will go back to whatever it was originally.
@@ -2982,7 +3068,7 @@ For example, if you allocated data files test.0 through test.
 Once MongoDB is aware of them, it will be unhappy if they go away.
 Durability is the guarantee that an operation that is committed will survive permanently.
 MongoDB has highly configurable durability settings, from absolutely no guarantees to completely durable.
-How MongoDB guarantees durability • How to configure your application and server to give you the level of durability you.
+How to configure your application and server to give you the level of durability you.
 MongoDB can ensure data integrity after crashes and hard shutdowns, assuming disk and software are behaving correctly.
 Note that relational databases usually use durability to describe transaction persistence.
 As MongoDB does not support transactions, it is used a bit differently here.
@@ -2999,6 +3085,7 @@ However, this guarantee is not strong enough for some applications, so there are
 You can ensure a write has been durably written by passing the j option to getLastError.
 Note that this means that, if you use "j" : true as an option on every write, your write speed will essentially be throttled to 33 writes/sec:
 It generally doesn’t take this long to flush writes to disk, so you’ll find your write performance improves if you allow MongoDB to batch most writes instead of committing after every one.
+Thus, if you have 50 important writes, you could use “normal” getLastError (without the j option) and then call it with the j option after the final write.
 If that succeeds, you know that all 50 writes are flushed safely to disk.
 If you have many connections with incoming writes, you can mitigate the speed penalty of using j by having many writes happen in parallel.
 Setting Commit Intervals Another option for making journaling less intrusive is that you can shorten (or lengthen) the amount of time between journal commits.
@@ -3021,6 +3108,7 @@ Additionally, if you use mongodump’s repair, you’ll still need to restore th
 Thus, you should judge how much time you’re willing to devote to data recovery and choose accordingly.
 MongoDB will not start listening on 27017 when running a repair, but you can watch the log to see what it is doing.
 To help with this (a bit), repair supports a --repairpath option.
+This lets you mount an “emergency drive” and repair your data onto that if you don’t have enough space left on your primary disk.
 If repair gets killed or errors out (say, runs out of disk space), you won’t be in any worse of a situation.
 Repair writes all of its output to new files, not changing your original files until the very end, so your original data files will be in no worse shape than when you started the repair.
 The other option is using the --repair option on mongodump.
@@ -3107,6 +3195,9 @@ To tell the server to get options from a configuration file, use the -f or -conf
 The options supported in a configuration file are exactly the same as those accepted at the command line.
 This configuration file specifies the same options we used earlier when starting with regular command-line arguments.
 It also highlights most of the interesting aspects of MongoDB configuration files:
+Any text on a line that follows the # character is ignored as a comment.
+The syntax for specifying options is option = value, where option is case-sensitive.
+For command-line switches like --fork, the value true should be used.
 Stopping MongoDB Being able to safely stop a running MongoDB server is at least as important as being able to start one.
 There are a couple of different options for doing this effectively.
 The shutdown command, when run on a primary, steps down the primary and waits for a secondary to catch up before shutting down the server.
@@ -3142,7 +3233,6 @@ Most init scripts use the --logpath option to send logs to a file.
 If you have multiple MongoDB instances on a single machine (say, a mongod and a mongos), make sure that their logs are stored in separate files.
 Make sure that you know where the logs are and have read access to the files.
 MongoDB spits out a lot of log messages, but please do not run with the --quiet option (which suppresses some of them)
-Leaving the log level at the default is usually perfect: there is enough info for basic debugging (why is this slow, why isn’t this starting up,
 If you are debugging a specific issue with your application, there are a couple options for getting more info from the logs.
 First, you can change the log level, either by restarting MongoDB with more v’s or running the setParameter command:
 Remember to turn log level back down to 0, or your logs may be needlessly noisy.
@@ -3192,6 +3282,7 @@ On a box dedicated to MongoDB, resident should be a little less than the total m
 Resident memory is that only statistic that actually tracks how much data is in physical RAM, but by itself this stat does not tell you much about how MongoDB is using memory.
 From the top line to the bottom: virtual, mapped, and resident memory.
 If your data fits entirely in memory, resident should be approximately the size of your data.
+When we talk about data being “in memory,” we’re always talking about the data being in RAM.
 Tracking Page Faults As you can see from Figure 21-1, memory metrics tend to be fairly steady, but as your data set grows virtual and mapped will grow with it.
 Resident will grow to the size of your available RAM and then hold steady.
 You can use other statistics to find out how MongoDB is using memory, not just how much of each type it has.
@@ -3217,7 +3308,8 @@ Some IO wait is normal (MongoDB has to go to disk sometimes and, although it tri
 Tracking Background Flush Averages One other disk metric to watch is how long it takes MongoDB to write its dirty pages to disk, also known as the background flush average.
 If the background flush average starts creeping up, you know that your disk is having trouble keeping up with requests.
 At least once a minute (by default), MongoDB will flush all writes that have happened to disk.
-Depending on the operating system, MongoDB may flush writes more frequently if there are a lot of dirty pages.) You can also configure the interval by passing a number of seconds to the --syncdelay option when starting mongod.
+Depending on the operating system, MongoDB may flush writes more frequently if there are a lot of dirty pages.
+You can also configure the interval by passing a number of seconds to the --syncdelay option when starting mongod.
 More frequent syncs will make the amount of data to be synced smaller, but can also be less efficient.
 A common misconception is that syncdelay has something to do with data durability.
 Generally, you want to see background flush averages of less than a second.
@@ -3239,6 +3331,7 @@ If this working set fits in RAM, MongoDB will generally be fast: it only has to 
 One way to think about this is to track data accessed over time, as shown in Figure 21-7
 You can measure for that amount of time to figure out how much your data set grows.
 Note that this example uses time, but it’s possible that there’s another access pattern that makes more sense for your application (time being the most common one)
+The working set is data used in the requests before the cutoff of “frequent requests”
 You can also use MongoDB’s stats to estimate the working set.
 MongoDB keeps a map of what it thinks is its memory, which you can see by passing in the "workingSet" : 1 option to serverStatus:
 MongoDB does not actually know how many pages are in memory, but it should be close.
@@ -3297,6 +3390,7 @@ Make sure you create the "_id" index as a unique index.
 Once created, the "_id" index cannot be dropped or changed (other than by dropping the whole collection)
 Replication getting stuck and, just before February 10, beginning to recover.
 If a system is overloaded, a secondary may gradually fall behind.
+But you generally won’t see the characteristic “one second per second” slope in the graph, but some replication will still be happening.
 Still, it is important to be aware if the secondaries cannot keep up with peak traffic or are gradually falling further behind.
 Primaries do not throttle writes to “help” secondaries catch up, so it common for secondaries to fall behind on overloaded systems (particularly as MongoDB tends to prioritize writes over reads, which means replication can be starved on the primary)
 You can force throttling of the primary to some extent by using “w” with your write concern.
@@ -3310,6 +3404,7 @@ The other important metric to track is the length of each member’s oplog.
 Every member that might become primary should have an oplog longer than a day.
 If a member may be a sync source for another member, it should have an oplog longer than the time an initial sync takes to complete.
 Figure 21-15 shows what a standard oplog-length graph looks like.
+This oplog has an excellent length: 1,111 hours is over a month of data! In general, oplogs should be as long as you can afford the disk space to make them.
 Given the way they’re used, they take up basically no memory and a long oplog can mean the difference between a painful ops experience and an easy one.
 Figure 21-16 shows a slightly unusual variation caused by a fairly short oplog and variable traffic.
 The administrator may want to make the oplog longer when she gets a chance.
@@ -3385,6 +3480,7 @@ You must also create an oplog when you restore from a mongodump backup, or the r
 To restore a replica set member from a mongodump backup, start the target replica set member as a standalone server with an empty data directory.
 First, run mongorestore (as described in the previous section) with the --oplogReplay option.
 Now it should have a complete copy of the data, but it still needs an oplog.
+See “Resizing the Oplog” on page 220 for advice on oplog sizing.
 The easiest way to do this is to restore the oplog.bson backup file from the dump into the local.oplog.rs collection:
 Once this mongorestore is complete, you can restart this server as a replica set member.
 Backing Up a Sharded Cluster Sharded clusters are impossible to “perfectly” back up while active: you can’t get a snapshot of the entire state of the cluster at a point in time.
@@ -3392,6 +3488,7 @@ However, this limitation is generally sidestepped by the fact that as your clust
 Thus, when dealing with a sharded cluster, we focus on backing up pieces: the config servers and the replica sets individually.
 Turn off the balancer before performing any of these operations on a sharded cluster (either backup or restore)
 You cannot get a consistent snapshot of the world with chunks flying around.
+See “Balancing Data” on page 289 for instructions on turning the balancer on and off.
 Backing Up and Restoring an Entire Cluster When a cluster is very small or in development, you may want to actually dump and restore the entire thing.
 You can accomplish this by turning off the balancer and then running mongodump through the mongos.
 This creates a backup of all of the shards on whatever machine mongodump is running on.
@@ -3421,6 +3518,7 @@ Periodically add any operations that have happened on A to B’s copy of the dat
 There is a special tool that comes with MongoDB distributions that makes this easy: mongooplog (pronounced mon-goop-log) which copies data from the oplog of one server and applies it to the data set on another.
 This technique is sort of like keeping a secondary up-to-date manually, so you may just want to use a slavedelayed secondary instead.
 This chapter gives recommendations for setting up a server to go into production.
+Choosing what hardware to buy and how to set it up.
 Designing the System You generally want to optimize for data safety and as fast access as you can afford.
 This section discusses the best way to accomplish these goals when choosing disks, RAID configuration, CPU, and other hardware and low-level software components.
 Choosing a Storage Medium In order of preference, we would like to store and retrieve data from:
@@ -3430,10 +3528,10 @@ If you are in this camp, the important thing is that your working set is smaller
 If you are able to spend what you like on hardware, buy a lot of RAM and/or SSDs.
 Reading data from RAM takes a few nanoseconds (say, 100)
 Conversely, reading from disk takes a few milliseconds (say, 10)
+It can be hard to picture the difference between these two numbers, so suppose we scale them up to more relatable numbers: if accessing RAM took 1 second, accessing disk would take over a day!
 Thus, we want to access disk as seldom as possible.
 Fast spinning disks do not cut down disk access time that much, so don’t spend lots of money on them.
 It is more productive to get more memory or SSDs.
-These graphs are from a user bringing a new shard online midday on August 8
 He added a new shard backed by SSDs and, in the graphs, was concurrently running one shard with SSDs and one with spinning disks.
 In comparison, the chart in Figure 23-2 plots queries on the SSD drive.
 The other interesting point to note about SSDs versus spinning disks is the amount of stress these relative loads placed on the system.
@@ -3446,7 +3544,7 @@ As the numbers are greater than 100%, this graph also shows that multiple proces
 Contrast that to the chart in figure Figure 23-3, where not even a single core could be fully utilized due to the lag from disk IO.
 Finally, you can see some of the effect this has on MongoDB by looking at the graphs of lock times in Figure 23-5
 Contrast this with the lock percentage on the SSD machine in Figure 23-6
-The bump at the beginning of the chart was from a data-loading operation that he performed before bringing the SSD online.)
+The bump at the beginning of the chart was from a data-loading operation that he performed before bringing the SSD online.
 As you can see, SSDs can shoulder a lot more load than spinning disks, but unfortunately they aren’t an option for a lot of deployments.
 Even if it’s not possible to use SSDs for your entire cluster, consider deploying as many as possible and then using the forced hot spot data pattern in Chapter 15 to take advantage of them.
 Note that generally you cannot add an SSD to an existing replica set (where the other members have spinning disks)
@@ -3455,7 +3553,6 @@ Thus, it is a good idea to add a new shard to your cluster if you are introducin
 Note that SSDs are excellent for normal data usage patterns, but spinning disks actually work very well for the journal.
 Putting the journal on a spinning disk and your data on SSDs can save you SSD space and should have no impact on performance.
 Recommended RAID Configurations RAID is hardware or software that lets you treat multiple disks as though they were a single disk.
-A set of disks using RAID is referred to as a RAID array (somewhat unfortunately, as RAID stands for redundant array of inexpensive disks...
 There are a number of ways to configure RAID depending on the features you’re looking for, generally some combination of speed and fault-tolerance.
 Each disk holds part of the data, similar to MongoDB’s sharding.
 Because there are multiple underlying disks, lots of data can be written to disk at the same time.
@@ -3519,6 +3616,7 @@ However, that’s not an option for a lot of people, so the next-best thing is t
 If you can’t pursue either of these options and you need more disk IO than an overloaded EBS volume can sustain, there is a way to hack around it.
 Basically, what you can do is to keep monitoring against the volume MongoDB is using.
 If and when that volume slows down, immediately kill that instance and bring up a new one with a different data volume.
+Spiking IO utilization (“IO wait” on MMS), for obvious reasons.
 The number of lost TCP packets go up (Amazon is particularly bad about this: when performance starts to fall, it drops TCP packets all over the place)
 MongoDB’s read and write queues spiking (this can be seen on MMS or in mongo stat’s qr/qw column)
 If your load varies over the day or week, make sure your script takes that into account: you don’t want a rogue cron job killing off all of your instances because of an unusuallyheavy Monday morning rush.
@@ -3537,6 +3635,7 @@ Configuring System Settings There are several system settings which can help Mon
 This section covers each of these options and how you should tweak it.
 Turning Off NUMA When machines had a single CPU, all RAM was basically the same in terms of access time.
 As machines started to have more processors, engineers realized that having all memory be equally far from each CPU (as shown in Figure 23-7) was less efficient than having each CPU have some memory that is especially close to it and fast for that particular CPU to access.
+This architecture where each CPU has its own “local” memory is called non-uniform memory architecture (NUMA), shown in Figure 23-8
 Uniform memory architecture: all memory has the same access cost for each CPU.
 Non-Uniform Memory Architecture: certain memory is attached to a CPU, giving the CPU faster access to that particular memory.
 CPUs can still access other CPUs’ memory, but it is more expensive than accessing their own.
@@ -3548,11 +3647,15 @@ CPUs favor using the memory that is attached to them and processes tend to favor
 It must use its local memory for data that doesn’t have a “home” yet, but its local memory is full.
 Thus, it has to evict some of the data in its local memory to make room for the new data, even though there’s plenty of space left on the memory attached to CPU2! This process tends to cause MongoDB to run much slower than expected, as it only has a fraction of the memory available that it should have.
 MongoDB vastly prefers semi-efficient access to more data than extremely efficient access to less data.
+Turning off NUMA is one of the magic “go faster” buttons that you definitely want to make sure you’ve pressed.
 Like using SSDs, disabling NUMA just makes everything work better.
 For example, if you’re using grub, you can add the numa=off option to grub.cfg:
+If your system cannot turn it off in BIOS, you’ll have to start mongod with: $ numactl --interleave=all mongod [options]
+This nasty setting can be thought of as “super NUMA.” If it’s enabled, whenever a page of memory is accessed by a CPU, it will moved to that CPU’s local memory.
 Thus, if you have a threadA on one CPU and threadB on another and they’re both hitting a page of memory, that page will be copied from one CPU’s local memory to the other’s on every single access.
 You do not have to restart mongod for zone_reclaim_mode changes to take effect.
 If you have NUMA enabled, your hosts will show up in yellow on MMS, as shown in Figure 23-10
+You can see the actual warning that’s causing it to be yellow by going to the “Last Ping” tab.
 Figure 23-11 shows the warning you’ll see if NUMA is enabled.
 Once NUMA has been disabled, MMS will display the host in blue again.
 There are several other reasons a host may appear in yellow.
@@ -3566,16 +3669,16 @@ However, if you are accessing data fairly randomly across the disk, all of those
 If memory was contained your working set, 255 sectors of your working set would have to be evicted to make room for these sectors that aren’t going to be used.
 Fortunately, there’s a fairly easy way to see if your readahead setting is actively hurting you: check the resident set size of MongoDB and compare it to the system’s total RAM.
 If it is much lower, then your readahead is probably too high.
+This technique of comparing resident set size with total memory size works because data that’s been “read ahead” from disk is in memory but MongoDB didn’t request it, so it isn’t included in the calculation of MongoDB’s resident memory size.
 This shows you the settings for each of your block devices.
 You can change this setting for a device by running this command with the --setra option:
 You don’t want to set readahead too low, either: you don’t want to have to go to disk multiple times to fetch a single document.
 If you have large documents (greater than a megabyte in size), consider a higher readahead.
-If your documents are small, stick with something low, like 32
 When using RAID, you have to set readahead on everything: the RAID controller and the individual volumes.
 Unintuitively, you must restart MongoDB for readahead settings to take effect.
 You’d think you’re setting a disk property, so it should apply to all running programs.
 Unfortunately, processes make a copy of the readahead value when they start and continue to use that value until terminated.
-All of your data fits into memory and • You have no plans for it to ever grow beyond memory.
+You have no plans for it to ever grow beyond memory.
 MongoDB needs to page in lots of tiny pieces of memory, so using hugepages can result in more disk IO.
 Systems move data from disk to memory and back by the page.
 However, using hugepages means that you are keeping megabytes of data from one section of disk in memory.
@@ -3617,7 +3720,7 @@ Set the max number of file descriptors to unlimited or, if you’re nervous abou
 Each system has a different way of changing these limits, but in general, make sure that you change both the hard and soft limits.
 A hard limit is enforced by the kernel and can only be changed by an administrator, versus a soft limit, which is user-configurable.
 If the number of connections is left at 1024, MMS will warn you by displaying the host in yellow on the host list (as shown in the NUMA example above)
-Even if you have a non-sharded setup and an application that only uses a small number of connections, increase the hard and soft limits to at least 4096
+If low limits are the issue, the “Last Ping” tab should display a message similar to that shown in Figure 23-12
 That will stop MongoDB from warning you about them and give you some breathing room, just in case.
 Configuring Your Network This section covers which servers should have connectivity to which other servers.
 Often, for reasons of network security (and sensibility), you may want to limit the connectivity of MongoDB servers.
@@ -3632,8 +3735,6 @@ A mongos must be able to connect to the shards and config servers.
 A shard must be able to connect to the other shards and the config servers.
 There are three possible values in the table: “Required” means that connectivity between these two components is required for sharding to work as designed.
 MongoDB will attempt to degrade gracefully if it loses these connections due to network issues, but you shouldn’t purposely configure it that way.
-Not required” means that these two elements never talk in the direction specified, so no connectivity is needed.
-Not recommended” means that these two elements never talk, but due to user error they could.
 For example, it is recommended that clients only make connections to the mongos, not the shards, so that clients do not inadvertently make requests directly to shards.
 Similarly, clients should not be able to directly access config servers so that they cannot accidentally modify config data.
 Note that mongos processes and shards talk to config servers, but config servers don’t make connections to anyone, even one another.
@@ -3660,6 +3761,7 @@ This is not something that you want running on your production server.
 This means that, on most platforms, you can download an archive from http://www.mongodb.org/ downloads, inflate it, and run the binary.
 The MongoDB server requires a directory it can write database files to and a port it can listen for connections on.
 This section covers the entire install on the two variants of system: Windows and everything else (Linux, Max, Solaris)
+When we speak of “installing MongoDB,” generally what we are talking about is setting up mongod, the core database server.
 Most of the time, this will be the MongoDB process you are using.
 Choosing a Version MongoDB uses a fairly simple versioning scheme: even-point releases are stable, and odd-point releases are development versions.
 Let’s take the 2.4/2.5 release as a sample case to demonstrate how the versioning timeline works:
@@ -3720,7 +3822,7 @@ Data Files Inside of the MongoDB data directory, which is /data/db/ by default, 
 Each database has a single .ns file and several data files, which have monotonically increasing numeric extensions.
 The numeric data files for a database will double in size for each new file, up to a maximum file size of 2 GB.
 This behavior allows small databases to not waste too much space on disk, while keeping large databases in mostly contiguous regions on disk.
-This behavior can be disabled using the --noprealloc option.) Preallocation happens in the background and is initiated every time that a data file is filled.
+Preallocation happens in the background and is initiated every time that a data file is filled.
 This means that the MongoDB server will always attempt to keep an extra, empty data file for each database to avoid blocking on file allocation.
 Namespaces and Extents Within its data files, each database is organized into namespaces, each storing a specific collection’s data.
 The documents for each collection have their own namespace, as does each index.

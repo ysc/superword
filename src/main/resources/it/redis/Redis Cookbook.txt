@@ -49,6 +49,7 @@ So in order to decide whether your data should be stored in a RDBMS or NoSQL eng
 Also bear in mind that quite often the ideal solution will be to use both.
 Are your application and data a good fit for NoSQL?
 When working on the web, chances are your data and data model keep changing with added functionality and business updates.
+Evolving the schema to support these changes in a relational database is a painful process, especially if you can’t really afford downtime—which people most often can’t these days, because applications are expected to run 24/7
 As a case in point, in a recent presentation on MongoDB, Jeremy Zawodny of Craigslist mentioned how changing the schema on their database typically takes a two month-long toll on their post archival service.
 Examples of data that are a particularly good fit for nonrelation storage are transactional details, historical data, and server logs.
 These are normally highly dynamic, changing quite often, and their storage tends to grow quite quickly, further compounding the problem of adjusting the schema to store them.
@@ -92,6 +93,7 @@ Most modern Linux distributions have Redis packages available for installation, 
 However, if you prefer to use these, the installation procedure is much simpler: Debian/Ubuntu.
 This approach has a few advantages: by using your package management system, you can more easily keep software up-to-date, and you’ll most likely get at least security and stability updates.
 Besides that, you’ll also get startup scripts and an environment more suited to your distribution (user accounts, log files, database location, etc)
+Although Redis is not officially supported on Windows for several reasons—notably the lack of a copy-on-write fork()—the community provides a few ports.
 Due to Windows’ limitations, Redis MinGW builds execute operations such as BGSAVE and BGREWRITEAOF in the foreground (thus blocking the Redis process) and Cygwin builds don’t use CoW, which makes background operations very slow, particularly for large database sizes.
 Be sure to disable automatic saving in the config file (especially for MinGW builds) and use SAVE only when needed.
 Beware that for performance and stability reasons, the Windows versions of Redis are not recommended for production use.
@@ -102,13 +104,16 @@ Cygwin is the easiest way to compile Redis on Windows.
 Some users might have licensing issues (due to Cygwin’s use of the GPL)
 They all require you to have the XCode developer tools installed, which includes libraries and compilers.
 If you are a developer on a Mac, chances are you already have this package installed.
+If you don’t, you can either download it from Apple’s developers website or run “Install Developer Tools” on your Mac’s installation DVDs.
 You can manually compile Redis from source by following the steps earlier in this chapter.
 Most people, however, prefer the convenience of a package manager such as Fink, MacPorts, or Homebrew.
 A Redis package isn’t available on Fink, so we’ll cover the other two.
+MacPorts defines itself as “an easy to use system for compiling, installing, and managing open source software.” It is based on the FreeBSD Ports system, and to a large extent can be used in the exact same way.
 In order to install Redis through MacPorts, you need to first install the package management system.
 Once you’ve installed MacPorts, installing the Redis package is as simple as:
 Since Redis has no direct dependencies, the actual compilation and installation process is quite speedy.
 Homebrew is the latest entrant in the Mac package management scene.
+Being relatively new means that not every package you might be looking for is available on it—even though they make contributions very easy—but if you’re looking for a tool that developers use often, chances are that it’s going to be available through a Homebrew recipe.
 You can install Homebrew by following the detailed instructions available over at Github, but it is usually as simple as running the following command:
 Once that’s done, you’ll be ready to install packages using the Homebrew recipes system.
 You can then run redis-server manually or install it into the Mac’s own LaunchServices so that it starts when you reboot your computer.
@@ -134,6 +139,7 @@ Lists in Redis are ordered lists of binary safe strings, implemented on the idea
 This means that while getting an element by a specific index is a slow operation, adding to the head or tail of the data structure is extremely fast, as it should be in a database.
 You might want to use lists in order to implement structures such as queues, a recipe for which we’ll look into later in the book.
 Much like traditional hashtables, hashes in Redis store several fields and their values inside a specific key.
+Hashes are a perfect option to map complex objects inside Redis, by using fields for object attributes (example fields for a car object might be “color”, “brand”, “license plate”)
 Sets in Redis are an unordered collection of binary-safe strings.
 For instance, if you try to add an element wheel to a set twice, Redis will ignore the second operation.
 Sets allow you to perform typical set operations such as intersections and unions.
@@ -192,6 +198,7 @@ We’ll use these structures and commands to store application sample data: as e
 Imagine we run a business social network and want to track profile/page visit data.
 We could just add a column to whatever table is storing our page data in our RDBMS, but hopefully our traffic is high enough that updates to this column have trouble keeping up.
 We need something much faster to update and to query.
+Thanks to the atomicity of Redis commands (see “Using Redis Data Types” on page 7 for more about data types and atomicity), we know that if we store a counter key, we can use commands such as INCR (or INCRBY) and DECR (or DECRBY) to increment or decrement its contained value.
 So by designing a proper namespace for our data, maintaining our counters becomes a trivial one-operation endeavor.
 There’s no actual convention for organizing keys in systems like Redis, but a lot of people (including the authors) like to build keys out of keywords separated by colons, so we’ll do that here.
 If we already were storing visit data somewhere, we can first seed redis with that data by setting our keys to the current values:
@@ -204,12 +211,14 @@ A simple pseudocode for visits and counters could look like this:
 We INCR the visits counter related to the page (INCR visits:635:totals, for instance)
 We show the user the page with the return value.
 This way we guarantee that the user always sees real live counter data when looking at the page, and that his own visited is counted too—all with a single Redis command.
+As discussed in “Using Redis Data Types” on page 7, Redis’s implementation of hashes makes for a perfect solution to store the object data applications typically use.
 In the following example, we’ll look into how we might use hashes to store information on users in a given system.
 We’ll begin by designing a key namespace to store our users.
 As before, we’ll be separating keywords with colons to generate a rich key that makes sense in our system.
 For the sake of this recipe, we’ll go with something simple like keys in the form of users:alias, where alias is a binary-safe string.
 So to store information about a user called John Doe, we might build a hash called users:jdoe.
 Let’s also assume we want to store a number of fields about our users, such as a full name, email address, phone number, and number of visits to our application.
+We’ll use Redis’s hash management commands—like HSET, HGET, and HINCRBY—to store this information.
 With our hash built and in place, we can fetch single fields with HGET or the full hash by using the HGETALL command, as exemplified here:
 There are auxiliary commands like HKEYS, which return the keys stored in a particular hash, and HVALS, which returns only the values.
 Depending on how you want to retrieve your data, you may find it useful to use HGETALL or one of these to retrieve data from Redis into your application.
@@ -265,7 +274,6 @@ This command gives us, for every application, a hash containing its “general�
 Sets a value on a hash with the given key.
 As with other Redis commands, if the hash doesn’t exist, it’s created.
 In order to get a request token, consumers send their key, a timestamp, a unique generated nonce, a callback url, and a request signature that is a hash of the request path and parameters using the consumer secret.
-For security purposes, the consumer secret is never sent—it’s a pre-shared secret since both parts know it)
 The API provider needs to verify that the signature is correct using the key and secret, check whether this nonce/timestamp combination was used previously (to prevent replaying), and generate a new request token.
 In order to do so, the server needs to fetch the consumer data:
 Using a set to store the nonce data has a few advantages.
@@ -300,6 +308,7 @@ The pattern allows then for emitters and clients to be loosely coupled—they do
 They just need to be able to send messages in a given pattern, and receive messages that match that pattern.
 For a better understanding of how Publish/Subscribe works, see the Wikipedia page.
 Redis has direct support for the pub/sub pattern, meaning that it lets clients subscribe to specific channels matching a given pattern, and to publish messages to a given channel.
+This means that we can easily create channels like “chat:cars” for car-talk, or “chat:sausage” for food-related conversation.
 The channel names are not related to the Redis keyspace so you don’t have to worry about conflicts with existing keys.
 The pub/ sub functionality is supported by the following Redis commands: PUBLISH.
 With this knowledge, it is trivial to implement chat and notification systems, either for end-users or to stream messages between logical parts of applications.
@@ -313,9 +322,9 @@ Let’s start off by installing the necessary node libraries using npm:
 On the server side, we’ll be running Redis and creating a Javascript file that we’ll run with Node.js.
 This piece of code will take care of setting up a connection to Redis and listening on a given port for connecting clients (either using websockets or flash—this choice will be handled transparently by Socket.IO)
 These lines require the libraries we installed and create the variables we’ll use to access Redis and Socket.IO.
+We’ll access Redis with the “redis” variable, and “io” will let us.
 The next thing we must do in our code is to set up an HTTP server system on top of which Socket.io will do its websocket magic.
 If you have some experience with Node.js or Socket.IO, this code is pretty straightforward.
-What we’re basically doing is setting up an HTTP server, specifying how it will reply to requests, making it listen on a port (in this case, we’re going to listen on port JavaScript files and set up the websocket functionality.
 Now we set up the small bits of Redis code to support our functionality.
 The Redis client we set up with Node.js must subscribe to a specific chat channel, and deal with messages on that channel when they arrive.
 As you can see, our actual Redis code is extremely simple.
@@ -358,7 +367,6 @@ Notice the use of a multi function in the previous code.
 This is because we have a potential race condition in the temp_set sorted set.
 Whenever you have two or more commands that must both be applied before anyone else tries to access the data they change (as we do here with ZINTERSTORE followed by ZREVRANGE), the potential for a race condition exists.
 In order to avoid running into this race condition, while performing parallel search queries, we must either use Redis’s MULTI/EXEC commands or be able to generate a unique key for each search query.
-In that case, we should also clean up after ourselves and delete the temporary sorted set)
 The MULTI and EXEC commands allow transactional behavior in Redis.
 All commands written in a MULTI/EXEC block are assured to be run sequentially, which means that no other Redis client gets served during the length of the block.
 In the previous example, it eliminates the race condition in temp_set because other clients are unable to change the value between the ZINTERSTORE and ZREVRANGE operations.
@@ -400,7 +408,9 @@ What we’re doing here is adding the ID for this user (which could be simply an
 This allows us to track hits per day and globally over time.
 This also allows us to enforce rate limiting by simply checking whether that client has gone over the limit for a given time period.
 Fetching data for a given period of time is also a trivial and efficient operation that can be used to plot a chart or display the data in some other way:
+We can also fetch the top clients for any “time slot” that we’re storing data for, using the SORT command.
 This implementation, using hashes, is highly optimized for storage, retrieval, and updating (all O(1) operations) but not for calculating the top users (particularly for a date range)
+Should you require those operations—for example, when displaying a highscore table—you can reimplement the sort using sorted sets, which guarantee that you get your data sorted:
 Notice that we’re keeping the result of ZUNIONSTORE and setting an expiration timestamp on it.
 That’s a common Redis pattern: caching the result of a computationally expensive operation and, upon request, checking the cache before redoing the operation.
 In the previous example, where we’re using hashes, we could also store the result of SORT (using the STORE option) and then check for its existence in a similar way with EXISTS.
@@ -418,6 +428,7 @@ Aggregates a collection of sorted sets and stores it as a new sorted set at dest
 Optionally, you can specify weights (a multiplication factor) per set and the aggregation function: sum (the default), maximum scores, or minimum scores.
 Problem A typical use case for Redis has been a queue.
 Although this is owed mostly to Resque (a project started by Github after trying all the other Ruby job queueing solutions)
+In fact, there are several other implementations (Barbershop, qr, presque) and tutorials (“Creating Processing Queues with Redis”)
 Nevertheless, it’s interesting in the context of this book to give an example implementation (inspired by existing ones)
 Solution Let’s implement our queues on top of lists, which provide atomic push/pop operations and have constant access time to the list’s head and tail.
 We’ll also keep a set that lists all the existing queues for introspection purposes.
@@ -427,11 +438,9 @@ Redis lists contain strings, so we must serialize our data.
 Let’s also write some auxiliary functions for such operations as emptying a queue, removing it, checking its length, removing a job, and peeking into the queue to check what the next job is:
 Notice how we just delete the list (instead of using LTRIM) from Redis when emptying the queue.
 This isn’t a problem as Redis treats a nonexisting value as an empty queue.
-In fact, using the length function after emptying the queue with del will return 0
 Beware that removing a single element from a list isn’t cheap.
 Because lists are optimized for head and tail access, in order to remove an element from the middle of the list, Redis will have to iterate through it.
 You also need to know the exact value that you want to remove—you can’t apply regular expressions or other matchers and you can’t remove by index.
-Quick Reference for Additions to Lists When dealing with indexes, the head of the list is element 0
 Inserts the given value at the tail of the list-name list.
 It’s similar to the LRANGE command, but instead of just returning the elements, it trims the list.
 If count is positive, the elements are removed starting from the head, if it’s negative, they are removed starting from the tail, and if it’s 0, all occurrences of value are removed.
@@ -448,6 +457,7 @@ If you’re not a using a blocking implementation, you should add a “sleep” 
 Otherwise you’ll end up using all your CPU checking for jobs in an empty queue (assuming you’re not filling it up quickly enough)
 Implementing our job processing functionality is easy enough by just dequeuing and processing jobs in a loop.
 What if we want to have multiple queues, representing higher and lower priority jobs? Luckily, BLPOP supports multiple lists.
+People familiar with Unix and Linux system programming can see a resemblance to the select(2) call, which simultaneously monitors several file handles for activity.
 The relevant change here is the way BLPOP is used.
 If passed multiple lists, it will block waiting to return elements from the specified lists, using their order in its argument list.
 In our example, if there are jobs in both the first list and the second list in queues, the job from the first list will be returned first.
@@ -524,9 +534,10 @@ Discussion If you decide to use VM, you should be aware of its ideal use cases a
 This means that if you have a big number of small keys, VM might not be the best option for you or you might have the change your data structure and use large strings, hashes, lists, or sets instead.
 If you regularly query all your data, VM is probably not a good fit because your Redis server might end up blocking clients in order to fetch the values from disk.
 Doing a full dump of your Redis server will be extremely slow.
+In order to generate a snapshot, Redis needs to read all the values swapped to disk in order to write them to the RDB file (see “Configuring Persistence” on page 45)
 Due to this, it might be better for you to use AOF as a persistence mode.
 In order to enable it, you’ll need to add this to your configuration file:
-There are other settings that you should pay attention to when enabling VM: • vm-swap-file specifies the location of the swap file in your filesystem.
+There are other settings that you should pay attention to when enabling VM:
 Beware that this is a soft limit, because keys are always kept in memory and because Redis won’t swap values to disk while creating a new snapshot.
 Setting it to 0 enables blocking VM, which means that your Redis server will block all clients when it needs to read a value from disk.
 Once again, depending on your data access patterns, this may or may not be the best option.
@@ -538,7 +549,6 @@ Unfortunately, Redis can’t do online binary upgrades, and doing a server resta
 But that doesn’t mean that there aren’t other ways to achieve it without incurring downtime.
 You might also want to move your current Redis database to another system for maintenance purposes, a hardware upgrade, etc.
 Solution Our solution will involve starting a new Redis server in slave mode, switching over the clients to the slave and promoting the new server to the master role.
-To make the example easier to understand, let’s assume we have a Redis server listening on port 6379
 It might be easier to start the slave on a new server than on the existing one.
 This is because of memory requirements, and because you can reuse the same configuration file, directories, and port for the slave, changing only the hostname or IP address.
 Install the new Redis version without restarting your existing server.
@@ -574,7 +584,6 @@ All you have to do is copy the current snapshot to another location.
 Use a copy, not a move, because if Redis crashes and restarts and the snapshot is not there, you will end up losing all your data!
 In case you want an up-to-date snapshot (instead of using the last one Redis did according to your settings) you can trigger it by issuing:
 Be sure to compress the snapshot before backing it up.
-That will probably reduce its size by at least a factor of 10
 Simply shut down the server, put the snapshot you want to restore in the dbfilename location configured by redis.conf, and then start the server.
 This order is important, because when Redis shuts down, it performs a snapshot, thus overwriting this file.
 If you’re using the AOF as the only persistence mode (you can also use it together with snapshotting) the easiest way to do a backup is still to perform use a snapshot as described in the previous section.
@@ -582,6 +591,7 @@ However, if you’re using AOF, you’re most likely worried about losing data b
 You may also be avoiding snapshots because they put too much load on your server.
 In order to recover when using the AOF, just do the same procedure you would for snapshotting, but instead put your backup in the AOF location.
 Be sure to remember to run BGREWRITEAOF regularly if you’re using AOF.
+Should your Redis server refuse to start due to a corrupted AOF—which can happen if the server crashes or is killed while writing to the file—you can use the redis-checkaof utility to fix your AOF:
 If you are running Redis in VM mode, be sure to understand the tradeoffs.
 Starting or stopping your server will take a long time if you have a big dataset.
 Performing a snapshot in order to back up your data might also take a long time.
@@ -596,6 +606,7 @@ Problem Sharding is a horizontal partitioning tecnique often used with databases
 It allows you to scale them by distributing your data across several database instances.
 Not only does this allow you to have a bigger dataset, as you can use more memory, it will also help if CPU usage is the problem, since you can distribute your instances through different servers (or servers with multiple CPUs)
 In Redis’s case, sharding can be easily implemented in the client library or application.
+Solution Since Redis Cluster is still under development and should only be released sometime later in 2011—with a beta most likely arriving in the summer—sharding is a useful tecnique for scaling your application when your data no longer fits in a single server.
 Currently there are three possibilities when it comes to sharding Redis databases: Use a client with built-in sharding support.
 Build sharding support yourself on top of an existing client This involves some programming that might not be too hard if you understand your dataset and applications thoroughly.
 At the very least, you’ll have to implement a partitioning rule and handle the connections to the different servers.

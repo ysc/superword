@@ -25,6 +25,7 @@ Here, you can access, read and search across Packt's entire library of books.
 Preface Hadoop is a great open source tool for sifting tons of unstructured data into something manageable, so that your business can gain better insight into your customers, needs.
 It is cheap (can be mostly free), scales horizontally as long as you have space and power in your data center, and can handle problems your traditional data warehouse would be crushed under.
 That said, a little known secret is that your Hadoop cluster requires you to feed it with data; otherwise, you just have a very expensive heat generator.
+You will quickly find, once you get past the “playing around” phase with Hadoop, that you will need a tool to automatically feed data into your cluster.
 In the past, you had to come up with a solution for this problem, but no more! Flume started as a project out of Cloudera when their integration engineers had to keep writing tools over and over again for their customers to import data automatically.
 Today the project lives with the Apache Foundation, is under active development, and boasts users who have been using it in their production environments for years.
 In this book I hope to get you up and running quickly with an architectural overview of Flume and a quick start guide.
@@ -33,6 +34,7 @@ Since Flume comes with a wide variety of modules, chances are that the only tool
 By the end of the book, you should know enough to build out a highly available, fault tolerant, streaming data pipeline feeding your Hadoop cluster.
 What this book covers Chapter 1, Overview and Architecture, introduces the reader to Flume and the problem space that it is trying to address (specifically with regard to Hadoop)
 An architectural overview is given of the various components to be covered in the later chapters.
+Chapter 2, Flume Quick Start, serves to get you up and running quickly, including downloading Flume, creating a “Hello World” configuration, and running it.
 Chapter 3, Channels, covers the two major channels most people will use and the configuration options available for each.
 Chapter 4, Sinks and Sink Processors, goes into great detail on using the HDFS Flume output, including compression options and options for formatting the data.
 Failover options are also covered to create a more robust data pipeline.
@@ -41,6 +43,7 @@ Switching between different channels based on data content is covered, allowing 
 Chapter 6, Interceptors, ETL, and Routing, explains how to transform data in flight as well as extract information from the payload to use with channel selectors to make routing decisions.
 Tiering Flume agents is covered using Avro serialization, as well as using the Flume command line as a standalone Avro client for testing and importing data manually.
 Chapter 7, Monitoring Flume, discusses various options available to monitor Flume both internally and externally including Monit, Nagios, Ganglia, and custom hooks.
+Chapter 8, There Is No Spoon – The Realities of Real-time Distributed Data Collection, is a collection of miscellaneous things to consider that are outside the scope of just configuring and using Flume.
 What you need for this book You’ll need a computer with a Java Virtual Machine installed, since Flume is written in Java.
 If you don’t have Java on your computer, you can download it from http://java.com/
 You will also need an Internet connection so you can download Flume to run the Quick Start example.
@@ -51,12 +54,14 @@ For this level of implementation, you will need to know how to program in Java.
 Finally, you’ll need your favorite text editor since most of this book covers how to configure various Flume components via the agent’s text configuration file.
 Conventions In this book, you will find a number of styles of text that distinguish between different kinds of information.
 Here are some examples of these styles, and an explanation of their meaning.
+Code words in text are shown as follows: “We can include other contexts through the use of the include directive.”
 When we wish to draw your attention to a particular part of a code block, the relevant lines or items are set in bold:
 Warnings or important notes appear in a box like this.
 Let us know what you think about this book—what you liked or may have disliked.
 Reader feedback is important for us to develop titles that you really get the most out of.
 Customer support Now that you are the proud owner of a Packt book, we have a number of things to help you to get the most from your purchase.
 Errata Although we have taken every care to ensure the accuracy of our content, mistakes do happen.
+If you find a mistake in one of our books—maybe a mistake in the text or the code—we would be grateful if you would report this to us.
 By doing so, you can save other readers from frustration and help us improve subsequent versions of this book.
 If you find any errata, please report them by visiting http://www.
 Once your errata are verified, your submission will be accepted and the errata will be uploaded on our website, or added to any list of existing errata, under the Errata section of that title.
@@ -73,6 +78,7 @@ Furthermore, since you are reading this book, you are also aware that Hadoop was
 Of course, this only works if you can reliably load your Hadoop cluster with data for your data scientists to pick apart.
 Getting data in and out of Hadoop (in this case, the Hadoop File System (HDFS)) isn't hard—it is just a simple command as follows:
 This works great when you have all your data neatly packaged and ready to upload.
+How often should you batch load data to HDFS? Daily? Hourly? Whatever processing period you choose, eventually somebody always asks, "can you get me the data sooner?" What you really need is a solution that can deal with streaming logs/data.
 Cloudera, a provider of professional services for Hadoop as well as their own distribution of Hadoop, saw this need over and over while working with their customers.
 Flume was created to meet this need and create a standard, simple, robust, flexible, and extensible tool for data ingestion into Hadoop.
 It consisted of a federation of worker daemons (agents) configured from a centralized master (or masters) via Zookeeper (a federated configuration and coordination system)
@@ -83,7 +89,6 @@ This mode is good for things like metrics where gaps can easily be tolerated, as
 Disk failover mode stores undeliverable data to the local disk (or sometimes a local database) and keeps retrying until the data can be delivered to the next recipient in your data flow.
 This is handy for those planned (or unplanned) outages as long as you have sufficient local disk space to buffer the load.
 In June of 2011, Cloudera moved control of the Flume project to the Apache foundation.
-It came out of incubator status a year later in 2012
 During that incubation year, work had already begun to refactor Flume under the Star Trek Themed tag, Flume-NG (Flume the Next Generation)
 Flume 1.X (Flume-NG) There were many reasons to why Flume was refactored.
 What started as a refactoring branch eventually became the main line of development as Flume 1.X.
@@ -146,8 +151,6 @@ In the following diagram you can see there are two places data is created (on th
 To make things more interesting, let's say one of the machines generates two kinds of data (let's call them square and triangle data)
 You can see in the lower-left agent we use a multiplexing channel selector to split the two kinds of data into different channels.
 The rectangle channel is then routed to the agent in the upper-right corner (along with the data coming from the upper-left agent)
-The combined volume of events is written together in HDFS in datacenter 1
-Meanwhile the triangle data is sent to the agent that writes to ElasticSearch in datacenter 2
 Keep in mind that the data transformations can occur after any source or before any sink.
 How all of these components can be used to build complicated data workflows will become clear as the book proceeds.
 Summary In this chapter we discussed the problem that Flume is attempting to solve; getting data into your Hadoop cluster for data processing in an easily configured and reliable way.
@@ -223,7 +226,6 @@ In fact, if I had my own custom source written, I would use its classname for th
 You cannot define your own short names without patching the Flume distribution:
 Here we see that our source is now listening on port 12345 for input.
 We'll use the nc command (you can use telnet or something similar) to send the String "Hello World" and click on <RETURN> to mark the end of the event:
-OK" came from the agent after pressing return signifying it accepted the line of text as a single Flume event.
 If you look at the agent log you see the following:
 This log message shows that the Flume event contains no headers (netcat source doesn't add any itself)
 The body is shown in hexadecimal along with a String representation (for us humans to read, in this case the Hello World message)
@@ -494,7 +496,6 @@ This will leave orphaned tail processes that will never exit.
 Even if you delete the file being tailed (at least in Linux), the running tail process will keep the file handle open indefinitely.
 This keeps the file's space from actually being reclaimed until the tail process exits—which it won't.
 I think you are beginning to see why the Flume developers don't like tailing files.
-If you go down this route, be sure to periodically scan the process tables for tail -F whose parent PID is 1
 These are effectively dead processes and need to be killed manually.
 Here is a list of the other properties you can use with the exec source:
 Not every command keeps running, either because it fails (like when the channel it is writing to is full) or the command is designed to exit immediately.
@@ -544,6 +545,7 @@ The implementation for this source has chosen 2500 bytes as the maximum payload 
 So, if your payload will be larger than this, use one of the TCP sources instead.
 To create a syslog UDP source, set the type property to syslogudp.
 You must set the port to listen on using the port property.
+If no host is specified, all IPs for the server will be used—the same as specifying 0.0.0.0
 In this example, we will only listen for local UDP connections on port 5140:
 If you want syslog to forward a tailed file, you could add a line such as  the following to your syslog configuration file:
 This would send all error, alert, critical, emergency priority, and kernel messages of any priority into your Flume source.
@@ -673,6 +675,7 @@ You need to provide a bind address and port number to listen on:
 Here we have configured the agent on the right that listens on port 42424, uses a memory channel, and writes to HDFS.
 Here I've used the memory channel for brevity of this example configuration.
 Also, note that I've given this agent a different name, collector, just to avoid confusion.
+The agents on the left—feeding the collector tier—might have a configuration similar to this.
 I have left the sources off this configuration for brevity:
 This configuration, named client, would be applied to both agents on the left assuming both had similar source configurations.
 Since I don't like single points of failure, I would configure two collector agents with the preceding configuration and instead set each client agent to round robin between the two using a sink group.
@@ -737,7 +740,6 @@ The developers of Monit have a paid version that provides more bells and whistle
 Even in the free form, it can provide you a way to check that the Flume agent is running, restart it if it isn't, and send you an e-mail when this happens so you can look into why it died.
 Monit does much more, but this functionality is what we will cover here.
 If you are smart, and I know you are, you will add checks on the disk, CPU, and memory usage at a minimum, in addition to what we cover in this chapter.
-Nagios Another option for Flume agent process monitoring is Nagios (http://www.
 Like Monit, you can configure Nagios to watch your Flume agents and alert you via WebUI, e-mail, or an SNMP trap.
 The community is quite strong and there are many plugins for other applications available.
 My company uses this to check the availability of Hadoop Web UIs.
@@ -746,7 +748,6 @@ Again, if you already have tools in place at your company, see if you can re-use
 Monitoring performance metrics Now that we have covered a few options for process monitoring, how do you know if your application is actually doing the work you think it is? On many occasions I've seen a stuck syslog-ng process that appeared to be running, but it just wasn't sending any data.
 I'm not picking on syslog-ng specifically; all software does this when conditions occur that it isn't designed to deal with.
 When talking about Flume data flows, you need to monitor the following:
-Data entering sources is within expected rates • Data isn't overflowing your channels.
 Flume has a pluggable monitoring framework, but as mentioned at the beginning of the chapter, it is still very much a work in progress.
 That doesn't mean you shouldn't use it since that would be foolish.
 It means you'll want to prepare extra testing and integration time whenever you upgrade.
@@ -790,11 +791,13 @@ Be sure you take the previous chapter on monitoring seriously and not just as a 
 Transport time versus log time I had a situation where data was being placed using date patterns in the filename and/or paths in HDFS didn't match the contents of the directories.
 But the reality was that the date was being pulled from the transport.
 It turns out that the version of syslog we were using was rewriting the header, including the date portion, causing the data to take on the transport time and not reflect the original time of the record.
+Usually the offsets were tiny—just a second or two—so nobody really took notice.
 But then one day one of the relay servers died and when the data, which had got stuck on upstream servers, was finally sent it had the current time.
 In this case it was shifted by a couple of days.
 Be sure this isn't happening to you if you are placing data by date.
 Check the date edge cases to see that they are what you expect, and make sure you test your outage scenarios before they happen for real in production.
 As I mentioned before, these retransmits due to planned or unplanned maintenance (or even a tiny network hiccup) will most likely cause duplicate and out-of-order events to arrive, so be sure to account for this when processing raw data.
+Time zones are evil In case you missed my bias against using local time in Chapter 4, Sinks and Sink Processors, I'll repeat it here a little stronger—time zones are evil.
 You are pulling data from all over the place into your Hadoop cluster.
 You may even have multiple data centers in different parts of the country (or the world)
 The last thing you want to be doing while trying to analyze your data is to deal with askew data.
@@ -835,13 +838,15 @@ If you do choose to send all your data to a single destination, consider adding 
 This way if there is a communication issue or extended cluster maintenance, you can let data pile up on a machine different than the ones trying to service your customers.
 This is sound advice even in a single data center situation.
 Compliance and data expiry Remember that the data your company is collecting on your customers may contain sensitive information.
-You may be bound by other regulatory limitations on access to data such as Payment Card Industry (PCI—http://en.wikipedia.
 If you aren't properly handling access to this data in your cluster, the government will lean on you or worse, you won't have customers anymore if they feel you aren't protecting their rights and identities.
 Consider scrambling, trimming, or obfuscating your data of personal information.
+Chances are the business insight you are looking for falls more into the category of "how many people who search for hammer actually buy one?" rather than "how many customers are named Bob?" As you saw in Chapter 6, Interceptors, it would be very easy to write an Interceptor to obfuscate Personally Identifiable Information (PII—http://en.wikipedia.org/wiki/Personally_identifiable_ information) as you move it around.
 Your company probably has a document retention policy that most likely includes the data you are putting into Hadoop.
 Make sure you remove data that your policy says you aren't supposed to be keeping around anymore.
 The last thing you want is a visit from the lawyers.
 Summary In this chapter we covered several real-world considerations you need to think about when planning your Flume implementation, including the following:
+The mayhem introduced with daylight savings time to your time-based logic.
+Items to consider when you have more than one data center.
 Hopefully you will be able to apply much of this information directly in your application/Hadoop integration efforts.
 About Packt Publishing Packt, pronounced 'packed', published its first book "Mastering phpMyAdmin for Effective MySQL Management" in April 2004 and subsequently continued to specialize in publishing highly focused books on specific technologies and solutions.
 Our books and publications share the experiences of your fellow IT professionals in adapting and customizing today's systems, applications, and frameworks.

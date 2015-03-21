@@ -68,12 +68,10 @@ A call to ready(e) also sets the value of the variable instance that a primary u
 The primary uses the value of instance to set the epoch of transaction identifiers when broadcasting, and we assume that the value of e is unique for different primary instances.
 Note that the statement of agreement is different compared to previous work.
 We instead state agreement as a safety property, which guarantees that the state of two processes do not diverge.
-Note that local primary order corresponds to FIFO order for a single primary instance, and that global primary order prevents runs such as the one described in Figure 1
 Finally, a primary has to guarantee that the state updates generated are consistent.
 Comparison with causal atomic broadcast PO atomic broadcast is designed to preserve the causal.
 In this section, we compare causal atomic broadcast and PO atomic broadcast, and argue that they are not comparable.
 It follows directly from the core properties that PO atomic broadcast implements PO causal order and strict causality [15]
-Each process executes one iteration of this protocol at a time, and at any time, a process may drop the current iteration and start a new one by proceeding to Phase 1
 There are two roles Zab process can perform according to the protocol: leader and follower.
 A leader concurrently executes the primary role and proposes transactions according to the order of broadcast calls of the primary.
 Followers accept transactions according to the steps of the protocol.
@@ -82,8 +80,6 @@ If the leader oracle of a process determines that it is the leader, then it exec
 Being selected the leader according to its oracle, however, is not sufficient to establish its leadership.
 To establish leadership, a process needs to complete the synchronization phase (Phase 2)
 In the phase description of Zab, and later in the analysis, we use the following notation:
-History) Each follower f has a history hf of accepted transactions.
-Initial history) The initial history of an epoch e, Ie, is the history of a prospective leader of e at the end of phase 1 of epoch e.
 The following section discusses the Zab protocol in more detail along with some implementation aspects.
 In our implementation of Zab, a Zab process can be looking for a leader (ELECTION state), following (FOLLOWING state), or leading (LEADING state)
 While in this state the process tries to elect a new leader or become a leader.
@@ -100,8 +96,6 @@ Also important is the fact that calls to broadcast transactions are local when t
 Figure 5 shows the events for both the leader and followers when establishing a new leader.
 An elected leader does not become established for a given epoch e until it completes Phase 2, in which it successfully achieves consensus on the proposal history and on itself as the leader of e.
 We define a established leader and a established epoch as follows:
-Established epoch) An epoch e is established if there is an established leader for e.
-Once a process determines that it is a prospective leader by inspecting the output of the leader election algorithm, it starts a new iteration in Phase 1
 It initially collects the latest epoch of a quorum of followers Q, proposes a later epoch, and collects the latest epoch and highest zxid of each of the followers in Q.
 The leader completes Phase 1 once it selects the history from a follower f with latest epoch and highest zxid in a ACK-E(f.a, hf )
 These steps are necessary to guarantee that once the prospective leader completes Phase 1, none of the followers in Q accept proposals from earlier epochs.
@@ -121,7 +115,6 @@ Detecting crashes through connections closing was not a suitable choice for us.
 Timeout values for a connection can be of minutes or even hours, depending on the operating system configuration and the state of the connection.
 To mutually detect crashes in a fine-grained and convenient manner, avoiding operating system reconfiguration, leader and followers exchange periodic heartbeats.
 If the leader does not receive heartbeats from a quorum of followers within a timeout interval, the leader renounces leadership of the epoch, and transitions to the ELECTION state.
-Once it elects a leader, it starts a new iteration of the algorithm, and starts a new iteration of the protocol proceeding to Phase 1
 When a follower emerges from leader election, it connects to the leader.
 To support a leader, a follower f acknowledges its new epoch proposal, and it only does so if the new epoch proposed is later than f.p.
 A follower only follows one leader at a time and stays connected to a leader as long as it receives heartbeats within a timeout interval.
@@ -144,8 +137,6 @@ To sustain leadership, a leader process ` needs to be able to send messages to a
 In this section, we present an argument for the correctness of Zab.
 A more detailed proof appear in a technical report [15]
 We present initially a list of definitions followed by a set of invariants that the protocol must satisfy.
-Sequence of transactions delivered in the broadcast phase) Df is the sequence of transactions follower f delivered while in the B phase of epoch f.a.
-Last committed epoch of a follower) Given a follower f , we use f.e to denote the last epoch e such that f has learned that e has been committed.
 The following properties are invariants that the protocol maintains at each step, and that can be verified against the protocol of Section IV in a straightforward manner.
 We use them when proving the core properties of Zab.
 During the broadcast phase of epoch e, a follower f such that f.a = e accepts proposals and delivers transactions according to zxid order.
@@ -178,6 +169,7 @@ Using ping we measured the basic latency between servers to be 100 microseconds.
 Latency of 1K operations as the number of servers increases.
 As with throughput, turning off the disk write cache causes a significant performance impact.
 We use preallocated files, write sequentially, and use the fdatasync to only sync the data to disk.
+Unfortunately, the Linux kernel does not recognize the “only sync data” flag until version 2.6.26
 When we sync, the performance penalty should be no more than a rotational delay and a seek (around 20 milliseconds)
 This extra access time affects both the latency and the throughput.
 In the first phase, called read phase, the new leader contacts all other processes to read any possible value that has been proposed by previous leaders and committed.
@@ -232,3 +224,13 @@ Zab uses a scheme for assigning transaction identifiers that guarantees at most 
 This scheme enables efficient recovery of primary crashes by allowing correct transaction histories to be chosen by simply comparing the last transaction identifier accepted by a process.
 Zab is in production as part of ZooKeeper and has met the demands of our workloads.
 The performance of ZooKeeper has been key for its wide adoption.
+Raynal, “Atomic broadcast in asynchronous crashrecovery distributed systems and its use in quorum-based replication,” IEEE Transactions on Knowledge and Data Engineering, vol.
+Redstone, “Paxos made live: An engineering perspective,” in PODC ’07: Proceedings of the twenty-sixth annual ACM symposium on Principles of distributed computing.
+Guerraoui, “Reliable and total order broadcast in the crash-recovery model,” J.
+Lamport, “Time, clocks, and the ordering of events in a distributed system,” Communications of the ACM, vol.
+Toueg, “The weakest failure detector for solving consensus,” in PODC ’92: Proceedings of the eleventh annual ACM symposium on Principles of distributed computing.
+Zhou, “Omega meets Paxos: Leader election and stability without eventual timely links,” in DISC’05: Proceedings of the International Conference on Distributed Computing, vol.
+Lampson, “The ABCD’s of Paxos,” in PODC ’01: Proceedings of the twentieth annual ACM symposium on Principles of distributed computing.
+Liskov, “Viewstamped replication: A new primary copy method to support highly-available distributed systems,” in PODC ’88: Proceedings of the seventh annual ACM Symposium on Principles of distributed computing.
+Joseph, “Reliable communication in the presence of failures,” ACM Trans.
+Dolev, “Efficient message ordering in dynamic networks,” in PODC ’96: Proceedings of the fifteenth annual ACM symposium on Principles of distributed computing.

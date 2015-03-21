@@ -1,4 +1,7 @@
 It covers the three primary elements that offer new input/output (I/O) APIs in Java 7, showing you how to:
+Use the extensive file I/O API system that developers have long sought.
+Work with the socket channel API to carry out multicasting and socket binding associated with channels.
+Enhance scalability with the asynchronous I/O API: map to I/O facilities, completion ports, and various I/O event port mechanisms.
 Each chapter contains extensive code examples that show the power and elegance of NIO.2, giving you the knowledge to apply the latest and greatest techniques in your own code.
 For your convenience Apress has placed some of the front matter material after the index.
 This class is a milestone of NIO.2, and every application that involves I/O operations will exploit the powerful facilities of this class.
@@ -15,8 +18,10 @@ Java 7 provides a simple API for conversion between them.
 Remember the days when you had to do the following?
 Well, those days are gone, because with Java 7 you can do this:
 At a closer look, a Path is a programmatic representation of a path in the file system.
+The path string contains the file name, the directory list, and the OS-dependent file delimiter (e.g., backslash “\” on Microsoft Windows and forward slash “/” on Solaris and Linux), which means that a Path is not system independent since it is based on a system-dependent string path.
 Because Path is basically a string, the referenced resource might not exist.
 Defining a Path Once you identify the file system and the location of a file or directory, you can create a Path object for it.
+Absolute paths, relative paths, paths defined with the notation “.” (indicates the current directory) or “..” (indicates the parent directory), and paths containing only a file/directory name are covered by the Path class.
 The simplest solution for defining a Path is to call one of the get() methods of the Paths helper class.
 Define an Absolute Path An absolute path (also known as a full path or file path) is a path that contains the root directory and all other subdirectories that contain a file or folder.
 Note that if you define a chunk for each component of the path, you can omit the file separator delimiter.
@@ -25,6 +30,8 @@ A relative path is often used in creating a web page.
 Relative paths are used much more frequently than absolute paths.
 Defining a path relative to the current file store root should start with the file delimiter.
 Define a Path Relative to the Working Folder When you define a path relative to the current working folder, the path should not start with the file delimiter.
+Define a Path Using Shortcuts Defining paths using the notation “.” (indicates the current directory) or “..” (indicates the parent directory) is a common practice.
+These kinds of paths can be processed by NIO.2 to eliminate possible cases of redundancy if you call the Path.normalize() method (which removes any redundant elements, including any “.” or “directory/..” occurrences):
 If you want to see the effect of the normalize() method, try to define the same Path with and without normalize(), as follows, and print the result to the console:
 Define a Path from a URI In some cases, you may need to create a Path from a Uniform Resource Identifier (URI)
 You can do so by using the URI.create() method to create a URI from a given string and by using the Paths.get() method that takes a URI object as an argument.
@@ -93,13 +100,13 @@ You will see how to determine whether a file is read-only or hidden, when it was
 You will also discover how to view the access control list (ACL) of a file and how to set Unix permissions on a file.
 Moreover, you will explore file store attributes and learn how to define your own attributes.
 Determining Views Supported by a Particular File System Before you attempt to access a view's attributes, make sure that your file system supports the corresponding view.
+NIO.2 lets you either view the entire list of supported views by name or check if a file store—represented by the FileStore class that maps any type of store, such as partitions, devices, volumes, and so on—supports a particular view.
 For example, for Windows 7, the preceding code returned the following results:
 Note All file systems support the basic view, so you should get at least the basic name in your output.
 You can pass the desired view as a String or as a class name.
 The following code checks whether the basic view is supported by all the available file stores:
 Moreover, you can check if a file store in which a particular file resides supports a single view, as shown in this example:
 Now that you can determine which views are supported on your file system, it is time to dig deeper and explore each view’s attributes, starting with the basic view.
-Basic View Most file system implementations support a set of common attributes (size, creation time, last accessed time, last modified time, etc.)
 Get a Single Attribute with getAttribute() If you need to extract a single attribute instead of all the attributes in bulk, use the getAttribute() method.
 You need to pass the file path and the attribute name and specify whether or not you need to follow symbolic links.
 The following code snippet shows how to extract the size attribute value.
@@ -114,7 +121,6 @@ The following listing extracts in bulk the preceding four attributes for a given
 Setting an attribute’s value and extracting a single attribute by name can be accomplished by the setAttribute() and getAttribute() methods, respectively, as follows (I randomly chose the hidden attribute):
 File Owner View Most file systems accept the concept of file owner as an identity used to determine access rights to objects in a file system.
 Actually, as you will see in the following code examples, NIO.2 has multiple ways for setting and getting the file owner.
-Note A principal named “apress" is used in the examples in this section, but this principal will not be available on your machine.
 Besides the file path, this method gets a UserPrincipal instance that maps a string representing the file owner.
 Here is a simple example of setting a file owner:
 The owner attribute is identified by the name owner, and the value of the attribute is a UserPrincipal object.
@@ -136,12 +142,10 @@ The following is example output of this code (tested on Windows 7):
 Grant a New Access in an ACL ACL entries are created using an associated AclEntry.Builder object by invoking its build() method.
 For example, if you want to grant a new access to a principal, then you must follow this process:
 Following these steps, you can write a code snippet for granting read data access and append data access to a principal named apress:
-Note The principal named “apress" used in the preceding example will not be available on your machine.
 The preceding code adds a new entry in an ACL of an existing file.
 In common cases, you will probably do that when you create a new file.
 File Store Attributes If you think of a computer as a file storage container, then you can easily identify more types of stores, such as partitions, devices, volumes, and so on.
 NIO.2 can obtain information about each type of store through the FileStore abstract class.
-For a particular store, you can obtain its name, its type, total space,
 In the following subsections you will see how to obtain that information for all the stores in the default file system and for the store that contains a specified file.
 Since each instance (name, type, total space, used space, and available free space) is a FileStore object, you can call the corresponding dedicated methods such as name(), type(), getTotalSpace(), and so on.
 Note As you can see in the preceding example, if a store does not have a name, a blank string is returned.
@@ -240,12 +244,12 @@ After you are familiar with directory operations, you will explore file operatio
 As you will see, there is a wide array of file I/O methods to choose from.
 In this chapter, you will see at work methods for buffered and unbuffered streams, leaving coverage of the methods for channels for the next chapters, in which you will see the real power of NIO.
 The chapter ends with the well-known delete, copy, and move operations.
+Each of these tasks is detailed presented and, as you will see, many aspects were “redesigned” from previous Java 6, but you will also recognize many of the presented methods from the java.io.File class.
 Checking Methods for Files and Directories The Files class provides a set of isSomething methods that you can use to perform various kinds of checks before you actually manipulate a file or a directory.
 Some of these methods were presented in the previous chapters, while the rest are presented here.
 Taking advantage of these methods is recommended because they can be very useful in helping you to avoid exceptions or other strange behavior in your applications.
 For example, it is a good idea to check if a file exists before you try to move it to another location.
 Similarly, it is a good idea to check if a file is accessible to read before you try to read from it.
-Some of these checks can also be performed through the metadata attributes, as you have seen in Chapter 2
 Checking for the Existence of a File or Directory As you know from previous chapters, a Path instance is perfectly valid even if the mapped file or directory does not physically exist.
 Moreover, the syntactic Path methods can be applied with success in such cases because they do not operate on the file or directory itself.
 Both methods receive two arguments, representing the path to the file to test and options indicating how symbolic links are handled.
@@ -260,7 +264,6 @@ In addition, a SecurityException may be thrown if one of these methods does not 
 Checking File Accessibility Another good practice before you access a file is to check its accessibility level, using the isReadable(), isWritable(), and isExecutable() methods.
 After you pass the Path to be verified, these methods will.
 In addition, you can check if the Path points to a regular file by calling the isRegularFile() method.
-Regular files are files that have no special characteristics (they are not symbolic links, directories, etc.) and contain real data, such as text or binary files.
 Note The preceding examples check the accessibility by applying all four methods to a Path, but you can combine these four methods in different ways depending on what level of accessibility you need to get.
 For example, you may not care whether or not the Path is writable, in which case you can exclude this check.
 Caution Even if these methods confirm the accessibility, there is no guarantee that the file can be accessed.
@@ -287,6 +290,7 @@ NIO.2 provides this facility through an iterable stream named DirectoryStream, w
 Listing the Content by Applying a Glob Pattern Sometimes, you may need to list only the content that meets certain criteria, which requires applying a filter to the directory’s content.
 Commonly, you need to extract only files and subdirectories whose names match a particular pattern.
 NIO.2 defines this particular pattern as a built-in glob filter.
+Conforming to NIO.2 documentation, a glob pattern is just a string that is matched against other strings—in this case, directories and files names.
 Since this is a pattern, it must respect some rules, as follows:
 Convey a set of single characters or a range of characters if the hyphen character is present.
 Listing the Content by Applying a User-Defined Filter If a glob pattern does not satisfy your needs, then is time to write your own filter.
@@ -313,7 +317,7 @@ This code creates a new file on a POSIX file system that has specific permission
 As you will see soon, this is not the only way to create a new file.
 Writing a Small File NIO.2 comes with an elegant solution for writing small binary/text files.
 Both of these methods open the file for writing (this can involve creating the file, if it doesn’t exist) or initially truncate an existing regular file to a size of 0 bytes.
-After all bytes or lines are written, the method closes the file (it closes the file even when an I/O error or exception.
+In short, this method acts as if the CREATE, TRUNCATE_EXISTING, and WRITE options are present—of course, this is applicable by default when no other options are specified.
 Writing Bytes with the write() Method Writing bytes into a file can be accomplished with the Files.write() method.
 This method gets the path to the file, the byte array with the bytes to write, and options specifying how the file is opened.
 Now, if you check the corresponding path, you will find a small picture representing a tennis ball.
@@ -328,6 +332,7 @@ These methods read the entire file’s bytes or lines, respectively, into a sing
 Focusing on the readAllBytes() method, the following code snippet reads the previously created ball.png binary file (the file must exist) into a byte array (the file path is passed as an argument):
 This time the byte array should be converted to String, as in the following example (you can use any charset that is proper for your text files):
 Caution If the file is too large (bigger than 2GB), then the size of the array cannot be allocated and a OutOfMemory error will be thrown.
+For a 64-bit JVM, it can be much larger—tens of gigabytes potentially.
 Reading with the readAllLines() Method In the preceding example you saw how to read a text file through the readAllBytes() method.
 A more convenient solution is to use the readAllLines() method, since this method will read the entire file and return a List of String, which can be easily looped as follows (pass to this method the Path of the file to read and the charset to use for decoding):
 Conforming to official documentation, this method recognizes the following as line terminators:
@@ -348,6 +353,7 @@ Using the newOutputStream() Method The newOutputStream() method gets the path to
 It returns a new default thread-safe unbuffered stream that may be used to write bytes to the file (this is a java.io-specific OutputStream)
 The method opens the file for writing (this can involve creating the file, if it doesn’t exist) or initially truncates an existing regular file to a size of 0 bytes.
 In short, this method acts as if the CREATE, TRUNCATE_EXISTING, and WRITE options are present (which is applicable by default when no other options are specified)
+Moreover, if you decide that it is a better idea to use a buffered stream instead of the preceding code, a conversion based on the java.io API is recommended, such as shown in the following code, which appends to the file racquet.txt (the file must exist) the text “String: Babolat RPM Blast 16”:
 Using the newInputStream() Method The newInputStream() method gets the path to the file to open and options specifying how to open the file.
 It returns a new default thread-safe unbuffered stream that may be used to read bytes from the file (this is a java.io-specific InputStream)
 The method opens the file for read; if no options are present, then it is equivalent to opening the file with the READ option.
@@ -385,6 +391,7 @@ Note Since deleteOnExit() applies to File instances, not Path, you need to conve
 Creating Temporary Files This section takes a closer look at temporary files and the NIO.2 approach to them.
 In real-world applications, temporary files often provide very useful help.
 They work very well when you need files that are not indented to be used outside of the application or the application execution.
+Known in Java as “work files,” they can be placed in any directory chosen from the application or in the default location returned by the Java property java.io.tmpdir.
 In NIO.2 you can create a temporary file with the createTempFile() method.
 Creating a temporary file in the default operating system location can be accomplished by calling the createTempFile() method with three parameters: a prefix string to be concatenated in front of the file’s name (it can be null), a suffix string to be concatenated at the end of the file’s name (it can be null; the default is .tmp), and an optional list of file attributes to set atomically when creating the file.
 The following code snippet creates two temporary files, one without a prefix and suffix and one with a specified prefix and suffix:
@@ -395,9 +402,11 @@ Besides the temporary file prefix and suffix and optional list of attributes, th
 The following is an example that creates a temporary file in the C:\rafaelnadal\tmp directory:
 The output will be one empty temporary file in the C:\rafaelnadal\tmp directory:
 Deleting a Temporary File with Shutdown-Hook A temporary file is just a simple file until you make sure that it is truly temporary, which means that an automatic mechanism must delete temporary files periodically or at a specified time.
+The shutdownhook mechanism was presented earlier in the chapter in the section “Deleting a Temporary Directory with Shutdown-Hook.” The mechanism works in the same way for temporary files, so we will skip that presentation here and go straight to the code example.
 Note The preceding code uses a Thread.sleep() method to add a delay between the creation time of the temporary file and the JVM shutdown.
 Obviously, in place of that, you will provide the business logic that uses the temporary file for the job for which it was created.
 Deleting a Temporary File with the deleteOnExit() Method Another solution for deleting a temporary file is to call the deleteOnExit() method.
+This mechanism was detailed in the earlier section “Deleting a Temporary Directory with the deleteOnExit() Method” and works the same way for temporary files, so we will skip it here and to straight to the code example.
 Note Since deleteOnExit() applies to File instances, not Path, you need to convert the Path to a File by calling the Path.toFile() method.
 As its name suggests, this option deletes the file when the stream is closed.
 Moreover, you can simulate a temporary file even without calling the createTempFile() method.
@@ -418,7 +427,6 @@ COPY_ATTRIBUTES: Copy a file with its associated attributes (at least, the lastM
 If you are not familiar with enum types, then you should know that they can be imported into applications as follows.
 Note By default, when copying a symbolic link, the target of that link is copied.
 Caution Trying to copy a nonempty directory will result in an empty directory.
-This is a task usually implemented as a recursive operation, as you will see in Chapter 5
 Moreover, copying a file is not an atomic operation, which means that an IOException exception can be thrown and the copy aborted even if the target file is incomplete or the attributes were not totally copied.
 Usually, when you copy a file, you need a source path (copy from) and a target path (copy to)
 Based on this simple case, NIO.2 provides a Files.copy() method that takes the path to the file to copy, the path to the target file, and a set of options for controlling the copy process.
@@ -441,7 +449,6 @@ ATOMIC_MOVE: The file move will be performed as an atomic operation, which guara
 Again, these enum types can be imported into an application like this:
 Note By default, when moving a symbolic link, the symbolic link itself is moved, not the target of that link.
 Caution The move() method can also be used to move empty directories.
-Trying to move a nonempty directory is a task usually implemented as a recursive copy operation, as you will see in Chapter 5
 Nevertheless, it is possible to move a directory that it is not empty if it does not require moving the entries in the directory.
 In some cases a directory has entries for special files (such as links) that are created when the directory is created, and if the directory contains only those entries, it is considered empty.
 If the target already exists, then it is replaced because the REPLACE_EXISITING option is specified.
@@ -472,7 +479,6 @@ Usually, this method returns a CONTINUE result or a TERMINATE result.
 For example, when searching for a file, this method should return CONTINUE until the file is found (or the tree is completely traversed) and TERMINATE after the file is found.
 When this method is invoked, it receives a reference to the file and the file’s basic attributes.
 If an I/O error occurs, then it throws an IOException exception.
-The entries will be visited if the method returns CONTINUE and will not be visited if it returns SKIP_SUBTREE (the latter visit.
 Also, you can skip visiting the siblings of this file or directory (and any descendants) by returning the SKIP_SIBLINGS result.
 When this method is invoked, it gets a reference to the directory and the directory’s basic attributes.
 If an I/O error occurs, then it throws an IOException exception.
@@ -506,6 +512,7 @@ Searching for Files by Name The preceding list can be incorporated into the foll
 This application will search for the file rafa_1.jpg in the entire default file system and will stop the search when it finds it.
 A fragment of the output may look something like this:
 Searching for Files by Glob Pattern Sometimes you may have only partial information about the file you want to search for, such as only its name or extension or perhaps even just a chuck of its name or extension.
+Based on this small piece of information, you can write a glob pattern, as described in the Chapter 4 section “Listing the Content by Applying a Glob Pattern.” The search will locate all files in a file store that match the glob pattern, and from the results you’ll probably be able to find the file you needed to locate.
 The process will stop only after the entire tree has been traversed.
 If you have additional information about the file you are looking for, then you can create a more complex search.
 For example, besides the small piece of information about the file name and type, perhaps you know that the file size is smaller than a certain number of kilobytes, or perhaps you know a detail such as when the file was created, when the file was last modified, whether the file is hidden or read-only, or who owns it.
@@ -536,6 +543,7 @@ The array can be looped and each paragraph can be passed to the searchText() met
 We can extract text from Excel files as shown in the following example.
 After creating an HSSFWorkbook for the Excel document, the basic idea is to iterate over the sheets, then over the rows, and finally over the cells.
 The cell should contain the specific text that we are looking for.
+Row row; Cell cell; String text; boolean flag = false; InputStream xls = null;
 Finally, we can extract text from PowerPoint files as shown in the following example; each slide may contain text and notes:
 Note I arbitrarily chose the third-party libraries used in the preceding examples.
 There are many other open source and commercial libraries available for dealing with different kinds of documents.
@@ -544,14 +552,16 @@ Our search example is not the most efficient way to do the searching.
 In a worstcase scenario, we would have to walk through an entire array (half of an array in a typical scenario)
 Perhaps using an indexing search such as the one that Apache Lucene (http://lucene.apache.org/java/docs/index.html) provides would be a better way to do it.
 This as an exercise you can attempt on your own.
-Text files (.txt, .html, .xml, etc.) do not require a third-party library.
 They can be read using pure NIO.2 code as follows:
+Writing a Complete Search Program Yes! The pie is ready! Just throw it in the oven! We have the searched text, the text extracted from a set of common file formats, and a method that checks if the extracted text contains the searched text.
 Put everything in the traversal process and the application is ready:
+Row row; Cell cell; String text; boolean flag = false; InputStream xls = null;
 Note that sometimes this is a pretty slow process that may take from several seconds to dozens of minutes—the running time will vary based on the file tree size, number of checked files, and the size of those files.
 In the preceding example, the file tree contains all file stores in the default file system, so each file in any of the supported formats will be opened, read, and explored for our set of search words.
 Depending on how large and numerous the matching files are, the process may appear to be jammed for a few seconds as the results are returned.
 You can improve this application by adding more file formats, a progress bar or flag indicating process status, and multiple threads to speed up the process.
 Moreover, displaying the name of the files as they are found may be a better idea than storing their names and path.
+Writing a File Delete Application Deleting a single file is a simple operation, as you saw in the Chapter 4 section “Deleting Files and Directories.” After you call the delete() or deleteIfExists() method, the file is deleted from your file system.
 Deleting an entire file tree is an operation based on calling the delete() or deleteIfExists() method recursively through a FileVisitor implementation.
 Before you see an example, here are a few things you need to keep in mind:
 Before you delete a directory, you must delete all files from it.
@@ -586,7 +596,6 @@ After a short intro to the recursive programming technique, you learned about th
 You then saw how to develop a set of applications that that you can use to perform tasks that involve traversing a file tree, such as finding, copying, deleting, and moving files.
 The most common use is to monitor a directory for changes to its content through actions such as create, delete, and modify.
 You’ve probably seen the effect of such a service many times.
-For example, when you open a text file in an editor (such as GridinSoft Notepad, jEdit, etc.) and the file content is modified outside the editor, you will see a message that asks whether you want to reload the file because it was modified.
 This means the editor has detected a file change through a watch service and is reporting it accordingly.
 This is known as the file change notification mechanism, and starting with NIO.2, it is available through the Watch Service API.
 The Watch Service API is a low-level API that can be used as is or can be customized.
@@ -646,7 +655,8 @@ Keep in mind that a key always has a state, which can be either ready, signaled,
 Ready: When it is first created, a key is in the ready state, which means that it is ready to accept events.
 Signaled: When a key is in the signaled state, it means that at least one event has occurred and the key was queued, so it is available to be retrieved by poll() or take() methods.
 It is analogous to fishing: the key is the float, and the events are the fish.
-When you have a fish on the hook, the float (key) signals you to pull the line out of the water.) Once signaled, the key remains in this state until its reset() method is invoked to return the key to the ready state.
+When you have a fish on the hook, the float (key) signals you to pull the line out of the water.
+Once signaled, the key remains in this state until its reset() method is invoked to return the key to the ready state.
 If other events occur while the key is signaled, they are queued without requeuing the key itself (this never happens when fishing)
 Invalid: When a key is in the invalid state, it means that it is no longer active.
 A key remains valid until either it is cancelled by explicitly calling the cancel() method, the directory becomes inaccessible, or the watch service is closed.
@@ -710,12 +720,12 @@ Next, we know that the video camera sends images every 10 seconds, which means t
 We set it to wait exactly 11 seconds, and if in this time no new capture is created, then we report this through a message and stop the system:
 Finally, if we have a new capture available, then all we need to do is check whether it is in the JPG image format.
 We pass the file, and it returns null or the content type as a MIME.
-We have accomplished the main tasks in writing the controller, so now all we need to do is fill in the missing code (imports, declarations, main function, etc.) to give us the complete application, as follows:
 For testing purposes, you may need to write a tester class or, much easier, play the role of the video camera.
 Just start the application and copy and paste JPG images in C:\security before the critical time passes.
 Try different cases, such as using a wrong file format, waiting more than 11 seconds before copying another image, and so on.
 Watching a Printer Tray System In this section, we will develop an application that monitors a large-scale printer tray.
 Suppose that we have a multithreading base class that receives documents to be printed and dispatches them to a suite of.
+Now the printers are “fed” from a common public tray represented by a directory (C:\printertray, which you need to create manually)
 Our job is to implement a watch service to manage this tray.
 When a new document arrives into the tray, we have to pass it to the Print class, and after a document has been printed, we have to delete it from the tray.
 We start by obtaining a watch service via the classical approach and registering the C:\printertray directory for CREATE and DELETE events:
@@ -760,7 +770,6 @@ Next, suppose that we read 2 bytes of data into our buffer.
 Continuing with a second read, another 3 bytes go into the buffer.
 At this point, suppose that we are not reading into the buffer anymore and want to write from the buffer.
 To do this, we first need to call the flip() method before we write any bytes.
-This will set the limit to the current position, and set the position to 0
 After the flip, the buffer appears as shown in Figure 7-6
 There are two additional operations we may want to accomplish.
 Continuing with Figure 7-8 as a reference, we may want to rewind the buffer or clear the buffer.
@@ -773,6 +782,7 @@ In addition to the get() and put() methods, ByteBuffer also has extra methods fo
 The JVM will perform native I/O operations on direct buffers.
 Direct buffers are created by using the allocateDirect() method, while non-direct buffers are created by using the allocate() method.
 At this point you have sufficient information about ByteBuffer to understand the following applications.
+To get deeper into the bowels of ByteBuffer, access dedicated tutorials on the Web.
 The next section will introduce you to channels and relate them with buffers.
 By contrast, in a block-oriented I/O system, the input/output stream produces or consumes a block of data in one step.
 Channels are analogous to streams, but with a few differences:
@@ -783,6 +793,7 @@ We can read or write a ByteBuffer from or to a channel, get or set the current p
 The following methods are associated with these features (more details are available in the official documentation at http://download.oracle.com/javase/7/docs/api/index.html):
 Setting the position to a value that is greater than the current size is legal but does not change the size of the entity.
 The first (simplest) newByteChannel() method receives the path to the file to open or create and a set of options specifying how the file is opened.
+The StandardOpenOption enum constants were described in the Chapter 4 section “Using Standard Open Options,” but they are repeated here for easy reference:
 CREATE_NEW Creates a new file, failing with an exception if the file already exists.
 DELETE_ON_CLOSE Deletes the file when the stream is closed (used for deleting temporary files)
 The second newByteChannel() method receives the path to the file to open or create, a set of options specifying how the file is opened, and, optionally, a list of file attributes to set atomically when the file is created.
@@ -805,10 +816,13 @@ The first position is 0 and the last valid position is the channel (entity) size
 Example 1: Read One Character from Different Positions We start with a simple example that reads exactly one character from a text file from the first, middle, and last positions.
 Example 2: Write Characters at Different Positions Next, we will try to write to a specific position.
 Suppose that the MovistarOpen.txt file has the following default content:
+We want to accomplish two tasks: first, add some text at the end of the preceding text, and second, replace “Gonsales” with “Gonzalez” because Fernando’s last name was misspelled in the first instance.
 If everything worked fine, the new MovistarOpen.txt content should be as follows:
 Example 3: Copy a Portion of a File from the Beginning to the End Moving on to a new application, we next want to copy a portion of text from the beginning of a file to the end of the same file.
+We want to copy the text “The Pride of New Zealand” at the end, like this:
 Example 4: Replace a File Portion with Truncate Capability In this example we will truncate a file and append new text in place of the truncated text.
 Brasil Open At Forefront Of Green Movement The Brasil Open, the second stop of the four-tournament Latin American swing, is held in an area renowned for its lush natural beauty and stunning beaches.
+We want to truncate the file content to remove the text “From this point forward ...” and append new text in its place.
 The effect of this application is the following modification of the BrasilOpen.txt file:
 Brasil Open At Forefront Of Green Movement The Brasil Open, the second stop of the four-tournament Latin American swing, is held in an area renowned for its lush natural beauty and stunning beaches.
 The tournament has taken a lead in environmental conservation efforts, with highlights including the planting of 500 trees to neutralise carbon emissions and providing recyclable materials to local children for use in craft work.
@@ -857,10 +871,10 @@ The application is listed next and is available in the Source Code Download sect
 The output of this application is pretty hard to sort through since there are so many numbers involved, so I’ve plotted some of the data instead to give you a clearer image of the results of several.
 The Y axis in these figures is the estimated time expressed in seconds, and the X axis is the size of the used buffer (or run number, after skipping the first three runs)
 As shown in Figure 7-13, the fastest Files.copy() method is Path to Path, followed by Path to OutputStream, and finally InputStream to Path.
-As final test we took the fastest results from the above three diagrams and put them together in figure 714
 As you can see, Files.copy() with Path to Path seams to be the fastest solution for copying a file.
 You then saw how to get a FileChannel with RAF capabilities and discovered the main facilities provided by FileChannel, including mapping a region of the file directly into memory for faster access, locking a region of the file, and reading and writing bytes from an absolute location without affecting the channel’s current position.
 The chapter ended with a benchmarking application that tries to determine the fastest way to copy a file by comparing FileChannel capabilities against other common approaches, such as Files.copy(), using buffered streams and a byte array, and using unbuffered streams and a byte array.
+Some years later, around the ’80s, the notion of the socket was introduced on BSD (Berkeley Software Distribution—a Unix variant) for communication between processes using Internet Protocol (IP)
 Finally, programmers can now create network applications without years of study about network communications.
 Java developers can write a simple network application just by scratching the surface of a few subjects, such as IP, IP addresses, ports, and Java networks.
 On top of IP, we have other common protocols, such as TCP (Transmission Control Protocol) and UDP (User Datagram Protocol) (this chapter’s applications exploit these protocols), and on top of these we have even more, including HTTP, TELNET, DNS, and so on.
@@ -878,12 +892,14 @@ Upon acceptance, the server gets a new socket bound to a new local port number a
 We can conclude that, for Java, a socket is a bidirectional software endpoint between a server program and its client programs, or more generally, between two programs running on the network that are involved in a two-way communication.
 An endpoint is a combination of an IP address and a port number.
 Java introduced support for sockets in JDK 1.0, but things have of course changed over time from version to version.
+First of all, NIO.2 introduces an interface named NetworkChannel that provides methods commons to all network channel classes—any channel that implements this interface is a channel to a network socket.
 This interface’s methods and the ones added directly into classes (for checking connection state, getting remote addresses, and shutdown) will prevent you from having to call the socket() method.
 NIO.2 also introduces the MulticastChannel interface as a subinterface of NetworkChannel.
 As its name suggests, the MulticastChannel interface maps a network channel that supports IP multicasting.
 Keep in mind that MulticastChannel is implemented only by the datagram channel (the DatagramChannel class)
 When joining a multicast group you get a membership key, which is a token that represents the membership of a multicast group.
 Through the membership key, you can block/unblock datagrams from different addresses, drop membership, get the channel and/or multicast group for which this membership key was created, and more.
+In addition, the “Short Overview of ByteBuffer” section may be taken in consideration to understand how Java buffers work.
 NetworkChannel Overview In this section we will have a short overview of the NetworkChannel methods.
 This interface represents a channel to a network socket and comes with a set of five common methods for all sockets.
 We present them here since they will be very useful in the next sections.
@@ -904,6 +920,7 @@ By default, this is TRUE, but the option’s value can be set after the socket i
 If not otherwise specified, multicast datagrams are sent with a default value of 1, to prevent them to be forwarded beyond the local network.
 With this option we can control the scope of the multicast datagrams.
 By default this is set to 1, but the option’s value can be set after the socket is bound.
+IP_TOS: This option’s value is an integer representing the value of the Type of Service (ToS) octet in IP packets sent by sockets—the interpretation of this value is specific to the network.
 The option’s value can be set any time after the socket is bound.
 By default, it is FALSE, but the option’s value can be set any time.
 SO_KEEPALIVE: This option’s value it is a boolean indicating if the connection should be kept alive or not.
@@ -912,8 +929,10 @@ SO_LINGER: This option’s value is an integer that represents a timeout in seco
 When attempting to close a blocking-mode socket via the close() method, it will wait for the duration of the linger interval before transmitting the unsent data (not defined for non-blocking mode)
 By default, it is a negative value, which means that this option is disabled.
 The option’s value can be set any time and the maximum value is OS dependent.
+SO_RCVBUF: This option’s value is an integer that represents the size in bytes of the socket receive buffer—the input buffer used by the networking implementation.
 By default, the value is OS dependent, but it can be set before the socket is bound or connected.
 Depending on the OS, the value can be changed after the socket is bound.
+SO_SNDBUF: This option’s value is an integer that represents the size in bytes of the socket send buffer—the output buffer used by the networking implementation.
 By default, the value is OS dependent, but it can be set before the socket is bound or connected.
 Depending on the OS, the value can be changed after the socket is bound.
 SO_REUSEADDR: This option’s value is an integer that represents if an address can be reused or not.
@@ -923,7 +942,6 @@ By default it is FALSE, but it can be set at any time.
 Writing TCP Server/Client Applications It is far from our aim to write a TCP tutorial, since this is a very well-documented and large subject, and involves many technical notions and aspects, but we’ll give a quick overview.
 The primary function of TCP is to provide a point-to-point communication mechanism.
 One process on one machine communicates with another process on another machine or within the same machine.
-A unique TCP connection is identified by five elements: the IP address and port of the server, the IP address and port of the client, and the protocol (TCP/IP, UDP, etc.)
 The server listens to one single port and can talk to many clients at the same time.
 Moreover, TCP supports sending data as byte arrays or using streams, which are very popular in Java.
 Non-Blocking Mechanisms When you decide to write a Java TCP server/client application, you must consider whether you need to write a blocking or non-blocking application.
@@ -995,11 +1013,13 @@ Note Obviously, in real-world cases it’s considered bad practice to hard-code 
 In this case the client will only be able to run on the same machine with the server, which sort of defeats the purpose of remote communication.
 In your case, the client may likely use the hostname of the server instead of the IP address (likely configured through DNS)
 Transmitting Data over a Connection The connection has been established, so we can start transmitting data packets.
+The following code sends the “Hello!” message, and then sends random numbers until the number 50 is generated.
 We used ByteBuffer, CharBuffer, and the read()/write() methods of SocketChannel class (we listed these methods previously when we developed the server-side code, so you should be familiar with them already):
 Closing the Channel When a channel becomes useless, it must be closed.
 Again, the Java 7 try-with-resources feature may be used for automatic closing.
 Putting It All Together into the Client Now we have everything we need for creating our client.
 Putting together all the required elements will provide us the following client:
+First, start the server and wait until you see the message “Waiting for connections ...”
 Continue by starting the client and check out the output.
 Writing a Non-Blocking TCP Client/Server Application Before we start developing, let’s have a short overview of the non-blocking API, which has been available since NIO, so it shouldn’t look totally new to you.
 Keeping this in mind, we won’t go into too much detail about the things you likely already know.
@@ -1009,24 +1029,24 @@ A Selector is created through a no-argument open() method (Selector was not modi
 Basically, this class has the ability to recognize when one or more channels are available for data transfer and serializes the requests for helping the server to satisfy its clients (it monitors each recorded socket channel)
 Moreover, the Selector processes multiple sockets’ I/O read/write operations in a single thread, thanks to a concept known as multiplexing—this solves the problem of dedicating one thread to each socket connection.
 Using the SelectionKey Class If you are still on track, then let’s go deeper! Each time a channel is registered with a Selector, it is.
-Think of keys as the helpers used by the selector to sort the client requests—each helper (key) represents a single client subrequest and contains information for identifying the client and the type of the request (connect, read,write, etc.).When registering, we indicate the selector and, usually, the interest set for the resulting key (the interest set identifies the operations for which the key’s channel is monitored by the Selector)
 A selector is responsible for maintaining three sets of selection keys:
 Note All three sets are empty in a newly created selector.
 Selectors are themselves safe for use by multiple concurrent threads, but their key sets however are not.
 When something happens on the battlefield, the selector wakes up and creates the corresponding keys (instances of the SelectionKey class)
 The selector waits for incoming connections into an infinite loop (waits for events recorded on the selector)
+In addition, a “select() with timeout” method is available, as is a non-blocking method called selectNow()
 The Selector waits for a client to attempt a connection, and when that happens, the server application gets the keys created by the selector.
 For each key, it checks the type (each processed key is removed from the set by explicitly calling the remove() method of an Iterator over keys—this will prevent the same key from coming up again)
 At this point, the client socket channel is registered to the selector for reading/writing operations.
 Note In non-blocking mode, an I/O operation may transfer fewer bytes than were requested (partial read or write), or possibly no bytes at all.
 Using the Selector’s Methods Next, we’ll go over the methods invoked in this section, as well as a few more, are overviewed next (most of the following descriptions were taken from the official Java 7 Javadoc)
-If time expires and there is nothing to select, it returns 0
 A key is invalid if it is cancelled, its channel is closed, or its selector is closed.
 It gets the selector, the interest set for the resulting key, and the attachment for the resulting key (may be null)
 Writing the Server Based on these methods and the preceding discussion, we have written the following non-blocking echo server (every step is commented to help give you a good understanding):
 Writing the Client Focusing on the client side, the structure is almost the same, with a few differences:
 When 50 is generated, the client stops sending and closes the channel.
 The server will echo (write back) everything it reads from the client.
+First, start the server and wait until you see the message “Waiting for connections ....” Continue by starting a set of clients and check out the output.
 Figure 8-2 shows an example of running the server and three client instances.
 Keep in mind that even if it looks like a multithreading application, this is a single-thread application based on the multiplexing technique.
 Writing UDP Server/Client Applications Since TCP has had its moment of glory, it is time for UDP to get our attention.
@@ -1042,6 +1062,7 @@ Typically, use UDP in applications in which reliability is not critical but spee
 In the next sections, we will write a single-thread blocking client/server application based on UDP.
 Writing a UDP Server To aid your understanding, we will split the developing process into discrete steps and bring to the front the features of NIO.2 meant to increase performance and ease of development.
 Again, we will write an echo server and a client that sends some text to it and receives it back.
+So, we can create a server datagram–oriented socket for IPv4 like this:
 But in this case, the ProtocolFamily of the channel’s socket is platform (configuration) dependent and therefore unspecified.
 A client datagram–oriented socket channel can be created and checked in the same manner.
 As an example, we can set the input and output buffers used by the networking implementation as follows:
@@ -1070,10 +1091,12 @@ Again, the Java 7 try-with-resources features can be used for automatic closing.
 Putting All Together into the Server Now we have everything we need for creating our server.
 Putting all of the previous information together will provide us the following server:
 After creating a new DatagramChannel in the same manner as shown previously, and setting whatever options you need, you can start sending and receiving data packets.
+A client datagram–oriented socket channel doesn’t have to be bound to a local address, since the server will extract the IP address and port from each received data packet—in other words, it knows where the client lives.
 Moreover, if this channel’s socket is not bound, then the send() and receive() methods will first cause the socket (client or server) to be bound to an address that is assigned automatically, as if by invoking the bind() method with a parameter of null.
 But keep in mind that if the server side is automatically bound (not explicitly), then the client should be aware of the chosen address (or more precisely, of the chosen IP address and port)
 The opposite is also true if the server sends the first data packet.
 First, start the server and wait until you see the following message:
+I have successfully sent 37 bytes to the Echo Server!
 Caution    Don’t forget to manually stop the UDP server after finishing tests!
 In a connected-client scenario, the channel’s socket is configured so that it only receives/sends datagrams from/to the given remote peer address.
 After the connection is established, data packets may not be received/sent from/to any other address.
@@ -1088,6 +1111,7 @@ These methods return the number of bytes read (it can be zero) or –1 if the ch
 Writing a sequence of bytes to this channel from the given buffer.
 These methods return the number of bytes written; it can be zero:
 First, start the server and wait until you see this message:
+I have successfully sent 37 bytes to the Echo Server!
 Multicasting You are probably already familiar with the term multicasting.
 But, if you are not, let’s have a short overview of this concept.
 Without academic descriptions and definitions, think of multicasting as the Internet’s version of broadcasting.
@@ -1126,6 +1150,7 @@ For example, the following code will return information about all the network in
 This application will return all the network interfaces found on your machine, and for each one will render its display name (a human-readable String describing the network device) and name (the real name used to identify a network interface)
 Moreover, each network interface is checked to see if it supports multicast, if it is virtual (a subinterface), and if it is up and running.
 Figure 8-4 shows a fragment of output on my machine.
+The framed interface is the one used for testing multicast applications—its name is eth3 and will be used later in the client/server multicast application for indicating this interface.
 Writing a UDP Multicast Server In this section, we will write a UDP multicast server that sends to the group datagrams containing the current date and time on the server.
 Now that we have some experience with writing UDP client/server applications, there is no need to repeat the entire process step by step.
 We’ll just point out the main differences that transform a usual UDP client/server application into a UDP multicast client/server application.
@@ -1193,6 +1218,7 @@ A handler should override two methods: the completed() method, which is invoked 
 If the operation completes successfully, then the result is passed as a parameter to the completed() method, and if the operation fails, a Throwable is passed to the failed() method.
 Ignoring the operation status, both methods receive an attachment parameter representing an object that is passed in to the asynchronous operation.
 It can be used to track which operation finished first if the same CompletionHandler object is used for multiple operations, but, of course, you may find it useful in other situations.
+Tip Per the official Java Platform SE 7 documentation for CompletionHandler, “The implementations of these methods should complete in a timely manner so as to avoid keeping the invoking thread from dispatching to other completion handlers.” The following sections will explain the reason.
 Types of Asynchronous Channels As of this writing, Java 7 comes with the following three types of asynchronous channels.
 This class provides methods for reading and writing a file based on ByteBuffers.
 In addition, it provides methods for locking files, truncating files, and getting file sizes, but keep in mind that, unlike a synchronous FileChannel channel, this type of channel does not maintain a global file position (current position) or offset.
@@ -1203,7 +1229,7 @@ After opening, the channel has the capability to accept incoming connections in 
 Important tasks such as binding and setting channel options are provided through the implemented NetworkChannel interface.
 Opening such a channel type allows us to bind it to a group that has an associated thread pool to which tasks are submitted to handle I/O operations (there is also a default group when none is specified)
 After opening, the channel has the capability to connect to the remote addresses in an asynchronous manner, which means that we can choose between a Future and a CompletionHandler for tracking the connection status.
-For a successful connection, this channel can read and write buffers of bytes (sequences of bytes, ByteBuffers) through a set of read() and write() asynchronous methods— again, we can choose between a Future and a CompletionHandler for tracking the reading or writing status.
+For a successful connection, this channel can read and write buffers of bytes (sequences of bytes, ByteBuffers) through a set of read() and write() asynchronous methodsagain, we can choose between a Future and a CompletionHandler for tracking the reading or writing status.
 Important tasks such as binding and setting channel options are provided through the implemented NetworkChannel interface.
 A timeout may leave the channel, or the underlying connection, in an inconsistent state.
 A subsequent attempt to initiate a read or write operation causes an unspecified runtime exception to be thrown.
@@ -1301,6 +1327,7 @@ File Read and CompletionHandler Now that you’ve seen a few examples of how the
 This method reads a sequence of bytes from this channel into the given buffer, starting at the given file position.
 Besides the destination buffer and the file position, this method gets the object to attach to the I/O operation (can be null) and the completion handler for consuming the result.
 Since we are in an asynchronous environment, this method just initiates the read and does not block the application.
+The following code shows you how to use it to read the first 100 bytes—you can locate the CompletionHandler as an anonymous inner class:
 The current thread was used just to discover when we should stop the application; in some cases, the flow may end the application before the completion handler consumes the result.
 In other cases, you may see the waiting message after the CompletionHandler output, depending on how fast it consumes the result of the I/O operation.
 The destination ByteBuffer may “arrive” into the CompletionHandler as the object attached to the I/O operation (when you do not have any attachments, just pass null)
@@ -1317,10 +1344,12 @@ In our scenario, we want to develop an application that asynchronously fills up 
 Moreover, we want to use a custom group with a fixed thread pool of five threads.
 We start by creating the thread pool through an ExecutorService:
 We continue by passing the thread pool to the open() method, next to the file path and options:
+Next, in a loop, we create 50 Callable workers (value-returning tasks) and override the call() method to create random-capacity byte buffers and fill them up with bytes from from random positions in the file—this is our computation.
 We submit each “worker” to the executor and store its Future into an ArrayList.
 Later, we will loop this list and call the get() method to retrieve the result from each byte buffer.
 Since we passed to the executor all the necessary tasks, we can shut it down so that it doesn’t accept new tasks.
 It finishes all existing threads in the queue and terminates—in the meantime, we can count some sheep:
+After counting sheep for awhile, the isTerminate() method returns true, and the results are just “out of the oven.” Iterate the Future list and call the get() method to retrieve each result:
 Done! Gluing everything together and adding boilerplate code and imports produces the following:
 Developing an asynchronous client/server application is an interesting project for any Java developer who is focused on the networking applications field.
 The easiest approach for a better understanding of how to accomplish this task is to follow a straightforward set of steps accompanied by chunks of codes that will be glued together at the end of the discussion.
@@ -1366,12 +1395,14 @@ After opening an asynchronous socket channel (and optionally binding it), you sh
 This method initiates an operation to connect to this channel.
 The method returns a Future<Void> object representing the pending result.
 The connection has been established, so we can start transmitting data packets.
+The following code sends the “Hello!” message, and then sends random numbers until the number 50 is generated.
 The following read() and write() methods get a destination/source ByteBuffer, initiate a read/write operation, and return a Future<Integer> object for tracking the read/write operation status.
 Calling the get() method will wait until the operation is complete and returns the number of read/written bytes.
 Again, the Java 7 try-with-resources feature may be used for automatically closing.
 Now we have everything we need to create our client.
 Putting together the preceding code chunks and adding the necessary imports, spaghetti code, and so on will provide us the following client:
 Testing the Echo Application (Based on Future) Testing the application is a simple task.
+First, start the server and wait until you see the message “Waiting for connections ...”
 Continue by starting the client and check out the output.
 Writing an Asynchronous Server (Based on CompletionHandler) Next, we want to develop the same echo asynchronous server using the CompletionHandler mode instead of the Future mode.
 Actually, we will mix them together, by letting the CompletionHandler mode deal with the connection’s acceptance operation and letting the Future mode deal with read/write operations.
@@ -1392,6 +1423,7 @@ Now, the completed() method of the completion handler is responsible for maintai
 For this we use the same read() and write() methods as earlier and use the same approach.
 The failed() method of the completion handler should be called only if the operation of connecting fails—in this case, the channel is closed.
 Testing the Echo Application (Based on CompletionHandler) Testing the application is a simple task.
+First, start the server and wait until you see the message “Waiting for connections ....” Continue by starting the client and checking out the output.
 Using Read/Write Operations and CompletionHandler In the previous examples, we have managed the read/write operations through the Future mode.
 The first read() method initiates an operation that reads a sequence of bytes from this channel into a subsequence of the given buffers (known as an asynchronous scattering read)
 This method initiates an operation that reads a sequence of bytes from this channel into the given buffer:
@@ -1412,9 +1444,9 @@ You can avoid this scenario by using blocking only for short reading operations.
 But, moving on to other tasks may cause the thread to invoke the write() method again, and the completion handler has not yet been invoked by the previous write call.
 You can fix this issue by making sure that the completion handler complete() method is invoked before a new write operation is initiated.
 For this, use a first-in first out queue (FIFO-Q) for the byte buffers and write only when the previous write() has completed.
+Refer to the “ByteBuffers Considerations” section, earlier in this chapter, also.
 It will also have dedicated methods for read/write operations: a set of send()/receive() methods for connectionless case, and a set of read()/write() methods for connection case.
 All read/write operations will be asynchronous and will provide support for Future and CompletionHandler modes.
-This class was introduced in and then removed from earlier, unstable versions of Java 7
 There is a chance it will show up in later releases, so some guidelines for its main features are presented here.
 This channel supports asynchronous opening and read/write operations (through send()/receive() methods for unconnected channels, and read()/write() methods for connected channels)
 That means that these operations can be tracked by Future and CompletionHandler mechanisms.
@@ -1459,6 +1491,7 @@ Returns the number of bytes available to this virtual machine on the partition n
 Requests that the file or directory denoted by this abstract pathname be deleted when the virtual machine terminates.
 Working with the ZIP File System Provider Conforming to NIO.2, a file system concerns the generic notion of a container that’s capable of managing and accessing the file system objects.
 A file system object is typically a file store (e.g., on Windows we usually have C:, D:, and E: file stores, and we refer to them as partitions), but it can be a directory or a file as well.
+Moreover, it provides an implementation of a custom file system provider—the ZIP File System Provider (ZFSP)—that can be used as-is, and/or can be the inspiration point to develop other custom file system providers.
 The ZFSP treats a ZIP/JAR file as a file system and provides the ability to manipulate the contents of the file.
 The ZFSP creates one file system for each ZIP/JAR file.
 First, we create a simple HashMap that contains the configurable properties of a ZIP file system created by the ZFSP.
@@ -1474,7 +1507,6 @@ Therefore, implementing a custom file system provider requires writing at least 
 Define a URI scheme for the provider (the getScheme() method should return this URI scheme)
 Create an internal cache for managing the provider’s created file systems.
 Implement the newFileSystem() and getFileSystem() methods for creating a file system and for retrieving a reference to an existing file system.
-Implement the methods of the file system according to your needs (you may need to define the number of roots, read/write access, file stores, etc.)
 For more details, you may want to take a closer look at official documentation, at http://download.oracle.com/javase/7/docs/technotes/guides/io/fsp/filesystemprovider.html.
 This last section covers some useful methods that are ready to help you in any NIO.2 application.
 Default File System You’ve seen how to get the default file system many times in this book, but we’re putting this so you can easily access this information if you forget.
@@ -1498,7 +1530,6 @@ The publisher makes no warranty, express or implied, with respect to the materia
 Apress and friends of ED books may be purchased in bulk for academic, corporate, or promotional use.
 Any source code or other supplementary materials referenced by the author in this text is available to readers at www.apress.com.
 Anghel Leonard is a senior Java developer with more than 12 years of experience in Java SE, Java EE, and related frameworks.
-Currently, he is developing web applications using the latest Java technologies on the market (EJB 3.0, CDI, Spring, JSF, Struts,
 In the past two years, he has focused on developing rich Internet applications for geographic information systems.
 He has more than 20 years of experience working in various areas of information technology and financial services.
 His professional interests are in Internet technology, service-oriented architecture, enterprise application architecture, multiplatform distributed applications, cloud, distributed caching, Java, grid, and high performance computing.
@@ -1507,14 +1538,15 @@ And thank you, Octavia, my dear wife, for your love, patience, and for being nex
 This book covers all the important aspects involved in developing NIO.2-based applications.
 You will learn to develop NIO.2 applications, beginning with simple but essential stuff and gradually moving on to complex features such as sockets and asynchronous channels.
 For the opening chapters (Chapters 1-5), it is enough to be familiar with Java syntax and to know how to open and run NetBeans projects.
-For Chapters 6-10), having some knowledge about a few fundamental programming concepts such as recursion, multi-threading and concurrency, Internet protocols, and network applications is essential.
 What This Book Covers This section contains a brief summary of what is covered in each chapter.
 In this chapter I cover such important topics as declaring Path instances and syntactic operations.
 Attributes are divided into categories, and now they cover POSIX systems as well.
 This chapter shows you how to create, follow, and manipulate symbolic and hard links.
 You learn how to check file status and loop file stores, how to work with temporary files, and how to delete, copy, and move files and directories.
+Use the FileVisitor API to develop recursive file operations Chapter 5: Need to copy, move, or delete an entire directory? You’ve come to the right place.
 Chapter 5 shows you how to do all that through the brand new FileVisitor API.
 You also find out how to develop a Search File tool.
+Explore the Watch Service API and file changed notification Chapter 6: Want to monitor a file/directory for changes such as entries created, deleted, or modified? This is what the Watch Service does best.
 I also cover watching a print tray and surveying a video camera in this chapter.
 This is where you discover how flexible and versatile the new Watch Service API is.
 Practice, practice, practice, and go beyond being a RAF apprentice!

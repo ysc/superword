@@ -12,9 +12,9 @@ The web and networked devices spur an explosion of data collection and access un
 The magnitude of values stored and managed continues to grow at a staggering rate, and in parallel, more people than ever require fast and reliable access to this data.
 There’s a lot of discussion around what constitutes Big Data.
 I have a 6 Terabyte RAID inmy house to store videos and other backups.
+Does that count? On the other hand, CERN grabbed about 200 Petabytes looking for the Higgs boson.
 Riak was built as a solution to real Big Data problems, based on the Amazon Dynamo design.
 Dynamo is a highly available design—meaning that it responds to requests quickly at very large scales, even if your application is storing and serving terabytes of data a day.
-Riak had been used in production prior to being open-sourced in 2009
 It’s currently used by Github, Comcast, Voxer, Disqus and others, with the larger systems storing hundreds of TBs of data, and handling several GBs per node daily.
 Erlang was chosen due to its strong support for concurrency, solid distributed communication, hot code loading, and fault-tolerance.
 It runs on a virtual machine, so running Riak requires an Erlang installation.
@@ -46,6 +46,7 @@ Retrieving Bob is as easy as going to his house.
 Let’s say that poor old Bob dies, and Claire moves into this house.
 The address remains the same, but the contents have changed.
 Addresses in Riakville are more than a house number, but also a street.
+For convenience, we call a bucket/key + value pair an object, sparing ourselves the verbosity of “X key in the Y bucket and its value”
 Distributing data across several nodes is how Riak is able to remain highly available, tolerating outages and network partitions.
 Riak combines two styles of distribution to achieve this: replication and partitions.
 Replication is the act of duplicating data across multiple servers.
@@ -66,7 +67,6 @@ We partition data across multiple nodes, as well as replicate that data into mul
 Our server count has increased, but so has our capacity and reliability.
 If you’re designing a horizontally scalable system by partitioning data, you must deal with replicating those partitions.
 Riak applies consistent hashing to map objects along the edge of a circle (the ring)
-We won’t do all of the math, but trust me when I say favorite falls within the range of partition 3
 If we visualize our 64 partitions as a ring, favorite falls here.
 We count around the ring of vnodes in order, assigning each node to the next available vnode, until all vnodes are accounted for.
 This places the object in physical nodes C, D, and E.
@@ -85,30 +85,37 @@ If a network partition occurs between nodes, your servers still run.
 Making Riak run faster by keeping R andW values low will increase the likelihood of temporarily inconsistent results (higher availability)
 Setting those values higher will improving the odds of consistent responses (never quite reaching strict consistency), but will slow down those responses and increase the likelihood that Riak will fail to respond (in the event of a partition)
 Currently, no setting can make Riak truly CP in the general case, but features for a few strict cases are being researched.
+A question the CAP theorem demands you answer with a distributed system is: do I give up strict consistency, or give up ensured availability? If a request comes in, do I lock out requests until I can enforce consistency across the nodes? Or do I serve requests at all costs, with the caveat that the database may become inconsistent?
 Riak’s solution is based on Amazon Dynamo’s novel approach of a tunable AP system.
 It takes advantage of the fact that, though the CAP theorem is true, you can choose what kind of tradeoffs you’re willing to make.
 Riak is highly available to serve requests, with the ability to tune its level of availability (nearing, but never quite reaching, full consistency)
 Riak allows you to choose how many nodes you want to replicate an object to, and how many nodes must be written to or read from per request.
 These values are settings labeled n_val (the number of nodes to replicate to), r (the number of nodes read from before returning), and w (the number of nodes written to before considered successful)
 You can set other values (R,W) to equal the n_val number with the shorthand all.
+In other words, setting w=all would help ensure your system was more likely to be consistent, at the expense of waiting longer, with a chance that your write would fail if fewer than 3 nodes were available (meaning, over half of your total servers are down)
 A failed write, however, is not necessarily a true failure.
 The client will receive an error message, but the write will typically still have succeeded on some number of nodes smaller than theW value, and will typically eventually be propagated to all of the nodes that should have it.
+To ensure you have the most recent value, you can read from all 3 nodes containing objects (r=all)
 Remember when Imentioned that RDBMS databases werewrite consistent? This is close to read consistency.
+Just like w=all, however, the read will fail unless 3 nodes are available to be read.
+Finally, if you only want to quickly read any value, r=1 has low latency, and is likely consistent if w=all.
 In general terms, the N/R/W values are Riak’s way of allowing you to trade lower consistency for more availability.
 If you’ve followed thus far, I only have one more conceptual wrench to throw at you.
+I wrote earlier that with r=all, we can “compare all nodes against each other and choose the latest one.” But how do we know which is the latest value? This is where vector clocks (aka vclocks) come into play.
 Vector clocks measure a sequence of events, just like a normal clock.
 But since we can’t reasonably keep the clocks on dozens, or hundreds, or thousands of servers in sync (without really exotic hardware, like geosynchronized atomic clocks, or quantum entanglement), we instead keep a running history of updates.
 Let’s use our favorite example again, but this time we have 3 people trying to come to a consensus on their favorite food: Aaron, Britney, and Carrie.
 We’ll track the value each has chosen along with the relevant vector clock.
 To illustrate vector clocks in action, we’ll cheat a bit.
 By default, Riak no longer tracks vector clocks using client information, but rather via the server that coordinates a write request; nonetheless, the concept is the same.
-We’ll cheat further by disregarding the timestamp that is stored with vector clocks.)
+We’ll cheat further by disregarding the timestamp that is stored with vector clocks.
 When Aaron sets the favorite object to pizza, a vector clock could contain his name and the number of updates he’s performed.
 Britney now comes along, and reads favorite, but decides to update pizza to cold pizza.
 When using vclocks, she must provide the vclock returned from the request she wants to update.
 This is how Riak can help ensure you’re updating a previous value, and not merely overwriting with your own.
 At the same time as Britney, Carrie decides that pizza was a terrible choice, and tried to change the value to lasagna.
 Nowwe are back to the simple case, where requesting the value of favoritewill just return the agreed upon pizza.
+So why don’t we just distribute a standard relational database? MySQL has the ability to cluster, and it’s ACID (Atomic, Consistent, Isolated, Durable), right? Yes and no.
 A single node in the cluster is ACID, but the entire cluster is not without a loss of availability and (often worse) increased latency.
 When you write to a primary node, and a secondary node is replicated to, a network partition can occur.
 To remain available, the secondary will not be in sync (eventually consistent)
@@ -116,6 +123,7 @@ Have you ever loaded from a backup on database failure, but the dataset was inco
 Or, the entire transaction can fail, making the whole cluster unavailable.
 Unlike single node databases like Neo4j or PostgreSQL, Riak does not support ACID transactions.
 Locking across multiple servers would can write availability, and equally concerning, increase latency.
+As your server count grows—especially as you introduce multiple datacenters—the odds of partitions and node failures drastically increase.
 We’ll cover other technical concepts as needed, including the gossip protocol, hinted handoff, and readrepair.
 We’ll check out lookups, take advantage of write hooks, and examine alternative query options like secondary indexing, search, andMapReduce.
 It’s worth mentioning that I use the word “node” a lot.
@@ -163,6 +171,7 @@ You can take a peek at the bucket’s properties by issuing a GET to the bucket.
 If you have a command-line tool like jsonpp (or json_pp) installed, you can pipe the output there for easier reading.
 The results below are a subset of all the props values.
 But you may also have noticed that the cart props returned both r and w as quorum, rather than a number.
+As long as r+w > n, in the absence of sloppy quorum (below), you’ll be able to get the newest values.
 In other words, you’ll have a reasonable level of consistency.
 If you were a strict quorum, you could merely refuse both drinks, since the required people (N=2) are unavailable.
 But you’d rather be a sloppy drunk… erm, Imean sloppy quorum.
@@ -204,6 +213,7 @@ Issuing a plain get on the /cart/fridge-97207 key will also return the vtags of 
 Setting last_write_wins to true will optimize writes by assuming that previous vector clocks have no inherent value.
 With Riak 1.3, Basho introduced active anti-entropy to proactively identify and repair inconsistent data.
 This feature is also helpful for recovering data loss in the event of disk corruption or administrative error.
+The overhead for this functionality isminimized bymaintaining sophisticated hash trees (“Merkle trees”) which make it easy to compare data sets between vnodes, but if desired the feature can be disabled.
 The truth is, key-value is a pretty powerful mechanism that spans a spectrum of use-cases.
 However, sometimes we need to lookup data by value, rather than key.
 Sometimes we need to perform some calculations, or aggregations, or search.
@@ -235,12 +245,14 @@ You can actually chain together linkwalks, whichwill follow the a followed link.
 If casey has links, they can be followed by tacking another link triplet on the end, like so:
 Now it may not seem so from what we’ve seen, but link walking is a specialized case of MapReduce.
 If you have used Riak before, or have some older documentation, you may wonder what the difference is between Riak Search and Yokozuna.
+In an attempt to make Riak Search user friendly, it was originally developed with a “Solr like” interface.
 Sadly, due to the complexity of building distributed search engines, it was woefully incomplete.
 Basho decided that, rather than attempting to maintain parity with Solr, a popular and featureful search engine in its own right, it made more sense to integrate the two.
 Changes are to be expected, so please refer to the yokozuna project page for the most recent information.
 Before using Yokozuna, you’ll have to have it installed and a bucket set up with an index (these details can be found in the next chapter)
 Here we add ryan to the people table (with a default index)
 To execute a search, request /search/[bucket] along with any distributed Solr parameters.
+Here we query for documents that contain a word starting with zez, request the results to be in json format (wt=json), only return the Riak key (fl=_yz_rk)
 With the matching _yz_rk keys, you can retrieve the bodies with a simple Riak lookup.
 Another useful feature of Solr and Yokozuna is the tagging of values.
 Riak is a distributed data store with several additions to improve upon the standard key-value lookups, like specifying replication values.
@@ -251,6 +263,7 @@ A network cable is cut at 2am? Deal with it after a few more hours of sleep.
 Understanding this integral part of your application stack is still important, however, despite Riak’s reliability.
 We’ve covered the core concepts of Riak, and I’ve provided a taste of how to use it, but there is more to the database than that.
 There are details you should know if you plan on operating a Riak cluster of your own.
+Up to this point you’ve conceptually read about “clusters” and the “Ring” in nebulous summations.
 What exactly do we mean, and what are the practical implications of these details for Riak developers and operators?
 A cluster in Riak is a managed collection of nodes that share a common Ring.
 Secondly, the Ring is also used as a shorthand for describing the state of the circular hash ring I just mentioned.
@@ -263,13 +276,13 @@ Periodically, nodes will also send their status to a random peer for added consi
 Propagating changes in Ring is an asynchronous operation, and can take a couple minutes depending on Ring size.
 Currently, it is not possible to change the number of vnodes of a cluster.
 This means that you must have an idea of how large you want your cluster to grow in a single datacenter.
-The number of vnodes must be a power of 2 (eg.
 A great deal of effort has been made toward being able to change the number of vnodes, so by the time you read this, it is entirely possible that Basho has released a version of Riak that allows it.
 Even if you are not a programmer, it’s worth taking a look at this Ring example.
 It’s also worth remembering that partitions are managed by vnodes, and in conversation are sometimes interchanged, though I’ll try to be more precise here.
 Riak has the amazing, and dangerous, attach command that attaches an Erlang console to a live Riak node, with access to all of the Riak modules.
 Just to illustrate that Erlang binary value is a real number, the next line makes it a more readable format, similar to the ring partition numbers.
 So what does all this have to do with replication? With the above list, we simply replicate a write down the list N times.
+If something has happened to one of those nodes, like a network split (confusingly also called a partition —the “P” in “CAP”), the remaining active nodes in the list become candidates to hold the data.
 When a node goes down, data is replicated to a backup node.
 This is not permanent; Riak will periodically examine whether each vnode resides on the correct physical node and hands them off to the proper node when possible.
 As long as the temporary node cannot connect to the primary, it will continue to accept write and read requests on behalf of its incapacitated brethren.
@@ -288,6 +301,7 @@ It’smostly the same information you can get from getting /stats via HTTP, alth
 Finally, top is an analysis command checking the Erlang details of a particular node in real time.
 Different processes have different process ids (Pids), use varying amounts of memory, queue up so many messages at a time (MsgQ), and so on.
 This is useful for advanced diagnostics, and is especially useful if you know Erlang or need help from other users, the Riak team, or Basho.
+With several solitary nodes running—assuming they are networked and are able to communicate to each other—launching a cluster is the simplest part.
 Executing the cluster command will output a descriptive set of commands.
 To create a new cluster, you must join another node (any will do)
 Taking a node out of the cluster uses leave or force-remove, while swapping out an old node for a new one uses replace or forcereplace.
@@ -310,7 +324,7 @@ Below I turned off the C node to show what it might look like.
 WARNING: The cluster state will not converge until all nodes.
 If all of the above information options about your nodes weren’t enough, you can list the status of each vnode per node, via vnode-status.
 It’ll show each vnode by its partition number, give any status information, and a count of each vnode’s keys.
-Finally, you’ll get to see each vnode’s backend type— something I’ll cover in the next section.
+Finally, you’ll get to see each vnode’s backend typesomething I’ll cover in the next section.
 The last command is diag, which leverages Riaknostic to give you more diagnostic tools.
 I know this was a lot to digest, and probably pretty dry.
 There are plenty of details behind many of the riak-admin commands, too numerous to cover in such a short book.
@@ -322,6 +336,7 @@ Riak Pipe is an input/output messaging system that forms the basis of Riak’sMa
 Thiswas not always the case, andMR used to be a dedicated implementation, hence some legacy options.
 Like the ability to alter the KV path, you can also change HTTP from /mapred to a custom path.
 Number of items the mapper will fetch in one request.
+Riak KV’s MapReduce implementation (under riak_kv, though implemented in Pipe) is the primary user of the Spidermonkey JavaScript engine—the second user is precommit hooks.
 It’s an integration of the distributed Solr search engine into Riak, and provides some extensions for extracting, indexing, and tagging documents.
 The Solr server runs its own HTTP interface, and though your Riak users should never have to access it, you can choose which solr_port will be used.
 Several modern databases have swappable backends, and Riak is no different in that respect.
@@ -335,7 +350,7 @@ Implementations handle how data is encoded and transferred, and this project han
 Other projects add depth to Riak but aren’t strictly necessary.
 Two of these projects are lager, for logging, and riak_sysmon, for monitoring.
 If you wish to disable rotation, you can either set.
-To disable forwarding events of a particular type, set 0
+Whether to redirect error_logger messages into lager %% defaults to true.
 Finding reasonable limits for a given workload is a matter.
 InnoDB - The MySQL engine once supported by Riak, but now deprecated.
 You may recall that we skipped the diag command while looking through riak-admin, but it’s time to circle back around.

@@ -30,7 +30,6 @@ I start up a Clojure REPL and use it to poke around the problem API.
 Ten minutes later, my grandboss pokes his head into my office.
 Another ten minutes pass by when my great-grandboss pokes his head into my office.
 I get a half hour of silence before the CTO pokes his head into my office.
-Working on it,” I say before he opens his mouth.
 I whip up a way to keep the data clean until the legacy developer gets back and can put together a proper fix.
 The support calls stop coming in, and everyone relaxes a bit.
 A week or so later at an all-hands meeting, the great-grandboss thanks me for the Java program I wrote that saved the day.
@@ -50,6 +49,7 @@ Peter Norvig, author of the classic Lisp text Paradigms of Artificial Intelligen
 Patterns in Dynamic Languages that expressive languages like Lisp could turn classic object-oriented patterns invisible.1
 Unfortunately, not many people in the mainstream software development world seem to have read Norvig, but when we can replace a complicated pattern with something simpler, it makes sense that we should.
 It makes our code more concise, easier to understand, and easier to maintain.
+These patterns run the gamut from tiny—patterns consisting of a line or two of code—to very large—ones that deal with entire programs.
 Sometimes these patterns have first-class language support, which means that someone else has done the hard work of implementing them for us.
 This means that functional patterns are more lightweight than object-oriented patterns.
 You still need to understand the pattern before you can use it, but the implementation becomes as simple as a few lines of code.
@@ -86,6 +86,7 @@ Some object-oriented patterns can even be replaced with a straightforward applic
 Second, the functional world also has its own set of useful patterns.
 These patterns focus on writing code that avoids mutability and favors a declarative style, which helps us write simpler, more maintainable code.
 The two main sections of this book cover these two sets of patterns.
+Don’t the patterns we know and love extend across languages? Aren’t they supposed to provide common solutions to common problems regardless of what language you are using? The answer to both questions is yes, so long as the language you are using looks something like Java or its ancestor, C++
 With the emergence of more expressive language features, many of these patterns fade away.
 Classic Java itself has a great example of a language feature replacing a pattern: foreach.
 That’s not to say that foreach loops are exactly equivalent to the Iterator.
@@ -216,6 +217,7 @@ It’s able to garbage-collect short-lived objects very efficiently, so this sty
 Let’s continue our tour of TinyWeb with a look at view handling.
 In a fully featured framework, we’d include some ways to plug template engines into our view, but for TinyWeb we’ll just assume we’re generating our response bodies entirely in code using string manipulation.
 First we’ll need a View interface, which has a single method, render()
+The experienced object-oriented programmer might grumble about extra effort to get immutable objects, especially if we’re doing it “just to be functional.” However, immutable data doesn’t just fall out of functional programming; it’s a good practice that can help us write cleaner code.
 A large class of software bugs boil down to one section of code modifying data in another section in an unexpected way.
 This type of bug becomes even more heinous in the multicore world we all live in now.
 By making our data immutable, we can avoid this class of bugs altogether.
@@ -274,6 +276,8 @@ Here’s our modified view code in its full functional glory:
 It defines a single method, render(), which takes a map representing the data in our model and returns a rendered String.
 Next up, let’s take a look at the body of FunctionView.
 The code below declares a class that has a constructor with a single argument, viewRenderer, which sets an immutable field of the same name.
+The viewRenderer function parameter has a rather strange-looking type annotation, (Map[String, String]) => String.
+It says that viewRenderer is a function that takes a Map[String, String] and returns a String, just like the renderView() on our Java RenderingStrategy.
 Next, let’s take a look at the render() method itself.
 As we can see from the code below, it takes in a model and runs it through the viewRender() function.
 Notice how there’s no return keyword anywhere in this code snippet? This illustrates another important aspect of functional programming.
@@ -306,6 +310,7 @@ Unlike Java, we don’t define a class for filter; we simply use a list of highe
 Also like the Java version, the Scala TinyWeb has a single method, handleRequest(), which takes in an HttpRequest.
 Let’s take a look at it in greater detail starting with the class definition.
 Here we’re defining a class that takes two constructor arguments, a map of controllers and a list of filters.
+Note the type of the filters argument, List[(HttpRequest) => HttpRequest]
 This says that filters is a list of functions from HttpRequest to HttpRequest.
 Next up, let’s look at the signature of the handleRequest() method:
 The Option type is a container type with two subtypes, Some and None.
@@ -418,7 +423,6 @@ Now that we’ve got let under our belts, let’s take a look at the try express
 Much like in Scala, try is an expression with a value.
 If no exception is thrown, try takes on the value of the body of the expression itself; otherwise it takes on the value of a catch clause:
 If no exception is thrown, then the try expression takes the value of a map with two key-value pairs, which represents our HTTP response.
-The first key is the :status-code with a value of 200
 Its value is computed by passing the http-request into the controller and then passing that result into the render function along with the view to be rendered.
 We can see this in action using our test-view and test-controller below:
 Before we move on, let’s take a bit of a closer look at Clojure’s exception handling using a couple of simpler examples.
@@ -467,9 +471,8 @@ They are first-class constructs, which means that in addition to being higher or
 They can be unnamed, or anonymous functions, which are extremely handy for small, one-off pieces of code.
 In fact, Functional Interface (as its name might suggest) is a pattern that in the object-oriented world approximates the behavior of the functions of the functional world.
 We’ll cover a couple of different flavors of a Functional Interface replacement in this section.
-This is similar to using an anonymous inner class to implement Functional Interface in Java and is covered in Sample Code: Anonymous Functions, on page 41
+The first replaces smaller instances of the pattern—say ones that take a few lines of code—with an anonymous function.
 The second covers instances of the pattern that span more than a few lines.
-In Java, we’d implement these using a named rather than an anonymous class; in the functional world we use a named function, as we do in Sample Code: Named Functions, on page 43
 Our first example demonstrates anonymous functions and how we can use them to replace small instances of Functional Interface.
 One common situation where we’d do this is when we need to sort a collection differently than its natural ordering, the way it’s commonly ordered.
 To do so, we need to create a custom comparison so that the sorting algorithm knows which elements come first.
@@ -759,6 +762,9 @@ The code below, which assumes an isVowel() helper method, illustrates this solut
 There’s a higher-level pattern here: we’re filtering some type of element out of a sequence.
 Here it’s vowels in a string, but it could be odd numbers, people named “Michael” or anything else.
 We’ll exploit this higher-order pattern in our functional replacement, which uses the filter function.
+Next up, let’s discuss prepending a list of names with the “Hello, ” string.
+Here we take in a list of names, iterate through them, prepend “Hello, ” to each name, and add it to a new list.
+We’re mapping an operation onto each item in a sequence, here prepending a word with the “Hello, ” string.
 We’ll see how we can use the higher-order map function to do so.
 Let’s examine one final problem: summing up a sequence of numbers.
 In classic Java, we’d compute a sum by iterating through a list and adding each number to a sum variable, as in the code below:
@@ -770,12 +776,14 @@ To do our filtering, we can take advantage of the fact that Scala sets can be ca
 If the set contains the passed-in argument, it returns true; otherwise it returns false, as the code below shows:
 Now we can use the isVowel() from above, along with filter() and toSet(), to get a set of vowels out of a string:
 Here we can see it in action, filtering vowels out of a string:
+Our next example—prepending a list of names with “Hello, ”—can be written by mapping a function that does the prepending over a sequence of strings.
 Here, mapping just means that the function is applied to each element in a sequence and that a new sequence is returned with the result.
 Here we map a function that prepends the string "Hello, " to each name in a sequence:
 The Scala REPL inserts commas between elements in a sequence, so it’s putting an additional comma between each of our greetings.
 We’re using an operation, in this case, addition, to take a sequence and reduce it to a single value.
 In Scala, the simplest way to do this is to use the aptly named reduce method, which takes a single argument, a reducing function.
 Here we create a reducing function that adds its arguments together, and we use it to sum a sequence:
+That’s it—no iterating, no mutation, just a simple higher-order function!
 Here we take advantage of that property of Clojure sets to define a vowel? predicate, which we can then use with filter to filter the vowels out of a sequence.
 We then use Clojure’s set function to construct a new set from an existing sequence.
 Now we can use it to filter out sets of vowels from a word:
@@ -995,6 +1003,7 @@ Here we use the get method to try to retrieve the value for :foo from an empty m
 The lack of a value for a key is distinct from a key that has the value of nil, as this code demonstrates:
 We’ll start by looking at how we’d use Null Object as a default when we don’t get back a value from a map lookup.
 In this example, we’ll have a map full of people keyed off of an ID.
+If we don’t find a person for a given ID, we need to return a default person with the name “John Doe.”
 In classic Java, we’ll create a Person interface with two subclasses, RealPerson and NullPerson.
 The first, RealPerson, allows us to set a first and last name, while NullPerson has them hardcoded to "John" and "Doe"
 If we get a null back when we try to get a person by ID, we return an instance of NullPerson; otherwise we use the RealPerson we got out of the map.
@@ -1020,13 +1029,14 @@ The code in this example deals with a basic use of Null Object as a default valu
 Next up, let’s take a look at how we’d handle working with Null Object and its replacements when the time comes to modify them.
 Let’s take a look at our person example from a different angle.
 This time, instead of looking up a person that may not exist, we want to create a person only if we’ve got a valid first and last name.
-In Java, we’ll use the same null object we saw in Classic Java, on page 102
 If we have both a first and last name available to use, we’ll use a RealPerson; otherwise we’ll use a NullPerson.
 To do this, we write a buildPerson() that takes a firstName and a lastName.
 If either is null, we return a NullPerson; otherwise we return a RealPerson built with the passed-in names.
 This approach allows us to minimize the surface area of our code where we need to deal with null, which helps cut down on surprise null pointers.
 Now let’s see how we can accomplish the same in Scala without needing to introduce an extraneous null object.
 Our Scala approach to this problem will take advantage of Option instead of creating a special Null Object type.
+The firstName and lastName we pass into buildPerson() are Option[String]s, and we return an Option[Person]
+If both firstName and lastName are Some[String], then we return a Some[Person]; otherwise we return a None.
 The right way to do this in Scala is to treat the Options as we would treat any other container, such as a Map or a Vector.
 Earlier we saw a simple example of using the map() method on an instance of Some.
 Let’s look at how we’d use Scala’s most powerful sequence manipulation tool, the sequence comprehensions we introduced in Sample Code: Sequence Comprehensions, on page 77, to manipulate Option types.
@@ -1269,7 +1279,6 @@ The unit of injection in Clojure is the function, since Clojure is not object or
 For the most part, this means that the problems we solve with Dependency Injection in an object-oriented language don’t exist in Clojure, as we can naturally compose functions together.
 However, one use for Dependency Injection does need a bit of special treatment in Clojure.
 To stub out functions for testing purposes, we can use a macro named with-redfs, which allows us to temporarily replace a function with a stub.
-Let’s take a closer look at the sketch of a problem we saw in the Overview, on page 128
 There we created a movie service that allows us to do several movie-related actions.
 Each video is associated with a movie and needs to be decorated with details related to that movie, such as the movie’s title.
 To accomplish this, we’ve got a top-level movie service that depends on a movie DAO to get movie details and on a favorites service to fetch favorites for a given user.
@@ -1415,6 +1424,7 @@ In this pattern, we’ll look at some problems that can be solved cleanly using 
 Since the JVM doesn’t support tail recursive optimization, Scala and Clojure have to use a neat trick to support practical mutual recursion, just as they did with normal tail recursion, to avoid running out of stack space.
 Instead of making mutually recursive calls directly, we return a function that would make the desired call, and we let the compiler or runtime take care of the rest.
 Scala’s support for trampolining hides a lot of the details of this and provides us with both a tailcall() method to make mutually recursive calls and a done() method to call when we’re done with the recursion.
+To prove it, let’s take a quick look at the “Hello, World” for mutual recursion, a mathematically pretty but horribly inefficient way of telling if a number is even or odd, before we get into more real-world examples.
 Here’s how it works: we need two functions, isEven() and isOdd()
 The isEven() function checks to see if n is zero and, if so, it returns true.
 The isOdd() method checks to see if n is zero and if so returns false.
@@ -1426,6 +1436,7 @@ In addition, the results returned by the tail recursive functions are wrapped in
 To get them out at the end, we can call result() on the final TailRec instance.
 Here’s our even/odd code, rewritten to take advantage of Scala’s trampolining:
 This time, there’s no stack overflow with big numbers, though if you try with a big enough number, you should expect to wait a very long time, since this algorithm’s runtime is linearly proportional to the size of the number!
+In this example, we’ll use Mutual Recursion to build a simple state machine that takes a sequence of transitions between the different phases of matter—liquid, solid, vapor, and plasma—and verifies that the sequence is valid.
 For instance, it’s possible to go from solid to liquid, but not from solid to plasma.
 Each state in the machine is represented by a function, and the transitions are represented by a sequence of transition names, like condensation and vaporization.
 A state function picks the first transition off of the sequence and, if it’s valid, calls the function that gets it to where it should transition, passing it the remainder of the transitions.
@@ -1583,10 +1594,14 @@ For instance, a monad to do IO would gather up all of the IO done through the Ch
 The runtime would then be responsible for performing the IO.
 To create a function that itself creates functions, allowing us to synthesize behaviors on the fly.
 Sometimes we’ve got a function that performs a useful action, and we need a function that performs some other, related action.
+We might have a vowel? predicate that returns true when a vowel is passed in and need a consonant? that does the same for consonants.
 Other times, we’ve got some data that we need to turn into an action.
 We might have a discount percentage and need a function that can apply that discount to a set of items.
 With Function Builder, we write a function that takes our data or function (though, as we’ve seen, the distinction between functions and data is blurry) and uses it to create a new function.
 To use Function Builder, we write a higher-order function that returns a function.
+For example, to create a consonant? predicate from a vowel? predicate, we create a new function that calls vowel? and negates the result.
+To create odd? from even?, we create a function that calls even? and negates the result.
+To create dead? from alive?, we create a function that calls dead? and negates the result.
 We can encode it with a Function Builder implementation named negate.
 The negate function takes in a function and returns a new one that calls the passed-in function and negates the result.
 Another common use for Function Builder is when we’ve got a piece of static data we need to use as the basis for some action.
@@ -1594,6 +1609,7 @@ For instance, we could convert a static percentage to a function that calculates
 This function takes in a number to calculate a percentage of and uses the percentage stored in its closure to do so.
 We’ll see several examples of both flavors of Function Builder a bit later on.
 One way to use Function Builder is to create functions out of static data.
+This lets us take a bit of data—a noun—and turn it into an action—a verb.
 Let’s look at a couple of examples, starting with a function that takes a percentage and creates a function that calculates discounted prices based on those percentages.
 It then creates a function that uses discountPercentage to calculate a discount.
 The simplest way to use discountedPrice() is to have it create an anonymous function, which we call directly.
@@ -1699,7 +1715,6 @@ The new function has fewer arguments than the original and keeps track of the su
 In Scala Partial function application is another functional feature that’s important enough to warrant first-class support in Scala.
 The way it works is that you call a function and replace the arguments you don’t currently have values for with underscores.
 For example, if we’ve got a function that adds two integers together and we want a function that adds 42 to a single integer, we could create it like this:
-As the code below shows, addFortyTwo is a function of one argument, to which it adds 42
 Creating partially applied functions is simple, but spotting when to use them can be a bit tough.
 Say we’ve got a function that calculates income tax by state, and we want to create functions that let us calculate the income tax for a particular state.
 We can use a partially applied function to do it, like so:
@@ -1774,6 +1789,7 @@ Let’s get started with a dive into the Scala code.
 Scala’s has built-in support for Lazy Sequence in its Stream library.
 Perhaps the simplest thing we can do with a lazy sequence is to create an infinite sequence of all integers.
 Scala’s Stream library has a method that does just that, called from()
+According to the ScalaDoc, it will “create an infinite stream starting at start and incrementing by step.”
 Here, we use from() to create a sequence of all integers, starting at 0:
 This may seem a strange thing to do, but we can use another method, take(), to work with the first few numbers in the sequence.
 Here we’re using it to take the first five integers from our infinitely long list and then print them:
@@ -1904,12 +1920,12 @@ In both cases, we’ll go through our test purchases in a for comprehension, pul
 For timing, we’ll reuse the same code from the above example.
 Let’s start with the Purchase class, a straightforward case class:
 Generating our test data can be done with an infinitely long lazy sequence, from which we’ll take as many samples as we need.
-It’s okay if you don’t understand the details here; they can be found in Pattern 18, Lazy Sequence,
 If we wanted to take, say, five items from our infinite sequence, we do so with take(), like this:
 This function takes the number of test purchases, obtains the test purchases from our infinite sequence of test data, and adds them to a map indexed by store, as described earlier.
 To add a new purchase to the map, we pull the store number out of the purchase and attempt to get any existing purchases for that store from the map.
 If they exist, we add the new purchase to the existing list and create a new map with the updated key.
 Our mutable version is quite similar to the immutable version, except that we modify a mutable map and then turn it into an immutable one when done, as this code shows:
+So how do these two solutions perform? Let’s take a look by running it over 500,000 samples, starting with the immutable version first:
 As we can see, the mutable version is only a tiny bit faster.
 A bit of profiling reveals that this is largely because much of the time in the example was spent generating test data, and not manipulating the map.
 If we were reading the events off the filesystem or over the network, this overhead would be even greater, and the difference between the two solutions even smaller! On the other hand, even a tiny amount of time shaved off of each event processing may end up mattering if the data set is big enough.
@@ -1926,6 +1942,7 @@ Since Clojure has handy-dandy transients, the mutable solution looks very simila
 Now let’s give it a whirl, starting with the mutable version:
 As we can see, the differences are fairly minimal, but the mutable version is a bit faster.
 It’s the sort of thing that the old advice to avoid premature optimization is all about.
+As we’ve seen from this chapter, Scala and Clojure’s immutable data structures perform very well—not much worse than their mutable counterparts! If you’re modifying several immutable data structures in one go and if you’re doing it for large amounts of data, you’re likely to see a significant improvement.
 However, immutable data structures should be the default—they’re usually plenty fast.
 Before using Focused Mutability or any small-scale performance optimization, it’s a good idea to profile your application and make sure you’re optimizing in the right place; otherwise, you might find that you’re spending time optimizing a section of code that is rarely called, which will have little effect on the overall performance of the program.
 Using the right control flow abstraction for the job can help us write clearer code.
@@ -2002,7 +2019,6 @@ In Clojure and other Lisps, eval operates on data structures that have been read
 This means it’s possible to do much more sophisticated manipulations, since we don’t have to build up our code using raw string manipulation.
 The macroexpansion step as described in the diagram provides a convenient hook for us to do exactly this.
 A macro is just a function with a few key differences.
-The arguments to a macro are not evaluated, just like the call-by-name arguments we used in Scala in In Scala, on page 206
 A macro is run before compile time, and it returns the code to be compiled.
 This gives us a formal, built-in way of doing the sort of manipulations we introduced in our Java builder-generator thought experiment.
 In addition, a few other Clojure features help us build macros by controlling evaluation.
@@ -2041,6 +2057,7 @@ If we don’t make it a generated symbol, Clojure will qualify the symbol in the
 The following syntax-quoted let statement serves as a template for the code that the macro will generate.
 As we can see, the meat of the solution is a for statement that wraps the expression in to-time in a function and runs it through time-run the requested number of times:
 To test this out, we can use macroexpand-1 to look at the code it generates, as we do in the following REPL session:
+Since all the symbols are either gensyms or are fully qualified by their namespace, this can be a bit hard to read! If I’m having trouble understanding how a macro works, I like to manually convert the output from macroexpand-1 into the code that I’d write by hand.
 To do this, you generally just need to remove the namespaces from fully qualified symbols and the generated part of gensyms.
 As you can see, this cleaned-up output is much simpler to understand.
 I’ve also found that the process of going through the generated code by hand will help any bugs in the macro to surface.
@@ -2144,7 +2161,6 @@ If we want to write the commands in the same order as we would in a shell, we ju
 Now we can create a pipe of commands, as we do in the following REPL session:
 This has the same effect as running the ls command and passing its output into grep-readme:
 Now that we can define commands and pipes, let’s use macros to add some syntactic sugar to make things easier.
-For an introduction to Clojure’s macros, see Clojure Macros, on page 209
 This macro takes a name and a command string and defines a function that executes the command string.
 Now we can define a command and name it with a single macro invocation, as we do in the following REPL output:
 Now let’s do the same for our piped commands as we did for single commands with the def-pipe macro.

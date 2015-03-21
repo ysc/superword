@@ -31,9 +31,9 @@ Aparna Ramani, Rob Weltman, Jolly Chen, and Helen Friedland were instrumental th
 Special thanks to Christophe Bisciglia for giving me an opportunity at Cloudera and for the advice along the way.
 To those whom I may have omitted from this list, please forgive me.
 Finally, a special thank you to Kathy Sammer for her unwavering support, and for teaching me to do exactly what others say you cannot.
-Portions of this book have been reproduced or derived from software and documentation available under the Apache Software License, version 2
 Over the past few years, there has been a fundamental shift in data storage, management, and processing.
 Companies are storing more data from more sources in more formats than ever before.
+This isn’t just about being a “data packrat” but rather building products, features, and intelligence predicated on knowing more about the world (where the world can be users, searches, machine logs, or whatever is relevant to an organization)
 Organizations are finding new ways to use data that was previously believed to be of little value, or far too expensive to retain, to better serve their constituents.
 Sourcing and storing data is one half of the equation.
 Processing that data to produce information is fundamental to the daily operations of every modern business.
@@ -45,6 +45,7 @@ You could simply show each visitor a rotating list of products they could buy, h
 It’s not exactly an informed decision, but it’s a start.
 The question is what do you need to improve the chance of showing the right person the right product? Maybe it makes sense to show them what you think they like, based on what they’ve previously looked at.
 For some products, it’s useful to know what they already own.
+Customers who already bought a specific brand of laptop computer from you may be interested in compatible accessories and upgrades.1 One of the most common techniques is to cluster users by similar behavior (such as purchase patterns) and recommend products purchased by “similar” users.
 No matter the solution, all of the algorithms behind these options require data.
 I once worked on a data-driven marketing project for a company that sold beauty products.
 Using purchase transactions of all customers over a long period of time, the company was able to predict when a customer would run out of a given product after purchasing it.
@@ -78,6 +79,7 @@ In cases where Pig doesn’t support a necessary function, developers can extend
 If you know Perl, Python, Ruby, JavaScript, or even shell script, you can learn Pig’s syntax in the morning and be running MapReduce jobs by lunchtime.
 Apache Sqoop Not only does Hadoop not want to replace your database, it wants to be friends with it.
 Exchanging data with relational databases is one of the most popular integration points with Apache Hadoop.
+Sqoop, short for “SQL to Hadoop,” performs bidirectional data transfer between Hadoop and almost any database with a JDBC driver.
 Using MapReduce, Sqoop performs these operations in parallel with no need to write code.
 For even greater performance, Sqoop supports database-specific plug-ins that use native features of the RDBMS rather than incurring the overhead of JDBC.
 Many of these connectors are open source, while others are free or available from commercial vendors at a cost.
@@ -112,6 +114,7 @@ Administrators do, however, play an absolutely critical role in planning, instal
 Hadoop is a comparatively low-level system, leaning heavily on the host operating system for many features, and it works best when developers and administrators collaborate regularly.
 It’s an extremely exciting time to get into Apache Hadoop.
 The so-called big data space is all the rage, sure, but more importantly, Hadoop is growing and changing at a staggering rate.
+Each new version—and there have been a few big ones in the past year or two—brings another truckload of features for both developers and administrators alike.
 You could say that Hadoop is experiencing software puberty; thanks to its rapid growth and adoption, it’s also a little awkward at times.
 You’ll find, throughout this book, that there are significant changes between even minor versions.
 It’s a lot to keep up with, admittedly, but don’t let it overwhelm you.
@@ -122,7 +125,6 @@ The goal is not to enumerate all possible scenarios, but rather to call out what
 Chapter 4 walks you through the process of planning for an Hadoop deployment including hardware selection, basic resource planning, operating system selection and configuration, Hadoop distribution and version selection, and network concerns for Hadoop clusters.
 If you are looking for the meat and potatoes, Chapter 5 is where it’s at, with configuration and setup information, including a listing of the most critical properties, organized by.
 We also briefly cover the flux capacitor and discuss the burn rate of energon cubes during combat.
-Those that have strong security requirements or want to understand identity, access, and authorization within Hadoop will want to pay particular attention to Chapter 6
 Chapter 7 explains the nuts and bolts of sharing a single large cluster across multiple groups and why this is beneficial while still adhering to service-level agreements by managing and allocating resources accordingly.
 Once everything is up and running, Chapter 8 acts as a run book for the most common operations and tasks.
 Chapter 9 is the rainy day chapter, covering the theory and practice of troubleshooting complex distributed systems such as Hadoop, including some real-world war stories.
@@ -133,6 +135,7 @@ These systems are fantastic as the backing store for relational databases, conte
 Imagine for a second, though, hundreds or thousands of machines all waking up at the same time and pulling hundreds of terabytes of data from a centralized storage system at once.
 By creating a system composed of independent machines, each with its own I/O subsystem, disks, RAM, network interfaces, and CPUs, and relaxing (and sometimes removing) some of the POSIX requirements, it is possible to build a system optimized, in both performance and cost, for the specific type of workload we’re interested in.
 Store millions of large files, each greater than tens of gigabytes, and filesystem sizes reaching tens of petabytes.
+Use a scale-out model based on inexpensive commodity servers with internal JBOD (“Just a bunch of disks”) rather than RAID to achieve large-scale storage.
 Accomplish availability and high throughput through application-level replication of data.
 Optimize for large, streaming reads and writes rather than low-latency access to many small files.
 While it is true that HDFS can be used independently of MapReduce to store large datasets, it truly shines when they’re used together.
@@ -149,6 +152,7 @@ Filesystem metadata is stored on a centralized server, acting as a directory of 
 Another major difference between HDFS and other filesystems is its block size.
 Hadoop, on the other hand, uses the significantly larger block size of 64 MB by default.
 Increasing the block size means data will be written in larger contiguous chunks on disk, which in turn means data can be written and read in larger sequential operations.
+This minimizes drive seek operations—one of the slowest operations a mechanical disk can perform—and results in better performance when doing large streaming I/O operations.
 Rather than rely on specialized storage subsystem data protection, HDFS replicates each block to multiple machines in the cluster.
 By default, each block in a file is replicated three times.
 Because files in HDFS are write once, once a replica is written, it is not possible for it to change.
@@ -161,6 +165,7 @@ Daemons There are three daemons that make up a standard HDFS cluster, each of wh
 Namenode 1 Stores filesystem metadata, stores file to block map, and provides a global picture of the filesystem.
 Blocks are nothing more than chunks of a file, binary blobs of data.
 In HDFS, the daemon responsible for storing and retrieving block data is called the datanode (DN)
+The datanode has direct local access to one or more disks—commonly called data disks —in a server on which it’s permitted to store block data.
 In production systems, these disks are usually reserved exclusively for Hadoop.
 Storage can be added to a cluster by adding more datanodes with additional disk capacity, or even adding disks to existing datanodes.
 One of the most striking aspects of HDFS is that it is designed in such a way that it doesn’t require RAID storage for its block data.
@@ -190,11 +195,15 @@ Despite its name, the secondary namenode is not a backup for the namenode and pe
 The secondary namenode may have the worst name for a process in the history of computing.
 It has tricked many new to Hadoop into believing that, should the evil robot apocalypse occur, their cluster will continue to function when their namenode becomes sentient and walks out of the data center.
 We’ll explore the true function of the secondary namenode in just a bit, but for now, remember what it is not; that’s just as important as what it is.
+Reading and Writing Data Clients can read and write to HDFS using various tools and APIs (see “Access and Integration” on page 20), but all of them follow the same process.
 The client always, at some level, uses a Hadoop library that is aware of HDFS and its semantics.
 This library encapsulates most of the gory details related to communicating with the namenode and datanodes when necessary, as well as dealing with the numerous failure cases that can occur when working with a distributed filesystem.
 The Read Path First, let’s walk through the logic of performing an HDFS read operation.
+In addition to using Hadoop’s client library—usually a Java JAR file—each client must also have a copy of the cluster configuration data that specifies the location of the namenode (see Chapter 5)
 As shown in Figure 2-2, the client begins by contacting the namenode, indicating which file it would like to read.
+The client identity is first validated—either by trusting the client and allowing it to specify a username or by using a strong authentication mechanism such as Kerberos (see Chapter 6)—and then checked against the owner and permissions of the file.
 If the file exists and the user has access to it, the namenode responds to the client with the first block ID and the list of datanodes on which a copy of the block can be found, sorted by their distance to the client.
+If the namenode is unavailable for some reason—because of a problem with either the namenode itself or the network, for example—clients will receive timeouts or exceptions (as appropriate) and will be unable to proceed.
 With the block IDs and datanode hostnames, the client can now contact the most appropriate datanode directly and read the block data it needs.
 This process repeats until all blocks in the file have been read or the client closes the file stream.
 It is also possible that while reading from a datanode, the process or host on which it runs, dies.
@@ -243,6 +252,7 @@ The rest of this book will simply refer to these files using their base names, f
 Recall from earlier that the namenode writes changes only to its write ahead log, edits.
 Over time, the edits file grows and grows and as with any log-based system such as this, would take a long time to replay in the event of server failure.
 Similar to a relational database, the edits file needs to be periodically applied to the fsimage file.
+The problem is that the namenode may not have the available resources—CPU or RAMto do this while continuing to provide service to the cluster.
 The secondary namenode instructs the namenode to roll its edits file and begin writing to edits.new.
 The secondary namenode copies the namenode’s fsimage and edits files to its local checkpoint directory.
 The secondary namenode loads fsimage, replays edits on top of it, and writes a new, compacted fsimage file to disk.
@@ -274,6 +284,7 @@ These tools, after all, support health checks, in and out of band communication,
 Unfortunately, HA is a tougher nut to crack than simply killing a process and starting a new one elsewhere.
 The real challenge with implementing a highly available namenode stems from the fact that datanode block reports are not written to disk.
 In other words, even if one were to set up a namenode with one of these systems, write the proper health checks, detect a failure, initiate a state transition (failover), and activate the standby, it still wouldn’t know where to find any of the blocks and wouldn’t be able to service HDFS clients.
+Additionally, the datanodes—probably now viewing the namenode via a virtual IP (VIP)—would not realize a transition had occurred and wouldn’t know to send a new block report to bring the new namenode up to speed on the state of the cluster.
 As we saw earlier, receiving and processing block reports from hundreds or thousands of machines is actually the part of cluster startup that takes time; on the order of tens of minutes or more.
 This type of interruption is still far outside of the acceptable servicelevel agreement for many mission-critical systems.
 Systems such as Linux-HA work well for stateless services such as static content serving, but for a stateful system such as the namenode, they’re insufficient.
@@ -319,6 +330,7 @@ Files are uploaded using either -put or the synonym -copyFromLocal and are downl
 As a convenience, the -moveFromLocal and -moveToLocal commands will copy a file from or to HDFS, respectively, and then remove the source file (see Example 2-4)
 Also unique to HDFS is the ability to set the replication factor of a file.
 This can be done by using the -setrep command, which takes a replication factor and an optional flag (-R) to indicate it should operate recursively (see Example 2-5)
+Next, the fsck, which is covered in “Checking Filesystem Integrity with fsck” on page 198, is used to inspect file health but has the nice side effect of displaying block location information for each file.
 You may notice that only files have a block list.
 Directories in HDFS are purely metadata entries and have no block data.
 That is, development of a kernel module is not required.
@@ -329,6 +341,7 @@ All of the properties of HDFS are still present: no in-place modification of fil
 To be absolutely clear, FUSE does not make HDFS a POSIX-compliant filesystem.
 It is only a compatibility layer that can expose HDFS to applications that perform only basic file operations.
 Around the same time, a standalone RESTful HDFS proxy service was created, called HttpFS.
+While at first glance, both WebHDFS and HttpFS solve the same problemin fact, HttpFS is 100% API-compatible with WebHDFS—they address two separate architectual problems.
 By using the embedded web server in each daemon, WebHDFS clients must be able to communicate with each node of the cluster, just like native Java clients.
 HttpFS primarily exists to solve this problem and instead acts as a gateway service that can span network segments.
 Clients require only connectivity to the HttpFS daemon, which in turn performs all communication with the HDFS cluster using the standard Java APIs.
@@ -336,13 +349,13 @@ The upside to HttpFS is that it minimizes the footprint required to communicate 
 Of course, it is perfectly fine to run multiple HttpFS proxies to overcome this problem.
 Further, because both WebHDFS and HttpFS are fully API-compatible, developers writing client applications need to concern themselves with these details.
 The decision can be one based exclusively on the required data throughput and network design and security requirements.
+MapReduce refers to two distinct things: the programming model (covered here) and the specific implementation of the framework (covered later in “Introducing Hadoop MapReduce” on page 33)
 Designed to simplify the development of large-scale, distributed, fault-tolerant data processing applications, MapReduce is foremost a way of writing applications.
 In MapReduce, developers write jobs that consist primarily of a map function and a reduce function, and the framework handles the gory details of parallelizing the work, scheduling parts of the job on worker machines, monitoring for and recovering from failures, and so forth.
 Developers are shielded from having to implement complex and repetitious code and instead, focus on algorithms and business logic.
 User-provided code is invoked by the framework rather than the other way around.
 This is much like Java application servers that invoke servlets upon receiving an HTTP request; the container is responsible for setup and teardown as well as providing a runtime environment for user-supplied code.
 Similarly, as servlet authors need not implement the low-level details of socket I/O, event handling loops, and complex thread coordination, MapReduce developers program to a well-defined, simple interface and the “container” does the heavy lifting.
-The idea of MapReduce was defined in a paper written by two Google engineers in 2004, titled "MapReduce: Simplified Data Processing on Large Clusters" (J.
 The paper describes both the programming model and (parts of) Google’s specific implementation of the framework.
 Hadoop MapReduce is an open source implementation of the model described in this paper and tracks the implementation closely.
 Specifically developed to deal with large-scale workloads, MapReduce provides the following features: Simplicity of development.
@@ -353,6 +366,7 @@ The reduce function then operates on the intermediate key-value pairs, processin
 These primitives can be used to implement filtering, projection, grouping, aggregation, and other common data processing functions.
 Scale Since tasks do not communicate with one another explicitly and do not share state, they can execute in parallel and on separate machines.
 Additional machines can be added to the cluster and applications immediately take advantage of the additional hardware with no change at all.
+Automatic parallelization and distribution of work Developers focus on the map and reduce functions that process individual records (where “record” is an abstract concept—it could be a line of a file or a row from a relational database) in a dataset.
 The storage of the dataset is not prescribed by MapReduce, although it is extremely common, as we’ll see later, that files on a distributed filesystem are an excellent pairing.
 The framework is responsible for splitting a MapReduce job into tasks.
 Tasks are then executed on worker nodes or (less pleasantly) slaves.
@@ -434,7 +448,8 @@ The format of the file depends on the output format specified by the author of t
 Sample reducer output for our example job would look as follows:
 For those that are familiar with SQL and relational databases, we could view the logs as a table with the schema:
 We would, of course, have to parse the data to get it into a table with this schema, but that’s beside the point.
-In fact, the ability to deal with semi-structured data as well as act as a data processing engine are two of Hadoop’s biggest benefits.) To produce the same output, we would use the following SQL statement.
+In fact, the ability to deal with semi-structured data as well as act as a data processing engine are two of Hadoop’s biggest benefits.
+To produce the same output, we would use the following SQL statement.
 In the interest of readability, we’re ignoring the fact that this doesn’t yield identically formatted output; the data is the same.
 As exciting as all of this is, MapReduce is not a silver bullet.
 It is just as important to know how MapReduce works and what it’s good for, as it is to understand why MapReduce is not going to end world hunger or serve you breakfast in bed.
@@ -459,6 +474,7 @@ Hadoop MapReduce is similar to traditional distributed computing systems in that
 A master node coordinates cluster resources while workers simply do what they’re told, which in this case is to run a map or reduce task on behalf of a user.
 Client applications written against the Hadoop APIs can submit jobs either synchronously and block for the result, or asynchronously and poll the master for job status.
 Cluster daemons are long-lived while user tasks are executed in ephemeral child processes.
+Although executing a separate process incurs the overhead of launching a separate JVM, it isolates the framework from untrusted user code that could—and in many cases does—fail in destructive ways.
 Since MapReduce is specifically targeting batch processing tasks, the additional overhead, while undesirable, is not necessarily a showstopper.
 One of the ingredients in the secret sauce of MapReduce is the notion of data locality, by which we mean the ability to execute computation on the same machine where the data being processed is stored.
 Many traditional high-performance computing (HPC) systems have a similar master/worker model, but computation is generally distinct from data storage.
@@ -470,7 +486,9 @@ This is not just for data availability in the face of failures, but also to incr
 Daemons There are two major daemons in Hadoop MapReduce: the jobtracker and the tasktracker.
 The jobtracker is the master process, responsible for accepting job submissions from clients, scheduling tasks to run on worker nodes, and providing administrative functions such as worker health and task progress monitoring to the cluster.
 There is one jobtracker per MapReduce cluster and it usually runs on reliable hardware since a failure of the master will result in the failure of all running jobs.
+Clients and tasktrackers (see “Tasktracker” on page 35) communicate with the jobtracker by way of remote procedure calls (RPC)
 Just like the relationship between datanodes and the namenode in HDFS, tasktrackers inform the jobtracker as to their current health and status by way of regular heartbeats.
+Each heartbeat contains the total number of map and reduce task slots available (see “Tasktracker” on page 35), the number occupied, and detailed information about any currently executing tasks.
 After a configurable period of no heartbeats, a tasktracker is assumed dead.
 The jobtracker uses a thread pool to process heartbeats and client requests in parallel.
 When a job is submitted, information about each task that makes up the job is stored in memory.
@@ -487,6 +505,8 @@ Each job that is submitted has a job-level view that offers links to the job’s
 If you are to be responsible for a production Hadoop cluster, you will find yourself checking this interface constantly throughout the day.
 The act of deciding which tasks of a job should be executed on which worker nodes is referred to as task scheduling.
 This is not scheduling in the way that the cron daemon executes jobs at given times, but instead is more like the way the OS kernel schedules process CPU time.
+Much like CPU time sharing, tasks in a MapReduce cluster share worker node resources, or space, but instead of context switching—that is, pausing the execution of a task to give another task time to run—when a task executes, it executes completely.
+Understanding task scheduling—and by extension, resource allocation and sharing—is so important that an entire chapter (Chapter 7) is dedicated to the subject.
 The second daemon, the tasktracker, accepts task assignments from the jobtracker, instantiates the user code, executes those tasks locally, and reports progress back to the jobtracker periodically.
 There is always a single tasktracker on each worker node.
 Both tasktrackers and datanodes run on the same machines, which makes each node both a compute node and a storage node, respectively.
@@ -507,6 +527,7 @@ This is required because this data is usually too large to fit exclusively in me
 Tasktrackers, like the jobtracker, also have an embedded web server and user interface.
 It’s rare, however, that administrators access this interface directly since it’s unusual to know the machine you need to look at without first referencing the jobtracker interface, which already provides links to the tasktracker interface for the necessary information.
 When It All Goes Wrong Rather than panic when things go wrong, MapReduce is designed to treat failures as common and has very well-defined semantics for dealing with the inevitable.
+With tens, hundreds, or even thousands of machines making up a Hadoop cluster, machinesand especially hard disks—fail at a significant rate.
 In addition to faulty servers, there can sometimes be errant user MapReduce jobs, network failures, and even errors in the data.
 It’s common for child tasks to fail for a variety of reasons: incorrect or poorly implemented user code, unexpected data problems, temporary machine failures, and administrative intervention are a few of the more common causes.
 A child task is considered to be failed when one of three things happens:
@@ -525,12 +546,12 @@ Even if it immediately recovers, all running tasks will eventually fail.
 This effectively means the jobtracker is a single point of failure (SPOF) for the MapReduce layer—a current limitation of Hadoop MapReduce.
 For jobs whose input or output dataset is on HDFS, it’s possible that HDFS could experience a failure.
 This is the equivalent of the filesystem used by a relational database experiencing a failure while the database is running.
-If a datanode process fails, any task that is currently reading from or writing to it will follow the HDFS error handling described in Chapter 2
 Unless all datanodes containing a block fail during a read, or the namenode cannot find any datanodes on which to place a block during a write, this is a recoverable case and the task will complete.
 When the namenode fails, tasks will fail the next time they try to make contact with it.
 The framework will retry these tasks, but if the namenode doesn’t return, all attempts will be exhausted and the job will eventually fail.
 Additionally, if the namenode isn’t available, new jobs cannot be submitted to the cluster since job artifacts (such as the JAR file containing the user’s code) cannot be written to HDFS, nor can input splits be calculated.
 The team at Yahoo! ran into a number of scalability limitations that were difficult to overcome given Hadoop’s existing architecture and design.
+In large-scale deployments such as Yahoo!’s “Hammer” clustera single, 4,000-plus node Hadoop cluster that powers various systems—the team found.
 Since YARN is not yet stable, and the goal of this book is to provide pragmatic operational advice, the remainder of the content will focus exclusively on the MRv1 daemons and their configuration.
 Picking a Distribution and Version of Hadoop One of the first tasks to take on when planning an Hadoop deployment is selecting the distribution and version of Hadoop that is most appropriate given the features and stability required.
 This process requires input from those that will eventually use the cluster: developers, analysts, and possibly other systems such as business intelligence applications.
@@ -539,6 +560,7 @@ For instance, some relational databases support extensions to SQL for advanced a
 Hadoop is, as previously mentioned, an Apache Software Foundation (ASF) project.
 This means it’s available directly from Apache in both source and binary formats.
 It’s extremely common though for people to use more than just core Hadoop.
+While Hadoop is absolutely critical—after all, it provides not just the distributed file-system, but also the MapReduce processing framework—many users view it as the core of a larger system.
 In this sense, Hadoop is analogous to an operating system kernel, giving us the core functionality upon which we build higher-level systems and tools.
 Many of these related libraries, tools, languages, and systems are also open source projects available from the ASF.
 There is an inherent complexity in assembling these projects or components into a cohesive system.
@@ -559,7 +581,6 @@ Some of these features were so significant or had such a sweeping impact that th
 As you might expect, this in turn led to a somewhat dizzying array of releases and parallel lines of development.
 Here is a whirlwind tour of the various lines of development and their status.
 The 0.20 branch of Hadoop is extremely stable and has seen quite a bit of production burn-in.
-This branch has been one of the longest-lived branches in Hadoop’s history since being at Apache, with the first release appearing in April 2009
 One of the features missing from 0.20 was support for file appends in HDFS.
 Apache HBase relies on the ability to sync its write ahead log, (such as force file contents to disk) which under the hood, uses the same basic functionality as file append.
 Append was considered a potentially destabilizing feature and many disagreed on the implementation, so it was relegated to a branch.
@@ -584,6 +605,7 @@ There are, of course, some guidelines and a reasonable base configuration, but s
 As you probably already know, one of the major advantages of Hadoop is its ability to run on so-called commodity hardware.
 This isn’t just a function of cost, although that certainly plays a large role.
 One example of this is Hadoop’s preference for JBOD1 and how its I/O patterns fit this model explicitly.
+This isn’t to say production Hadoop clusters commonly run on $1,000 machines—your expectations of what is meant by commodity may need adjustment—but rather that you won’t need to break the bank by purchasing top-end servers.
 Hadoop hardware comes in two distinct classes: masters and workers.
 Master nodes are typically more robust to hardware failure and run critical cluster services.
 Loss of a master almost certainly means some kind of service disruption.
@@ -599,12 +621,14 @@ The distinction between a node and the service assigned to said node is importan
 Separately, there are the five core Hadoop services: namenode, secondary namenode, datanode, jobtracker, and tasktracker, each a separate daemon.
 Worker services such as the datanode and tasktracker always run together.
 As the cluster grows, these services are separated and dedicated hardware for each is provisioned.
+When you hear “master,” the next question is always “what process?” “Slave,” or “worker,” will always mean the datanode and tasktracker pair.
 Each of these machines serves a critical function the cluster can’t live without.2 While proponents of Hadoop beat the commodity hardware drum, this is the place where people spend more money and spring for the higher-end features.
 Dual power supplies, bonded network interface cards (NICs), and sometimes even RAID 10 in the case of the namenode storage device, are not uncommon to find in the wild.
 In general, master processes tend to be RAM-hungry but low on disk space consumption.
 The namenode and jobtracker are also rather adept at producing logs on an active cluster, so plenty of space should be reserved on the disk or partition on which logs will be stored.
 The operating system device for master nodes should be highly available.
 Most of the real work is done on the data devices, while the OS device usually only has to contend with logfiles in /var/log.
+Small clusters—clusters with fewer than 20 worker nodes—do not require much for master nodes in terms of hardware.
 Master nodes in large clusters should have a total of 96 GB of RAM.
 Remember that these are baseline numbers meant to give you a place from which to start.
 The namenode is absolutely critical to a Hadoop cluster and usually receives special treatment.
@@ -618,6 +642,7 @@ Each file is made up of one or more blocks and has associated metadata.
 The more files the namenode needs to track, the more metadata it maintains, and the more memory it requires as a result.
 Again, this is a guideline and can easily be invalidated by the extremes.
 Since all metadata must fit in memory, by definition, it can’t take roughly more than that on disk.
+Either way, the amount of disk this really requires is minimal—less than 1 TB.
 When provisioning, there are two options for namenode device management: use the namenode’s ability to write data to multiple JBOD devices, or write to a RAID device.
 No matter what, a copy of the data should always be written to an NFS (or similar) mounted volume in addition to whichever local disk configuration is selected.
 This NFS mount is the final hope for recovery when the local disks catch fire or when some equally unappealing, apocalyptic event occurs.3 The storage configuration selected for production usage is usually dictated by the decision to purchase homogeneous hardware versus specially configured machines to support the master daemons.
@@ -642,10 +667,12 @@ It’s easy to imagine use cases where the cluster’s primary function is long-
 In these cases, an administrator may choose to deviate from the balanced CPU to memory to disk configuration to optimize for storage-dense configurations.
 Starting from the desired storage or processing capacity and working backward is a technique that works well for sizing machines.
 Consider the case where a system ingests new data at a rate of 1 TB per day.
+We know Hadoop will replicate this data three times by default, which means the hardware needs to accommodate 3 TB of new data every day! Each machine also needs additional disk capacity to store temporary data during.
 Typical worker node hardware configurations Midline configuration (all around, deep storage, 1 Gb Ethernet)
 Allocate memory to take advantage of triple- or quadchannel memory configurations.
 High end configuration (high memory, spindle dense, 10 Gb Ethernet)
 Cluster Sizing Once the hardware for the worker nodes has been selected, the next obvious question is how many of those machines are required to complete a workload.
+The complexity of sizing a cluster comes from knowing—or more commonly, not knowing—the specifics of such a workload: its CPU, memory, storage, disk I/O, or frequency of execution requirements.
 Worse, it’s common to see a single cluster support many diverse types of jobs with conflicting resource requirements.
 Much like a traditional relational database, a cluster can be built and optimized for a specific usage pattern or a combination of diverse workloads, in which case some efficiency may be sacrificed.
 There are a few ways to decide how many machines are required for a Hadoop deployment.
@@ -655,6 +682,7 @@ It so happens that as machines are added to the cluster, we get compute resource
 Given the earlier example of 1 TB of new data every day, a growth plan can be built that maps out how many machines are required to store the total amount of data.
 It usually makes sense to project growth for a few possible scenarios.
 Sample cluster growth plan based on storage Average daily ingest rate 1 TB.
+Node-usable raw storage 18 TB Node raw storage – MapReduce reserve.
 Cluster size growth projection for various scenarios (18 TB usable/node)
 Projecting cluster size based on the completion time of specific jobs is less common, but still makes sense in certain circumstances.
 This tends to be more complicated and requires significantly more information than projections based solely on data size.
@@ -663,10 +691,10 @@ There’s a clear chicken and egg problem; a job must be run with a subset of th
 An interesting property of MapReduce jobs is that map tasks are almost always uniform in execution.
 Reduce tasks, on the other hand, don’t have this property.
 The number of reducers is defined by the developer rather than being based on the size of the data, so it’s possible to create a situation where the job bottlenecks on the number of reducers or an uneven distribution of data between the reducers.
-The latter problem is referred to as reducer skew and is covered in greater detail in Chapter 9
 Blades, SANs, and Virtualization The large-scale data storage and processing industry moves in cycles.
 In the past, administrators have purchased large beefy “scale-up” machines with the goal of stuffing as much CPU, RAM, and disk into a single machine as possible.
 At some point, we collectively realized this was difficult and expensive.
+For many data center services, we moved to running “pizza boxes” and building in the notion of failure as a first-class concept.
 A few years later, we were confronted with another problem: many machines in the data center were drastically underutilized and the sheer number of machines was difficult to manage.
 Machines were consolidated onto a smaller number of beefy boxes, reducing power and improving utilization.
 Local disk was eschewed in favor of large storage area networks (SANs) and network attached storage (NAS) because virtual machines could now run on any physical machine in the data center.
@@ -681,6 +709,7 @@ It is true that the density and power consumption properties of blade systems ar
 Blade enclosures commonly share I/O planes and network connectivity, and the blades themselves usually have little to no local storage.
 This is because these systems are built for compute-intensive workloads where comparatively little I/O is done.
 For those workloads, blade systems may be cost-effective and have a distinct advantage, but for Hadoop, they struggle to keep up.
+In “Worker Hardware Selection” on page 48, we talked about how Hadoop prefers JBOD disk configurations.
 There’s nothing inherently wrong with RAID; it’s fast, it’s proven, and it scales for certain types of applications.
 MapReduce is all about processing massive datasets, in parallel, in large sequential I/O access patterns.
 Each task is going to read a 128 MB sequential block of data from disk in a series of read operations.
@@ -752,6 +781,7 @@ This is less about Hadoop specifically and applies to general system maintenance
 Every system needs a functioning cron daemon to drive scheduled tasks.
 Cleaning up temporary files, compressing old logs, and running configuration management processes are a few examples of common cluster maintenance jobs.
 One of the common gotchas is to forget to synchronize clocks between machines.
+Pick a node in the cluster—usually one of the master nodes—and make it a local NTP server for all other nodes.
 Depending on the environment, developers may also have direct access to machines to view logs.
 Some of the supporting shell scripts do use ssh to start and stop services on the cluster.
 This is useful for automated tasks running from cron to be able to notify administrators of exceptional circumstances.
@@ -761,6 +791,7 @@ But before we get into the list of things that can go wrong, let’s first talk 
 As we discussed previously, Hadoop worker processes such as the tasktracker and datanodes heartbeat into the jobtracker and namenode (respectively) every few seconds.
 The first time this occurs, Hadoop learns about the worker’s existence.
 Part of this heartbeat includes the identity of the machine, either by hostname or by IP address.
+This identifier—again, either the hostname or the IP address—is how Hadoop will refer to this machine.
 This means that when an HDFS client, for instance, asks the namenode to open a file, the namenode will return this identifier to the client as the proper way in which to contact the worker.
 The exact implications of this are far-reaching; both the client and the worker now must be able to directly communicate, but the client must also be able to resolve the hostname and communicate with the worker using the identifier as it was reported to the namenode.
 But what name does the datanode report to the namenode? That’s the real question.
@@ -780,6 +811,7 @@ Normally, this isn’t a concern because there’s usually at least an entry in 
 Oddly enough, on Mac OS X, if the hostname doesn’t resolve, it still returns the hostname and the IP address active on the preferred network interface.
 Hostname canonicalization is the process of finding the complete, official, hostname according to the resolution system, in this case, the host’s resolver library.
 In lay terms, this usually means finding the fully qualified hostname.
+Since getLocalHost() returns a nonqualified hostname—hadoop01 on our example cluster—there’s some work to be done.
 What it does next is the quirk; it gets all IP addresses for the given hostname, and checks to make sure the original IP address appears in the list.
 If this fails for any reason, including a SecurityManager implementation that disallows resolution, the original IP address is returned as the canonical name.
 This code can be compiled and run using javac dns.java followed by java dns.
@@ -791,6 +823,7 @@ There are a few pathological cases where seemingly benign (and worse, common) co
 One of the most common issues is that the machine believes its name to be 127.0.01
 Worse, some versions of CentOS and RHEL configure things this way by default! This is extremely dangerous because datanodes communicate to the namenode that they’re.
 See man 5 hosts for details on the difference between fields two and three in the hosts file.
+The clients are told to write to the datanode at 127.0.0.1—in other words, themselves—and they constantly fail.
 This goes down as one of the worst configuration mistakes that can occur because neither traditional monitoring tools nor the untrained administrator will notice this until it’s far too late.
 Even then, it still may not be clear why the machine reports itself this way.
 Users, Groups, and Privileges Hadoop is, in many ways, an arbitrary code execution engine.
@@ -803,7 +836,6 @@ Historically, it was common to run all daemons as a single user, usually named h
 This was prior to support for secure operation being a first class deployment mode and suffered from potential data exposure issues.
 For example, if a MapReduce task is running as user hadoop, that process can simply open raw blocks on the worker’s Linux filesystem, bypassing all application-level authorization checks.
 By running child tasks as user mapred the standard filesystem access controls can be used to restrict direct access to datanode block data.
-For more information about user identity, authentication, and authorization in MapReduce see Chapter 6
 By default, the CDH Hadoop RPM and Deb packages will create these users if they don’t already exist, and the init scripts will start the daemons as the correct users.
 Users of Apache Hadoop can write similar scripts or use an external system to ensure daemons are started as the correct users.
 Each Hadoop daemon consumes various system resources, as you can guess.
@@ -824,6 +856,7 @@ This is especially dangerous for HBase as Region Servers must maintain communica
 To avoid this, vm.swappiness should be set to 0 (zero) to instruct the kernel to never swap application data, if there is an option.
 The kernel decides if enough RAM is available and either grants or denies the allocation request.
 Linux (and a few other Unix variants) support the ability to overcommit memory; that is, to permit more memory to be allocated than is available in physical RAM plus swap.
+This is scary, but sometimes it is necessary since applications commonly allocate memory for “worst case” scenarios but never use it.
 Check if enough memory is available and, if so, allow the allocation.
 If there isn’t enough memory, deny the request and return an error to the application.
 This is absolutely as weird and scary as it sounds.
@@ -832,6 +865,7 @@ In other words, the child process has a complete copy of the parent’s memory s
 If that child’s intention is to immediately call exec() (which replaces one process with another) the act of cloning the parent’s memory is a waste of time.
 Because this pattern is so common, the vfork() function was created, which unlike fork(), does not clone the parent memory, instead blocking it until the child either calls exec() or exits.
 The problem is that the HotSpot JVM developers implemented Java’s fork operation using fork() rather than vfork()
+So why does this matter to Hadoop? Hadoop Streaming—a library that allows MapReduce jobs to be written in any language that can read from standard in and write to standard out—works by forking the user’s code as a child process and piping data through it.
 This means that not only do we need to account for the memory the Java child task uses, but also that when it forks, for a moment in time before it execs, it uses twice the amount of memory we’d expect it to.
 Disk Configuration Disk configuration and performance is extremely important to Hadoop.
 Since many kinds of MapReduce jobs are I/O-bound, an underperforming or poorly configured.
@@ -885,6 +919,7 @@ Rack topology information is used to make reasonable decisions about data block 
 In Chapter 2, we covered the nuts and bolts of how HDFS works and why.
 Taking a step back and looking at the system from the perspective of the network, there are three primary forms of traffic: cluster housekeeping traffic such as datanode block reports and heartbeats to the namenode, client metadata operations with the namenode, and block data transfer.
 Basic heartbeats and administrative commands are infrequent and only transfer small amounts of data in remote procedure calls.
+Only in extremely large cluster deployments—on the order of thousands of machines—does this traffic even become noticeable.
 Most administrators will instead focus on dealing with the rate of data being read from, or written to, HDFS by client applications.
 Remember, when clients that execute on a datanode where the block data is stored perform read operations, the data is read from the local device, and when writing data, they write the first replica to the local device.
 Clients that do not run on a datanode or that read more than a single block of data will cause data to be transferred across the network.
@@ -921,6 +956,7 @@ So the question really becomes one of whether the benefits outweigh the cost.
 Vendor selection, network size, media, and phase of the moon all seem to be part of the pricing equation.
 On the other hand, plenty of organizations have simply made the jump and declared that all new infrastructure must be 10 Gb, which is also fine.
 Those that primarily run ETL-style or other high input to output data ratio MapReduce jobs may prefer the additional bandwidth of a 10 Gb network.
+Analytic MapReduce jobs—those that primarily count or aggregate numbers—perform far less network data transfer during the shuffle phase, and may not benefit at all from such an investment.
 For space- or power-constrained environments, some choose to purchase slightly beefier hosts with more storage that, in turn, require greater network bandwidth in order to take full advantage of the hardware.
 The latency advantages of 10 Gb may also benefit those that wish to run HBase to serve low-latency, interactive applications.
 Typical Network Topologies It’s impossible to fully describe all possible network topologies here.
@@ -975,6 +1011,7 @@ Some Hadoop community members have written, at length, about the port density, b
 Cluster access in a spine fabric can be placed on a dedicated leaf.
 Since all leaves have equidistant access to all others via the spine, bandwidth is not sacrificed.
 Also noteworthy is that the spine fabric implicitly supports redundancy because of the use of ECMP routing.
+It’s possible to lose up N – 1 spine switches where N is the number of uplinks per leaf, although bandwidth is obviously reduced with each loss as well.
 Installing Hadoop Once you’ve prepped the environment, selected the version and distribution of Hadoop, and decided which daemons will run where, you’re ready to install Hadoop.
 The act of installing Hadoop is relatively simple once the machines have been properly prepared.
 The goal here, though, is to define some best practices for deployment to avoid the most common mistakes and pain points.
@@ -985,6 +1022,7 @@ Tarball installs are also complicated because the administrator needs to perform
 If you’re not sure which method of install to perform, start with RPM or Deb packages.
 It will save you from making common mistakes and keep you in line with best practices developed by the Hadoop community over time.
 Do I Need Root Access to Install Hadoop? Sometimes, due to organizational boundaries or security restrictions, administrators responsible for deploying Hadoop do not have Linux root user privileges.
+While Hadoop itself does not necessarily require root privileges, installation—at least according to best practices—does require that some actions be performed as a superuser.
 Whether one can get away without requiring root access depends on the method of deployment, the features of Hadoop that are to be enabled, and how much planning can be done beforehand.
 It is, however, possible to divide the tasks that require superuser privileges from those that do not.
 Expect that, for a production deployment, root privileges will be required during installation and for specific maintenance operations (covered later in Chapter 8)
@@ -1004,6 +1042,8 @@ The Common subproject was to contain code shared by both HDFS and MapReduce, whi
 The idea here was that Hadoop could, in theory, support other compute and storage layers.
 While this is true, it made development of Hadoop itself extremely difficult and ultimately there was still only a single software artifact that came out of the project that contained the cumulative source code of all three components.
 This artifact, for lack of a better way to do deal with the situation, is now released under the Common subproject.
+Clicking on the “Common” tab and then on the “Releases” link leads to the download page.
+Scrolling down, you’ll find a link labeled “Download a release now.” This leads to the list of mirrors with a recommended mirror based on your geographic location at the top of the page.
 In the following examples, we use selected-mirror to indicate the location of the software on one of the mirror sites:
 You’ll notice that the directory includes common directories like bin, sbin, lib, libexec, share, as well as conf directory that contains configuration files.
 In the src directory, you’ll find the source code for Hadoop itself.
@@ -1013,7 +1053,6 @@ While not critical, it is a strange decision and some administrators will want t
 Move the unpacked directory to the proper location on the filesystem.
 The proper location to install Hadoop is left entirely to the administrator when installing from a tarball.
 For personal testing installations, your home directory may be fine, whereas production deployments may live in /usr/local or /opt.
-If you elect to deploy Hadoop in a system directory such as /usr/local, you’ll need root privileges to move files there; /usr/local usually has the ownership root:root with the permissions 0755
 If you’ve moved Hadoop to a system directory, don’t forget to change the owner and group:
 From here on out, you’ll need to work as root to make changes within the directory.
 Make sure that the directory containing the Hadoop software is not writable by the user MapReduce tasks will execute as.
@@ -1077,6 +1116,7 @@ Don’t let the volume of parameters, the number of configuration files, or the 
 This section is organized by subsystem or component in an effort to make the information accessible.
 Critical parameters are highlighted and when appropriate, related or interdependent parameters are cross referenced.
 Further, each section below is organized such that the most generic, system wide parameters are described first, while.
+Since the topic of securing Hadoop is so vast, an entire chapter—Chapter 6—is dedicated to the subject.
 Rather than force administrators to go through the painful process of updating all configuration files, the developers chose to maintain backward compatibility with the old property names.
 Clearly the writing is on the wall, however, and you should begin to familiarize yourself with the new property names as soon as possible.
 There are cases, notably namenode high availability and federation, where the new property names must be used.
@@ -1146,7 +1186,6 @@ Loggers output their log events to an appender which is responsible to handling 
 By far, the most commonly used appenders write log events to disk, but appenders for outputting log events to the console, sending data to syslog, or even to JMS exist.
 The final component in log4j is the layout which acts as a formatter for log events.
 One of the most powerful aspects of log4j is that the log level of each logger, its appender, and the layout are all configured via the configuration file so they may be changed at runtime.
-The log4j configuration file format is a standard Java properties file (i.e.
 Logger names are defined by the application, but are almost always the name of the Java class that is generating the log events.
 The hierarchical relationship of a logger is defined by dotted notation with descendants having their parent’s prefix.
 The value of a logger parameter is always a log level, a comma, and the name of one or more appenders.
@@ -1199,6 +1238,7 @@ Hadoop MapReduce (specifically jobs that use input formats that subclass FileIn 
 No disk space is reserved, by default, meaning HDFS is allowed to consume all available disk space on each data disk, at which point the node becomes read only.
 If the average MapReduce job produces a significant amount of intermediate output (again, this is map task output) or you have large disks (where each disk is greater than 2TB), feel free to increase the amount of reserved capacity accordingly.
 If the previous sentence makes you glaze over, use the following python snippet (where 200 is the number of nodes in the cluster in question):
+This isn’t entirely true because MapReduce jobs operate on input splits—a logical window into a filenot an HDFS block, directly.
 Symptoms of this being set too low include datanodes timing out or receiving connection refused while trying to connect to the namenode, large namenode RPC queue sizes, and possibly high RPC latency.
 With disk failures being relatively common in mid to large clusters, this isn’t ideal.
 Loss of a datanode results in a drop in the observed replication factor and, in turn, causes the namenode to instruct a datanode with another copy of the data to replicate the data to recover.
@@ -1225,6 +1265,7 @@ Be sure and warn application developers of this as it has claimed a number of vi
 There is discussion within the community about making trash a server-side feature that applies to all clients equally, although it hasn’t yet been done.
 Formatting the Namenode Before HDFS can be started, the namenode must be formatted.
 Formatting is a relatively simple operation, performed once, that creates the initial filesystem metadata on the namenode.
+The format command must be run as the OS user that you intend to be the HDFS super user (see “HDFS” on page 153 for more information on users and security in HDFS), on the namenode host, and after all dfs.name.dir directories have been created with the proper permissions.
 When run, the format operation creates an empty fsimage file, edit log, and a randomly generated storage ID.
 The first time datanodes connect to a namenode, they adopt the storage ID and will refuse to connect to any other namenode.
 Should you need to reformat the namenode, you must delete all data on the datanodes as well, which includes this storage ID information.
@@ -1232,6 +1273,7 @@ Formatting is a destructive operation When you format the namenode, a new filesy
 If you reformat an existing namenode, not only is all existing metadata destroyed, but any existing block data on datanodes will be permanently orphaned and inaccessible.
 Exercise caution when performing a format operation and make sure that you truly intend to do so.
 To format a namenode, execute the hadoop namenode -format command, as shown in Example 5-3
+Once the namenode has been formatted, you can start the HDFS daemons (see “Starting and Stopping Processes with Init Scripts” on page 195)
 Creating a /tmp Directory Many applications in the Hadoop ecosystem expect to find a /tmp directory in HDFS.
 Much like /tmp in Linux, application commonly write temporary files and directories to this path while performing work.
 In order to be useful, this directory must be world writable so any user can create files, although users should not be able to modify or replace files they do not own.
@@ -1244,6 +1286,7 @@ If you have an existing cluster where you’ve already configured this, you can 
 Typically, this volume should be mounted with the options tcp, hard, intr, at least nfsvers=3, and whatever timeo and retrans values make sense for your network.
 See man 5 nfs for more information on NFS mount options.
 The shared edits directory should have the same permissions as any other namenode metadata directory.
+See “Users, Groups, and Privileges” on page 60 for details.
 If the shared edits path is not writable or becomes unavailable for any reason, the namenode process will abort.
 This is notably different than dfs.name.dir where a failed path is simply ignored.
 As this implies, if this path is inaccessible from both namenodes, both will abort and HDFS will become unavailable, hence the recommendation for a filer that is, itself, highly available.
@@ -1260,17 +1303,19 @@ It’s critical that this be prevented, as two processes writing to the same set
 In an automatic failover configuration, this is further complicated by the fact that a human isn’t around.
 To enforce exclusive access to the shared state, HA systems typically employ one or more fencing methods.
 How you fence a service depends greatly on the service in question, so this is a common place custom scripts are used.
+Hadoop support various fencing methods that must be configured (see “Fencing Options” on page 102) before HA will function.
 The next step is to make the necessary configuration changes to the core-site.xml and hdfs-site.xml files.
 This involves the creation of a logical name for the highly available namenode service called the nameservice-id, the grouping of namenodes into that service using logical namenode-ids, defining namenode properties like the RPC and HTTP service ports, and configuring a set of fencing methods.
 All of this is required for both manual and automatic failover scenarios.
 No more secondary namenode Remember that in an HA deployment, the standby (inactive) namenode performs the work of the secondary namenode.
+See “Namenode High Availability” on page 17 for more information.
 Fencing Options In order to prevent data corruption during a forced state transition (in other words, when our partner dies and we must become active) a method of fencing is required.
 This is because, in cases where the misbehaving namenode stops responding, it’s still possible that it’s up and running and will attempt to write to the shared edits directory.
 To prevent this, Hadoop allows administrators to decide the best way to fence off the unhealthy namenode.
 Fencing methods are configurable, and normally, multiple different methods are specified in configuration.
 Each method listed is executed, in order, until one of them succeeds.
 Generally, methods should be ordered with more polite methods earlier and the severe options later.
-Typical fencing strategies in HA systems include asking the partner to give up control gracefully (e.g.
+Confused? Do not pass go! If an effective fencing strategy is not configured correctly it is possible to corrupt shared state information in most HA data storage systems.
 If the concepts behind HA and fencing aren’t clear, take the time to do a little extra research.
 It will save you countless hours, and possible data loss, down the road.
 Hadoop ships with one standard and two user-configurable fencing methods: sshfence and shell.
@@ -1285,6 +1330,7 @@ If the host to fence is down, this method will declare that it failed to fence t
 As a result, you must have a non-ssh based fencing method to fall back to.
 The second fencing method is the shell method which, as you might expect, executes an arbitrary shell command.
 This allows you to perform arbitrarily complex fencing using IPMI, NFS filer level fencing, or other vendor specific functions.
+All Hadoop configuration properties are available as environment variables to the shell script with dots (“.”) replaced with underscores (“_”)
 Additionally, the special environment variables in Table 5-2 are also available for use.
 The script, along with any arguments, should be surrounded by parenthesis after the method name.
 A closing parenthesis may not appear in the arguments, themselves.
@@ -1333,6 +1379,7 @@ The thread that watches for changes in the edit log is interrupted.
 The namenode transitions to active and starts the necessary services.
 If you have not configured automatic failover, you can manually activate the primary namenode by running the command in Example 5-12
 The arguments to the -fail over command are the namenode that should be standby followed by the namenode that should become active.
+It helps to remember the order by thinking “I want to transition from namenode A to B.” Refer to the namenode web user interface or log files to confirm the transition completes successfully.
 From the standby namenode, run the hdfs namenode -bootstrapStandby command to copy the necessary metadata from the active namenode, shown in Example 5-13
 Start the standby namenode and failover controller, if you have configured automatic failover, as you did on the primary namenode.
 Check the web user interface of each namenode; one should claim to be active and the other standby.
@@ -1340,6 +1387,7 @@ To test that automatic failover is working correctly, simply stop the active nam
 If you check the failover controller logs, you should see it detect the change in health status and yield active status by removing its lock in ZooKeeper.
 The standby namenode should detect this almost immediately and take over the active role.
 To test manual failover if you’re not using automatic failover, simply run the same command in Example 5-12 with the order of the namenodes reversed.
+It differs from namenode high availability (described in “Namenode High Availability” on page 100) in that rather than a single namespace being served from one of two possible namenodes, multiple namenodes each serve a different slice of a larger namespace.
 It’s possible to enable either federation or high availability, or even both simultaneously.
 Sometimes, federation is used to provide a different level of service to a slice of a global namespace.
 For example, it may be necessary to tune garbage collection parameters or enable HA for the path /hbase but not the rest of the namespace.
@@ -1430,12 +1478,12 @@ Oversubscribing the machine’s CPU and disk IO will lead to degraded performanc
 If a worker node starts swapping performance will immediately and severely suffer.
 It’s possible that all tasks slow so much that they time out causing them to fail and be retried later.
 If the pattern of swapping and time out continues, tasks can exhaust their maximum number of retries causing the job to fail.
+So where do you start when configuring the number of tasks for a machine? Start with a baseline configuration of one and a half tasks for each physical CPU core (rounded up the nearest whole number), assuming the balanced hardware configuration from “Worker Hardware Selection” on page 48, and adjust based on the observed behavior of the jobs that are commonly run.
 Dividing these tasks by map and reduce slots can also be tricky.
 The size of this buffer is controlled by the io.sort.mb parameter.
 Prior to spilling to disk, this where the map output is partitioned and sorted by key.
 When the map task is complete, there may be many of these spill files.
 These files, which are already sorted by key, are merged into larger files and served to reducers by the tasktracker.
-The value of io.sort.mb is specified in megabytes and, by default, is 100
 Increasing the size of this buffer results in fewer spills to disk and, as a consequence, reduces the number of spill files that must be merged when the map task completes.
 The io.sort.mb parameter is one way administrators and job developers can trade more memory for reduced disk IO.
 The downside of this is that this buffer must be.
@@ -1537,11 +1585,13 @@ The naming convention of the racks is a slash separated, pseudo-hierarchy, exact
 Although today, rack topologies are single level (that is, machines are either in the same rack or not; there is no true hierarchy), it is possible that Hadoop will develop to understand multiple levels of locality.
 For instance, it is not currently possible to model multinode chassis systems with multiple racks.
 If a chassis holds two discreet servers and the cluster spans multiple racks, it is possible that two replicas of a block could land in a single chassis, which is less than ideal.
+This situation is significantly more likely in the case of highly dense blade systems, although they have other problems as well (see “Blades, SANs, and Virtualization” on page 52)
 Some users see rack topology as a way to span a Hadoop cluster across data centers by creating two large racks, each of which encompasses all the nodes in each data center.
 Hadoop will not berate you with errors if you were to try this (at least not initially), but rest assured it will not work in practice.
 It seems as though, with multiple replicas and the ability to impact how replicas are placed, you’d have everything you need.
 If you were to configure a cluster this way, you’d almost immediately hit the network bottleneck between data centers.
 Remember that while rack topology doesn’t necessarily prohibit non-local reads, it only reduces the chances, and either way, all writes would always span data centers (because replicas are written synchronously)
+The other major issue is that, when running MapReduce jobs, the jobtracker will see replicas in the other data center—and the nodes on which they reside—as viable candidates for scheduling in order to achieve data locality during processing.
 This is benign enough, as no data is transferred across the network, but the ensuing shuffle phase will have to transfer a significant amount of data between the data centers.
 The final pathological case with this configuration is that, assuming everything else were not to be a problem (which is unlikely), within a data center, replicas will view all racks as a single rack.
 This results in an inability to distinguish between a rack-local task and a non-local task to Hadoop, which generates a significant amount of data transfer across the core switches within a single data center that wouldn’t normally occur.
@@ -1561,10 +1611,10 @@ It shouldn’t be possible for one group to monopolize the resources of a shared
 Administrators and especially security and compliance staff expect to be able to monitor and audit user activity in multitenant systems to ensure policies are enforced.
 The degree of isolation within a multitenant system can be seen as the gating factor between silo and shared deployments.
 This is even more true of data storage and processing systems, and is the impetus for a deep review of identity, access, and authorization controls in a system such as Hadoop.
-When a user performs an action in Hadoop, there are three significant questions: 1
 The identity of the entity interacting with the cluster (where entity means a human user or another system) is who they purport to be.
 In Linux, we use usernames, whereas the relational database MySQL, for instance, has its own notion of a user.
 The identity is an arbitrary label that is unique to an entity, and something to which we can attach meaning.
+Can this user prove they are who they say they are? Anyone can claim to be your Uncle Larry or Aunt Susan, but can they prove it? We authenticate one another by confirming an identity using some kind of system.
 To enter a country, an individual must present a valid and authentic passport bearing a photo of the person, for instance (although some may say this is a weak form of subjective authentication)
 Linux provides multiple forms of authentication via plug-ins, although passwords are probably the most common.
 Authentication mechanisms vary in strength (the rigor with which they confirm a user’s identity)
@@ -1583,6 +1633,7 @@ Authentication must always be performed before authorization is considered, and 
 Identity In Hadoop, there is a strong relationship between who a user is in the host operating system and who they are in HDFS or MapReduce.
 Furthermore, since there are many machines involved in a cluster, it may not be immediately obvious what is actually required in order to execute a MapReduce job.
 Hadoop, like most systems, uses the concepts of users and groups to organize identities.
+However—and this is the root of quite a bit of confusion—it uses the identity of the user according to the operating system.
 That is, there is no such thing as a Hadoop user or group.
 When an OS user, in my case, user esammer, executes a command using the hadoop executable, or uses any of the Java APIs, Hadoop accepts this username as the identity with no further checks.
 In simple mode, the Hadoop library on the client sends the username of the running process with each command to either the namenode or jobtracker, depending on the command executed.
@@ -1761,7 +1812,6 @@ This group should not contain any users other than the user the tasktracker runs
 If it does, those users will be able to impersonate any user with a user id greater than what is specified in min.user.id.
 If a user with uid below this value submits a MapReduce job, the task-controller will refuse to execute the tasks, exiting with a non-zero status code, which will cause all tasks to fail.
 The default value of this is 1000 in CDH while Apache Hadoop has no default.
-A number of Linux distributions, notably CentOS and RHEL, start the uid numbering of user accounts at 500
 This means that the CDH default of 500 will cause all tasks to fail by default.
 By default, CDH includes users mapred, hdfs, and bin in this list whereas Apache Hadoop leaves this empty.
 By doing so, you can avoid the potential attack vector where a task running as hdfs could read or modify HDFS blocks stored on the local disks, circumventing the permission checks performed by the namenode.
@@ -1783,7 +1833,9 @@ For example, it is possible to grant the owner of a file both read and write pri
 Using our previous example, to indicate the file owner has both read and write privileges, we would sum the read permission value of 4 and the write permission value of.
 The special value of 0 (zero) means that a user has no permissions.
 Noteworthy, it is not meaningful (nor is it illegal) for a file to be executable in HDFS, although directories use the execute permission to indicate that a user may access its contents (if they know the name of the contained file or directory already) and metadata information (then read permission is also required to retrieve the children’s names)
+To represent the three classes of user—owner, group, and other—we use three integers, one for each class, in that order.
 To indicate the owner of a directory has read, write, and execute permissions, but no one else has access, the permissions 700 would be used.
+In addition to the above permissions, three other special permissions exist: setuid, setgid, and sticky mode (or “the sticky bit”)
 The setuid permission in Linux changes the process effective user id to that of the file owner when the file is executed.
 Since files in HDFS cannot be executed, granting this means nothing.
 The setgid permission, when set on a directory in Linux, forces the group of all immediate child files and directories to that of the parent directory.
@@ -1825,6 +1877,7 @@ There are a number of parameters and extra files that need to be configured to d
 The first step is to modify mapred-site.xml to enable ACLs, define cluster administrators, and specify the queues that should exist.
 Access control lists must be globally enabled prior to use.
 Hadoop does not enforce ACLs, even if they’re defined, if this parameter is not set to true.
+Some scheduler plug-ins—notably the FIFO scheduler, which is the default—do not support multiple queues.
 Both the capacity scheduler and fair scheduler plug-ins support multiple queues.
 The cluster owner, cluster admins, and job owner can always administer their jobs.
 The queues described thus far are independent of the capacity and fair scheduler plugins, although they are related.
@@ -1838,6 +1891,7 @@ The data accessed by the job is commonly a directory of files in HDFS and is the
 In other words, there’s nothing else to which access must be controlled.
 Other ecosystem projects do have additional information or higher level constructs that must be secured in multiuser environments.
 While also a client-side application, Hive stores additional metadata about the data in HDFS and presents a relational database style abstraction3 to the end user.
+This presents an interesting case where, even if we were to restrict a user from accessing the data contained in HDFS, they would still be able to see the metadata—the table names, field names and types, and so forth—managed by Hive.
 Disclosing information about users’ datasets to one another may be sufficient to reveal what they are doing or how.
 Because of this risk, each of the ecosystem projects, including Hive, are responsible for protecting any metadata they maintain.
 Each ecosystem project has different controls for protecting metadata and must be configured independently.
@@ -1861,6 +1915,7 @@ When Oozie executes a MapReduce job as part of a workflow, it is run by the Oozi
 In a secure environment, the Oozie server must authenticate via Kerberos to submit MapReduce jobs to the cluster.
 It’s important, however, that these jobs execute as the user that created the workflow and not as the user running the Oozie server.
 In order to launch MapReduce jobs with the proper identity, each workflow defines the user and group with which the jobs should run.
+In other words, if I—authenticated as user esammer —attempt to submit a workflow to Oozie that specifies user janedoe, Oozie will refuse to accept the workflow.
 Oozie has a very simple security model based on the notion of users and groups.
 All users can see all workflows, but only modify those owned by themselves or a group to which they belong.
 Any number of users may be designated as administrators who, additionally, may modify any workflows, and perform administrative functions.
@@ -1898,6 +1953,7 @@ Like Flume, Apache ZooKeeper doesn’t have a direct dependency on Hadoop, but a
 ZooKeeper is a quorum-based, highly available, distributed coordination service used to build centralized configuration storage, naming, synchronization, leader election, and group membership services.
 Those building specialized distributed systems may find ZooKeeper appealing, but for many, it is seen as infrastructure for HBase and some features of HDFS.
 Like files in a traditional filesystem, ZNodes can store arbitrary bytes, have access control lists associated with them, and can be organized hierarchically.
+In ZooKeeper, there is no distinction between a “file” and a “directory” ZNode; a single ZNode may have data (like a file) but also have child ZNodes (like a directory)
 Since ZNodes are very commonly used to store internal state of other applications and critical coordination information, they can be protected by ACLs, as mentioned earlier.
 In keeping with the filesystem metaphor, ZooKeeper offers a shell where administrators can execute commands to perform the equivalent of the chmod and chown commands.
 Many of the Hadoop ecosystem projects are client side tools or languages that bake down to MapReduce jobs.
@@ -1960,10 +2016,12 @@ This has more to do with the architecture of the namenode, notably its requireme
 Using file count quotas, it’s possible to prevent users or processes from monopolizing the namenode resources and potentially causing a service interruption.
 The commands to set and clear file count quotas are similar to space quotas: hadoop dfsadmin -setQuota number path and hadoop dfsad min -clrQuota path, respectively.
 As we’ve already seen, the hadoop fs -count -q path displays both count and space quotas.
+MapReduce Schedulers Cluster compute capacity—the aggregate of worker node CPU, memory, network bandwidth, and disk IO—is a finite resource.
 Task slots (or just slots) are a proxy for system resources.
 In other words, an administrator configures the number of slots on a given machine based on some predetermined notion of what actual resources map and reduce tasks will need.
 This is often difficult because jobs may have varied resource consumption profiles, or where Hadoop is a new platform within an organization, the profile of jobs may be entirely unknown.
 Slots are shared across jobs that are executing concurrently just as the Linux kernel shares resources between running processes.
+In Hadoop MapReduce, the schedulera plug-in within the jobtracker—is the component that is responsible for assigning tasks to open slots on tasktrackers.
 Accidentally scheduling CPU, memory, or disk IO intensive tasks on the same host can cause contention.
 Additionally, map tasks have a locality preference (they want to be on one of the machines that has a replica of the data they are to process) that the scheduler must take into account.
 Tasks also may belong to jobs submitted from different users, some of which have service level agreements that must be met, whereas others simply want a fair allocation of resources so they aren’t deferred indefinitely.
@@ -1971,6 +2029,7 @@ An easier way to understand the problem is by looking at an existing system such
 Consider two users, each of whom submits a SQL query at roughly the same time.
 What do we expect? Most would assume that both queries execute and make progress concurrently.
 In fact, users are commonly unaware of one another until such a time that there is contention for database resources.
+The “right” decision is probably to prioritize the billing system operation over the analyst query, but what if the analyst started her query first? The point is that resource scheduling in a multiuser environment is just as important as what resources are available in aggregate.
 When a MapReduce job is executed by the client, a list of input splits is first computed.
 Each split is a range of the data set to process, as determined by the input format.
 The jobtracker creates a map task for each input split and based on the job configuration, adds these tasks to a designated queue.
@@ -1989,6 +2048,8 @@ The jobtracker also communicates with the namenode to figure out which hosts con
 With this information, it’s possible to make an informed decision about which tasks should be scheduled based on the current available resources.
 Each scheduler implements data locality logic like this in addition to other features they may support.
 The FIFO Scheduler The first in, first out (FIFO) scheduler is the default scheduler in Hadoop.
+As the name implies, it uses a simple “first come, first served” algorithm for scheduling tasks.
+For example, given two jobs—A and B—submitted in that order, all map tasks in job A will execute before any tasks from job B.
 As job A map tasks complete, job B map tasks.
 This is simple enough, but suffers from a trivial monopolization problem.
 Take the hypothetical case where Jane, our resident data scientist, submits a job to find frequently co-occuring product page views in activity data of a large commerce website over the last month.
@@ -2043,6 +2104,8 @@ Of those slots, only a subset may be available, so the available capacity is als
 The jobtracker knows both of these numbers because it receives regular status updates from tasktrackers by way of their heartbeat messages.
 When assigning tasks, the scheduler first looks at the demand for each pool.
 A pool with no demand is not given any slots, even if it has a minimum share.
+I can hear every reader screaming “but what if a job comes along and...”—hang in there, we’ll get there.
+The scheduler gives each pool with demand its minimum share—if there is one configured—before going any further.
 If the sum of the minimum shares of pools with demand is greater than the total capacity, the minimum shares of each pool are adjusted pro rata.
 With the minimum shares satisfied, the scheduler switches to allocating the remaining slots.
 The goal is to assign free slots as evenly as possible.
@@ -2057,6 +2120,7 @@ Even though another 60 map slots are available, they are not given to the pool b
 Doing so would defeat one of the primary goals of the scheduler: to achieve the highest possible utilization of the cluster.
 Building on the previous example, assume Bob were to now also submit a job with a map task demand of 40 tasks.
 A new pool named bob is created and the fair share of all pools are adjusted.
+Fair scheduler example allocation—demand less than fair share, total capacity of 80 slots.
 If Jane now comes along with a 120 map task job, a new pool is created and fair shares are adjusted again.
 Bob and Jane, each with a demand greater than the total capacity, are not able to run all tasks at once anymore.
 When there isn’t enough available capacity, tasks simply queue and are given to a pool as slots become available, and tasks can then execute, as you’d expect.
@@ -2065,23 +2129,27 @@ Far more often, Mary and Bob’s jobs would already be running when Jane came al
 In this case, Bob is said to be over his fair share and Jane under (or starved)
 When this occurs, the scheduler allows Bob’s tasks to complete gracefully, and then gives the newly available slots to the pool that has been starved the longest—in this case, Jane.
 The system self-corrects over time, and ultimately, all demand is satisfied.
+Fair scheduler example allocation—total demand exceeds total capacity of 80 slots.
 So far we’ve described the ad-hoc job submission case where end users are submitting MapReduce jobs.
 This is fine, but these jobs are not incredibly time-sensitive.
 Let’s now assume a pool named production exists where automated ETL jobs run regularly.
 It’s important that each job is given a certain number of map slots in order to complete within a specified window of time (which, of course, assumes you know the average time of each map task and approximately how many tasks each iteration of the job requires, but that’s another story)
 Remember that minimum share allocation always occurs before fair share allocation and that we never give out more than a pool’s demand.
 The remaining slots are divided according to the fair share assignment, which results in both Mary and Bob receiving 25 slots.
+Fair scheduler example allocation—demand less than minshare, total capacity of 80 slots.
+Fair scheduler example allocation—demand greater than minshare, total capacity of 80 slots.
 In addition to, or in place of a minimum share, pools may also have a weight.
 Pools with greater weight receive more slots during fair share allocation (weight does not impact minimum share allocation)
 The weight of a pool simply acts as a multiplier; a weight of 2 means the pool receives two slots to every one slot the other pools receive.
 The effects of a pool’s weight aren’t apparent until the total demand is greater than the total capacity.
 This is because when demand can be met for all jobs, there’s no need to give one job special treatment over another.
 Neither pool in this example has a minimum share configured in the interest of simplicity, although that is a perfectly valid configuration.
+Fair scheduler example allocation—a pool with a weight, total capacity of 80 slots.
 Job priorities, like those supported in the FIFO scheduler, are also supported in the Fair Scheduler.
 When a priority is set, it simply affects the weight of the job; the higher the priority, the greater the weight, and the more tasks assigned during fair share allocation.
 Since the priority mechanism works by way of the weight, and weight is only accounted for during fair share allocation, the job priority does not affect minimum share allocation.
 Pools never receive more slots than their demand, even if there’s a minimum share.
-During fair share assignment, slots are allocated in an attempt to “fill the water.
+Pools can a have a weight that is only considered during fair share allocation.
 So far, we’ve talked only about slot allocation to pools, but it’s possible that two jobs could be submitted to the same pool.
 A trivial example of a situation where more than one job would exist in a single pool at the same time would be user Mary submitting two MapReduce jobs.
 The Fair Scheduler uses another instance of itself to schedule jobs within each pool.
@@ -2095,6 +2163,7 @@ Instead, the scheduler attempts to use as much of the cluster as possible by all
 When a job is submitted to a pool with a minimum share and those slots have been given away, there are two options: wait for the running tasks to complete and take the slots as they free up, or forcefully reclaim the necessary resources promised by the minimum share configuration.
 For jobs operating with an SLA, it’s usually not acceptable to delay execution, especially when it’s unclear how long we’d have to wait for those resources.
 The Fair Scheduler deals with this problem by preempting tasks and stealing the slots back to fulfill a starved pool’s minimum share.
+To be clear, language like “forcefully reclaim” and “preempt” are euphemisms for “kill,” in the context of Hadoop.
 This is because, as we’ve seen, the unit of work in a MapReduce job is the task.
 It’s not possible to suspend a task like an operating system, context switch to a higher priority task, and then resume the lower priority task where we left off later.
 Instead, the scheduler simply kills a task, which then goes back into the queue for retry at a later time.
@@ -2120,7 +2189,7 @@ This is counterintuitive at first; how could delaying task assignment increase o
 The amount of delay introduced by leaving the slot available (or temporarily violating fairness) is more than made up for by increasing the overall data locality hit rate.
 Leaving the slot open temporarily sacrifices fairness by potentially selecting a task to execute in a free slot that it is not necessarily entitled to for an increase in locality.
 Delayed assignment can improve data locality and performance and in certain cases, noticeably so.
-Choose the Fair Scheduler over the Capacity Scheduler if: • You have a slow network and data locality makes a significant difference to job.
+You have a slow network and data locality makes a significant difference to job.
 Features like delay scheduling can make a dramatic difference in the effective locality rate of map tasks.
 You have a lot of variability in the utilization between pools.
 The Fair Scheduler’s preemption model affects much greater overall cluster utilization by giving away otherwise reserved resources when they’re not used.
@@ -2198,7 +2267,6 @@ Rather than cover the deprecated parameters (which were a little confusing), the
 You may find that these parameters are not covered in the published documentation for certain releases, but they do work and should be used instead.
 To reduce confusion, explicit version numbers have been listed for these parameters.
 The value of this parameter is an integer and specifies the percentage of the total available cluster slots to be reserved for tasks in this queue.
-The sum of the capacities of all queues must be less than or equal to 100
 If there are any queues without a configured capacity, each receives an even share of any unallocated capacity.
 Places an upper limit on how much of the cluster, beyond the queue’s defined capacity, a queue is permitted to use (defined as a percentage of capacity)
 This parameter exists to prevent a queue with long running tasks from grabbing and holding excess capacity that, when needed by another queue that’s starved for capacity, can not be returned quickly.
@@ -2220,6 +2288,7 @@ To ensure new job acceptance is performed with some degree of fairness across qu
 One of these is that the queue capacity (which, remember, is expressed as a percentage of cluster slot capacity), while normally applied to task slots, can also be used as the percentage of resources to use for new job acceptance.
 This parameter acts as a multiplier to that job count.
 Unless a queue’s capacity is unusually small or you reduce max system jobs, there probably isn’t a compelling reason to modify this value.
+The notable exception is the case where cluster resources—both jobtracker and total cluster slots—are in almost absurd demand, in which case this can act like throttling connections on an HTTP server.
 Enabling this parameter causes the scheduler to take job priorities into account when scheduling, otherwise they’re ignored.
 It’s possible to control the frequency (defined in milliseconds) at which this polling occurs.
 Polling too often results in wasted CPU resources, whereas polling too infrequently means that jobs that should be scheduled can’t because they’re not yet ready.
@@ -2256,6 +2325,7 @@ Researchers, both in academia and the industry, are working on new ways to manag
 Using a system like cgroups also greatly increases system stability as processes can be isolated from one another and resource limit violators killed quickly.
 Hadoop clusters require a moderate amount of day-to-day care and feeding in order to remain healthy and in optimal working condition.
 Maintenance tasks are usually performed in response to events: expanding the cluster, dealing with failures or errant jobs, managing logs, or upgrading software in a production environment.
+This chapter is written in “run book form,” with common tasks called out and simple processes for dealing with those situations.
 It’s not meant to supplant a complete understanding of the system, and as always, the normal caveats apply when dealing with systems that store data or serve critical functions.
 Managing Hadoop Processes It’s not at all unusual to need to start, stop, or restart Hadoop daemons because of configuration changes or as part of a larger process.
 Depending on the selected deployment model and distribution, this can be as simple as using standard service init scripts or by way of specialized scripts for Hadoop.
@@ -2469,6 +2539,7 @@ It was entirely preventable (in fact, nothing like it ever happened again)
 Misconfiguration Kathleen Ting, a manager on Cloudera’s support team gave a talk at HadoopWorld 2011 in New York City, supported by research done by Ari Rabkin, where she talked about common failures and their cause.
 She revealed that 35% of tickets handled by the Cloudera support team were due to some kind of misconfiguration, within either Hadoop or the operating system.
 Further, these tickets accounted for 40% of the time spent by the team resolving issues with customers.
+This is not to say that the users were necessarily twiddling configuration parameters randomly—in fact, many are advanced users of multiple projects in the Hadoop ecosystem—but that the interaction between the numerous parameters leads to all kinds of unintended behavior.
 It’s possible to dismiss that argument and say that Hadoop is still young technology, that this situation will improve in time.
 Take the Oracle relational database, one of the most widely deployed relational database systems today.
 Many agree that with its myriad parameters, it can be incredibly difficult to configure optimally.
@@ -2477,7 +2548,6 @@ Now consider that Oracle, as a product, is about 32 years old.
 This kind of story is not unique (although maybe Oracle is an extreme example) in large, complex systems.
 So what can be done to mitigate misconfiguration? Here are a few tips:
 Develop a solid understanding of the precedence of configuration value overrides.
-Start with the basic parameters required for operation, such as storage locations,
 Make sure that the cluster works with the minimal necessary set before graduating to the performance- and security-related parameters.
 Before setting anything, make sure you have a good idea about what it does.
 With each release, look for any parameters that changed in meaning or scope.
@@ -2528,7 +2598,6 @@ For example, if one were to disable the switch port to which a host were connect
 On the other hand, if the process that should receive messages from a client were to garbage collect for an excessive period of time, it might appear to the client as if the host became unavailable through some fault of the network.
 Further, short of absolute hardware failure, many network partitions are transient, leaving you with only symptoms remaining by the time you investigate.
 An historical view of the system, with proper collection of various metrics, is the only chance one has to distinguish these cases from one another.
-Is the Computer Plugged In?” Let’s be honest: there’s no simple script to follow when performing tests to confirm or reject a diagnosis.
 There are different frameworks you can use, though, to make sure you cover all bases.
 Again, in contrast to the medical field, doctors are taught silly little mnemonics to help them remember the various systems to consider when troubleshooting human beings.
 Given that they (arguably) have a lot more on the line than most administrators dealing with a problematic cluster, we’ll build on their wisdom and experience.
@@ -2538,12 +2607,13 @@ It’s not unusual that administrators forget to check something, and it’s not
 When you’re at a loss or when you want to make sure you’ve thought of everything, try ESPORE.
 E-SPORE is a mnemonic device to help you remember to examine each part of a distributed system while troubleshooting: Environment.
 Are there any glaring, obvious issues? Usually something has drawn your attention to a failure, such as a user filing a ticket or a monitoring system complaining about something.
+Is this unusual, given the history of the system? What is different about the environment now from the last time everything worked?
 The MapReduce service depends on HDFS being up, running, and healthy.
-All of HDFS depends on the namenode, which depends on its host OS,
 There’s also the more specific dependencies within the services like the jobtracker’s dependency on the namenode for discovering block locations for scheduling, or an HBase region server’s dependency on the ZooKeeper quorum.
 The entire cluster also has shared dependency on data center infrastructure such as the network, DNS, and other services.
 If the jobtracker appears to be failing to schedule jobs, maybe it’s failing to communicate with the namenode.
 When MapReduce tasks begin to fail in a seemingly random way, look closer.
+Are the tasks from the same job? Are they all assigned to the same tasktracker? Do they all use a shared library that was changed recently? Patterns exist at various levels within the system.
 If you don’t see one within a failed job, zoom out to the larger ETL process, then the cluster.
 Output Hadoop communicates its ailments to us by way of its logs.
 Sometimes the error is logically far from the original cause (or the symptom is not immediately indicative of the disease)
@@ -2596,7 +2666,10 @@ Another possibility to consider is shifting the time at which the offending job 
 If it’s an ad hoc job, maybe there should be an upper bound on how much data a single job can process at once before it loses an SLA.
 Alternatively, it could be that a summarized or highly compressed version of the dataset should be built to facilitate the offending job, assuming that it’s so critical that it must run.
 Some of these options are as much architectural changes as they are about changing the process by which the cluster is managed.
+On “Reboot It” Syndrome The propensity for rebooting hosts or restarting daemons without any form of investigation is the opposite of everything discussed thus far.
+As administrators, we exist within the 20% for whom this is not—nor can we allow it to become —the case.
 By defaulting to just restarting things, you’re defaulting to the nuclear option, obliterating all information and opportunities to learn from an experience.
+Consider for a moment what would happen if doctors opted for the medical version of “reboot it.” Maybe they’d just cut off anything that stopped working.
 Detecting, reacting to, and correcting an issue is generally seen as the problem-solving process.
 Unfortunately, this is a problem in and of itself because it misses the real opportunity: to learn from the failure.
 Incorporating new experiences can, and should, influence future behavior and ability.
@@ -2644,7 +2717,7 @@ However, it’s equally important to see how these techniques apply to real-worl
 What follows is a number of cases of real production problems with some depth on what it took to detect and resolve each case.
 In certain cases, details have been changed or omitted to protect the innocent, but the crux of the issue remains.
 A group of datanodes could be misconfigured somehow, causing any write that included one or more of those nodes in the replication pipeline to be affected.
-The rule around network partitions— that a machine failure and a network failure are indistinguishable from one another when it comes to message loss—could easily be generalized to a situation such as this, in which a pattern of failure could be a switch or a group of machines, and that a slow machine is the same as a slow segment of the network (where the segment could be a small as a single port)
+The rule around network partitionsthat a machine failure and a network failure are indistinguishable from one another when it comes to message loss—could easily be generalized to a situation such as this, in which a pattern of failure could be a switch or a group of machines, and that a slow machine is the same as a slow segment of the network (where the segment could be a small as a single port)
 If we could find when and where the degraded performance occurred, only then would it even be possible to find out why.
 Unfortunately, there was no per-host network monitoring in place, so it wasn’t a simple matter of looking at the distribution of traffic to machines.
 Even if it was available, it’s still difficult to distinguish artificially limited traffic from an underutilized machine in the cluster.
@@ -2747,7 +2820,6 @@ When we refer to context, we mean one of the four groups of metrics.
 We’ll use the term metric plugin to refer to the class that can be configured to handle metrics.
 Although all of Hadoop is instrumented to capture this information, it’s not available to external systems by default.
 One must configure a plug-in for each context to handle this data in some way.
-The configuration file is a simple Java properties format file and is largely self-explanatory,
 Hadoop’s default metric plug-in for all four contexts, NullContext is the /dev/null of plug-ins.
 Metrics are not collected from the internal components, nor are they output to any external system.
 This plug-in effectively disables access to metrics, as shown in Example 10-1
@@ -2756,7 +2828,6 @@ Systems such as JMX and the metrics servlet (described later) rely on this infor
 The added insight into the system is significant and well worth the minimal overhead introduced.
 Additionally, updating the metric configuration requires a daemon restart, which can temporarily disrupt service down the road.
 More specifically, JMX will always be able to access the standard JVM instrumented components, but this is different from the jvm context provided by Hadoop metrics.
-Example 10-3) to the control the filename to write to (fileName) and the desired frequency of updates (period) in seconds.
 Practically speaking, FileContext is flawed and shouldn’t be used in production clusters because the plug-in never rotates the specified file, leading to indefinite growth.
 Truncating the file doesn’t work because the JVM will continue to write to the open file descriptor until the daemon is restarted.
 During that period of time, disk space on the local filesystem will continue to evaporate and it won’t be immediately clear as to why (the classic anonymous file situation)
@@ -2768,7 +2839,6 @@ Because of its ability to scale, Ganglia is a fantastic system to use with Hadoo
 It works by running a small monitoring daemon on each host called gmond that collects metrics locally.
 Each gmond process relays data to a central gmetad process that records data in a series of RRD, or round-robin database files, which are fixed-size files that efficiently store time series data.
 A PHP web application displays this data in a simple but effective view.
-The port is optional, in which case it defaults to 8649
 For more information about installing and configuring Ganglia, see the project website.
 Because Hadoop is a Java-based system, supporting JMX is a relatively simple decision to make from a development perspective.
 Some monitoring systems, notably those written in Java themselves, even have first-class support for JMX.
@@ -2781,6 +2851,7 @@ The other common (and some might argue, slightly more modern) method of getting 
 The ubiquity of HTTP-based services, bevy of JSON parsing libraries, and the simplicity make it an extremely compelling option for many.
 Downsides to using REST/JSON include the lack of standardization and discoverability, HTTP overhead, and requirement for custom polling code to do something with the JSON blob returned from the service.
 There are actually two such servlets: the original metrics servlet that lives at /metrics and its updated replacement at /jmx.
+Both provide similar functionality—an HTTP GET request that produces a JSON format response—but they work in very different ways.
 The newer / jmx servlet, on the other hand, exposes Hadoop’s JMX MBeans as JSON (which, as you learned earlier, get their information from the metrics system)
 If a metric plug-in with an update thread is configured, pointing an HTTP client at the path /metrics will yield a plain-text version of the metric data.
 Using the format=json query parameter, one can retrieve the same content in JSON format:
@@ -2905,11 +2976,12 @@ The absolute number of HDFS blocks that can still be allocated (BlockCapacity)
 This is the maximum number of blocks that a namenode will track before it refuses new file creation.
 It exists to prevent accidental out of memory errors due to overallocation.
 Increasing the namenode heap size automatically adjusts the total number of blocks allowed.
-MapReduce Checks As with HDFS, most of the monitoring of MapReduce is done at the master process— in this case, the jobtracker.
+Note that epoch timestamps generated by Java are expressed in milliseconds, not seconds—hence the division by 1000 in the example.
+MapReduce Checks As with HDFS, most of the monitoring of MapReduce is done at the master processin this case, the jobtracker.
 There are two major components to monitoring MapReduce: monitoring the framework and monitoring individual jobs.
 Aggregate cluster metrics are provided as JSON blob in the SummaryJson field.
 The total number of nodes currently alive, total map slots available and used, total reduce slots available and used, and total job submissions are also available.
-Recommendation: Perform the following cluster-level checks: • Check whether the number of alive nodes is within a tolerance that still allows your.
+Check whether the number of alive nodes is within a tolerance that still allows your.
 Depending on the size of your cluster and the criticality of jobs, this will vary.
 Check whether the number of blacklisted tasktrackers is below some percentage of the total number of tasktrackers in the cluster.
 A blacklisted tasktracker is one that is alive but is demonstrating repeated failures across jobs.
@@ -2955,11 +3027,11 @@ Updating existing data uses the size of the file, but also a CRC32 checksum, to 
 This task can take some time, so it’s possible to disable the CRC32 checksum calculation with the -skipcrccheck option.
 The -delete option, like rsync’s --delete option, attempts to delete any files in the destination that do not exist in the source path.
 Combined with the -update option, this option makes distcp behave like a file synchronization utility.
-In most cases, it’s desirable to preserve the owner, group, permissions, and other file attributes when performing a copy,
 As for the permissions required to read the files on the source cluster, you must, of course, have at least read access to the files you wish to back up or be the super user.
 There are, however, a few limitations to using distcp for backups.
 Because it runs as a MapReduce job, distcp does chew up map slots and has all the same associated overhead therein.
 Each map task in the job is essentially an HDFS client of the remote cluster, and all the same HDFS write path semantics apply.
+Notably, each clientwhich in this case, is any worker node in the cluster—must be able to write to each datanode in the remote cluster directly.
 This setup creates an N x M communication pattern requirement between the two clusters, where N is the number of source cluster nodes and M is the number of destination cluster nodes.
 Environments that do not permit full N x M communication between clusters either will not be able to use distcp or will experience a ton of pain trying to configure SOCKS proxies appropriately (which, ultimately, may not be able to withstand the amount of data transfer)
 Depending on the network infrastructure, this may or may not be a problem.
@@ -2981,10 +3053,11 @@ For this method to be feasible, the application must be sure to deliver to the i
 Additionally, for the application to know that the data will safely delivered to each cluster (eventually), the ingest service must be durable.
 In some cases, this durability can be traded for speed, although that wouldn’t be appropriate for revenue-bearing events.
 You could build this setup yourself; however, a number of open source systems in the Hadoop ecosystem provide exactly this functionality.
-Flume can be configured to listen to various data sources like RPC interfaces— for instance, writing received events to one or more channels, which are ultimately connected to sinks.
+Flume can be configured to listen to various data sources like RPC interfacesfor instance, writing received events to one or more channels, which are ultimately connected to sinks.
 Channels are effectively a queue, and can be reliable, in which case they store data durably on disk before attempting delivery, or not, in which case they only store events in memory while they shuffle it along as fast as possible.
 Sinks take events from channels and do something with them.
 The most popular of the sinks is the HDFS sink, which writes events into HDFS in various configurable ways.
+Flume’s ability to “fan out” and duplicate events to separate channels, each of which may go to separate clusters, is one way to deal with the problem of backup, that is, avoiding it as much as possible by rethinking the problem.
 It is specifically built for streaming data sources that produce data as discreet events.
 Primarily, this means log files or things that look like that: syslog events, log4j messages, and so forth.
 Refer to the Flume website and documentation for more information about its intended set of use cases.
@@ -3002,6 +3075,7 @@ With the total cluster processing power of MapReduce, regenerating the data in t
 Parallel writes to multiple clusters have the added benefit of drastically reducing the window of time between discreet backup operations.
 Data is much fresher in both clusters, and this approach also opens the possibility of running read-only or ad hoc analysis jobs on the otherwise backup-only cluster.
 Another nice side effect is that by streaming data throughout the data to two clusters, the costly, large, batch network operation of a full or incremental backup is amortized throughout the day.
+This way tends to be easier to manage and control and reduces the risk of a large backup “eating its tail” (meaning that the next backup is scheduled to start, but the previous instance is still running)
 Recovering from the case in which one cluster falls behind happens implicitly, because this technique is based on the idea of queuing.
 Temporarily disabling backups for maintenance is unnecessary; data destined for a cluster in maintenance accumulates in the queue until the cluster returns to service.
 The downside to this approach is that the idea of backups is something developers have to think about.

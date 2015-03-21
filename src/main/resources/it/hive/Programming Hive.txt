@@ -42,6 +42,7 @@ Hive offered a fast and simple way to take advantage of MapReduce in an SQL-like
 This approach also made it easy to prototype proof-of-concept applications and also to.
 Even though I am now very familiar with Hadoop internals, Hive is still my primary method of working with Hadoop.
 Being a Hive Committer and a member of the Apache Software Foundation is my most valued accolade.
+Dean Wampler As a “big data” consultant at Think Big Analytics, I work with experienced “data people” who eat and breathe SQL.
 For them, Hive is a necessary and sufficient condition for Hadoop to be a viable tool to leverage their investment in SQL and open up new opportunities for data analytics.
 I suggested to my previous editor at O’Reilly, Mike Loukides, that a Hive book was needed by the community.
 My career has involved an array of technologies including search, Hadoop, mobile, cryptography, and natural language processing.
@@ -68,6 +69,7 @@ Hive provides an SQL dialect, called Hive Query Language (abbreviated HiveQL or 
 Mapping these familiar data operations to the low-level MapReduce Java API can be daunting, even for experienced Java developers.
 Hive does this dirty work for you, so you can focus on the query itself.
 Hive translates most queries to MapReduce jobs, thereby exploiting the scalability of Hadoop, while presenting a familiar SQL abstraction.
+If you don’t believe us, see “Java Versus Hive: The Word Count Algorithm” on page 10 later in this chapter.
 Hive is most suited for data warehouse applications, where relatively static data is analyzed, fast response times are not required, and when the data is not changing rapidly.
 The design constraints and limitations of Hadoop and HDFS impose limits on what Hive can do.
 The biggest limitation is that Hive does not provide record-level update, insert, nor delete.
@@ -92,8 +94,6 @@ While you don’t need an intimate knowledge of MapReduce to use Hive, understan
 We provide a brief overview of Hadoop and MapReduce here.
 MapReduce MapReduce is a computing model that decomposes large data manipulation jobs into individual tasks that can be executed in parallel across a cluster of servers.
 The results of the tasks can be joined together to compute the final results.
-The MapReduce programming model was developed at Google and described in an influential paper called MapReduce: simplified data processing on large clusters (see the Appendix) on page 309
-The Google Filesystem was described a year earlier in a paper called The Google filesystem on page 310
 Both papers inspired the creation of Hadoop by Doug Cutting.
 A map operation converts the elements of a collection from one form to another.
 In this case, input key-value pairs are converted to zero-to-many.
@@ -108,6 +108,7 @@ The Hadoop Distributed Filesystem, HDFS, or a similar distributed filesystem, ma
 Each block is replicated several times (three copies is the usual default), so that no single hard drive or server failure results in data loss.
 Also, because the goal is to optimize the processing of very large data sets, HDFS and similar filesystems use very large block sizes, typically 64 MB or multiples thereof.
 Such large blocks can be stored contiguously on hard drives so they can be written and read with minimal seeking of the drive heads, thereby maximizing write and read performance.
+To make MapReduce more clear, let’s walk through a simple example, the Word Count algorithm that has become the “Hello World” of MapReduce.7 Word Count returns a list of all the words that appear in a corpus (one or more documents) and the count of how many times each word appears.
 The output shows each word found and its count, one per line.
 By common convention, the word (output key) and count (output value) are usually separated by a tab separator.
 There is a lot going on here, so let’s walk through it from left to right.
@@ -116,17 +117,21 @@ Here are four documents, the third of which is empty and the others contain just
 By default, a separate Mapper process is invoked to process each document.
 In real scenarios, large documents might be split and each split would be sent to a separate Mapper.
 Also, there are techniques for combining many small documents into a single split for a Mapper.
+If you’re not a developer, a “Hello World” program is the traditional first program you write when learning a new language or tool set.
 The fundamental data structure for input and output in MapReduce is the key-value pair.
 After each Mapper is started, it is called repeatedly for each line of text from the document.
 For each call, the key passed to the mapper is the character offset into the document at the start of the line.
 The value, the line of text, is tokenized into words, using one of several possible techniques (e.g., splitting on whitespace is the simplest, but it can leave in undesirable punctuation)
+We’ll also assume that the Mapper converts each word to lowercase, so for example, “FUN” and “fun” will be counted as the same word.
+Finally, for each word in the line, the mapper outputs a key-value pair, with the word as the key and the number 1 as the value (i.e., the count of “one occurrence”)
 Note that the output types of the keys and values are different from the input types.
 Part of Hadoop’s magic is the Sort and Shuffle phase that comes next.
 Hadoop sorts the key-value pairs by key and it “shuffles” all pairs with the same key to the same Reducer.
 There are several possible techniques that can be used to decide which reducer gets which range of keys.
 We won’t worry about that here, but for illustrative purposes, we have assumed in the figure that a particular alphanumeric partitioning was used.
 For the mapper to simply output a count of 1 every time a word is seen is a bit wasteful of network and disk I/O used in the sort and shuffle.
-It does minimize the memory used in the Mappers, however.) One optimization is to keep track of the count for each word and then output only one count for each word when the Mapper finishes.
+It does minimize the memory used in the Mappers, however.
+One optimization is to keep track of the count for each word and then output only one count for each word when the Mapper finishes.
 The inputs to each Reducer are again key-value pairs, but this time, each key will be one of the words found by the mappers and the value will be a collection of all the counts emitted by all the mappers for that word.
 Note that the type of the key and the type of the value collection elements are the same as the types used in the Mapper’s output.
 That is, the key type is a character string and the value collection element type is an integer.
@@ -140,9 +145,11 @@ There’s a real opportunity to eliminate reinventing these idioms by letting �
 It not only provides a familiar programming model for people who know SQL, it also eliminates lots of boilerplate and sometimes-tricky coding you would have to do in Java.
 This is why Hive is so important to Hadoop, whether you are a DBA or a Java developer.
 Hive lets you complete a lot of work with relatively little effort.
+Figure 1-2 shows the major “modules” of Hive and how they work with Hadoop.
 In this book, we will mostly focus on the CLI, command-line interface.
 Bundled with the Hive distribution is the CLI, a simple web interface called Hive web interface (HWI), and programmatic access through JDBC, ODBC, and a Thrift server (see Chapter 16)
 All commands and queries go to the Driver, which compiles the input, optimizes the computation required, and executes the required steps, usually with MapReduce jobs.
+Instead, it uses built-in, generic Mapper and Reducer modules that are driven by an XML file representing the “job plan.” In other words, these generic modules function like mini language interpreters and the “language” to drive the computation is encoded in XML.
 Hive communicates with the JobTracker to initiate the MapReduce job.
 Hive does not have to be running on the same master node with the JobTracker.
 In larger clusters, it’s common to have edge nodes where tools like Hive run.
@@ -170,6 +177,7 @@ HBase is inspired by Google’s Big Table, although it doesn’t implement all B
 One of the important features HBase supports is column-oriented storage, where columns can be organized into column families.
 Rather than reading entire rows and discarding most of the columns, you read only the columns you need.
 HBase can be used like a key-value store, where a single key is used for each row to provide very fast reads and writes of the row’s columns or column families.
+HBase also keeps a configurable number of versions of each column’s values (marked by timestamps), so it’s possible to go “back in time” to previous values, when needed.
 Finally, what is the relationship between HBase and Hadoop? HBase uses HDFS (or one of the other distributed filesystems) for durable file storage of data.
 To provide row-level updates and fast queries, HBase also uses in-memory caching of data and local files for the append log of updates.
 Periodically, the durable files are updated with all the append log updates, etc.
@@ -198,6 +206,7 @@ You might be skeptical about using Hive for your own work.
 If so, consider the following example that implements the Word.
 Count algorithm we discussed above, first using the Java MapReduce API and then using Hive.
 It’s very common to use Word Count as the first Java MapReduce program that people write, because the algorithm is simple to understand, so you can focus on the API.
+Hence, it has become the “Hello World” of the Hadoop world.
 The following Java implementation is included in the Apache Hadoop distribution.8 If you don’t know Java (and you’re still reading this section), don’t worry, we’re only showing you the code for the size comparison:
 In both examples, the files were tokenized into words using the simplest possible approach; splitting on whitespace boundaries.
 This approach doesn’t properly handle punctuation, it doesn’t recognize that singular and plural forms of words are the same word, etc.
@@ -225,6 +234,8 @@ These are the current URLs at the time of this writing.
 After the installation is complete, you’ll need to ensure that Java is in your path and the JAVA_HOME environment variable is set.
 On Linux systems, the following instructions set up a bash file in the /etc/profile.d/ directory that defines JAVA_HOME for all users.
 Changing environmental settings in this folder requires root access and affects all users of the system.
+If you’ve never used sudo (“super user do something”) before to run a command as a “privileged” user, as in two of the commands, just type your normal password when you’re asked for it.
+If you’re on a personal machine, your user account probably has “sudo rights.” If not, ask your administrator to run those commands.
 Mac OS X systems don’t have the /etc/profile.d directory and they are typically single-user systems, so it’s best to put the environment variable definitions in your $HOME/.bashrc.
 The Java paths are different, too, and they may be in one of several places.5 Here are a few examples.
 You’ll need to determine where Java is installed on your Mac and adjust the definitions accordingly.
@@ -260,10 +271,10 @@ The following output of the Linux ls command shows the typical contents of the �
 Hadoop provides a dfs tool that offers basic filesystem functionality like ls for the default filesystem.
 Since we’re using local mode, the default filesystem is the local filesystem:6
 If you find yourself using the hadoop dfs command frequently, it’s convenient to define an alias for it (e.g., alias hdfs="hadoop dfs")
-The Hadoop distribution contains an implementation of the Word Count algorithm we discussed in Chapter 1
 Let’s run it! Start by creating an input directory (inside your current working directory) with files to be processed by Hadoop:
 Use the hadoop command to launch the Word Count application on the input directory we just created.
 Note that it’s conventional to always specify directories for input and output, not individual files, since there will often be multiple input and/or output files per directory, a consequence of the parallelism of the system.
+Unfortunately, the dfs -ls command only provides a “long listing” format.
 There is no short format, like the default for the Linux ls command.
 If you are running these commands on your local installation that was configured to use local mode, the hadoop command will launch the MapReduce components in the same process.
 If you are running on a cluster or on a single machine using pseudodistributed mode, the hadoop command will launch one or more separate processes using the JobTracker service (and the output below will be slightly different)
@@ -295,6 +306,7 @@ However, this is fine for learning Hive on a personal machine.
 For clusters, MySQL or a similar relational database is required.
 Finally, a simple web interface, called Hive Web Interface (HWI), provides remote access to Hive.
 Hive has a number of configuration properties that we will discuss as needed.
+These properties control features such as the metastore (where data is stored), various optimizations, and “safety controls,” etc.
 Starting Hive Let’s finally start the Hive command-line interface (CLI) and run a few commands! We’ll briefly comment on what’s happening, but save the details for discussion later.
 Substitute the directory where Hive is installed on your system whenever $HIVE_HOME is listed in the following script.
 Or, if you added $HIVE_HOME/bin to your PATH, you can just type hive to run the command.
@@ -308,6 +320,7 @@ For individual commands and queries, we’ll omit the OK and Time taken:...
 At the successive prompts, we create a simple table named x with a single INT (4-byte integer) column named a, then query it twice, the second time showing how queries and commands can spread across multiple lines.
 If you are running with the default Derby database for the metastore, you’ll notice that your current working directory now contains a new subdirectory called metastore_db that was created by Derby during the short hive session you just executed.
 If you are running one of the VMs, it’s possible it has configured different behavior, as we’ll discuss later.
+Creating a metastore_db subdirectory under whatever working directory you happen to be in is not convenient, as Derby “forgets” about previous metastores when you change to a new working directory! In the next section, we’ll see how to configure a permanent location for the metastore database, as well as make other changes.
 Configuring Your Hadoop Environment Let’s dive a little deeper into the different Hadoop modes and discuss more configuration issues relevant to Hive.
 You can skip this section if you’re using Hadoop on an existing cluster or you are using a virtual machine instance.
 If you are a developer or you installed Hadoop and Hive yourself, you’ll want to understand the rest of this section.
@@ -317,6 +330,7 @@ Figure 2-1 illustrates a Hadoop job running in local mode.
 If you plan to use the local mode regularly, it’s worth configuring a standard location for the Derby metastore_db, where Hive stores metadata about your tables, etc.
 Changes to your configuration are done by editing the hive-site.xml file.
 Here is an example configuration file where we set several properties for local mode execution (Example 2-1)
+You can use any directory path you want for the value.
 Note that this directory will not be used to store the table metadata, which goes in the separate metastore.
 This property controls whether to connect to a remote metastore server or open a new metastore server as part of the Hive Client JVM.
 This setting is almost always set to true and JDBC is used to communicate directly to a relational database.
@@ -335,6 +349,7 @@ Specifying a different value here allows each user to define their own warehouse
 Hence, each user might use the following statement to define their own warehouse directory:
 It’s tedious to type this each time you start the Hive CLI or to remember to add it to every Hive script.
 Of course, it’s also easy to forget to define this property.
+See “The .hiverc File” on page 36 for more details.
 Metastore Using JDBC Hive requires only one extra component that Hadoop does not already have; the metastore component.
 The metastore stores metadata such as table schema and partition information that you specify when you run commands such as create table x..., or alter table y..., etc.
 Because multiple users and systems are likely to need concurrent access to the metastore, the default embedded database is not suitable for production.
@@ -362,6 +377,7 @@ The Command-Line Interface The command-line interface or CLI is the most common 
 Using the CLI, you can create tables, inspect schema and query tables, etc.
 However, that’s technically an unsupported option, but it produces the help output with an additional line that complains about Missing argument for option: h.
 For Hive v0.7.X, the -d, --hivevar, and -p options are not supported.
+Variables and Properties The --define key=value option is effectively equivalent to the --hivevar key=value option.
 Both let you define on the command line custom variables that you can reference in Hive scripts to customize execution.
 This feature is only supported in Hive v0.8.0 and later versions.
 When you use this feature, Hive puts the key-value pair in the hivevar “namespace” to distinguish these definitions from three other built-in namespaces, hiveconf, system, and env.
@@ -378,6 +394,7 @@ Variable references in queries are replaced in the CLI before the query is sent 
 Let’s look at the --hiveconf option, which is supported in Hive v0.7.X.
 It is used for all properties that configure Hive behavior.
 It turns on printing of the current working database name in the CLI prompt.
+See “Databases in Hive” on page 49 for more on Hive databases.
 We can even add new hiveconf entries, which is the only supported option for Hive versions earlier than v0.8.0:
 It’s also useful to know about the system namespace, which provides read-write access to Java system properties, and the env namespace, which provides read-only access to environment variables:
 Unlike hivevar variables, you have to use the system: or env: prefix with system properties and environment variables.
@@ -385,6 +402,7 @@ The env namespace is useful as an alternative way to pass variable definitions t
 The query processor will see the literal number 2012 in the WHERE clause.
 If you are using Hive v0.7.X, some of the examples in this book that use parameters and variables may not work as written.
 If so, replace the variable reference with the corresponding value.
+Hive “One Shot” Commands The user may wish to run one or more queries (semicolon separated) and then have the hive CLI exit immediately after completion.
 The CLI accepts a -e command argument that enables this feature.
 If mytable has a string and integer column, we might see the following output:
 A quick and dirty technique is to use this feature to output the query results to a file.
@@ -397,6 +415,7 @@ By convention, saved Hive query files use the .q or .hql extension.
 If you are already inside the Hive shell you can use the SOURCE command to execute a script file.
 By the way, we’ll occasionally use the name src (“source”) for tables in queries when the name of the table is irrelevant for the example.
 This convention is taken from the unit tests in Hive’s source code; first create a src table before all tests.
+For example, when experimenting with a built-in function, it’s convenient to write a “query” that passes literal arguments to the function, as in the following example taken from later in the book, “XPath-Related Functions” on page 207:
 The details for xpath don’t concern us here, but note that we pass string literals to the xpath function and use FROM src LIMIT 1 to specify the required FROM clause and to limit the output.
 Substitute src with the name of a table you have already created or create a dummy table named src:
 The .hiverc File The last CLI option we’ll discuss is the -i file option, which lets you specify a file of commands for the CLI to run as it starts, before showing you the prompt.
@@ -441,6 +460,7 @@ Primitive Data Types Hive supports several sizes of integer and floating-point t
 As for other SQL dialects, the case of these names is ignored.
 It’s useful to remember that each of these types is implemented in Java, so the particular behavior details will be exactly what you would expect from the corresponding Java types.
 For example, STRING is implemented by the Java String, FLOAT is implemented by Java float, etc.
+Note that Hive does not support “character arrays” (strings) with maximum-allowed lengths, as is common in other SQL dialects.
 Relational databases offer this feature as a performance optimization; fixed-length records are easier to index, scan, etc.
 In the “looser” world in which Hive lives, where it may not own the data files and has to be flexible on file format, Hive relies on the presence of delimiters to separate fields.
 Also, Hadoop and Hive emphasize optimizing disk reading and writing performance, where fixing the lengths of column values is relatively unimportant.
@@ -450,21 +470,25 @@ Note that you don’t need BINARY if your goal is to ignore the tail end of each
 If a table schema specifies three columns and the data files contain five values for each record, the last two will be ignored by Hive.
 What if you run a query that wants to compare a float column to a double column or compare a value of one integer type with a value of a different integer type? Hive will implicitly cast any integer to the larger of the two integer types, cast FLOAT to DOUBLE, and cast any integer value to DOUBLE, as needed, so it is comparing identical types.
 What if you run a query that wants to interpret a string column as a number? You can explicitly cast one type to another as in the following example, where s is a string column that holds a value representing an integer:
+To be clear, the AS INT are keywords, so lowercase would be fine.
 Collection Data Types Hive supports columns that are structs, maps, and arrays.
 Note that the literal syntax examples in Table 3-2 are actually calls to built-in functions.
+For example, if a column name is of type ARRAY of strings with the value ['John', 'Doe'], then the second element can be referenced using name[1]
 As for simple types, the case of the type name is ignored.
 Most relational databases don’t support such collection types, because using them tends to break normal form.
 For example, in traditional data models, structs might be captured in separate tables, with foreign key relations between the tables, as appropriate.
 A practical problem with breaking normal form is the greater risk of data duplication, leading to unnecessary disk space consumption and potential data inconsistencies, as duplicate copies can grow out of sync as changes are made.
 However, in Big Data systems, a benefit of sacrificing normal form is higher processing throughput.
+Scanning data off hard disks with minimal “head seeks” is essential when processing terabytes to petabytes of data.
 Embedding collections in records makes retrieval faster with minimal seeks.
 Navigating each foreign key relationship requires seeking across the disk, with significant performance overhead.
-However, you can index tables, as we’ll see in Chapter 7
 Here is a table declaration that demonstrates how to use these types, an employees table in a fictitious Human Resources application:
 The name is a simple string and for most employees, a float is large enough for the salary.
+The list of subordinates is an array of string values, where we treat the name as a “primary key,” so each element in subordinates would reference another record in the table.
 In a traditional model, the relationship would go the other way, from an employee to his or her manager.
 We’re not arguing that our model is better for Hive; it’s just a contrived example to illustrate the use of arrays.
 The deductions is a map that holds a key-value pair for every deduction that will be subtracted from the employee’s salary when paychecks are produced.
+The key is the name of the deduction (e.g., “Federal Taxes”), and the key would either be a percentage value or an absolute number.
 In a traditional data model, there might be separate tables for deduction type (each key in our map), where the rows contain particular deduction values and a foreign key pointing back to the corresponding employee record.
 Finally, the home address of each employee is represented as a struct, where each field is named and has a particular type.
 Note that Java syntax conventions for generics are followed for the collection types.
@@ -490,8 +514,6 @@ Here is the same table declaration again, this time with all the format defaults
 The ROW FORMAT DELIMITED sequence of keywords must appear before any of the other clauses, with the exception of the STORED AS … clause.
 You can override the field, collection, and key-value separators and still use the default text file format, so the clause STORED AS TEXTFILE is rarely used.
 For most of this book, we will use the default TEXTFILE file format.
-There are other file format options, but we’ll defer discussing them until Chapter 15
-A related issue is compression of files, which we’ll discuss in Chapter 11
 So, while you can specify all these clauses explicitly, using the default separators most of the time, you normally only provide the clauses for explicit overrides.
 These specifications only affect what Hive expects to see when it reads files.
 Except in a few limited cases, it’s up to you to write the data files in the correct format.
@@ -524,18 +546,21 @@ The simplest syntax for creating a database is shown in the following example:
 While normally you might like to be warned if a database of the same name already exists, the IF NOT EXISTS clause is useful for scripts that should create a database onthe-fly, if necessary, before proceeding.
 You can also use the keyword SCHEMA instead of DATABASE in all the database-related commands.
 At any time, you can see the databases that already exist as follows:
+If you have a lot of databases, you can restrict the ones listed using a regular expression, a concept we’ll explain in “LIKE and RLIKE” on page 96, if it is new to you.
 The following example lists only those databases that start with the letter h and end with any other characters (the .* part):
 Tables in that database will be stored in subdirectories of the database directory.
 The exception is tables in the default database, which doesn’t have its own directory.
 You can override this default location for the new directory as shown in this example:
 You can add a descriptive comment to the database, which will be shown by the DESCRIBE DATABASE <database> command.
 Note that DESCRIBE DATABASE also shows the directory location for the database.
+In the output of DESCRIBE DATABASE, we’re showing master-server to indicate the URI authority, in this case a DNS name and optional port number (i.e., server:port) for the “master node” of the filesystem (i.e., where the NameNode service is running for HDFS)
 If you are running in pseudo-distributed mode, then the master server will be localhost.
 However, if you are running in local mode, your current working directory is used as the parent of some/relative/path.
 For script portability, it’s typical to omit the authority, only specifying it when referring to another distributed filesystem instance (including S3 buckets)
 Lastly, you can associate key-value properties with the database, although their only function currently is to provide a way of adding information to the output of DESCRIBE DATABASE EXTENDED <database>:
 The USE command sets a database as your working database, analogous to changing working directories in a filesystem:
 Now, commands such as SHOW TABLES; will list the tables in this database.
+Unfortunately, there is no command to show you which database is your current working database! Fortunately, it’s always safe to repeat the USE … command; there is no concept in Hive of nesting of databases.
 The IF EXISTS is optional and suppresses warnings if financials doesn’t exist.
 By default, Hive won’t permit you to drop a database if it contains tables.
 You can either drop the tables first or append the CASCADE keyword to the command, which will cause the Hive to drop the tables in the database first:
@@ -545,6 +570,7 @@ Alter Database You can set key-value pairs in the DBPROPERTIES associated with a
 No other metadata about the database can be changed, including its name and directory location:
 There is no way to delete or “unset” a DBPROPERTY.
 Creating Tables The CREATE TABLE statement follows SQL conventions, but Hive’s version offers significant extensions to support a wide range of flexibility where the data files for tables are stored, the formats used, etc.
+In this section, we describe the other options available for the CREATE TABLE statement, adapting the employees table declaration we used previously in “Collection Data Types” on page 43:
 First, note that you can prefix a database name, mydb in this case, if you’re not currently working in the target database.
 If you add the option IF NOT EXISTS, Hive will silently ignore the statement if the table already exists.
 This is useful in scripts that should create a table the first time they run.
@@ -555,6 +581,7 @@ If you use IF NOT EXISTS and the existing table has a different schema than the 
 You can add a comment to any column, after the type.
 Like databases, you can attach a comment to the table itself and you can define one or more table properties.
 In most cases, the primary benefit of TBLPROPERTIES is to add additional documentation in a key-value format.
+However, when we examine Hive’s integration with databases such as DynamoDB (see “DynamoDB” on page 225), we’ll see that the TBLPROPERTIES can be used to express essential metadata about the database connection.
 Finally, you can optionally specify a location for the table data (as opposed to metadata, which the metastore will always hold)
 By default, Hive always creates the table’s directory under the directory for the enclosing database.
 To avoid potential confusion, it’s usually better to use an external table if you don’t want to use the default location table.
@@ -562,8 +589,11 @@ You can also copy the schema (but not the data) of an existing table: CREATE TAB
 This version also accepts the optional LOCATION clause, but note that no other properties, including the schema, can be defined; they are determined from the original table.
 With no additional arguments, it shows the tables in the current working database.
 If we aren’t in the same database, we can still list the tables in that database: hive> USE default;
+If we have a lot of tables, we can limit the ones listed using a regular expression, a concept we’ll discuss in detail in “LIKE and RLIKE” on page 96:
+If you know regular expressions, it’s better to test a candidate regular expression to make sure it actually works! The regular expression in the single quote looks for all tables with names starting with empl and ending with any other characters (the .* part)
 Using the IN database_name clause and a regular expression for the table names together is not supported.
 We can also use the DESCRIBE EXTENDED mydb.employees command to show details about the table.
+We have reformatted the output for easier reading and we have suppressed many details to focus on the items that interest us now:
 Replacing EXTENDED with FORMATTED provides more readable but also more verbose output.
 The first section shows the output of DESCRIBE without EXTENDED or FORMATTED (i.e., the schema including the comments for each column)
 If you only want to see the schema for a particular column, append the column to the table name.
@@ -571,11 +601,13 @@ Returning to the extended output, note the line in the description that starts w
 It shows the full URI path in HDFS to the directory where Hive will keep all the data for this table, as we discussed above.
 However, they are only shown in the Detailed Table Information if a user-specified table property has also been defined!
 Managed Tables The tables we have created so far are called managed tables or sometimes called internal tables, because Hive controls the lifecycle of their data (more or less)
+When we drop a managed table (see “Dropping Tables” on page 66), Hive deletes the data in the table.
 However, managed tables are less convenient for sharing with other tools.
 For example, suppose we have data that is created and used primarily by Pig or other tools, but we want to run some queries against it, but not give Hive ownership of the data.
 We can define an external table that points to that data, but doesn’t take ownership of it.
 External Tables Suppose we are analyzing data from the stock markets.
 Periodically, we ingest the data for NASDAQ and the NYSE from a source like Infochimps (http://infochimps.com/da tasets) and we want to study this data with many tools.
+The schema we’ll use next matches the schemas of both these data sources.
 Let’s assume the data files are in the distributed filesystem directory /data/stocks.
 The following table declaration creates an external table that can read all the data files for this comma-delimited data in /data/stocks:
 The EXTERNAL keyword tells Hive this table is external and the LOCATION … clause is required to tell Hive where it’s located.
@@ -584,6 +616,7 @@ Therefore, dropping the table does not delete the data, although the metadata fo
 There are a few other small differences between managed and external tables, where some HiveQL constructs are not permitted for external tables.
 However, it’s important to note that the differences between managed and external tables are smaller than they appear at first.
 Even for managed tables, you know where they are located, so you can use other tools, hadoop dfs commands, etc., to modify and even delete the files in the directories for managed tables.
+Hive may technically own these directories and files, but it doesn’t have full control over them! Recall, in “Schema on Read” on page 48, we said that Hive really has no control over the integrity of the files used for storage and whether or not their contents are consistent with the table schema.
 Still, a general principle of good software design is to express intent.
 If the data is shared between tools, then creating an external table makes this ownership explicit.
 You can tell whether or not a table is managed or external using the output of DESCRIBE EXTENDED tablename.
@@ -604,6 +637,7 @@ If we create this table in the mydb database, there will still be an employees d
 However, Hive will now create subdirectories reflecting the partitioning structure.
 The state directories will contain zero or more files for the employees in those states.
 Once created, the partition keys (country and state, in this case) behave like regular columns.
+There is one known exception, due to a bug (see “Aggregate functions” on page 85)
 In fact, users of the table don’t need to care if these “columns” are partitions or not, except when they want to optimize query performance.
 For example, the following query selects all employees in the state of Illinois in the United States:
 Note that because the country and state values are encoded in directory names, there is no reason to have this data in the data files themselves.
@@ -626,6 +660,7 @@ The Detailed Table Infor mation includes the country and state as partition keys
 The comments for both of these keys are null; we could have added comments just as for regular columns.
 You create partitions in managed tables by loading data into them.
 Notice how we reference the HOME environment variable in HiveQL:
+See “Loading Data into Managed Tables” on page 71 for more information on populating tables.
 External Partitioned Tables You can use partitioning with external tables.
 In fact, you may find that this is your most common scenario for managing large production data sets.
 The combination gives you a way to “share” data with other tools, while still optimizing query performance.
@@ -638,11 +673,14 @@ Alternatively, we could use smaller integer types for some of the timestamp-rela
 We’re assuming that a day’s worth of log data is about the correct size for a useful partition and finer grain queries over a day’s data will be fast enough.
 Recall that when we created the nonpartitioned external stocks table, a LOCATION … clause was required.
 Instead, an ALTER TABLE statement is used to add each partition separately.
+It must specify a value for each partition key, the year, month, and day, in this case (see “Alter Table” on page 66 for more details on this feature)
 The directory convention we use is completely up to us.
 Here, we follow a hierarchical directory structure, because it’s a logical way to organize our data, but there is no requirement to do so.
+An interesting benefit of this flexibility is that we can archive old data on inexpensive storage, like Amazon’s S3, while keeping newer, more “interesting” data in HDFS.
 For example, each day we might use the following procedure to move data older than a month to S3:
 Copy the data for the partition being moved to S3
 You don’t have to be an Amazon Elastic MapReduce user to use S3 this way.
+You can still query this data, even queries that cross the month-old “boundary,” where some data is read from HDFS and some data is read from S3! By the way, Hive doesn’t care if a partition directory doesn’t exist for a partition or if it has no files.
 In both cases, you’ll just get no results for a query that filters for the partition.
 This is convenient when you want to set up partitions before a separate process starts writing data to them.
 As soon as data is there, queries will return results from that data.
@@ -655,6 +693,8 @@ This output is missing a useful bit of information, the actual location of the p
 There is a location field, but it only shows Hive’s default directory that would be used if the table were a managed table.
 We frequently use external partitioned tables because of the many benefits they provide, such as logical data management, performant queries, etc.
 You can use it with managed tables, too, when you have (or will have) data for partitions in directories created outside of the LOAD and INSERT options we discussed above.
+You’ll need to remember that not all of the table’s data will be under the usual Hive “warehouse” directory, and this data won’t be deleted when you drop the managed table! Hence, from a “sanity” perspective, it’s questionable whether you should dare to use this feature with managed tables.
+Customizing Table Storage Formats In “Text File Encoding of Data Values” on page 45, we discussed that Hive defaults to a text file format, which is indicated by the optional clause STORED AS TEXTFILE, and you can overload the default values for the various delimiters when creating the table.
 Here we repeat the definition of the employees table we used in that discussion:
 When TEXTFILE is used, each line is considered a separate record.
 You can replace TEXTFILE with one of the other built-in file formats supported by Hive, including SEQUENCEFILE and RCFILE, both of which optimize disk space usage and I/O bandwidth performance using binary encoding and optional compression.
@@ -663,24 +703,27 @@ If you are unfamiliar with Java, the dotted name syntax indicates a hierarchical
 The last name, TextInputFormat, is a class in the lowest-level package mapred.
 For completeness, there is also an output format that Hive uses for writing the output of queries to files and to the console.
 Hive uses an input format to split input streams into records, an output format to format records into output streams (i.e., the output of queries), and a SerDe to parse records into columns, when reading, and encodes columns into records, when writing.
-We’ll explore these distinctions in greater depth in Chapter 15
 Third-party input and output formats and SerDes can be specified, a feature which permits users to customize Hive for a wide range of file formats not supported natively.
+Here is a complete example that uses a custom SerDe, input format, and output format for files accessible through the Avro protocol, which we will discuss in detail in “Avro Hive SerDe” on page 209:
 Hive provides the WITH SERDEPRO PERTIES feature that allows users to pass configuration information to the SerDe.
 Note that the name and value of each property must be a quoted string.
 If you specify one of these formats, you are required to specify both of them.
 Note that the DESCRIBE EXTENDED table command lists the input and output formats, the SerDe, and any SerDe properties in the DETAILED TABLE INFORMATION.
 Finally, there are a few additional CREATE TABLE clauses that describe more details about how the data is supposed to be stored.
+Let’s extend our previous stocks table example from “External Tables” on page 56:
 If not used and the table doesn’t exist, Hive returns an error.
 For managed tables, the table metadata and data are deleted.
 While it’s not guaranteed to work for all versions of all distributed filesystems, if you accidentally drop a managed table with important data, you may be able to re-create the table, re-create any partitions, and then move the files from .Trash to the correct directories (using the filesystem commands) to restore the data.
 For external tables, the metadata is deleted but the data is not.
 Alter Table Most table properties can be altered with ALTER TABLE statements, which change metadata about the table but not the data itself.
+These statements can be used to fix mistakes in schema, move partition locations (as we saw in “External Partitioned Tables” on page 61), and do other operations.
 It’s up to you to ensure that any modifications are consistent with the actual data.
 Renaming a Table Use this statement to rename the table log_messages to logmsgs:
 Adding, Modifying, and Dropping a Table Partition As we saw previously, ALTER TABLE table ADD PARTITION … is used to add a new partition to a table (usually an external table)
 Here we repeat the same command shown previously with the additional options available:
 Multiple partitions can be added in the same query when using Hive v0.8.0 and later.
 As always, IF NOT EXISTS is optional and has the usual meaning.
+Hive v0.7.X allows you to use the syntax with multiple partition specifications, but it actually uses just the first partition specification, silently ignoring the others! Instead, use a separate ALTER STATEMENT statement for each partition.
 This command does not move the data from the old location, nor does it delete the old data.
 For managed tables, the data for the partition is deleted, along with the metadata, even if the partition was created using ALTER TABLE … ADD PARTITION.
 Changing Columns You can rename a column, change its position, type, or comment:
@@ -701,6 +744,9 @@ The PARTITION clause is required if the table is partitioned.
 You can specify a new SerDe along with SerDe properties or change the properties for the existing SerDe.
 The SERDEPROPERTIES feature is a convenient mechanism that SerDe implementations can exploit to permit user customization.
 The following example demonstrates how to add new SERDEPROPERTIES for the current SerDe:
+You can alter the storage properties that we discussed in “Creating Tables” on page 53:
+See also “Bucketing Table Data Storage” on page 125 for information on the use of data bucketing.
+Miscellaneous Alter Table Statements In “Execution Hooks” on page 158, we’ll discuss a technique for adding execution “hooks” for various operations.
 The ALTER TABLE … TOUCH statement is used to trigger these hooks:
 A typical scenario for this statement is to trigger execution of the hooks when table storage files have been modified outside of Hive.
 This statement won’t create the table or partition if it doesn’t already exist.
@@ -712,6 +758,7 @@ This chapter continues our discussion of HiveQL, the Hive query language, focusi
 If they are, please refer to Chapter 6 for details.
 Loading Data into Managed Tables Since Hive has no row-level insert, update, and delete operations, the only way to put data into an table is to use one of the “bulk” load operations.
 Or you can just write files in the correct directories by other means.
+We saw an example of how to load data into a managed table in “Partitioned, Managed Tables” on page 58, which we repeat here with an addition, the use of the OVERWRITE keyword:
 This command will first create the directory for the partition, if it doesn’t already exist, then copy the data to it.
 If the target table is not partitioned, you omit the PARTITION clause.
 It is conventional practice to specify a path that is a directory, rather than an individual file.
@@ -753,6 +800,7 @@ Dynamic Partition Inserts There’s still one problem with this syntax: if you h
 By comparison, up until now we have considered only static partitions.
 Hive determines the values of the partition keys, country and state, from the last two columns in the SELECT clause.
 This is why we used different names in staged_employ ees, to emphasize that the relationship between the source column values and the output partition values is by position only and not by matching on names.
+After running this query, employees will have 100 partitions! You can also mix dynamic and static partitions.
 This variation of the previous query specifies a static value for the country (US) and a dynamic value for the state:
 The static partition keys must come before the dynamic partition keys.
 When it is enabled, it works in “strict” mode by default, where it expects at least some columns to be static.
@@ -769,6 +817,7 @@ Creating Tables and Loading Them in One Query You can also create a table and in
 This table contains just the name, salary, and address columns from the employee table records for employees in California.
 The schema for the new table is taken from the SELECT clause.
 A common use for this feature is to extract a convenient subset of data from a larger, more unwieldy table.
+Recall that “populating” a partition for an external table is done with an ALTER TABLE statement, where we aren’t “loading” data, per se, but pointing metadata to a location where the data can be found.
 Exporting Data How do we get data out of tables? If the data files are already formatted the way you want, then it’s simple enough to copy the directories or files:
 One or more files will be written to /tmp/ca_employees, depending on the number of reducers invoked.
 Independent of how the data is actually stored in the source table, it is written to files with all fields serialized as strings.
@@ -776,7 +825,9 @@ Hive uses the same encoding in the generated output files as it uses for the tab
 As a reminder, we can look at the results from within the hive CLI:
 If there were two or more reducers writing output, we would have additional files with similar names (e.g., 000001_0)
 Just like inserting data to tables, you can specify multiple inserts to directories:
+There are some limited options for customizing the output of the data (other than writing a custom OUTPUTFORMAT, as discussed in “Customizing Table Storage Formats” on page 63)
 To format columns, the built-in functions include those for formatting strings, such as converting case, padding output, and more.
+See “Other built-in functions” on page 88 for more details.
 If you export table data frequently, it might be appropriate to use comma or tab delimiters.
 Another workaround is to define a “temporary” table with the storage configured to match the desired output format (e.g., tab-delimited fields)
 Then write a query result to that table and use INSERT OVERWRITE DIRECTORY, selecting from the temporary table.
@@ -784,15 +835,17 @@ Unlike many relational databases, there is no temporary table feature in Hive.
 You have to manually drop any tables you create that aren’t intended to be permanent.
 After learning the many ways we can define and format tables, let’s learn how to run queries.
 Of course, we have assumed all along that you have some prior knowledge of SQL.
-We’ve used some queries already to illustrate several concepts, such as loading query data into other tables in Chapter 5
 We’ll move quickly through details that are familiar to users with prior SQL experience and focus on what’s unique to HiveQL, including syntax and feature differences, as well as performance implications.
 The FROM clause identifies from which table, view, or nested query we select records (see Chapter 7)
 For a given record, SELECT specifies the columns to keep, as well as the outputs of function calls on one or more columns (e.g., the aggregation functions like count(*))
+Let’s assume we have the same contents we showed in “Text File Encoding of Data Values” on page 45 for four employees in the US state of Illinois (abbreviated IL)
 Here are queries of this table and the output they produce:
+The second version uses a table alias e, which is not very useful in this query, but becomes necessary in queries with JOINs (see “JOIN Statements” on page 98) where several different tables are used:
 When you select columns that are one of the collection types, Hive uses JSON (JavaScript Object Notation) syntax for the output.
 First, let’s select the subordinates, an ARRAY, where a comma-separated list surrounded with […] is used.
 Note that STRING elements of the collection are quoted, while the primitive STRING name column is not:
 Here is a query that selects the first element of the subordinates array:
+Also, the extracted STRING values are no longer quoted! To reference a MAP element, you also use ARRAY[...] syntax, but with key values instead of integer indices:
 Specify Columns with Regular Expressions We can even use regular expressions to select the columns we want.
 The following query selects the symbol column and all columns from stocks whose names start with the prefix price:1
 Computing with Column Values Not only can you select columns in a table, but you can manipulate column values using function calls and arithmetic expressions.
@@ -805,7 +858,8 @@ Let’s discuss arithmetic operators and then discuss the use of functions in ex
 If the operands are integer types, the quotient of the division is returned.
 No type coercion is performed if the two operands are of the same numeric type.
 Otherwise, if the types differ, then the value of the smaller of the two types is promoted to wider type of the other value.
-Wider in the sense that a type with more bytes can hold a wider range of values.) For example, for INT and BIGINT operands, the INT is promoted to BIGINT.
+Wider in the sense that a type with more bytes can hold a wider range of values.
+For example, for INT and BIGINT operands, the INT is promoted to BIGINT.
 Since the deductions are FLOATS, the 1 was promoted to FLOAT.
 You have to be careful about data overflow or underflow when doing arithmetic.
 Hive follows the rules for the underlying Java types, where no attempt is made to automatically convert a result to a wider type if one exists, when overflow or underflow will occur.
@@ -826,17 +880,19 @@ Perhaps the two best known examples are count, which counts the number of rows (
 Here is a query that counts the number of our example employees and averages their salaries:
 You can usually improve the performance of aggregation by setting the following property to true, hive.map.aggr, as shown here:
 This setting will attempt to do “top-level” aggregation in the map phase, as in this example.
-An aggregation that isn’t top-level would be aggregation after performing a GROUP BY.) However, this setting will require more memory.
+An aggregation that isn’t top-level would be aggregation after performing a GROUP BY.
 For example, we could count the unique stock symbols this way:
 Wait, zero?? There is a bug when trying to use count(DISTINCT col) when col is a partition column.
 Note that the Hive wiki currently claims that you can’t use more than one function(DIS TINCT …) expression in a query.
 For example, the following is supposed to be disallowed, but it actually works:
 The “inverse” of aggregate functions are so-called table generating functions, which take single columns and expand them to multiple columns or rows.
+We will discuss them extensively in “Table Generating Functions” on page 165, but to complete the contents of this section, we will discuss them briefly now and list the few built-in table generating functions available in Hive.
 To explain by way of an example, the following query converts the subordinate array in each employees record into zero or more new records.
 If an employee record has an empty subordinates array, then no new records are generated.
 We used a column alias, sub, defined using the AS sub clause.
 When using table generating functions, column aliases are required by Hive.
 There are many other particular details that you must understand to use these functions correctly.
+We’ll wait until “Table Generating Functions” on page 165 to discuss the details.
 Like get_json_object, but it takes multiple names and returns a tuple.
 All the input parameters and output column types are STRING.
 It takes a URL and the part names to extract, returning a tuple.
@@ -855,6 +911,7 @@ The LIMIT clause puts an upper limit on the number of rows returned:
 Column Aliases You can think of the previous example query as returning a new relation with new columns, some of which are anonymous results of manipulating columns in employees.
 It’s sometimes useful to give those anonymous columns a name, called a column alias.
 Nested SELECT Statements The column alias feature is especially useful in nested select statements.
+We’ll cover WHERE clauses in “WHERE Clauses” on page 92 below.
 When Hive Can Avoid MapReduce If you have been running the queries in this book so far, you have probably noticed that a MapReduce job is started in most cases.
 Hive implements some kinds of queries without using MapReduce, in so-called local mode, for example:
 In this case, Hive can simply read the records from employees and dump the formatted output to the console.
@@ -872,11 +929,14 @@ A <= B Primitive types NULL if A or B is NULL; true if A is less than or equal t
 A >= B Primitive types NULL if A or B is NULL; true if A is greater than or equal to B; false otherwise.
 Matching is done by the JDK regular expression library and hence it follows the rules of that library.
 For example, the regular expression must match the entire string A, not just a subset.
+We’ll discuss LIKE and RLIKE in detail below (“LIKE and RLIKE” on page 96)
 First, let’s point out an issue with comparing floating-point numbers that you should understand.
 Gotchas with Floating-Point Comparisons A common gotcha arises when you compare floating-point numbers of different types (i.e., FLOAT versus DOUBLE)
 When you write a floating-point literal value like 0.2, Hive uses a DOUBLE to hold the value.
 We defined the deductions map values to be FLOAT, which means that Hive will implicitly convert the tax deduction value to DOUBLE to do the comparison.
 The number 0.2 can’t be represented exactly in a FLOAT or DOUBLE.
+See http://docs.oracle.com/cd/E19957-01/806-3568/ncg_goldberg .html for an in-depth discussion of floating-point number issues.
+In this particular case, the closest exact value is just slightly greater than 0.2, with a few nonzero bits at the least significant end of the number.
 Rather, it’s a general problem for all systems that use the IEEE standard for encoding floating-point numbers! However, there are two workarounds we can use in Hive.
 We could use DOUBLE instead of FLOAT in our schema.
 However, this change will increase the memory footprint of our queries.
@@ -896,6 +956,7 @@ The rich details of regular expression syntax and features are beyond the scope 
 The entry for RLIKE in Table 6-6 provides links to resources with more details on regular expressions.
 Here, we demonstrate their use with an example, which finds all the employees whose street contains the word Chicago or Ontario:
 The string after the RLIKE keyword has the following interpretation.
+Hence, there might be no characters before “Chicago” or “Ontario” and there might be no characters after them.
 Of course, we could have written this particular example with two LIKE clauses:
 General regular expression matches will let us express much richer matching criteria that would become very unwieldy with joined LIKE clauses such as these.
 The following query groups stock records for Apple by year, then averages the closing price for each year:
@@ -913,6 +974,7 @@ However, since this is an inner JOIN, no IBM records.
 This is not valid in Hive, primarily because it is difficult to implement these kinds of joins in MapReduce.
 It turns out that Pig offers a cross product feature that makes it possible to implement this join, even though Pig’s native join feature doesn’t support it, either.
 Also, Hive does not currently support using OR between predicates in ON clauses.
+To see a nonself join, let’s introduce the corresponding dividends data, also available from infochimps.org, as described in “External Tables” on page 56:
 Here is an inner JOIN between stocks and dividends for Apple, where we use the ymd and symbol columns as join keys:
 Yes, Apple paid a dividend years ago and only recently announced it would start doing so again! Note that because we have an inner JOIN, we only see records approximately every three months, the typical schedule of dividend payments, which are announced when reporting quarterly results.
 Most of the time, Hive will use a separate MapReduce job for each pair of things to join.
@@ -927,6 +989,7 @@ Hive also assumes that the last table in the query is the largest.
 It attempts to buffer the other tables and then stream the last table through, while performing joins on individual records.
 Therefore, you should structure your join queries so the largest table is last.
 We actually made the mistake of using the smaller dividends table last:
+We should switch the positions of stocks and dividends: SELECT s.ymd, s.symbol, s.price_close, d.dividend FROM dividends d JOIN stocks s ON s.ymd = d.ymd AND s.symbol = d.symbol WHERE s.symbol = 'AAPL';
 It turns out that these data sets are too small to see a noticeable performance difference, but for larger data sets, you’ll want to exploit this optimization.
 Fortunately, you don’t have to put the largest table last in the query.
 Hive also provides a “hint” mechanism to tell the query optimizer which table should be streamed:
@@ -942,6 +1005,7 @@ By the time the WHERE clause is reached, d.exchange is NULL most of the time, so
 One solution is straightforward; remove the clauses in the WHERE clause that reference the dividends table:
 You might wonder if you can move the predicates from the WHERE clause into the ON clause, at least the partition filters.
 However, using such filter predicates in ON clauses for inner joins does work! Fortunately, there is solution that works for all joins; use nested SELECT statements:
+The nested SELECT statement performs the required “push down” to apply the partition filters before data is joined.
 Also, contrary to Hive documentation, partition filters don’t work in ON clauses for OUTER JOINS, although they do work for INNER JOINS!
 Here we switch the places of stocks and dividends and perform a righthand join, but leave the SELECT statement unchanged:
 If we convert the previous query to a full-outer join, we’ll actually get the same results, since there is never a case where a dividend record exists without a matching stock record:
@@ -955,7 +1019,6 @@ Unlike other join types, Cartesian products are not executed in parallel, and th
 It is critical to point out that using the wrong join syntax will cause a long, slow-running Cartesian product query.
 For example, the following query will be optimized to an inner join in many databases, but not in Hive:
 In Hive, this query computes the full Cartesian product before applying the WHERE clause.
-We’ll discuss the features of strict mode more extensively in Chapter 10
 For example, suppose there is a table of user preferences, a table of news articles, and an algorithm that predicts which articles a user would like to read.
 A Cartesian product is required to generate the set of all users and all pages.
 Map-side Joins If all but one table is small, the largest table can be streamed through the mappers while the small tables are cached in memory.
@@ -994,6 +1057,7 @@ Suppose that the same columns are used in both clauses and all columns are sorte
 In this case, the CLUSTER BY clause is a shor-hand way of expressing the same query.
 For example, let’s modify the previous query to drop sorting by s.ymd and use CLUSTER BY on s.symbol:
 Because the sort requirements are removed for the s.ymd, the output reflects the original order of the stock data, which is sorted descending.
+Casting We briefly mentioned in “Primitive Data Types” on page 41 that Hive will perform some implicit conversions, called casts, of numeric data types, as needed.
 For example, when doing comparisons between two numbers of different types.
 Here we discuss the cast() function that allows you to explicitly convert a value of one type to another.
 Recall our employees table uses a FLOAT for the salary column.
@@ -1063,6 +1127,7 @@ For v0.8.0, the command creates a new table, not a new view.
 A view is dropped in the same way as a table: DROP VIEW IF EXISTS shipments;
 A view will be shown using SHOW TABLES (there is no SHOW VIEWS), however DROP TABLE cannot be used to delete a view.
 As for tables, DESCRIBE shipments and DESCRIBE EXTENDED shipments displays the usual data for the shipment view.
+With the latter, there will be a tableType value in the Detailed Table Information indicating the “table” is a VIRTUAL_VIEW.
 You cannot use a view as a target of an INSERT or LOAD command.
 You can only alter the metadata TBLPROPERTIES for a view:
 There are no keys in the usual relational database sense, but you can build an index on columns to speed some operations.
@@ -1189,7 +1254,7 @@ While this format can be used for any type of data there are some data sets that
 Repeated Data Given enough rows, fields like state and age will have the same data repeated many times.
 Many Columns The table below has a large number of columns.
 Queries typically only use a single column or a small set of columns.
-Almost) Always Use Compression! In almost all cases, compression makes data smaller on disk, which usually makes queries faster by reducing I/O overhead.
+You can reference the section “RCFile” on page 202 to see how to use this format.
 The only compelling reason to not use compression is when the data produced.
 MapReduce jobs tend to be I/O bound, so the extra CPU overhead is usually not a problem.
 However, for workflows that are CPU intensive, such as some machine-learning algorithms, compression may actually reduce performance by stealing valuable CPU resources from more essential operations.
@@ -1199,12 +1264,14 @@ Most of the time, you don’t need to understand how Hive works, freeing you to 
 While the sophisticated process of query parsing, planning, optimization, and execution is the result of many years of hard engineering work by the Hive team, most of the time you can remain oblivious to it.
 However, as you become more experienced with Hive, learning about the theory behind Hive, and the low-level implementation details, will let you use Hive more effectively, especially where performance optimizations are concerned.
 This chapter covers several different topics related to tuning Hive performance.
+Some tuning involves adjusting numeric configuration parameters (“turning the knobs”), while other tuning steps involve enabling or disabling specific features.
 Using EXPLAIN The first step to learning how Hive works (after reading this book…) is to use the EXPLAIN feature to learn how Hive translates queries into MapReduce jobs.
 Now, put the EXPLAIN keyword in front of the last query to see the query plan and other information.
 This shows how Hive parsed the query into tokens and literals, as part of the first step in turning the query into the ultimate result:
-The indentation of the actual output was changed to fit the page.) For those not familiar with parsers and tokenizers, this can look overwhelming.
+The indentation of the actual output was changed to fit the page.
+For those not familiar with parsers and tokenizers, this can look overwhelming.
 However, even if you are a novice in this area, you can study the output to get a sense for what Hive is doing with the SQL statement.
-As a first step, ignore the TOK_ prefixes.) Even though our query will write its output to the console, Hive will actually write the output to a temporary file first, as shown by this part of the output:
+Even though our query will write its output to the console, Hive will actually write the output to a temporary file first, as shown by this part of the output:
 Next, we can see references to our column name number, our table name onecol, and the sum function.
 A Hive job consists of one or more stages, with dependencies between different stages.
 As you might expect, more complex queries will usually involve more stages and more stages usually requires more processing time to complete.
@@ -1219,6 +1286,7 @@ On the reduce side, under the Reduce Operator Tree, we see the same Group by Ope
 Understanding the intricate details of how Hive parses and plans every query is not useful all of the time.
 However, it is a nice to have for analyzing complex or poorly performing queries, especially as we try various tuning steps.
 We can observe what effect these changes have at the “logical” level, in tandem with performance measurements.
+In an effort to “go green,” we won’t show the entire output, but we will show you the Reduce Operator Tree to demonstrate the different output:
 We encourage you to compare the two outputs for the Reduce Operator Tree.
 Limit Tuning The LIMIT clause is commonly used, often by people working with the CLI.
 However, in many cases a LIMIT clause still executes the entire query, then only returns a handful.
@@ -1245,6 +1313,7 @@ First, queries on partitioned tables are not permitted unless they include a par
 In other words, you’re prevented from queries that will scan all partitions.
 The rationale for this limitation is that partitioned tables often hold very large data sets that may be growing rapidly.
 An unrestricted partition could consume unacceptably large resources over such a large table:
+The following enhancement adds a partition filter—the table partitions—to the WHERE clause:
 The second type of restricted query are those with ORDER BY clauses, but no LIMIT clause.
 Because ORDER BY sends all results to a single reducer to perform the ordering, forcing the user to specify a LIMIT clause prevents the reducer from executing for an extended period of time:
 The third and final type of query prevented is a Cartesian product.
@@ -1260,6 +1329,7 @@ Let’s see an example that uses a GROUP BY query, because they always require a
 In contrast, many other queries are converted into map-only jobs:
 Hive is determining the number of reducers from the input size.
 This can be confirmed using the dfs -count command, which works something like the Linux du -s command; it computes a total size for all the data under a given directory:
+We’ve reformatted the output and elided some details for space.
 Changing this value to 750 MB causes Hive to estimate four reducers for this job:
 However, there are cases where a query’s map phase will create significantly more data than the input size.
 In the case of excessive map phase data, the input size of the default might be selecting too few reducers.
@@ -1280,10 +1350,12 @@ A drawback of this feature is that JVM reuse will keep reserved task slots open 
 If an “unbalanced” job has some reduce tasks that run considerably longer than the others, the reserved slots will sit idle, unavailable for other jobs, until the last task completes.
 Indexes Indexes may be used to accelerate the calculation speed of a GROUP BY query.
 The main use case for bitmap indexes is when there are comparatively few values for a given column.
+Dynamic Partition Tuning As explained in “Dynamic Partition Inserts” on page 74, dynamic partition INSERT statements enable a succinct SELECT statement to create many new partitions for insertion into a partitioned table.
 This is a very powerful feature, however if the number of partitions is high, a large number of output handles must be created on the system.
 This is a somewhat uncommon use case for Hadoop, which typically creates a few files at once and streams large amounts of data to them.
 Out of the box, Hive is configured to prevent dynamic partition inserts from creating more than 1,000 or so partitions.
 While it can be bad for a table to have too many partitions, it is generally better to tune this setting to the larger value and allow these queries to work.
+When strict mode is on, at least one partition has to be static, as demonstrated in “Dynamic Partition Inserts” on page 74:
 Then, increase the other relevant properties to allow queries that will create a large number of dynamic partitions, for example:
 Another setting controls how many files a DataNode will allow to be open at once.
 The value affects the number of maximum threads and resources, so setting it to a very high number is not recommended.
@@ -1299,7 +1371,8 @@ For this optimization to work, a common set of GROUP BY keys is required:
 Virtual Columns Hive provides two virtual columns: one for the input filename for split and the other for the block offset in the file.
 These are helpful when diagnosing queries where Hive is producing unexpected or null results.
 By projecting these “columns,” you can see which file and row is causing problems:
-We wrapped the long output and put a blank line between the two output rows.) A third virtual column provides the row offset of the file.
+We wrapped the long output and put a blank line between the two output rows.
+A third virtual column provides the row offset of the file.
 One of Hive’s unique features is that Hive does not force data to be converted to a specific format.
 Hive leverages Hadoop’s InputFormat APIs to read data from a variety of sources, such as text files, sequence files, or even custom formats.
 Likewise, the OutputFormat API is used to write data to various formats.
@@ -1395,6 +1468,7 @@ Some versions of Hadoop, such as Hadoop v0.20.2, will require the JAR containing
 Take a look at the underlying structure of the table, before we archive it.
 Note the location of the table’s data partition, since it’s a managed, partitioned table:
 We reformatted the output slightly so it would fit, and used ...
+The underlying table has gone from two files to one Hadoop archive (HAR file):
 Compression: Wrapping Up Hive’s ability to read and write different types of compressed files is a big performance win as it saves disk space and processing overhead.
 This flexibility also aids in integration with other tools, as Hive can query many native file types without the need to write custom “adapters” in Java.
 This chapter explores working with the Hive source code itself, including the new Plugin Developer Kit introduced in Hive v0.8.0
@@ -1465,6 +1539,7 @@ Aggregate Functions Another type of function is an aggregate function.
 All aggregate functions, user-defined and built-in, are referred to generically as user-defined aggregate functions (UDAFs)
 An aggregate function takes one or more columns from zero to many rows and returns a single result.
 Examples include the math functions: sum(), which returns a sum of all.
+We saw this example in “GROUP BY Clauses” on page 97:
 Table Generating Functions A third type of function supported by Hive is a table generating function.
 As for the other function kinds, all table generating functions, user-defined and built-in, are often referred to generically as user-defined table generating functions (UDTFs)
 Table generating functions take zero or more inputs and produce multiple columns or rows of output.
@@ -1488,6 +1563,7 @@ To write a UDF, start by extending the UDF class and implements and the evaluate
 During query processing, an instance of the class is instantiated for each usage of the function in a query.
 Hive will pick the method that matches in a similar way to Java method overloading.
 This is how function documentation is defined and you should use these annotations to document your own UDFs.
+When a user invokes DESCRIBE FUNCTION ..., the _FUNC_ strings will be replaced with the function name the user picks when defining a “temporary” function, as discussed below.
 The arguments and return types of the UDF’s evaluate() function can only be types that Hive can serialize.
 For example, if you are working with whole numbers, a UDF can take as input a primitive int, an Inte ger wrapper object, or an IntWritable, which is the Hadoop wrapper for integers.
 You do not have to worry specifically about what the caller is sending because Hive will convert the types for you if they do not match.
@@ -1634,6 +1710,7 @@ For this reason, the functionally equivalent yet more generic TRANSFORM() clause
 Identity Transformation The most basic streaming job is an identity operation.
 The /bin/cat command echoes the data sent to it and meets the requirements.
 In this example, /bin/cat is assumed to be installed on all TaskTracker nodes.
+Any Linux system should have it! Later, we will show how Hive can “ship” applications with the job when they aren’t already installed around the cluster:
 Changing Types The return columns from TRANSFORM are typed as strings, by default.
 There is an alternative syntax that casts the results to different types.
 Projecting Transformation The cut command can be used with streaming to extract or project specific fields.
@@ -1669,15 +1746,14 @@ The next section discusses how to do streaming in parallel, when possible.
 These features can be used on most queries, but are particularly useful when doing streaming processes.
 For example, data for the same key may need to be sent to the same processing node, or data may need to be sorted by a specific column, or by a function.
 The first way to control this behavior is the CLUSTER BY clause, which ensures like data is routed to the same reduce task and sorted.
-To demonstrate the use of CLUSTER BY, let’s see a nontrivial example: another way to perform the Word Count algorithm that we introduced in Chapter 1
 Now, we will use the TRANSFORM feature and two Python scripts, one to tokenize lines of text into words, and the second to accept a stream of word occurrences and an intermediate count of the words (mostly the number “1”) and then sum up the counts for each word.
-Here is the first Python script that tokenizes lines of text on whitespace (which doesn’t properly handle punctuation, etc.):
+Without explaining all the Python syntax, this script imports common functions from a sys module, then it loops over each line on the “standard input,” stdin, splits each line on whitespace into a collection of words, then iterates over the word and writes each word, followed by a tab, \t, and the “count” of one.2 Before we show the second Python script, let’s discuss the data that’s passed to it.
 We’ll use CLUSTER BY for the words output from the first Python script in our TRANSFORM Hive query.
+This will have the effect of causing all occurrences of the word\t1 “pairs” for a give, word to be grouped together, one pair per line:
 Hence, the second Python script will be more complex, because it needs to cache the word it’s currently processing and the count of occurrences seen so far.
 When the word changes, the script must output the count for the previous word and reset its caches.
 We’ll assume that both Python scripts are in your home directory.
 Finally, here is the Hive query that glues it all together.
-We’ll start by repeating a CREATE TABLE statement for an input table of lines of text, one that we used in Chapter 1
 Any text file could serve as the data for this table.
 We could cache the counts of words seen and then write the final count.
 That would be faster, by minimizing I/O overhead, but it would also be more complex to implement.
@@ -1703,9 +1779,9 @@ WordCountReduce has an accumulator that is added by each element taken from the 
 When all the records have been counted, a single two-element array of the key and the count is emitted:
 Calculating Cogroups It’s common in MapReduce applications to join together records from multiple data sets and then stream them through a final TRANSFORM step.
 Suppose we have several sources of logfiles, with similar schema, that we wish to bring together and analyze with a reduce_script:
-Second, you may extend Hive using custom UDFs, or user-defined functions, which was discussed in Chapter 13
 Finally, you can customize the file and record formats, which we discuss now.
 File Versus Record Formats Hive draws a clear distinction between the file format, how records are encoded in a file, the record format, and how the stream of bytes for a given record are encoded in the record.
+In this book we have been using text files, with the default STORED AS TEXTFILE in CREATE TABLE statements (see “Text File Encoding of Data Values” on page 45), where each line in the file is a record.
 Most of the time those records have used the default separators, with occasional examples of data that use commas or tabs as field separators.
 However, a text file could contain JSON or XML “documents.” For Hive, the file format choice is orthogonal to the record format.
 We’ll first discuss options for file formats, then we’ll discuss different record formats and how to use them in Hive.
@@ -1719,6 +1795,7 @@ Hive uses the InputFormat when reading data from the table, and it uses the Outp
 InputFormat reads key-value pairs from files; Hive currently ignores the key and works only with the data found in the value by default.
 The reason for this is that the key, which comes from TextInputFormat, is a long integer that represents the byte offset in the block (which is not user data)
 The rest of the chapter describes other aspects of the table metadata.
+File Formats We discussed in “Text File Encoding of Data Values” on page 45 that the simplest data format to use is the text format, with whatever delimiters you prefer.
 It is also the default format, equivalent to creating a table with the clause STORED AS TEXTFILE.
 The text file format is convenient for sharing data with other tools, such as Pig, Unix text tools like grep, sed, and awk, etc.
 However, the text format is not space efficient compared to binary formats.
@@ -1752,6 +1829,7 @@ Internally, the Hive engine uses the defined InputFormat to read a record of dat
 A lazy SerDe does not fully materialize an object until individual attributes are necessary.
 The following example uses a RegexSerDe to parse a standard formatted Apache web log.
 The RegexSerDe is included as a standard feature as a part of the Hive distribution:
+However, this simplistic approach doesn’t handle strings with embedded commas or tabs, nor does it handle other common conventions, like whether or not to quote all or no strings, or the optional presence of a “column header” row as the first line in each file.
 First, it’s generally safer to remove the column header row, if present.
 Then one of several third-party SerDes are available for properly parsing CSV or TSV files.
 While TSV support should be similar, there are no comparable third-party TSV SerDes available at the time of this writing.
@@ -1766,6 +1844,7 @@ XPath models an XML document as a tree of nodes.
 Basic facilities are provided for access to primitive types, such as string, numeric, and Boolean types.
 While commercial solutions such as Oracle XML DB and MarkLogic provide native XML database solutions, open source Hive leverages the advantages provided by the parallel petabyte processing of the Hadoop infrastructure to enable widely effective XML database vivification.
 Here are some examples where these functions are run on string literals:
+There is a third-party JSON SerDe that started as a Google “Summer of Code” project and was subsequently cloned and forked by other contributors.
 Think Big Analytics created its own fork and added an enhancement we’ll go over in the discussion that follows.
 In the following example, this SerDe is used to extract a few fields from JSON data for a fictitious messaging system.
 Those that are exposed become available as columns in the table:
@@ -1777,7 +1856,8 @@ Avro Hive SerDe Avro is a serialization systemit’s main feature is an evolvabl
 Initially, Avro’s goals appeared to be in conflict with Hive since both wish to provide schema or metadata information.
 However Hive and the Hive metastore have pluggable design and can defer to the Avro support to infer the schema.
 The Hive Avro SerDe system was created by LinkedIn and has the following features:
-Infers the schema of the Hive table from the Avro schema • Reads all Avro files within a table against a specified schema, taking advantage of.
+Infers the schema of the Hive table from the Avro schema.
+Reads all Avro files within a table against a specified schema, taking advantage of.
 The schema specifies three columns: number as int, firstname as string, and lastname as string.
 When the DESCRIBE command is run, Hive shows the name and types of the columns.
 In the output below you will notice that the third column of output states from deser ializer.
@@ -2028,7 +2108,8 @@ We would like to run this workflow every day so we need to substitute the hardco
 There are many more things you can do with Oozie, including integrating Hive jobs with jobs implemented with other tools, such as Pig, Java MapReduce, etc.
 With EMR comes the ability to spin up a cluster of nodes on demand.
 These clusters come with Hadoop and Hive installed and configured.
-You can also configure the clusters with Pig and other tools.) You can then run your Hive queries and terminate the cluster when you are done, only paying for the time you used the cluster.
+You can also configure the clusters with Pig and other tools.
+You can then run your Hive queries and terminate the cluster when you are done, only paying for the time you used the cluster.
 This section describes how to use Elastic MapReduce, some best practices, and wraps up with pros and cons of using EMR versus other options.
 This chapter won’t cover all the details of using Amazon EMR with Hive.
 It is designed to provide an overview and discuss some practical details.
@@ -2065,7 +2146,8 @@ This instance group contains exactly one node, which is called the master node.
 The master node performs the same duties as the conventional Hadoop master node.
 It runs the namenode and jobtracker daemons, but it also has Hive installed on it.
 In addition, it has a MySQL server installed, which is configured to serve as the metastore for the EMR Hive installation.
-The embedded Derby metastore that is used as the default metastore in Apache Hive installations is not used.) There is also an instance controller that runs on the master node.
+The embedded Derby metastore that is used as the default metastore in Apache Hive installations is not used.
+There is also an instance controller that runs on the master node.
 It is responsible for launching and managing other instances from the other two instance groups.
 Note that this instance controller also uses the MySQL server on the master node.
 If the MySQL server becomes unavailable, the instance controller will be unable to launch and manage instances.
@@ -2126,6 +2208,7 @@ Since HDFS is formed by ephemeral storage of the nodes in the core instance grou
 S3, on the other hand, provides a persistent storage for data associated with the EMR cluster.
 Therefore, intermediate results of processing should be stored in HDFS, with only the final results saved to S3 that need to persist.
 Please note that as a side effect of using S3 as a source for input data, you lose the Hadoop data locality optimization, which may be significant.
+If this optimization is crucial for your analysis, you should consider importing “hot” data from S3 onto HDFS before processing it.
 This initial overhead will allow you to make use of Hadoop’s data locality optimization in your subsequent processing.
 Since EMR Hive and Hadoop installations natively understand S3 paths, it is straightforward to work with these files in subsequent Hadoop jobs.
 For example, you can add the following lines in .hiverc without any errors:
@@ -2136,6 +2219,7 @@ However, if this field is not set, those logs will not be available on S3
 If your workflow is configured to terminate if your job encounters an error, any logs on the cluster will be lost after the cluster termination.
 If your log-uri field is set, these logs will be available at the specified location on S3 even after the cluster has been terminated.
 They can be an essential aid in debugging the issues that caused the failure.
+However, if you store logs on S3, remember to purge unwanted logs on a frequent basis to save yourself from unnecessary storage costs!
 Spot Instances Spot instances allows users to bid on unused Amazon capacity to get instances at cheaper rates compared to on-demand prices.
 Depending on your use case, you might want instances in all three instance groups to be spot instances.
 In this case, your entire cluster could terminate at any stage during the workflow, resulting in a loss of intermediate data.
@@ -2197,6 +2281,7 @@ If this is null then the default database will be used.
 This must be non-null and refer to a valid table in Hive.
 If it is left null then the entire table will be read.
 Care should be used here, as reading all the partitions of a large table can result in scanning a large volume of data.
+For example, if the table to be read is partitioned on a column called datestamp, the filter might look like datestamp = "2012-05-26"
 This does carry some risks, depending on how you deploy Hive.
 This InputJobInfo instance is then passed to HCatInputFormat via the method setIn put along with the instance of Job being used to configure the MapReduce job:
 The map task will need to specify HCatRecord as a value type.
@@ -2213,7 +2298,6 @@ This can be achieved by passing a schema that describes the desired columns.
 The following example will configure the user’s job to read only two columns named user and url:
 Writing Data Similar to reading data, when writing data, the database and table to be written to need to be specified.
 If the data is being written to a partitioned table and only one partition is being written, then the partition to be written needs to be specified as well:
-Initializes a new OutputJobInfo instance for writing data from a table.
 The databaseName name indicates the Hive database (or schema) the table is in.
 If this is null then the default database will be used.
 The tableName is the table that will be written to.
@@ -2237,6 +2321,7 @@ Command Line Since HCatalog utilizes Hive’s metastore, Hive users do not need 
 However, for HCatalog users that are not also Hive users, a command-line tool hcat is provided.
 The biggest difference is that it only accepts commands that do not result in a MapReduce job being spawned.
 This means that the vast majority of DDL (Data Definition Language, or operations that define the data, such as creating tables) are supported:
+The SQL operations that HCatalog’s command line does not support are:
 Security Model HCatalog does not make use of Hive’s authorization model.
 Since it is possible to go directly to the filesystem and access the underlying data, authorization in Hive is limited.
 This can be resolved by having all files and directories that contain Hive’s data be owned by the user running Hive jobs.
@@ -2280,6 +2365,7 @@ In fact, it allows us to extract samples and summarize data that prior to using 
 Despite the fact that Hive allows us access to huge amounts of data at rates many times faster than before, it does not change the fact that most of the tools that we were previously familiar with as data scientists are not always able to analyze data samples of the size.
 In summary, Hive provides us a great tool to extract huge amounts of data; however, the toolbox of data science, or statistical learning, methods that we as data scientists are used to using cannot easily accommodate the new larger data sets without substantial changes.
 Many different software packages have been developed or are under development for both supervised and unsupervised learning on large data sets.
+Some of these software packages are stand alone software implementations, such as Vowpal Wabbit and BBR, while others are implementations within a larger infrastructure such as Mahout for Hadoop or the multitude of “large data” packages for R.
 A portion of these algorithms take advantage of parallel programing approaches while others rely on different methods to achieve scalability.
 The primary tool for statistical learning for several of the data scientists in our team is R.
 It provides a large array of packages that are able to perform many statistical learning methods.
@@ -2360,6 +2446,7 @@ The TaskTrackers of the deployment we submit the job to will have to be able to 
 This is done by scheduling tasks to run on nodes where the data is located.
 Which means a general performance decrease and network usage increase.
 Replicating Hadoop and Hive data is easier than replicating a traditional database.
+Unlike a database running multiple transactions that change the underlying data frequently, Hadoop and Hive data is typically “write once.” Adding new partitions does not change the existing ones, and typically new partitions are added on time-based intervals.
 Early iterations of replication systems were standalone systems that used distcp and generated Hive statements to add partitions on an interval.
 When we wanted to replicate a new table, we could copy an existing program and make changes for different tables and partitions.
 Over time we worked out a system that could do this in a more automated manner without having to design a new process for each table to replicate.
@@ -2383,6 +2470,7 @@ That said, Hive only has a host function, but not domain.
 If you just have the raw URLs, there are a couple of options.
 The important thing is that we’re going to be using these to look for matches, so just make your choice based on your own criteria.
 Now, we can convert each pageview’s URL to the appropriate class.
+But what if we’re an ad network? What if we have hundreds of sites? What if each of the sites could have any number of URL structures? If that’s the case, we probably also have a table that has each URL, as well as what site it belongs to.
 What we want to do is go through each referrer URL and see if it matches with anything of the same site ID.
 We use the outer join in this case, because we expect there to be some external referrers that won’t match, and this will let them through.
 Then, we just catch any cases that did match, and if there were any, we know they came from somewhere in the site.
@@ -2395,8 +2483,10 @@ Of course, you can’t count them day by day, either, because there might be som
 Counting uniques is O(n), where n is the number of records, but it has a high constant factor.
 We could maybe come up with some clever way to cut that down a little bit, but it’s much easier to cut down your n.
 While it’s never good to have a high O(n), most of the real problems happen further along.
+So, if each day has m entries, and an average of x redundancies, our first query would have n= 31*m.
 We can reduce this to n=31*(m–x) by building a temp table to save deduped versions for each day.
 Then we write a template version of a query to run over each day, and update it to our temp table.
+I like to refer to these as “metajobs,” so let’s call this mj_01.sql:
 Next, we write a script that marks this file up, runs it, and repeats it for every date in a range.
 Run the script, and you’ve got a table with a n=31*(m-x)
 Now, you can query the deduped table without as big a reduce step to get through.
@@ -2405,6 +2495,7 @@ If you still have trouble, you could hash your user IDs into different classes, 
 The basic idea remains, if you limit the size of your n, a high O(n) isn’t as big of a deal.
 Sessionization For analyzing web traffic, we often want to be able to measure engagement based on various criteria.
 One way is to break up user behavior into sessions, chunks of activity that represent a single “use.” A user might come to your site several times a day, a few days a month, but each visit is certainly not the same.
+So, what is a session? One definition is a string of activity, not separated by more than 30 minutes.
 That is, if you go to your first page, wait five minutes, go to the second page, it’s the same session.
 Wait 30 minutes exactly until the third page, still the same session.
 Wait 31 minutes until that fourth page, and the session will be broken; rather than the fourth pageview, it would be the first page of the second session.
@@ -2426,6 +2517,7 @@ In order to do this, we need to compare every pageview that could precede it.
 This is a pretty expensive move, as it requires performing a cross-product.
 To prevent this from blowing up to unmanageable size, we should group everything on criteria that limits it as much as possible.
 In this case, it’s just the user ID, but if you have a large network of independent sites, you might also want to group based on each source, as well:
+That’s a bit much, isn’t it? The important part is to count the flags that are not of a session origin, which is where we define c_nonorigin_flags.
 Basically, counting up how many reasons why it isn’t the session starter.
 Plus, since this is a cross-product, it prevents a false positive by using the candidate as its own qualifier.
 Which is probably a good reason to start on step two, finding which pageview belongs to which origin.
@@ -2463,6 +2555,7 @@ For all intents and purposes, it provides the same capabilities that the OPeNDAP
 It provides users with the ability to take in the reference data from RCMED and climate model output data produced elsewhere and to re-grid these datasets in order to match them spatially and temporally in preparation for the comparison of the reference and model data for the evaluation of model output against the user-selected reference data.
 At that point, the system allows for seasonal cycle compositing (e.g., all Januaries, or all summer months for N years), and for preparing the data for eventual metrics calculation, that is, comparison of the values of the model output against the remote sensing data observation parameters and their values.
 The system supports several metrics, such as bias computation, Root Mean Squared Error (RMSE), and the generation of relevant visualizations, including traditional plots and Taylor diagrams for science use/decision making.
+Our Experience: Why Hive? So, where does Hive come in to play? After loading 6 billion rows of (latitude, longitude, time, data point value, height) tuples into MySQL, the system fell down and.
 We did notice a high I/O wait on the nodes no matter how many task trackers we ran.
 The numbers suggested by the community member suggested that we needed roughly 16 mappers in the Hadoop job to match with the I/O performance of a local non-Hadoop task.
 Based on the above feedback, we were able to tune our Hive cluster for RCMES to respond to a count query benchmark, and to a space/time query from RCMET for billions of rows in under 15 seconds, using the above-mentioned resources, making Hive a viable and great choice for our system architecture.
@@ -2518,6 +2611,11 @@ Introduction For over 18 months, Karmasphere has been engaged with a fast-growin
 The first part of this chapter provides use case techniques that we’ve seen used repeatedly in customer environments to advance Hive-based analytics.
 As companies we’ve worked with plan for and move into production use of Hive, they look for incremental capabilities that make Hive-based access to Hadoop even easier to use, more productive, more powerful, and available to more people in their organization.
 When they wire Hadoop and Hive into their existing data architectures, they also want to enable results from Hive queries to be systematized, shared and integrated with other data stores, spreadsheets, BI tools, and reporting systems.
+Easier ways to ingest data, detect raw formats, and create metadata.
+Finer-grain control over data, table, and column security, and compartmentalized.
+Scheduling of queries for automated result generation and export to non-Hadoop.
+Integration with Microsoft Excel, Tableau, Spotfire, and other spreadsheet, reporting systems, dashboards, and BI tools.
+Ability to manage Hive-based assets including queries, results, visualizations, and.
 One recurring question from many Hive users revolves around the format of their data and how to make that available in Hive.
 Many data formats are supported out-of-the-box in Hive but some custom proprietary formats are not.
 And some formats that are supported raise questions for Hive users about how to extract individual components from within a row of data.
@@ -2531,6 +2629,7 @@ The detailed section was a JSON nested within the top level object, similar to t
 After talking with the customer, we realized they were interested in splitting individual columns of the detailed information that was tagged with “data” identifier in the above sample.
 To help them proceed, we used existing Hive function get_json_object as shown below: First step is to create a table using the sample data:
 Then using Hive functions such as get_json_object, we could get to the nested JSON element and parse it using UDFs:
+Extract the nested JSON object identified by data in the inner query as col0
 Then the JSON object is split into appropriate columns using their names in the.
 Using partitions with data being streamed or regularly added to Hadoop is a use case we see repeatedly, and a powerful and valuable way of harnessing Hadoop and Hive to analyze various kinds of rapidly additive data sets.
 Web, application, product, and sensor logs are just some of the types of data that Hive users often want to perform ad hoc, repeated, and scheduled queries on.
@@ -2538,6 +2637,7 @@ Hive partitions, when set up correctly, allow users to query data only in specif
 To set up partitions for a table, files should be located in directories as given in this example:
 With the above structure, tables can be set up with partition by year, month, and day.
 Queries can use yr, mon, and day as columns and restrict the data accessed to specific values during query time.
+If you notice the folder names, partitioned folders have identifiers such as yr= , mon=, and day=
 Working with one high tech company, we discovered that their folders did not have this explicit partition naming and they couldn’t change their existing directory structure.
 In this case, we can still add partitions by explicitly adding the location of the absolute path to the table using ALTER TABLE statements.
 The output of the script is a set of Hive SQL statements generated using the existing directory structure and captured into a simple text file.
@@ -2548,9 +2648,11 @@ Understanding and using Hive regex functions, n-gram functions and other string 
 One large manufacturing customer we worked with had lot of machine-generated compressed text data being ingested into Hadoop.
 Multiple rows of data in each file and a number of such files in time-partitioned buckets.
 Within each row there were a number of segments separated by /r/n (carriage return and line feed)
+Each segment was in the form of a “name: value” pair.
 Read each row and separate individual segments as name-value pairs.
 Zero in on specific segments and look for word counts and word patterns for analyzing keywords and specific messages.
 The sample below illustrates this customer’s data (text elided for space):
+Within each row there are three subsections, including “name,” “description,” and “type” separated by /r/n.
 First step is to create the initial table with this sample data:
 In the following, we run a series of queries, starting with a simple query and adding functions as we iterate.
 Note that the requirement can be met with queries written in several different ways.
@@ -2565,7 +2667,6 @@ Notice the use of temporary identifiers tmp1 for the inner query.
 This is required when you use the output of a subquery as the input to outer query.
 At the end of step three, we have the value of the description segment within each row.
 Notice that we have used functions such as lower to convert to lowercase and sentences to tokenize each word in the text.
-For additional information about the text analytics capabilities of Hive, see the functions listed in Chapter 3
 Hive adoption continues to grow, as outlined by the use cases defined above.
 Companies across different industry segments and various sizes have benefited immensely by leveraging Hive in their Hadoop environments.
 A strong and active community of contributors and significant investments in Hive R&D efforts by leading Hadoop vendors ensures that Hive, already the SQL-based standard for Hadoop, will become the SQL-based standard within organizations that are leveraging Hadoop for Big Data analysis.
@@ -2597,10 +2698,14 @@ While open source alternatives are currently available, these sometimes fall sho
 To manage certain use cases, companies often have to manually string together various different open source tools or rely on poor performing JDBC connectors.
 Karmasphere is a software company, based in Silicon Valley California, focused exclusively on bringing native Hadoop Big Data Analytics capabilities to teams of analysts and business users.
 Their flagship product, Karmasphere 2.0, is based on Apache Hive, extending it in a multi-user graphical workspace to enable:
+Social, project-based big data analytics for teams of analysts and business users.
+Heuristic-based recognition and table creation of many popular data formats.
+Easy integration with traditional spreadsheets, reporting, dashboard, and BI tools.
 Hive features survey We’d like to get feedback on the importance of these needs and share them back with the growing Hive community.
 If you are interested in seeing what others think and would like to participate, please visit: http://karmasphere.com/hive-features-survey.html.
 Avro Avro is a new serialization format developed to address some of the common problems associated with evolving other serialization formats.
 Some of the benefits are: rich data structures, fast binary format, support for remote procedure calls, and built-in schema evolution.
+Bash The “Bourne-Again Shell” that is the default interactive command shell for Linux and Mac OS X systems.
 A user may have many buckets, analogous to the root of a physical hard drive.
 Command-Line Interface The command-line interface (CLI) can run “scripts” of Hive statements or all the user to enter statements interactively.
 Data Warehouse A repository of structured data suitable for analysis for reports, trends, etc.
@@ -2657,6 +2762,7 @@ It can be used with or instead of HDFS when running MapReduce jobs.
 It is also used to create those record bytes (i.e., serialization)
 In contrast, the Input Format is used to split an input stream into records and the Output Format is used to write records to an output stream.
 A SerDe can be specified when a Hive table is created.
+The default SerDe supports the field and collection separators discussed in “Text File Encoding of Data Values” on page 45, as well as various optimizations such as a lazy parsing.
 Structured Query Language A language that implements the relational model for querying and manipulating data.
 While there is an ANSI standard for SQL that has undergone periodic revisions, all SQL dialects in widespread use add their own custom extensions and variations.
 Task In the MapReduce context, a task is the smallest unit of work performed on a single cluster node, as part of an overall job.

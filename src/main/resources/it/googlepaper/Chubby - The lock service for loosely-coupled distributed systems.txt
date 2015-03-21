@@ -42,9 +42,10 @@ For example, Chubby itself usually has five replicas in each cell, of which thre
 In contrast, if a client system uses a lock service, even a single client can obtain a lock and make progress safely.
 Thus, a lock service reduces the number of servers needed for a reliable client system to make progress.
 In a loose sense, one can view the lock service as a way of providing a generic electorate that allows a client system to make decisions correctly when less than a majority of its own members are up.
+One might imagine solving this last problem in a different way: by providing a “consensus service”, using a number of servers to provide the “acceptors” in the Paxos protocol.
 Like a lock service, a consensus service would allow clients to make progress safely even with only one active client process; a similar technique has been used to reduce the number of state machines needed for Byzantine fault tolerance [24]
 However, assuming a consensus service is not used exclusively to provide locks (which reduces it to a lock service), this approach solves none of the other problems described above.
-These arguments suggest two key design decisions: • We chose a lock service, as opposed to a library or.
+We chose a lock service, as opposed to a library or.
 Therefore, we must allow thousands of clients to observe this file, preferably without needing many servers.
 Clients and replicas of a replicated service may wish to know when the service’s primary changes.
 Even if clients need not poll files periodically, many will; this is a consequence of supporting many developers.
@@ -59,10 +60,9 @@ Thus, it is good for coarsegrained locks to survive lock server failures, there 
 Even brief unavailability of the lock server may cause many clients to stall.
 Performance and the ability to add new servers at will are of great concern because the transaction rate at the lock service grows with the combined transaction rate of clients.
 It can be advantageous to reduce the overhead of locking by not maintaining locks across lock server failure, and the time penalty for dropping locks every so often is not severe because locks are held for short periods.
-Clients must be prepared to lose locks during network partitions, so the loss of locks on lock server fail-over introduces no new recovery paths.)
+Clients must be prepared to lose locks during network partitions, so the loss of locks on lock server fail-over introduces no new recovery paths.
 Fortunately, it is straightforward for clients to implement their own fine-grained locks tailored to their application.
 Clients can learn of lost locks at unlock time, and if a simple fixed-length lease is used, the protocol can be simple and efficient.
-Chubby has two main components that communicate via RPC: a server, and a library that client applications link against; see Figure 1
 All communication between Chubby clients and the servers is mediated by the client library.
 An optional third component, a proxy server, is discussed in Section 3.1
 A Chubby cell consists of a small set of servers (typically five) known as replicas, placed so as to reduce the likelihood of correlated failure (for example, in different racks)
@@ -100,14 +100,14 @@ Users are authenticated by a mechanism built into the RPC system.
 Because Chubby’s ACLs are simply files, they are automatically available to other services that wish to use similar access control mechanisms.
 Chubby also exposes a 64-bit file-content checksum so clients may tell whether files differ.
 Clients open nodes to obtain handles that are analogous to UNIX file descriptors.
-Handles include: • check digits that prevent clients from creating or.
 Each Chubby file and directory can act as a reader-writer lock: either one client handle may hold the lock in exclusive (writer) mode, or any number of client handles may.
 Like the mutexes known to most programmers, locks are advisory.
 That is, they conflict only with other attempts to acquire the same lock: holding a lock called F neither is necessary to access the file F , nor prevents other clients from doing so.
-We rejected mandatory locks, which make locked objects inaccessible to clients not holding their locks: • Chubby locks often protect resources implemented by.
+We rejected mandatory locks, which make locked objects inaccessible to clients not holding their locks:
 To enforce mandatory locking in a meaningful way would have required us to make more extensive modification of these services.
 We did not wish to force users to shut down applications when they needed to access locked files for debugging or administrative purposes.
 In a complex system, it is harder to use the approach employed on most personal computers, where administrative software can break mandatory locks simply by instructing the user to shut down his applications or to reboot.
+Our developers perform error checking in the conventional way, by writing assertions such as “lock X is held”, so they benefit little from mandatory checks.
 Buggy or malicious processes have many opportunities to corrupt data when locks are not held, so we find the extra guards provided by mandatory locking to be of no significant value.
 In Chubby, acquiring a lock in either mode requires write permission so that an unprivileged reader cannot prevent a writer from making progress.
 Locking is complex in distributed systems because communication is typically uncertain, and processes may fail independently.
@@ -139,9 +139,7 @@ Clients see a Chubby handle as a pointer to an opaque structure that supports va
 Handles are created only by Open(), and destroyed with Close()
 Open() opens a named file or directory to produce a handle, analogous to a UNIX file descriptor.
 Only this call takes a node name; all others operate on handles.
-The name is evaluated relative to an existing directory handle; the library provides a handle on ”/” that is always valid.
 Directory handles avoid the difficulties of using a program-wide current directory in a multi-threaded program that contains many layers of abstraction [18]
-The client indicates various options: • how the handle will be used (reading; writing and.
 If a file is created, the caller may supply initial contents and initial ACL names.
 The return value indicates whether the file was in fact created.
 A related call Poison() causes outstanding and subsequent operations on the handle to fail without closing it; this allows a client to cancel Chubby calls made by other threads without fear of deallocating the memory being accessed by them.
@@ -173,7 +171,7 @@ Thus, if a client opens a file it has opened previously, only the first Open() c
 This caching is restricted in minor ways so that it never affects the semantics observed by the client: handles on ephemeral files cannot be held open if the application has closed them; and handles that permit locking can be reused, but cannot be used concurrently by multiple application handles.
 This last restriction exists because the client may use Close() or Poison() for their side-effect of cancelling outstanding Acquire() calls to the master.
 A Chubby session is a relationship between a Chubby cell and a Chubby client; it exists for some interval of time, and is maintained by periodic handshakes called KeepAlives.
-However, the protocol for session maintenance may require the client to acknowledge a cache invalidation in order to maintain its session; see below.)
+However, the protocol for session maintenance may require the client to acknowledge a cache invalidation in order to maintain its session; see below.
 A client requests a new session on first contacting the master of a Chubby cell.
 It ends the session explicitly either when it terminates, or if the session has been idle (with no open handles and no calls for a minute)
 Each session has an associated lease—an interval of time extending into the future during which the master guarantees not to terminate the session unilaterally.
@@ -256,12 +254,12 @@ Mirroring is used most commonly to copy configuration files to various computing
 A special cell, named global, contains a subtree /ls/global/master that is mirrored to the.
 The global cell is special because its five replicas are located in widely-separated parts of the world, so it is almost always accessible from most of the organization.
 Among the files mirrored from the global cell are Chubby’s own access control lists, various files in which Chubby cells and other systems advertise their presence to our monitoring services, pointers to allow clients to locate large data sets such as Bigtable cells, and many configuration files for other systems.
+Chubby’s clients are individual processes, so Chubby must handle more clients than one might expect; we have seen 90,000 clients communicating directly with a Chubby master—far more than the number of machines involved.
 Because there is just one master per cell, and its machine is identical to those of the clients, the clients can overwhelm the master by a huge margin.
 Thus, the most effective scaling techniques reduce communication with the master by a significant factor.
 Assuming the master has no serious performance bug, minor improvements in request processing at the master have little effect.
-We use several approaches: • We can create an arbitrary number of Chubby cells;
 Our typical deployment uses one Chubby cell for a data centre of several thousand machines.
-KeepAlives are by far the dominant type of request (see 4.1), and failure to process them in time is the typical failure mode of an overloaded server; clients are largely insensitive to latency variation in other calls.)
+KeepAlives are by far the dominant type of request (see 4.1), and failure to process them in time is the typical failure mode of an overloaded server; clients are largely insensitive to latency variation in other calls.
 Chubby clients cache file data, meta-data, the absence of files, and open handles to reduce the number of calls they make on the server.
 We do not yet use them in production, but they are designed, and may be used soon.
 We have no present need to consider scaling beyond a factor of five: First, there are limits on the number of machines one would wish to put in a data centre or make reliant on a single instance of a service.
@@ -270,7 +268,7 @@ Proxies add an additional RPC to writes and first-time reads.
 One might expect proxies to make the cell temporarily unavailable at least twice as often as before, because each proxied client depends on two machines that may fail: its proxy and the Chubby master.
 Alert readers will notice that the fail-over strategy described in Section 2.9, is not ideal for proxies.
 Partitioning is intended to enable large Chubby cells with little communication between the partitions.
-Although Chubby lacks hard links, directory modifiedtimes, and cross-directory rename operations, a few operations still require cross-partition communication: • ACLs are themselves files, so one partition may use.
+Although Chubby lacks hard links, directory modifiedtimes, and cross-directory rename operations, a few operations still require cross-partition communication:
 However, ACL files are readily cached; only Open() and Delete() calls require ACL checks; and most clients read publicly accessible files that require no ACL.
 When a directory is deleted, a cross-partition call may be needed to ensure that the directory is empty.
 Because each partition handles most calls independently of the others, we expect this communication to have only a modest impact on performance or availability.
@@ -284,10 +282,12 @@ Writes (which include lock operations) are delayed a further 5-10ms by the datab
 Even this variability in write latency has little effect on the mean request latency at the server because writes are so infrequent.
 No significant effort has been applied to tuning read/write server code paths; we checked that no egregious bugs were present, then focused on the scaling mechanisms that could be more effective.
 On the other hand, developers do notice if a performance bug affects the local Chubby cache, which a client may read thousands of times per second.
+Google’s infrastructure is mostly in C++, but a growing number of systems are being written in Java [8]
 This trend presented an unanticipated problem for Chubby, which has a complex client protocol and a non-trivial client-side library.
 Java encourages portability of entire applications at the expense of incremental adoption by making it somewhat irksome to link against other languages.
 The usual Java mechanism for accessing non-native libraries is JNI [15], but it is regarded as slow and cumbersome.
 Our Java programmers so dislike JNI that to avoid its use they prefer to translate large libraries into Java, and commit to supporting them.
+Chubby’s C++ client library is 7000 lines (comparable with the server), and the client protocol is delicate.
 To maintain the library in Java would require care and expense, while an implementation without caching would burden the Chubby servers.
 Even with hindsight, it is not obvious how we might have avoided the cost of writing, running and maintaining this additional server.
 Even though Chubby was designed as a lock service, we found that its most popular use was as a name server.
@@ -295,6 +295,7 @@ Caching within the normal Internet naming system, the DNS, is based on time.
 Usually it is straightforward to pick a suitable TTL value, but if prompt replacement of failed services is desired, the TTL can become small enough to overload the DNS servers.
 For example, it is common for our developers to run jobs involving thousands of processes, and for each process to communicate with every other, leading to a quadratic number of DNS lookups.
 We might wish to use a TTL of 60s; this would allow misbehaving clients to be replaced without excessive delay and is not considered an unreasonably short replacement time in our environment.
+Larger jobs create worse problems, and several jobs many be running at once.
 The variability in our DNS load had been a serious problem for Google before Chubby was introduced.
 Although Chubby’s caching allows a single cell to sustain a large number of clients, load spikes can still be a problem.
 To resolve this problem, we chose to group name entries into batches so that a single lookup would return and cache the name mappings for a large number (typically 100) of related processes within a job.
@@ -347,6 +348,7 @@ Our API choices can also affect the way developers chose to handle Chubby outage
 For example, Chubby provides an event that allows clients to detect when a master fail-over has taken place.
 The intent was for clients to check for possible changes, as other events may have been lost.
 Unfortunately, many developers chose to crash their applications on receiving this event, thus decreasing the availability of their systems substantially.
+We might have done better to send redundant “file change” events instead, or even to ensure that no events were lost during a fail-over.
 Second, we now supply libraries that perform some highlevel tasks so that developers are automatically isolated from Chubby outages.
 Third, we use the post-mortem of each Chubby outage as a means not only of eliminating bugs in Chubby and our operational procedures, but of reducing the sensitivity of applications to Chubby’s availability—both can lead to better availability of our systems overall.
 Fine-grained locking could be ignored At the end of Section 2.1 we sketched a design for a server that clients could run to provide fine-grained locking.
@@ -362,7 +364,6 @@ We were forced to send KeepAlive RPCs via UDP rather than TCP; UDP has no conges
 We may augment the protocol with an additional TCPbased GetEvent() RPC which would be used to communicate events and invalidations in the normal case, used in the same way KeepAlives.
 The KeepAlive reply would still contain a list of unacknowledged events so that events must eventually be acknowledged.
 Chubby’s cache design is derived from work on distributed file systems [10]
-The idea of exposing a general-purpose lock service is found in VMS [23],
 Chubby differs from a distributed file system such as Echo or AFS [10] in its performance and storage aspirations: Clients do not read, write, or store large amounts of data, and they do not expect high throughput or even low-latency unless the data is cached.
 They do expect consistency, availability, and reliability, but these attributes are easier to achieve when performance is less important.
 Because Chubby’s database is small, we are able to store many copies of it on-line (typically five replicas and a few backups)
@@ -384,6 +385,8 @@ Boxwood’s subcomponents use two or three replicas to achieve availability, whi
 However, these choices alone do not suggest a deep design difference, but rather an indication of how parameters in such systems must be adjusted to accommodate more client machines, or the uncertainties of racks shared with other projects.
 A more interesting difference is the introduction of Chubby’s grace period, which Boxwood lacks.
 Recall that the grace period allows clients to ride out long Chubby master outages without losing sessions or locks.
+Boxwood’s “grace period” is the equivalent of Chubby’s “session lease”, a different concept.
+Again, this difference is the result of differing expectations about scale and failure probability in the two systems.
 Although master fail-overs are rare, a lost Chubby lock is expensive for clients.
 Finally, locks in the two systems are intended for different purposes.
 Chubby locks are heavier-weight, and need sequencers to allow externals resources to be protected safely, while Boxwood locks are lighter-weight, and intended primarily for use within Boxwood.

@@ -10,6 +10,7 @@ Developers today routinely build applications and services that a decade ago wou
 I was an early reviewer of this book and I admire its economical and thorough but eminently readable style, lucidly describing complex issues without ever outstaying its welcome.
 This book combines academic rigour with a practical approach deeply informed by real-world experience and I have no hesitation in recommending it to developers of all experience levels.
 Experienced engineers building network-centric infrastructure or services should not be without this book.
+In fact, any Java developer building distributed applications such as J2EE, Jini, and Web Services should read this book—at least to understand the fundamental implications of networking on application design and implementation.
 Server and client architectures, using both blocking and non-blocking I/O schemes, are discussed and analysed from the point of view of scalability and with a particular emphasis on performance analysis.
 An extensive list of TCP/IP platform dependencies, not documented in Java, is provided, along with a handy reference to the various states a TCP/IP port can assume.
 These and all other trademarks referred to in this book remain property of their respective owners.
@@ -21,6 +22,7 @@ Java and network programming have always been a good match, for a number of reas
 Part I of the book introduces network programming and outlines some of the special problems associated with it.
 A comprehensive glossary, a cross-index of Java classes and methods, and a general index are provided.
 Indented paragraphs like this can be skipped on a first reading.
+Syntax is specified in the usual meta-language, where square brackets [ and ] contain optional elements, and ellipses … denote optional repetions.
 When introducing methods or fields of a class or interface, a short-form pseudo-Java syntax format like this is used:
 Every complete source code example in this book has been compiled and executed on Windows and Solaris platforms, and in many cases has been used to interoperate between both platforms.
 Java code is presented in various formats as dictated by space and pagination considerations.
@@ -83,7 +85,7 @@ How long you should wait in relation to this total expected time is a policy que
 In general, timeouts should be set slightly too long rather than slightly too short.19
 Good networking programming practice requires that retries of transactions which have timed out should occur at intervals which are initially random within a reasonable interval, to avoid the ‘thundering herd’ problem, and which increase exponentially, to reduce the network load which may have been part of the initial problem.
 For servers which are waiting for a client request, the timeout value is strictly a matter of policy: how long is the server prepared to wait for a request before abandoning the connection? The period chosen should be long enough to support heavy network loads and a reasonable amount of client processing, but not so long as to tie up precious server resources for absurd lengths of time.
-The resources allocated to a server connection consist of the connected socket itself and, usually, a thread and some sort of client context.)
+The resources allocated to a server connection consist of the connected socket itself and, usually, a thread and some sort of client context.
 Setting a socket timeout has no effect on blocking socket operations already in progress.
 The size of a socket’s send and receive buffers is managed by these methods:
 You can set the send buffer size of a socket at any time before closing it.
@@ -93,7 +95,6 @@ If the receiving application is slow in reading data from the buffer, its receiv
 The bandwidth used in this calculation is the effective bandwidth over the entire connection, not just the bandwidth via which either endpoint is connected to the Internet, which may be much higher.
 The bandwidth-delay product can be understood by thinking of the network as a cylindrical pipe as shown in Figure 3.4
 The bandwidth of the network corresponds to the cross-sectional area of the pipe, and the delay of the network corresponds to the length of the pipe.
-A network can have high delay if it extends across a slow gateway or router, or a large number of either: some physical-layer technologies such as x(:?  have inherently long delay.
 If it is genuinely necessary to abort a connection rather than terminate it gracefully, the ‘hard close’ can be used.
 Keep-alive should be viewed as a kind of ‘court of last resort’ for finally terminating dead connections after two hours if it is available.
 It should not be relied on as a substitute for sensible use of timeouts.
@@ -128,12 +129,12 @@ If maximum efficiency is required, the copy example above can be rewritten thus:
 In our meta-notation, the following methods are supported for each type 0:
 A view buffer is direct if and only if it was allocated from a direct byte buffer, and read-only if and only if it was allocated from a read-only byte buffer.
 The completed bulk output example is shown in Example 4.2
+Channels are initially created in blocking mode, and streams—even those with channels—can only be operated in blocking mode.
 A non-blocking read on a network channel transfers only the data, if any, that was already in the socket receive-buffer at the time of the call.
 If this amount is zero, the read transfers no data and returns zero.
 Multiplexing is somewhat like being directly driven by hardware interrupts from the network controller.
 The difference between managing a single channel in blocking mode and managing (multiplexing) multiple channels is illustrated in Figure 4.7
 For some reason which Sun have not made clear, multiplexing must be used in conjunction with non-blocking I/O.10
-We will see server and client architectures for exploiting multiplexing in Chapter 12
 The selectable I/O operations and their meanings when ready are specified in Table 4.4
 It is an arbitrary object which remains associated with the selection key which results from the registration, and which can be set, unset, and retrieved subsequently:
 The selected channels are obtained via the selected-keys set, and can be processed individually as shown in the following example:
@@ -198,7 +199,6 @@ The general technique for client socket factories is shown in Example 7.1
 The general technique for server socket factories is shown in Example 7.2
 In a practical implementation these would be defined // externally, e.g.
 In a practical implementation these would be defined // externally, e.g.
-Handshaking is usually asynchronous, but no I/O is done * on the socket until a handshake completes successfully,
 Verify the distinguished name (DN) // of the zeroth certificate.
 This means that to use this scheme you would have to use blocking mode and streams for the actual I/O, and non-blocking mode when selecting.
 Having to use blocking I/O implies having to commit a thread, whereupon the scalability advantage of non-blocking I/O and selection is lost.
@@ -246,8 +246,6 @@ This lets the client associate an acknowledgment with a request, and allows the 
 It would be better to ‘learn’ how well the network is performing rather than sticking doggedly to some preconception.
 We should adapt the behaviour of our application to the current network load in two critical ways.
 Second, when we are re-transmitting dropped packets, we must aim at reducing the congestion on the network rather than making it worse.
-Calculates the round-trip time, then updates the * smoothed round-trip time and the variance (deviation)
-Does the connect, then (re-)initializes * the statistics for the connection.
 Although even this implementation is an improvement over Stevens’, which just maintains one static set of statistics for all sockets.
 If the application communicates with multiple servers, each send/receive operation starts out with possibly irrelevant historical statistics, as Stevens agreed.
 A server for this protocol must obey two simple protocol rules:
@@ -311,6 +309,7 @@ To unify the discussion below, we introduce the following interface, representin
 Realistically, we will hit one or more ‘soft’ limits first, beyond which performance will degrade.
 Most probably we will first hit a physical-memory limit, beyond which performance will degrade for each memory increment according to the performance curve of the virtual-memory system, but again affecting all threads, not just the new one.
 Servers which expect thousands of concurrent clients need more efficiency and more reliability than this model provides.
+We would probably prefer to limit resource usage at the server and allow client performance to degrade gracefully up to a limit of clients, refusing service (‘lost calls’) to clients beyond our limit—a graceful degradation with self-protection.
 We can solve both these problems by arranging to use an existing thread instead of a new thread.
 If the thread already exists, the creation overhead per connection is zero; we can avoid overwhelming the execution environment at the server by managing the number of threads which pre- exist; and we can implement some explicit overflow policy when we receive a connection in excess of capacity.
 The next models to be considered use a pool of pre-existing worker threads, to reduce the process of dispatching a new conversation to simply dispatching the new connection to an existing thread.
@@ -340,12 +339,13 @@ List connections; // initialization not shown byte[] buffer; // initialization n
 We have no means of deciding which connection to scan for input next, so we must just cycle round them.
 If the next ready connection is the one before the one we are about to read, it has to wait for timeouts to occur on all the other connections being polled.
 This worst-case situation is not at all unrealistic: it occurs when only one of the connections is active.
+This would at least have the virtue of wasting zero time waiting for timeouts, but the problem then becomes what to do when no input is available on any channel: sleep a few milliseconds? Yield the thread? Just spin furiously round the polling loop? We’d rather do nothing rather than just wasting processor cycles, and we’d rather be told rather than having to keep looking.
 If we are using an explicit queue of connections, we only need to enqueue a new connection and it will be picked up by an idle.
 If we are using an implicit queue as in section 12.3.1, again an idle thread will pick up a new connection.
 Both of these are more or less selftuning: the idlest threads will tend to pick up the most connections, upon which they will become less idle, when they will tend to pick up fewer connections, until some of their connections terminate and they become idle again.
 You could also organize all this by hand, by book-keeping the level of activity of each thread, maintaining a separate explicit queue to each one, and choosing the queue to dispatch a new connection to on the basis of its statistics.
 The effect will be exactly the same as letting the system sort itself out with a single dispatch queue, assuming that your statistics are both accurate and well-used: if they aren’t, the situation will be worse.
-It’s hard to see why you would bother doing it ‘manually’.)
+It’s hard to see why you would bother doing it ‘manually’
 This gives better throughput, as your bank and supermarket demonstrate: at the bank, there is generally one queue for multiple tellers; at the supermarket, there is generally one queue per checkout.
 For an echo server, the request handler can be as simple as Example 12.11 below, using only one buffer:
 The internal state-management of the buffers takes care of all the book-keeping for us.
@@ -364,10 +364,12 @@ Where multiple interactions occur with the same server as part of a single overa
 This strategy is seen in Web browsers, where a page which consists of text plus several images is retrieved by several connections reading in parallel.
 In this way some of the connection overhead is overlapped with real I/O.
 In a situation like this it may be more natural to use multiplexed channel I/O at the client rather than a number of blocked threads.
+However you can’t act on this advice unless you know what the relevant assumptions are! In this Appendix we examine some ‘fallacies of networking’, and discuss the truth about them.
 These are the celebrated ‘eight fallacies of networking’ of L.
 The following subsections examine these eight fallacies in more detail.
 Bandwidth, the number of bits (or bytes) that can be transmitted per second, is finite, and sometimes surprisingly small.
 The total bandwidth of an end-to-end connection is the bandwidth of the slowest network segment in the path.
+Data cannot be transmitted into a network faster than its bandwidth: this implies queuing at transmitters and therefore leads to additional latency—see section 13.1.2
 The design of any non-trivial networked application must model current transmission volumes and future growth against network bandwidth and latency to obtain expected response times, and verify these against required response times.
 The transport cost between two computers, even when you own both of them and all the cabling and components in between, is not zero: consider the cost of electrical power, service contracts, amortization, and depreciation.
 The mean time between failure for disks is measured in years, not seconds, and the maximum time for an I/O transfer is bounded by seek time and transfer rate, so it is customary for an entire disk I/O request to be serviced before the API returns.
@@ -390,7 +392,6 @@ The design of any non-trivial application requires careful attention to expected
 Networking implies packet switching, which implies queuing, which implies waiting.
 Also, remote services are by definition remote, and often the only way you can observe them is via the network, often only via the very application protocol you are trying to exercise, so it can be difficult to discover their status under heavy load—which, of course, is the only time you want to discover its status!
 One component of a distributed system may get everything it asked for; another component may get enough of what it wants to at least function partially, or in a degraded mode of operation; and another component may be unable to function at all.
-Network programming is lots of fun, and very interesting indeed, but it is not the same as the sequential programming usually taught in Computer Science 101
 Corresponds to a Socket which has been closedc by both the local and remote applications and all acknowledgements exchanged; the port persists for a few minutes at both ends so that any further delayed packets for the connection can expire.
 If timeout is set and expires, whether unsent data is still sent or the connection is reset.
 Unix-based platforms leave unsent data queued for transmission; Windows resets the connection.

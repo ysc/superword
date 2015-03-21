@@ -28,6 +28,7 @@ I hope you’ll find this fourth edition an even stronger, longer-lived, more ac
 Organization of the Book Chapter 1, Basic Network Concepts, explains in detail what a programmer needs to know about how the networks and the Internet work.
 It covers the protocols that underlie the Internet, such as TCP/IP and UDP/IP.
 The next two chapters throw some light on two parts of Java programming that are critical to almost all network programs but are often misunderstood and misused: I/O and threading.
+Chapter 2, Streams, explores Java’s classic I/O which—despite the new I/O APIs—isn’t going away any time soon and is still the preferred means of handling input and output in most client applications.
 Understanding how Java handles I/O in the general case is a prerequisite for understanding the special case of how Java handles network I/O.
 Chapter 3, Threads, explores multithreading and synchronization, with a special emphasis on how they can be used for asynchronous I/O and network servers.
 Experienced Java programmers may be able to skim or skip these two chapters.
@@ -52,15 +53,16 @@ Who You Are This book assumes you are comfortable with the Java language and pro
 This book does not attempt to be a basic language tutorial.
 You should be thoroughly familiar with the syntax of Java.
 It also wouldn’t hurt if you’re familiar with basic Swing programming, though that’s not required aside from a few examples.
+When you encounter a topic that requires a deeper understanding for network programming than is customary—for instance, threads and streams—I’ll cover that topic as well, at least briefly.
 However, this book doesn’t assume that you have prior experience with network programming.
 You should find it a complete introduction to networking concepts and network application development.
-I don’t assume that you have a few thousand networking acronyms (TCP, UDP, SMTP, etc.) at the tip of your tongue.
 You’ll learn what you need to know about these here.
 Java Versions Java’s network classes have changed a lot more slowly since Java 1.0 than other parts of the core API.
 In comparison to the AWT or I/O, there have been almost no changes and only a few additions.
 Of course, all network programs make extensive use of the I/O classes and some make heavy use of GUIs.
 This book is written with the assumption that you are coding with at least Java 5.0
 In general, I use Java 5 features like generics and the enhanced for loop freely without further explanation.
+I have not shied away from using features introduced in Java 7 where they seemed especially useful or convenient—for instance, try-withresources and multicatch are both very helpful when trying to fit examples into the limited space available in a printed book—but I have been careful to point out my use of such features.
 Overall, though, Java’s networking API has been relatively stable since Java 1.0
 Very little of the post-1.0 networking API has ever been deprecated, and additions have been.
 You shouldn’t have any trouble using this book after Java 8 is released.
@@ -85,22 +87,18 @@ I do feel a little guilty about a couple of compromises necessitated by the need
 Most methods assume they are passed good data, and dispense with null checks and similar principles of good code hygiene.
 Furthermore, I have reduced the indentation to two characters per block and four characters per continuation line, as opposed to the Java standard of four and eight, respectively.
 On the positive side, these compromises have aided me in making this edition considerably shorter (by several hundred pages) than the previous edition.
-Code examples and fragments • Anything that might appear in a Java program, including keywords, operators, data.
+Anything that might appear in a Java program, including keywords, operators, data.
 Command lines and options that should be typed verbatim on the screen.
-New terms where they are defined • Pathnames, filenames, and program names (however, if the program name is also.
 Significant code fragments and complete programs are generally placed into a separate paragraph, like this:
 When code is presented as fragments rather than complete programs, the existence of the appropriate import statements should be inferred.
 In these cases, the user input will be displayed in bold, as in this example from Chapter 9:
 Finally, although many of the examples used here are toy examples unlikely to be reused, a few of the classes I develop have real value.
 Please feel free to reuse them or any parts of them in your own code.
-They are in the public domain (although the same is most definitely not true of the explanatory text!)
 Request for Comments I enjoy hearing from readers, whether with general comments about this book, specific corrections, other topics they would like to see covered, or just war stories about their own network programming travails.
 Please realize, however, that I receive several hundred pieces of email a day and cannot personally respond to each one.
 For the best chance of getting a personal response, please identify yourself as a reader of this book.
 If you have a question about a particular program that isn’t working as you expect, try to reduce it to the simplest case that reproduces the bug, preferably a single class, and paste the text of the entire program into the body of your email.
 And please, please send the message from the account you want me to reply to and make sure that your Reply-to address is properly set! There’s nothing quite so frustrating as spending an hour or more carefully researching the answer to an interesting question and composing a detailed response, only to have it bounce because my correspondent sent her feedback from a public terminal and neglected to set the browser preferences to include her actual email address.
-I also adhere to the old saying “If you like this book, tell your friends.
-If you don’t like it, tell me.” I’m especially interested in hearing about mistakes.
 I’ve yet to make it perfect, but I keep trying.
 And I’m sure that at least one of them is a really embarrassing whopper of a problem.
 If you find a mistake or a typo, please let me know so I can correct it.
@@ -188,7 +186,8 @@ The most important advantage of breaking data into individually addressed packet
 In contrast, when you make a local telephone call within the same exchange on a traditional phone line, you have essentially reserved a wire from your phone to the phone of the person you’re calling.
 When all the wires are in use, as sometimes happens during a major emergency or holiday, not everyone who picks up a phone will get a dial tone.
 If you stay on the line, you’ll eventually get a dial tone when a line becomes free.
-In some countries with worse phone service than the United States, it’s not uncommon to have to wait half an hour or more for a dial tone.) Another advantage of packets is that checksums can be used to detect whether a packet was damaged in transit.
+In some countries with worse phone service than the United States, it’s not uncommon to have to wait half an hour or more for a dial tone.
+Another advantage of packets is that checksums can be used to detect whether a packet was damaged in transit.
 We’re still missing one important piece: some notion of what computers need to say to pass data back and forth.
 A protocol is a precise set of rules defining how computers communicate: the format of addresses, how data is split into packets, and so on.
 There are many different protocols defining different aspects of network communication.
@@ -221,7 +220,7 @@ The host-to-network layer on the remote system decodes the analog signals into d
 The internet layer does some simple checks to see that the IP datagrams aren’t corrupt, reassembles them if they’ve been fragmented, and passes them to the server’s transport layer.
 The server’s transport layer checks to see that all the data arrived and requests retransmission of any missing or corrupt pieces.
 This request actually goes back down through the server’s internet layer, through the server’s host-to-network layer, and back to the client system, where it bubbles back up to the client’s transport layer, which retransmits the missing data back down through the layers.
-This is all transparent to the application layer.) Once the server’s transport layer has received enough contiguous, sequential datagrams, it reassembles them and writes them onto a stream read by the web server running in the server application layer.
+Once the server’s transport layer has received enough contiguous, sequential datagrams, it reassembles them and writes them onto a stream read by the web server running in the server application layer.
 The server responds to the request and sends its response back down through the layers on the server system for transmission back across the Internet and delivery to the web client.
 As you can guess, the real process is much more elaborate.
 The host-to-network layer is by far the most complex, and a lot has been deliberately hidden.
@@ -242,7 +241,9 @@ If you really push them, they might say that they’re talking to their computer
 Everything more than one layer deep is effectively invisible, and that is exactly the way it should be.
 The Host-to-Network Layer As a Java programmer, you’re fairly high up in the network food chain.
 In the standard reference model for IP-based Internets (the only kind of network Java really understands), the hidden parts of the network belong to the hostto-network layer (also known as the link layer, data link layer, or network interface layer)
+The host-to-network layer defines how a particular network interface—such as an Ethernet card or a WiFi antenna—sends IP datagrams over its physical connection to the local network and the world.
 The part of the host-to-network layer made up of the hardware that connects different computers (wires, fiber-optic cables, radio waves, or smoke signals) is sometimes called the physical layer of the network.
+As a Java programmer, you don’t need to worry about this layer unless something goes wrong—the plug falls out of the back of your computer, or someone drops a backhoe through the T–1 line between you and the rest of the world.
 The primary reason you’ll need to think about the host-to-network layer and the physical layer, if you need to think about them at all, is performance.
 For instance, if your clients reside on fast, reliable fiber-optic connections, you will design your protocol and applications differently than if they’re on high-latency satellite connections on an oil rig.
 You’ll make still different choices if your clients are on a 3G data plan where they’re charged by the byte for relatively low bandwidth.
@@ -253,6 +254,8 @@ In the OSI model, the internet layer goes by the more generic name network layer
 A network layer protocol defines how bits and bytes of data are organized into the larger groups called packets, and the addressing scheme by which different machines find one another.
 The Internet Protocol (IP) is the most widely used network layer protocol in the world and the only network layer protocol Java understands.
 Although these are two very different network protocols that do not interoperate on the same network without special gateways and/or tunneling protocols, Java hides almost all of the differences from you.
+In practice, most IPv4 datagrams are much smaller, ranging from a few dozen bytes to a little more than eight kilobytes.
+An IPv6 datagram contains a larger header and up to four gigabytes of data.
 All bits and bytes are big endian; most significant to least significant runs left to right.
 Besides routing and addressing, the second purpose of the Internet layer is to enable different types of Host-to-Network layers to talk to each other.
 Internet routers translate between WiFi and Ethernet, Ethernet and DSL, DSL and fiber-optic backhaul protocols, and so forth.
@@ -325,7 +328,6 @@ Ports Addresses would be all you needed if each computer did no more than one th
 Email needs to be separated from FTP requests, which need to be separated from web traffic.
 Each computer with an IP address has several thousand logical ports (65,535 per transport layer protocol, to be precise)
 These are purely abstractions in the computer’s memory and do not represent anything physical, like a USB port.
-For example, HTTP, the underlying protocol of the Web, commonly uses port 80
 We say that a web server listens on port 80 for incoming connections.
 When data is sent to a web server on a particular machine at a particular IP address, it is also sent to a particular port (usually port 80) on that machine.
 The receiver checks each packet it sees for the port and sends the data to any program that is listening to that port.
@@ -370,6 +372,7 @@ For example, all traffic coming from the Class C network 193.28.25.x may be reje
 Outgoing SSH connections may be allowed, but incoming SSH connections may not.
 Incoming connections on port 80 (web) may be allowed, but only to the corporate web server.
 More intelligent firewalls look at the contents of the packets to determine whether to accept or reject them.
+The exact configuration of a firewall—which packets of data are and to pass through and which are not—depends on the security needs of an individual site.
 Java doesn’t have much to do with firewalls—except insofar as they often get in your way.
 If a firewall prevents hosts on a network from making direct connections to the outside world, a proxy server can act as a go-between.
 Thus, a machine that is prevented from connecting to the external network by a firewall would make a request for a web page from the local proxy server instead of requesting the web page directly from the remote web server.
@@ -379,7 +382,8 @@ One of the security advantages of using a proxy server is that external hosts on
 They do not learn the names and IP addresses of the internal machines, making it more difficult to hack into internal systems.
 Whereas firewalls generally operate at the level of the transport or internet layer, proxy servers normally operate at the application layer.
 A proxy server has a detailed understanding of some application-level protocols, such as HTTP and FTP.
-The notable exception are SOCKS proxy servers that operate at the transport layer, and can proxy for all TCP and UDP connections regardless of application layer protocol.) Packets that pass through the proxy server can be examined to ensure that they contain data appropriate for their type.
+The notable exception are SOCKS proxy servers that operate at the transport layer, and can proxy for all TCP and UDP connections regardless of application layer protocol.
+Packets that pass through the proxy server can be examined to ensure that they contain data appropriate for their type.
 For instance, FTP packets that seem to contain Telnet data can be rejected.
 Figure 1-4 shows how proxy servers fit into the layer model.
 As long as all access to the Internet is forwarded through the proxy server, access can be tightly controlled.
@@ -395,7 +399,7 @@ If you look at a web server logfile, you’ll probably find some hits from clien
 That’s because AOL proxy servers supply many pages out of their cache rather than re-requesting them for one another.
 The biggest problem with proxy servers is their inability to cope with all but a few protocols.
 Generally established protocols like HTTP, FTP, and SMTP are allowed to pass through, while newer protocols like BitTorrent are not.
-Some network administrators consider this a feature.) In the rapidly changing world of the Internet, this is a significant disadvantage.
+In the rapidly changing world of the Internet, this is a significant disadvantage.
 It’s a particular disadvantage for Java programmers because it limits the effectiveness of custom protocols.
 In Java, it’s easy and often useful to create a new protocol that is optimized for your application.
 Consequently, some developers have taken to tunneling their protocols through HTTP, most notably with SOAP.
@@ -426,6 +430,7 @@ Internet Standards This book discusses several application layer Internet protoc
 If you need detailed information about any protocol, the definitive source is the standards document for the protocol.
 Although there are many standards organizations in the world, the two that produce most of the standards relevant to application layer network programming and protocols are the Internet Engineering Task Force (IETF) and the World Wide Web Consortium (W3C)
 The IETF is a relatively informal, democratic body open to participation by any interested party.
+Its standards are based on “rough consensus and running code” and.
 The W3C, by contrast, is a vendor organization, controlled by duespaying member corporations, that explicitly excludes participation by individuals.
 For the most part, the W3C tries to define standards in advance of implementation.
 Despite the name, a published RFC is a finished work.
@@ -484,6 +489,9 @@ If the implementations do not uncover any obstructions, the spec can be promoted
 Proposed recommendation A proposed recommendation is mostly complete and unlikely to undergo more than minor editorial changes.
 The main purpose of a proposed recommendation is to work out bugs in the specification document rather than in the underlying technology being documented.
 Recommendation A recommendation is the highest level of W3C standard.
+However, the W3C is very careful not to actually call this a “standard” for fear of running afoul of antitrust statutes.
+The IETF calls these submissions “Internet drafts” and publishes them for six months before deleting them.
+The W3C refers to such submissions as “acknowledged submissions” and publishes them indefinitely.
 However, neither organization actually promises to do more than acknowledge receipt of these documents.
 In particular, they do not promise to form a working group or begin the standardization process.
 Nonetheless, press releases invariably misrepresent the submission of such a document as a far more significant event than it actually is.
@@ -496,12 +504,12 @@ Consequently, I’ll take a few pages to summarize Java’s unique approach to I
 However, all output streams have the same basic methods to write data and all input streams use the same basic methods to read data.
 After a stream is created, you can often ignore the details of exactly what it is you’re reading or writing.
 Filter streams can be chained to either an input stream or an output stream.
+Filters can modify the data as it’s read or written—for instance, by encrypting or compressing itor they can simply provide additional methods for converting the data that’s read or written into other formats.
 Readers and writers can be chained to input and output streams to allow programs to read and write text (i.e., characters) rather than bytes.
 Used properly, readers and writers can handle a wide variety of character encodings, including multibyte character sets such as SJIS and UTF-8
 Streams are synchronous; that is, when a program (really a thread) asks a stream to read or write a piece of data, it waits for the data to be read or written before it does anything else.
 Nonblocking I/O is a little more complicated, but can be much faster in some high-volume applications, such.
 Normally, the basic stream model is all you need and all you should use for clients.
-Because channels and buffers depend on streams, I’ll start with streams and clients and later discuss nonblocking I/O for use with servers in Chapter 11
 This class provides the fundamental methods needed to write data.
 Subclasses of OutputStream use these methods to write data onto particular media.
 For instance, a FileOutputStream uses these methods to write data into a file.
@@ -519,7 +527,7 @@ Java doesn’t have an unsigned byte data type, so an int has to be used here in
 The only real difference between an unsigned byte and a signed byte is the interpretation.
 They’re both made up of eight bits, and when you write an int onto a network connection using write(int b), only eight bits are placed on the wire.
 If an int outside the range 0–255 is passed to write(int b), the least significant byte of the.
-This is the effect of casting an int to a byte.)
+This is the effect of casting an int to a byte.
 The most popular variation of this protocol sends 72-character lines containing printable ASCII characters.
 Because ASCII is a 7-bit character set, each character is sent as a single byte.
 Consequently, this protocol is straightforward to implement using the basic write() methods, as the next code fragment demonstrates:
@@ -528,8 +536,10 @@ After each 72-character chunk is written, a carriage return and a linefeed are w
 The next start character is calculated and the loop repeats.
 Writing a single byte at a time is often inefficient.
 For example, every TCP segment contains at least 40 bytes of overhead for routing and error correction.
+If each byte is sent by itself, you may be stuffing the network with 41 times more data than you think you are! Add overhead of the host-to-network layer protocol, and this can be even worse.
 That is, they accumulate bytes in memory and send them to their eventual destination only when a certain number have accumulated or a certain amount of time has passed.
 However, if you have more than one byte ready to go, it’s not a bad idea to send them all at once.
+Using write(byte[] data) or write(byte[] data, int offset, int length) is normally much faster than writing all the components of the data array one at a time.
 The algorithm for calculating which bytes to write when is the same as for the previous implementation.
 The crucial difference is that the bytes are packed into a byte array before being written onto the network.
 Also, notice that the int result of the calculation must be cast to a byte before being stored in the array.
@@ -543,7 +553,7 @@ The flush() method breaks the deadlock by forcing the buffered stream to send it
 Data can get lost if you don’t flush your streams.
 It’s important to flush your streams whether you think you need to or not.
 Depending on how you got hold of a reference to the stream, you may or may not know whether it’s buffered.
-For instance, System.out is buffered whether you want it to be or not.) If.
+For instance, System.out is buffered whether you want it to be or not.
 Failing to flush when you need to can lead to unpredictable, unrepeatable program hangs that are extremely hard to diagnose if you don’t have a good idea of what the problem is in the first place.
 As a corollary to all this, you should flush all streams immediately before you close them.
 Otherwise, data left in the buffer when the stream is closed may get lost.
@@ -584,6 +594,7 @@ Thus, a cast is necessary before storing the result in the byte array.
 However, as long as you’re clear about which one you’re working with, this is not a major problem.
 You can convert a signed byte to an unsigned byte like this:
 Reading a byte at a time is as inefficient as writing data one byte at a time.
+Consequently, there are two overloaded read() methods that fill a specified array with multiple bytes of data read from the stream read(byte[] input) and read(byte[] input, int offset, int length)
 The first method attempts to fill the specified array input.
 The second attempts to fill the specified subarray of input, starting at offset and continuing for length bytes.
 Notice I said these methods attempt to fill the array, not that they necessarily succeed.
@@ -634,6 +645,7 @@ The disadvantage of this approach is that you couldn’t then invoke these metho
 An object-oriented approach would embed this in the type system through interfaces and classes so that it could all be checked at compile time.
 However, other input streams such as Telne tInputStream may support marking if they’re chained to a buffered input stream first.
 They read and write bytes singly or in groups, but that’s all.
+Deciding what those bytes mean—whether they’re integers or IEEE 754 floating-point numbers or Unicode text—is completely up to the programmer and the code.
 However, there are certain extremely common data formats that can benefit from a solid implementation in the class library.
 For example, many integers passed as parts of network protocols are 32-bit big-endian integers.
 Many files transferred by FTP are stored in the ZIP format.
@@ -723,7 +735,8 @@ The binary formats used are primarily intended for exchanging data between two d
 What a data output stream writes, a data input stream can read.
 However, it happens that the formats are the same ones used for most Internet protocols that exchange binary numbers.
 For instance, the time protocol uses 32-bit big-endian integers, just like Java’s int.
-Both Java and most network protocols were designed by Unix programmers, and consequently both tend to use the formats common to most Unix systems.) However, this isn’t true for all network protocols, so check the details of any protocol you use.
+Both Java and most network protocols were designed by Unix programmers, and consequently both tend to use the formats common to most Unix systems.
+However, this isn’t true for all network protocols, so check the details of any protocol you use.
 The DataOutputStream class offers these 11 methods for writing particular Java data types:
 Integers are written in two’s complement in the minimum number of bytes possible.
 Thus, a byte is written as one byte, a short as two bytes, an int as four bytes, and a long as eight bytes.
@@ -738,7 +751,7 @@ The writeUTF() method does include the length of the string.
 It encodes the string itself in a variant of the UTF-8 encoding of Unicode.
 Because this variant is subtly incompatible with most non-Java software, it should be used only for exchanging data with other Java programs that use a DataInputStream to read.
 For exchanging UTF-8 text with all other software, you should use an Input StreamReader with the appropriate encoding.
-There wouldn’t be any confusion if Sun had just called this method and its partner writeString() and readString() rather than writeUTF() and readUTF().)
+There wouldn’t be any confusion if Sun had just called this method and its partner writeString() and readString() rather than writeUTF() and readUTF()
 Along with these methods for writing binary numbers and strings, DataOutput Stream of course has the usual write(), flush(), and close() methods any Output Stream class has.
 In addition, DataInputStream has the usual read(), available(), skip(), and close() methods, as well as methods for reading complete arrays of bytes and lines of text.
 In addition, DataInputStream provides two methods to read unsigned bytes and unsigned shorts and return the equivalent int.
@@ -806,6 +819,8 @@ It has three read() methods, as well as skip(), close(), ready(), mark(), reset(
 The read(char[] text, int offset, int length) method is the fundamental method through which the other two read() methods are implemented.
 A subclass must override at least this method as well as close(), although most will override some of the other methods as well in order to provide more efficient implementations.
 Most of these methods are easily understood by analogy with their InputStream counterparts.
+Technically it returns a UTF-16 code point, though almost always that’s the same as a Unicode character.
+The read(char[] text) method tries to fill the array text with characters and returns the actual number of characters read or –1 on end of stream.
 The read(char[] text, int offset, int length) method attempts to read length characters into the subarray of text beginning at offset and continuing for length characters.
 It also returns the actual number of characters read or –1 on end of stream.
 The mark() and reset() methods allow some readers to reset back to a marked position in the character sequence.
@@ -858,6 +873,7 @@ Because processes are fairly heavyweight items, too many could rapidly bring a s
 The problem wasn’t that the machines weren’t powerful enough or the network fast enough; it was that the FTP servers were poorly implemented.
 Many more simultaneous users could be served if a new process wasn’t needed for each connection.
 Early web servers suffered from this problem as well, although the problem was masked a little by the transitory nature of HTTP connections.
+Because web pages and their embedded images tend to be small (at least compared to the software archives commonly retrieved by FTP) and because web browsers “hang up” the connection after each.
 The fundamental problem is that while it’s easy to write code that handles each incoming connection and each new task as a separate process (at least on Unix), this solution doesn’t scale.
 By the time a server is attempting to handle a thousand or more simultaneous connections, performance slows to a crawl.
 The first is to reuse processes rather than spawning new ones.
@@ -896,13 +912,13 @@ You’re going to put all the work the thread does in this one method.
 This method may invoke other methods; it may construct other objects; it may even spawn other threads.
 In essence, the run() method is to a thread what the main() method is to a traditional nonthreaded program.
 A multithreaded program exits when both the main() method and the run() methods of all nondaemon threads return.
-Daemon threads perform background tasks such as garbage collection and don’t prevent the virtual machine from exiting.)
+Daemon threads perform background tasks such as garbage collection and don’t prevent the virtual machine from exiting.
 Subclassing Thread Consider a program that calculates the Secure Hash Algorithm (SHA) digest for many files.
 To a large extent, this is an I/O-bound program (i.e., its speed is limited by the amount of time it takes to read the files from the disk)
 If you write it as a standard program that processes the files in series, the program is going to spend a lot of time waiting for the hard drive to return the data.
 This limit is even more characteristic of network programs: they execute faster than the network can supply input.
 This is time that other threads could use, either to process other input sources or to do something that doesn’t rely on slow input.
-Sometimes, even if none of the threads have a lot of spare time to allot to other threads, it’s simply easier to design a program by breaking it into multiple threads that perform independent operations.)
+Sometimes, even if none of the threads have a lot of spare time to allot to other threads, it’s simply easier to design a program by breaking it into multiple threads that perform independent operations.
 It does this by reading the file with a DigestInput Stream.
 This filter stream calculates a cryptographic hash function as it reads the file.
 When it’s finished reading, the hash function is available from the digest() method.
@@ -919,6 +935,7 @@ Example 3-1 sidesteps that problem by never passing any information back to the 
 Most of the time, however, you’ll want to pass the information to other parts of the program.
 You can store the result of the calculation in a field and provide a getter method to return the value of that field.
 However, how do you know when the calculation of that value is complete? What do you return if somebody calls the getter.
+If you subclass Thread, you should override run() and nothing else! The various other methods of the Thread class—for example, start(), interrupt(), join(), sleep(), and so on—all have very specific semantics and interactions with the virtual machine that are difficult to reproduce in your own code.
 You should override run() and provide additional constructors and other methods as necessary, but you should not replace any of the other standard Thread methods.
 Implementing the Runnable Interface One way to avoid overriding the standard Thread methods is not to subclass Thread.
 Instead, write the task you want the thread to perform as an instance of the Runnable interface.
@@ -961,6 +978,7 @@ On some virtual machines, the main thread takes all the time available and leave
 The main thread is so busy checking for job completion that there’s no time left to actually complete the job! Clearly this isn’t a good approach.
 Callbacks In fact, there’s a much simpler, more efficient way to handle the problem.
 The infinite loop that repeatedly polls each ReturnDigest object to see whether it’s finished can be eliminated.
+The trick is that rather than having the main program repeatedly ask each ReturnDigest thread whether it’s finished (like a five-year-old repeatedly asking, “Are we there yet?” on a long car trip, and almost as annoying), you let the thread tell the.
 It does this by invoking a method in the main class that started it.
 This is called a callback because the thread calls its creator back when it’s done.
 This way, the main program can go to sleep while waiting for the threads to finish and not steal time from the running threads.
@@ -1005,6 +1023,7 @@ The Callable interface defines a single call() method that can generically retur
 Example 3-9 is a Callable that finds the maximum value in a subsection of an array in the most obvious way possible.
 Although you could invoke the call() method directly, that is not its purpose.
 Instead, you submit Callable objects to an Executor that spins up a thread for each one.
+There are other strategies an Executor could use—for instance, it could use a single thread to invoke the callables in order—but one thread per callable is a good strategy for this problem.
 Each subarray is searched at the same time, so on suitable hardware and a large input this program can run almost twice as fast.
 Nonetheless, the code is almost as simple and straightforward as finding the maximum in the first half of the array and then finding the maximum in the second half of the array, without ever worrying about threads or asynchronicity.
 It’s possible that the second thread has already finished, in which case the value is immediately returned; but if not, execution waits for that thread to finish too.
@@ -1025,7 +1044,8 @@ I have to find the book I’m looking for on the shelves.
 I have to stand in line to check the book out, or else I have to use it right there in the library rather than bringing it home with me.
 Sometimes somebody else has checked the book out, and I have to fill out a form requesting that the book be saved for me when it’s returned.
 And I can’t write notes in the margins, highlight paragraphs, or tear pages out to paste on my bulletin board.
-Well, I can, but if I do, it significantly reduces the usefulness of the book for future borrowers, and if the library catches me, I may lose my borrowing privileges.) There’s a significant time and convenience penalty associated with borrowing a book from the library rather than purchasing my own copy, but it does save me money and storage space.
+Well, I can, but if I do, it significantly reduces the usefulness of the book for future borrowers, and if the library catches me, I may lose my borrowing privileges.
+There’s a significant time and convenience penalty associated with borrowing a book from the library rather than purchasing my own copy, but it does save me money and storage space.
 A thread is like a borrower at a library; the thread borrows from a central pool of resources.
 Threads make programs more efficient by sharing memory, file handles, sockets, and other resources.
 As long as two threads don’t want to use the same resource at the same time, a multithreaded program is much more efficient than the multiprocess alternative, in which each process has to keep its own copy of every resource.
@@ -1066,7 +1086,8 @@ Although it is used by the other threads and objects, it’s referenced only wit
 Furthermore, although you’re synchronizing here on the out object, it’s the writeEntry() method that needs to be protected from interruption.
 The Writer classes all have their own internal synchronization, which protects one thread from interfering with a write() method in another thread.
 This is not true of input and output streams, with the exception of PrintStream.
-It is possible for a write to an output stream to be interrupted by another thread.) Each Writer class has a lock field that specifies the object on which writes to that writer synchronize.
+It is possible for a write to an output stream to be interrupted by another thread.
+Each Writer class has a lock field that specifies the object on which writes to that writer synchronize.
 The second possibility is to synchronize on the LogFile object itself.
 This is simple enough to arrange with the this keyword.
 Synchronized Methods Because synchronizing the entire method body on the object itself is such a common thing to do, Java provides a shortcut.
@@ -1098,7 +1119,7 @@ StringBuilder arguments are not safe because they’re not immutable; they can b
 A constructor normally does not have to worry about issues of thread safety.
 Until the constructor returns, no thread has a reference to the object, so it’s impossible for two threads to have a reference to the object.
 The most likely issue is if a constructor depends on another object in another thread that may change while the constructor runs, but that’s uncommon.
-There’s also a potential problem if a constructor somehow passes a reference to the object it’s creating into a different thread, but this is also uncommon.)
+There’s also a potential problem if a constructor somehow passes a reference to the object it’s creating into a different thread, but this is also uncommon.
 You can take advantage of immutability in your own classes.
 It’s usually the easiest way to make a class thread safe, often much easier than determining exactly which methods or code blocks to synchronize.
 To make an object immutable, simply declare all its fields private and final and don’t write any methods that can change them.
@@ -1242,7 +1263,6 @@ In the preceding example, if the thread is interrupted, it skips over the calcul
 Its problem was that the main() method tended to outpace the threads whose results the main() method was using.
 Because Example 3-12 joins to threads in the same order as the threads are started, this fix also has the side effect of printing the output in the same order as the arguments used to construct the threads, rather than in the order the threads finish.
 This modification doesn’t make the program any slower, but it may occasionally be an issue if you want to get the output of a thread as soon as it’s done, without waiting for other unrelated threads to finish first.
-Joining is perhaps not as important as it was prior to Java 5
 In particular, many designs that used to require join() can now more easily be implemented using an Executor and a Future instead.
 Waiting on an object A thread can wait on an object it has locked.
 While waiting, it releases the lock on the object and pauses until it is notified by some other thread.
@@ -1297,6 +1317,7 @@ If a thread is finishing in a small fraction of a second anyway, chances are it 
 Thread Pools and Executors Adding multiple threads to a program dramatically improves performance, especially for I/O-bound programs such as most network programs.
 Starting a thread and cleaning up after a thread that has died takes a noticeable amount of work from the virtual machine, especially if a program spawns hundreds of threads—not an unusual occurrence for even a low- to mediumvolume network server.
 Even if the threads finish quickly, this can overload the garbage collector or other parts of the VM and hurt performance, just like allocating thousands of any other kind of object every minute.
+If the threads are blocking naturally—for instance, by waiting for data from the network—there’s no real penalty to this; but if the threads.
 Finally, and most importantly, although threads help make more efficient use of a computer’s limited CPU resources, there is still only a finite amount of resources to go around.
 Once you’ve spawned enough threads to use all the computer’s available idle time, spawning more threads just wastes MIPS and memory on thread management.
 You simply submit each task as a Runnable object to the pool.
@@ -1334,6 +1355,7 @@ Obviously, an IP address, which can have as many as 12 decimal digits, is beyond
 I can remember about two IP addresses, and then only if I use both daily and the second is on the same subnet as the first.
 To avoid the need to carry around Rolodexes full of IP addresses, the Internet’s designers invented the Domain Name System (DNS)
 Clients often have a hostname, but often don’t, especially if their IP address is dynamically assigned at startup.
+Colloquially, people often use “Internet address” to mean a hostname (or even an email address, or full URL)
 In a book about network programming, it is crucial to be precise about addresses and hostnames.
 In this book, an address is always a numeric IP address, never a human-readable hostname.
 For instance, www.beand.com and xom.nu are really the same Linux box.
@@ -1355,10 +1377,12 @@ Usually, it includes both a hostname and an IP address.
 Instead, InetAddress has static factory methods that connect to a DNS server to resolve a hostname.
 This method does not merely set a private String field in the InetAddress class.
 It actually makes a connection to the local DNS server to look up the name and the numeric address.
+If you’ve looked up this host previously, the information may be cached locally, in which case a network connection is not required.
 You can also do a reverse lookup by IP address.
 If the address you look up does not have a hostname, getHostName() simply returns the dotted quad address you supplied.
 If, for some reason, you need all the addresses of a host, call getAllByName() instead, which returns an array:
 Finally, the getLocalHost() method returns an InetAddress object for the host on which your code is running:
+This is the hostname “localhost” and the dotted quad address “127.0.0.1”
 Example 4-2 prints the address of the machine it’s run on.
 If you’re not connected to the Internet, and the system does not have a fixed IP address or domain name, you’ll probably see localhost as the domain name and 127.0.0.1 as the IP address.
 This method can create addresses for hosts that do not exist or cannot be resolved:
@@ -1367,7 +1391,7 @@ Unlike the other factory methods, these two methods make no guarantees that such
 This could be useful if a domain name server is not available or might have inaccurate information.
 For example, none of the computers, printers, or routers in my basement area network are registered with any DNS server.
 Because I can never remember which addresses I’ve assigned to which systems, I wrote a simple program that attempts to connect to all 254 possible local addresses in turn to see which ones are active.
-This only took me about 10 times as long as writing down all the addresses on a piece of paper.)
+This only took me about 10 times as long as writing down all the addresses on a piece of paper.
 Caching Because DNS lookups can be relatively expensive (on the order of several seconds for a request that has to go through several intermediate servers, or one that’s trying to resolve an unreachable host) the InetAddress class caches the results of lookups.
 Once it has the address of a given host, it won’t look it up again, even if you create a new InetAddress object for the same host.
 As long as IP addresses don’t change while your program is running, this is not a problem.
@@ -1445,6 +1469,7 @@ Packets addressed to a link-local address will only be transmitted within their 
 The isMCNodeLocal() method returns true if the address is an interface-local multicast address, false otherwise.
 Packets addressed to an interface-local address are not sent beyond the network interface from which they originate, not even to a different network interface on the same node.
 The method name is out of sync with current terminology.
+Earlier drafts of the IPv6 protocol called this type of address “node-local,” hence the name “isMCNodeLocal.” The IPNG working group actually changed the name before this method was added to the JDK, but Sun didn’t get the memo in time.
 Testing Reachability The InetAddress class has two isReachable() methods that test whether a particular node is reachable from the current host (i.e., whether a network connection can be made)
 Connections can be blocked for many reasons, including firewalls, proxy servers, misbehaving routers, and broken cables, or simply because the remote host is not turned on when you try to connect.
 These methods attempt to use traceroute (more specifically, ICMP echo requests) to find out if the specified address is reachable.
@@ -1481,6 +1506,7 @@ You can see that this host has two separate Ethernet cards plus the local loopba
 Getter Methods Once you have a NetworkInterface object, you can inquire about its IP address and name.
 This is pretty much the only thing you can do with these objects.
 The getName() method returns the name of a particular NetworkInterface object, such as eth0 or lo.
+On Windows, you may see slightly friendlier names such as “Local Area Connection” or “Local Area Connection 2.”
 The tools in this class alone let you write some genuinely useful programs.
 Here you’ll look at two examples: one that queries your domain name server interactively and another that can improve the performance of your web server by processing logfiles offline.
 SpamCheck A number of services monitor spammers, and inform clients whether a host attempting to connect to them is a known spammer or not.
@@ -1490,7 +1516,7 @@ The nature of the problem requires that the response be fast, and ideally it sho
 Furthermore, the load should be distributed across many servers, ideally ones located around the world.
 Although this could conceivably be done using a web server, SOAP, UDP, a custom protocol, or some other mechanism, this service is in fact cleverly implemented using DNS and DNS alone.
 To find out if a certain IP address is a known spammer, reverse the bytes of the address, add the domain of the blackhole service, and look it up.
-Note that despite the numeric component, this is a hostname ASCII string, not a dotted quad IP address.)
+Note that despite the numeric component, this is a hostname ASCII string, not a dotted quad IP address.
 If the DNS query succeeds (and, more specifically, if it returns the address 127.0.0.2), then the host is known to be a spammer.
 If you use this technique, be careful to stay on top of changes to blackhole list policies and addresses.
 For obvious reasons, blackhole servers are frequent targets of DDOS and other attacks, so you want to be careful that if the blackhole server changes its address or simply stops responding to any queries, you don’t begin blocking all traffic.
@@ -1518,13 +1544,14 @@ Most web browsers generate multiple logfile entries per page served, because the
 And many visitors request multiple pages while visiting a site.
 If the same address is requested again, it can be retrieved from the cache much more quickly than from DNS.
 In my initial tests, it took more than a second per log entry.
-Exact numbers depend on the speed of your network connection, the speed of the local and remote DNS servers, and network congestion when the program is run.) The program spends a huge amount of time sitting and waiting for DNS requests to return.
+Exact numbers depend on the speed of your network connection, the speed of the local and remote DNS servers, and network congestion when the program is run.
+The program spends a huge amount of time sitting and waiting for DNS requests to return.
 Of course, this is exactly the problem multithreading is designed to solve.
 One main thread can read the logfile and pass off individual entries to other threads for processing.
 Over the space of a few days, even lowvolume web servers can generate a logfile with hundreds of thousands of lines.
 Trying to process such a logfile by spawning a new thread for each entry would rapidly bring even the strongest virtual machine to its knees, especially because the main thread can read logfile entries much faster than individual threads can resolve domain names and die.
 The number of threads is stored in a tunable parameter, numberOfThreads, so that it can be adjusted to fit the VM and network stack.
-Launching too many simultaneous DNS requests can also cause problems.)
+Launching too many simultaneous DNS requests can also cause problems.
 The first class, LookupTask, shown in Example 4-11, is a Callable that parses a logfile entry, looks up a single address, and replaces that address with the corresponding hostname.
 This doesn’t seem like a lot of work and CPU-wise, it isn’t.
 The second class, PooledWeblog, shown in Example 4-12, contains the main() method that reads the file and creates one LookupTask per line.
@@ -1561,9 +1588,10 @@ In addition, Java makes heavy use of nonstandard custom schemes such as rmi, jar
 There is no specific syntax that applies to the scheme-specific parts of all URIs.
 The authority part of the URI names the authority responsible for resolving the rest of the URI.
 This means the server at www.ietf.org is responsible for mapping the path /rfc/rfc3986.txt to a resource.
+The URI urn:isbn:156592870 has the scheme urn but doesn’t follow the hierarchical //authority/ path?query form for scheme-specific parts.
 Although most current examples of URIs use an Internet host as an authority, future schemes may not.
 However, if the authority is an Internet host, optional usernames and ports may also be provided to make the authority more specific.
-In most cases, including the password in the URI is a big security hole unless, as here, you really do want everyone in the universe to know the password.)
+In most cases, including the password in the URI is a big security hole unless, as here, you really do want everyone in the universe to know the password.
 The path is a string that the authority can use to determine which resource is identified.
 Different authorities may interpret the same path to refer to different resources.
 The path may be hierarchical, in which case the individual parts are separated by forward slashes, and the.
@@ -1582,7 +1610,7 @@ By contrast, a generic URI may tell you what a resource is, but not actually tel
 In Java, it’s the difference between the java.net.URI class that only identifies resources and the java.net.URL class that can both identify and retrieve resources.
 The network location in a URL usually includes the protocol used to access a server (e.g., FTP, HTTP), the hostname or IP address of the server, and the path to the resource on that server.
 Here the protocol is another word for what was called the scheme of the URI.
-Protocol is the word used in the Java documentation.) In a URL, the protocol part can be file, ftp, http, https, magnet, telnet, or various other strings (though not urn)
+In a URL, the protocol part can be file, ftp, http, https, magnet, telnet, or various other strings (though not urn)
 The host part of a URL is the name of the server that provides the resource you want.
 If present, it contains a username and, rarely, a password.
 It’s not necessary if the service is running on its default port (port 80 for HTTP servers)
@@ -1599,6 +1627,7 @@ Finally, the fragment references a particular part of the remote resource.
 If the remote resource is HTML, the fragment identifier names an anchor in the HTML document.
 If the remote resource is XML, the fragment identifier is an XPointer.
 Some sources refer to the fragment part of the URL as a “section”
+Java rather unaccountably refers to the fragment identifier as a “Ref ”
 Fragment identifier targets are created in an HTML document with an id attribute, like this:
 To refer to this point, a URL includes not only the document’s filename but the fragment identifier separated from the rest of the URL by a #:
 Technically, a string that contains a fragment identifier is a URL reference, not a URL.
@@ -1616,7 +1645,6 @@ More importantly, relative URLs allow a single document tree to be served by mul
 Most importantly of all, relative URLs allow entire trees of documents to be moved or copied from one site to another without breaking all the internal links.
 Rather than relying on inheritance to configure instances for different kinds of URLs, it uses the strategy design pattern.
 Protocol handlers are the strategies, and the URL class itself forms the context through which the different strategies are selected.
-Although storing a URL as a string would be trivial, it is helpful to think of URLs as objects with fields that include the scheme (a.k.a.
 Indeed, this is almost exactly how the java.net.URL class is organized, though the details vary a little between different versions of Java.
 After a URL object has been constructed, its fields do not change.
 This has the side effect of making them thread safe.
@@ -1695,7 +1723,6 @@ You should use this method when you want to communicate directly with the server
 The URLConnection gives you access to everything sent by the server: in addition to the document itself in its raw form (e.g., HTML, plain text, binary image data), you can access all the metadata specified by the protocol.
 For example, if the scheme is HTTP or HTTPS, the URLConnection lets you access the HTTP headers as well as the raw HTML.
 The URLConnection class also lets you write data to as well as read from a URL —for instance, in order to send email to a mailto URL or post form data.
-The URLCon nection class will be the primary subject of Chapter 7
 An overloaded variant of this method specifies the proxy server to pass the connection through:
 If the protocol handler does not support proxies, the argument is ignored and the connection is made directly if possible.
 The getContent() method is the third way to download data referenced by a URL.
@@ -1718,9 +1745,11 @@ If it doesn’t know how to return a string representation of the resource, then
 And if it doesn’t know how to present the resource as a reader, then it returns an InputStream.
 You have to test for the type of the returned object using instanceof.
 Splitting a URL into Pieces URLs are composed of five pieces:
+The fragment identifier, also known as the section or ref.
 For instance, the URL http://www.faqs.org/rfcs/rfc3986.html has a scheme, an authority, and a path, but no fragment identifier or query string.
 The authority may further be divided into the user info, the host, and the port.
 Read-only access to these parts of a URL is provided by nine public methods: get File(), getHost(), getPort(), getProtocol(), getRef(), getQuery(), getPath(), getUserInfo(), and getAuthority()
+The getProtocol() method returns a String containing the scheme of the URL (e.g., “http”, “https”, or “file”)
 The getHost() method returns a String containing the hostname of the URL.
 The getPort() method returns the port number specified in the URL as an int.
 If no port was specified in the URL, getPort() returns -1 to signify that the URL does not specify the port explicitly, and will use the default port for the protocol.
@@ -1772,6 +1801,7 @@ Unlike the URL class, the URI class does not depend on an underlying protocol ha
 As long as the URI is syntactically correct, Java does not need to understand its protocol in order to create a representative URI object.
 Thus, unlike the URL class, the URI class can be used for new and experimental URI schemes.
 The first constructor creates a new URI object from any convenient string.
+If the string argument does not follow URI syntax rules—for example, if the URI begins with a colon—this constructor throws a URISyntaxException.
 This is a checked exception, so either catch it or declare that the method where the constructor is invoked.
 The second constructor that takes a scheme specific part is mostly used for nonhierarchical URIs.
 The scheme is the URI’s protocol, such as http, urn, tel, and so forth.
@@ -1784,6 +1814,7 @@ Again, characters that are forbidden in a fragment identifier are escaped automa
 Passing null for this argument simply omits the fragment identifier.
 The third constructor is used for hierarchical URIs such as http and ftp URLs.
 The host and path together (separated by a /) form the scheme-specific part for this URI.
+If the constructor cannot form a legal hierarchical URI from the supplied pieces—for instance, if there is a scheme so the URI has to be absolute but the path doesn’t start with /—then it throws a URISyntaxException.
 The fourth constructor is basically the same as the third, with the addition of a query string.
 As usual, any unescapable syntax errors cause a URISyntaxException to be thrown and null can be passed to omit any of the arguments.
 The fifth constructor is the master hierarchical URI constructor that the previous two invoke.
@@ -1810,6 +1841,7 @@ If the URI is opaque, all you can get is the scheme, scheme-specific part, and f
 However, if the URI is hierarchical, there are getter methods for all the different parts of a hierarchical URI:
 If you want the raw, encoded parts of the URI, there are five parallel getRaw_Foo_() methods:
 There are no getRawPort() and getRawHost() methods because these components are always guaranteed to be made up of ASCII characters.
+In the event that the specific URI does not contain this information—for instance, the URI http://www.example.com has no user info, path, port, or query string—the relevant methods return null.
 Since it’s declared to return an int, it can’t return null.
 For various technical reasons that don’t have a lot of practical impact, Java can’t always initially detect syntax errors in the authority component.
 The immediate symptom of this failing is normally an inability to return the individual parts of the authority, port, host, and user info.
@@ -1840,6 +1872,7 @@ Comparing a URI to anything except another URI causes a ClassCastException.
 String Representations Two methods convert URI objects to strings, toString() and toASCIIString():
 If these characters occur as part of a path or query string, they and all other characters should be encoded.
 Any characters that are not ASCII numerals, letters, or the punctuation marks specified earlier are converted into bytes and each byte is written as a percent sign followed by two hexadecimal digits.
+Besides being encoded as %20, they can be encoded as a plus sign (+)
 You can construct URL objects that use illegal ASCII and non-ASCII characters and/or percent escapes.
 Such characters and escapes are not automatically encoded or decoded when output by methods such as getPath() and toExternalForm()
 You are responsible for making sure all such characters are properly encoded in the strings used to construct a URL object.
@@ -1902,6 +1935,7 @@ You normally shouldn’t use this in code running in a shared environment.
 For instance, you wouldn’t change the ProxySelector in a servlet because that would change the ProxySelector for all servlets running in the same container.
 Communicating with Server-Side Programs Through GET The URL class makes it easy for Java applets and applications to communicate with serverside programs such as CGIs, servlets, PHP pages, and others that use the GET method.
 Server-side programs that use the POST method require the URLConnection class and.
+All you need to know is what combination of names and values the program expects to receive.
 Then you can construct a URL with a query string that provides the requisite names and values.
 There are a number of ways to determine the exact syntax for a query string that talks to a particular program.
 If you’ve written the server-side program yourself, you already know the name-value pairs it expects.
@@ -1909,7 +1943,6 @@ If you’ve installed a third-party program on your own server, the documentatio
 If you’re talking to a documented external network API such as the eBay Shopping API, then the service usually provides fairly detailed documentation to tell you exactly what data to send for which purposes.
 If this is the case, it’s straightforward to figure out what input the program expects.
 The method the form uses should be the value of the METHOD attribute of the FORM element.
-This value should be either GET, in which case you use the process described here, or POST, in which case you use the process described in Chapter 7
 The part of the URL that precedes the query string is given by the value of the ACTION attribute of the FORM element.
 Note that this may be a relative URL, in which case you’ll need to determine the corresponding absolute URL.
 Finally, the names in the name-value pairs are simply the values of the NAME attributes of the INPUT elements.
@@ -1935,7 +1968,6 @@ Regardless of how you determine the set of name-value pairs the server expects, 
 All you have to do is create a query string that includes the necessary name-value pairs, then form a URL that includes that query string.
 Send the query string to the server and read its response using the same methods you use to connect to a server and retrieve a static HTML page.
 There’s no special protocol to follow once the URL is constructed.
-There is a special protocol to follow for the POST method, however, which is why discussion of that method will have to wait until Chapter 7.)
 To demonstrate this procedure, let’s write a very simple command-line program to look up topics in the Open Directory.
 This site is shown in Figure 5-1 and it has the advantage of being really simple.
 The Open Directory interface is a simple form with one input field named search; input typed in this field is sent to a program at http://search.dmoz.org/cgi-bin/search, which does the actual search.
@@ -1947,7 +1979,6 @@ Accessing Password-Protected Sites Many popular sites require a username and pas
 Some sites, such as the W3C member pages, implement this through HTTP authentication.
 Others, such as the New York Times website, implement it through cookies and HTML forms.
 Supporting sites that use nonstandard, cookie-based authentication is more challenging, not least because this varies a lot from one site to another.
-Implementing cookie authentication is hard short of implementing a complete web browser with full HTML forms and cookie support; we’ll discuss Java’s cookie support in Chapter 7
 Accessing sites protected by standard HTTP authentication is much easier.
 The Authenticator Class The java.net package includes an Authenticator class you can use to provide a username and password for sites that protect themselves using HTTP authentication:
 Since Authenticator is an abstract class, you must subclass it.
@@ -2006,11 +2037,13 @@ The type shows very generally what kind of data is contained: is it a picture, t
 For example, HTML’s content type is text/html; the type is text, and the subtype is html.
 The content type for a JPEG image is image/jpeg; the type is image, and the subtype is jpeg.
 In addition, nonstandard custom types and subtypes can be freely defined as long as they begin with x-
+Finally, the request is terminated with a blank line—that is, two carriage return/linefeed pairs, \r\n\r\n.
 Once the server sees that blank line, it begins sending its response to the client over the same connection.
+The response begins with a status line, followed by a header describing the response using the same “name: value” syntax as the request header, a blank line, and the requested resource.
 The first line indicates the protocol the server is using (HTTP/1.1), followed by a response code.
+The other header lines identify the date the request was made in the server’s time frame, the server software (Apache), a promise that the server will close the connection when it’s finished sending, the MIME media type, and the length of the document delivered (not counting this header)—in this case, 107 bytes.
 Table 6-1 lists the standard and experimental response codes you’re most likely to encounter, minus a few used by WebDAV.
 Continue The server is prepared to accept the request body and the client should send it; allows clients to ask whether the server will accept a request before they send a large amount of data as part of the request.
-The server accepts the client’s request in the Upgrade header field to change the application protocol (e.g., from HTTP to WebSockets.)
 POST, the requested data is contained in the response along with the usual headers.
 If the request method was HEAD, only the header information is included.
 Created The server has created a resource at the URL specified in the body of the response.
@@ -2079,6 +2112,7 @@ A client indicates that it’s willing to reuse a socket by including a Connecti
 The URL class transparently supports HTTP Keep-Alive unless explicitly turned off.
 That is, it will reuse a socket if you connect to the same server again before the server has closed the connection.
 You can control Java’s use of HTTP Keep-Alive with several system properties:
+Set http.keepAlive to “true or false” to enable/disable HTTP Keep-Alive.
 However, these optimizations are usually performed in a translation layer that shields application programmers from the details, so the code you write will still mostly follow the preceding steps 1–4
 Java does not yet support HTTP 2.0; but when the capability is added, your programs shouldn’t need to change to take advantage of it, as long as you access HTTP servers via the URL and URLConnection classes.
 A start line containing the HTTP method and a path to the resource on which the method should be executed.
@@ -2094,6 +2128,7 @@ The PUT method uploads a representation of a resource to the server at a known U
 That is, it can be repeated without concern if it fails.
 Putting the same document in the same place on the same server twice in a row leaves the server in the same state as only putting it once.
 The DELETE method removes a resource from a specified URL.
+If you aren’t sure whether a delete request succeeded—for instance, because the socket disconnected after you sent the request but before you received a response—just send the request again.
 It too uploads a representation of a resource to a server at a known URL, but it does not specify what the server is to do with the newly supplied resource.
 For instance, the server does not necessarily have to make that resource available at the target URL, but may instead move it to a different URL.
 Or the server might use the data to update the state of one or more completely different resources.
@@ -2136,6 +2171,7 @@ However, more likely, the value is a meaningless string such as ATVPDKIKX0DER, w
 Usually the cookie values do not contain the data but merely point to it on the server.
 Cookies are limited to nonwhitespace ASCII text, and may not contain commas or semicolons.
 To set a cookie in a browser, the server includes a Set-Cookie header line in the HTTP header.
+For example, this HTTP header sets the cookie “cart” to the value “ATVPDKIKX0DER”:
 If a browser makes a second request to the same server, it will send the cookie back in a Cookie line in the HTTP request header like so:
 As long as the server doesn’t reuse cookies, this enables it to track individual users and sessions across multiple, otherwise stateless, HTTP connections.
 For example, a request I just made to Amazon fed my browser five cookies:
@@ -2150,6 +2186,7 @@ Cookies are also scoped by path, so they’re returned for some directories on t
 The default scope is the original URL and any subdirectories.
 For instance, if a cookie is set for the URL http://www.cafeconleche.org/XOM/, the cookie also applies in http://www.cafeconleche.org/XOM/apidocs/, but not in http://www.cafeconleche.org/ slides/ or http://www.cafeconleche.org/
 However, the default scope can be changed using a Path attribute in the cookie.
+For example, this next response sends the browser a cookie with the name “user” and the value “elharo” that applies only within the server’s /restricted subtree, not on the rest of the site:
 When requesting a document in the subtree /restricted from the same server, the client echoes that cookie back.
 However, it does not use the cookie in other directories on the site.
 A cookie can include both a domain and a path.
@@ -2206,9 +2243,6 @@ One of several problems is that the URLConnection class is too closely tied to t
 For instance, it assumes that each file transferred is preceded by a MIME header or something very much like one.
 However, most classic protocols such as FTP and SMTP don’t use MIME headers.
 Opening URLConnections A program that uses the URLConnection class directly follows this basic sequence of steps:
-For instance, if the default setup for a particular kind of URL is acceptable, you can skip step 3
-If you only want the data from the server and don’t care about any metainformation, or if the protocol doesn’t provide any metainformation, you can skip step 4
-If you only want to receive data from the server but not send data to the server, you’ll skip step 6
 Consequently, unless you’re subclassing URLConnection to handle a new kind of URL (i.e., writing a protocol handler), you create one of these objects by invoking the open Connection() method of the URL class.
 You may find it convenient or necessary to override other methods in the class; but the single method that subclasses must implement is connect(), which makes a connection to a server and thus depends on the type of service (HTTP, FTP, and so on)
 When a URLConnection is first constructed, it is unconnected; that is, the local and remote host cannot send and receive data.
@@ -2249,6 +2283,7 @@ To download a binary file, it is more reliable to use a URLConnection’s getCon
 Example 7-3 is a program that uses this technique to save a binary file on a disk.
 As usual, the main() method loops over the URLs entered on the command line, passing each URL to the saveBinaryFile() method.
 It puts the type into the variable contentType and the content length into the variable contentLength.
+Next, an if statement checks whether the content type is text or the Content-length field is missing or invalid (contentLength == -1)
 If either of these is true, an IOException is thrown.
 If these checks are both false, you have a binary file of known length: that’s what you want.
 Now that you have a genuine binary file on your hands, you prepare to read it into an array of bytes called data.
@@ -2265,9 +2300,7 @@ The content encoding is not the same as the character encoding.
 The character encoding is determined by the Content-type header or information internal to the document, and specifies how characters are encoded in bytes.
 Content encoding specifies how the bytes are encoded in other bytes.
 This is the time the document was sent as seen from the server; it may not agree with the time on your local machine.
-If the HTTP header does not include a Date field, getDate() returns 0
 The final date method, getLastModified(), returns the date on which the document was last modified.
-If the HTTP header does not include a Last-modified field (and many don’t), this method returns 0
 Example 7-4 reads URLs from the command line and uses these six methods to print their content type, content length, content encoding, date of last modification, expiration date, and current date.
 The content type of the file at http://www.oreilly.com is text/html.
 It was last modified on the same day at 5:04 P.M.
@@ -2293,11 +2326,11 @@ This method retrieves the value of the header field name and tries to convert it
 This method is often used to retrieve the Content-length field.
 For example, to get the content length from a URLConnection uc, you would write:
 Caches Web browsers have been caching pages and images for years.
-If a logo is repeated on every page of a site, the browser normally loads it from the remote server only once,
 Several HTTP headers, including Expires and Cache-control, can control caching.
 By default, the assumption is that a page accessed with GET over HTTP can and should be cached.
 A page accessed with HTTPS or POST usually shouldn’t be.
 An Expires header (primarily for HTTP 1.0) indicates that it’s OK to cache this representation until the specified time.
+The Cache-control header (HTTP 1.1) offers fine-grained cache policies: — max-age=[seconds]: Number of seconds from now before the cached entry.
 A server can send multiple Cache-control headers in a single header as long as they don’t conflict.
 The Last-modified header is the date when the resource was last changed.
 A client can use a HEAD request to check this and only come back for a full GET if its local cached copy is older than the Last-modified date.
@@ -2319,7 +2352,6 @@ CacheRequest is an abstract class with two methods, as shown in Example 7-7
 The getOutputStream() method in the subclass should return an OutputStream that points into the cache’s data store for the URI passed to the put() method at the same time.
 For instance, if you’re storing the data in a file, you’d return a FileOutput Stream connected to that file.
 The protocol handler will copy the data it reads onto this OutputStream.
-If a problem arises while copying (e.g., the server unexpectedly closes.
 This method should then remove any data from the cache that has been stored for this request.
 Later, the data can be retrieved using the getData() method, a custom method in this subclass just retrieving the data Java wrote onto the Output Stream this class supplied.
 An obvious alternative strategy would be to store results in files and use a FileOutputStream instead.
@@ -2395,6 +2427,7 @@ Typically, this time is the last time the client fetched the document.
 If the document has changed since that time, the server will send it as usual.
 Otherwise, it replies with a 304 Not Modified message, like this:
 Some will send the document whether it’s changed or not.
+It then downloads and displays the document—but only if it’s been modified in the last 24 hours.
 Next, you see the new time, which you set to 24 hours prior to the current time:
 Because this document hasn’t changed in the last 24 hours, it is not reprinted.
 The useCaches variable determines whether a cache will be used if it’s available.
@@ -2568,6 +2601,7 @@ This scheme is fine for small requests sent in response to typical web forms.
 However, it’s burdensome for responses to very long forms or some SOAP messages.
 It’s very wasteful and slow for medium or large documents sent with HTTP PUT.
 It’s much more efficient if Java doesn’t have to wait for the last byte of data to be written before sending the first byte of data over the network.
+If you know the size of your data—for instance, you’re uploading a file of known size using HTTP PUT—you can tell the HttpURLConnection object the size of that data.
 If you don’t know the size of the data in advance, you can use chunked transfer encoding instead.
 In chunked transfer encoding, the body of the request is sent in multiple pieces, each with its own separate content length.
 Java will then use a slightly different form of HTTP than the examples in this book.
@@ -2584,7 +2618,7 @@ Because this number can actually be larger than the maximum size of an int, in J
 Java will use this number in the Content-length HTTP header field.
 However, if you then try to write more or less than the number of bytes given here, Java will throw an IOException.
 Of course, that happens later, when you’re writing data, not when you first call this method.
-You can’t use both chunked transfer encoding and fixed-length streaming mode on the same request.)”
+You can’t use both chunked transfer encoding and fixed-length streaming mode on the same request.
 Servers neither know nor care how the Content-length was set, as long as it’s correct.
 However, like chunked transfer encoding, streaming mode does interfere with authentication and redirection.
 If either of these is required for a given URL, an HttpRetryException will be thrown; you have to manually retry.
@@ -2593,10 +2627,10 @@ Data is transmitted across the Internet in packets of finite size called datagra
 The header contains the address and port to which the packet is going, the address and port from which the packet came, a checksum to detect data corruption, and various other housekeeping information used to ensure reliable transmission.
 However, because datagrams have a finite length, it’s often necessary to split the data across multiple packets and reassemble it at the destination.
 It’s also possible that one or more packets may be lost or corrupted in transit and need to be retransmitted or that packets arrive out of order and need to be reordered.
+Keeping track of this—splitting the data into packets, generating headers, parsing the headers of incoming packets, keeping track of what packets have and haven’t been received, and so on—is a lot of work and requires a lot of intricate code.
 Sockets allow the programmer to treat a network connection as just another stream onto which bytes can be written and from which bytes can be read.
 Sockets shield the programmer from low-level details of the network, such as error detection, packet sizes, packet splitting, packet retransmission, network addresses, and more.
 Using Sockets A socket is a connection between two hosts.
-Listen for incoming data • Accept connections from remote machines on the bound port.
 Java’s Socket class, which is used by both clients and servers, has methods that correspond to the first four of these operations.
 The last three operations are needed only by servers, which wait for clients to connect to them.
 They are implemented by the ServerSocket class, which is discussed in the next chapter.
@@ -2677,9 +2711,9 @@ Although it’s possible to send data over the socket using the output stream at
 In the most common pattern, the client sends a request.
 The client may send another request, and the server responds again.
 This continues until one side or the other is done, and closes the connection.
-One simple bidirectional TCP protocol is dict, defined in RFC 2229
+In this protocol, the client opens a socket to port 2628 on the dict server and sends commands such as “DEFINE eng-lat gold”
 This tells the server to send a definition of the word gold using its English-to-Latin dictionary.
-Different servers have different dictionaries installed.) After the first definition is received, the client can ask for another.
+After the first definition is received, the client can ask for another.
 You can see that control response lines begin with a three-digit code.
 The actual definition is plain text, terminated with a period on a line by itself.
 If the dictionary doesn’t contain the word you asked for, it returns 552 no match.
@@ -2694,6 +2728,7 @@ Finally, flush the output so you’ll be sure the command is sent over the netwo
 When you see a period on a line by itself, you know the definition is complete.
 You can then send the quit over the output stream:
 It connects to dict.org, and translates any words the user enters on the command line into Latin.
+However, it does specifically check for a line that begins “552 no match” in case the server doesn’t recognize the word.
 It reads a line of input from the console, sends it to the server, and waits to read a line of output it gets back.
 The close() method shuts down both input and output from the socket.
 On occasion, you may want to shut down only half of the connection, either input or output.
@@ -2765,6 +2800,7 @@ Getting Information About a Socket Socket objects have several properties that a
 These properties are set as soon as the socket connects, and are fixed from there on.
 The getInetAddress() and getPort() methods tell you the remote host and port the Socket is connected to; or, if the connection is now closed, which host and port the Socket was connected to when it was connected.
 The getLocalAddress() and getLo calPort() methods tell you the network interface and port the Socket is connected from.
+Unlike the remote port, which (for a client socket) is usually a “well-known port” that has been preassigned by a standards committee, the local port is usually chosen by the system at runtime from the available unused ports.
 This way, many different clients on a system can access the same service at the same time.
 The local port is embedded in outbound IP packets along with the local host’s IP address, so the server can send data back to the right port on the client.
 Example 8-6 reads a list of hostnames from the command line, attempts to open a socket to each one, and then uses these four methods to print the remote host, the remote port, the local address, and the local port.
@@ -2777,7 +2813,6 @@ If the socket was able to connect to the remote host at all, this method returns
 To tell if a socket is currently open, you need to check that isConnected() returns true and isClosed() returns false.
 Finally, the isBound() method tells you whether the socket successfully bound to the outgoing port on the local system.
 Whereas isConnected() refers to the remote end of the socket, isBound() refers to the local end.
-Binding will become more important when we discuss server sockets in Chapter 9
 The toString() method produces a string that looks like this:
 Don’t rely on this format; it may change in the future.
 All parts of this string are accessible directly through other methods (specifically getInetAddress(), getPort(), and getLocalPort())
@@ -2884,6 +2919,7 @@ Android in particular treats the setTraffic Class() method as a no-op.
 If the TCP stack is unable to provide the requested class of service, it may, but is not required to, throw a SocketException.
 Exactly how any given VM implements this is implementation dependent.
 However, knowing that a problem occurred is often not sufficient to deal with the problem.
+Did the remote host refuse the connection because it was busy? Did the remote host refuse the connection because no service was listening on the port? Did the connection attempt timeout because of network congestion or because the host was down? There are several subclasses of SocketException that provide more information about what went wrong and why:
 A BindException is thrown if you try to construct a Socket or ServerSocket object on a local port that is in use or that you do not have sufficient privileges to use.
 A Connec tException is thrown when a connection is refused at the remote host, which usually happens because the host is busy or no process is listening on that port.
 The java.net package also includes ProtocolException, which is a direct subclass of IOException:
@@ -2919,6 +2955,8 @@ If your search only has one match, either because you’re lucky or you’re sea
 Because there is only one oreilly.com in the database, the server returns all the information it has on this domain:
 Domain names in the .com and .net domains can now be registered with many different competing registrars.
 The whois protocol supports several flags you can use to restrict or expand your search.
+For example, if you know you want to search for a person named “Elliott” but you aren’t sure whether he spells his name “Elliot,” “Elliott,” or perhaps even something as unlikely as “Elliotte,” you would type:
+This tells the whois server that you want only matches for people (not domains, gateways, groups, or the like) whose names begin with the letters “Elliot.” Unfortunately, you need to do a separate search if you want to find someone who spells his name “Eliot.” The rules for modifying a search are summarized in Table 8-3
 Each prefix should be placed before the search string on the command line.
 Expand or * Search only for group records and show all individuals in that group.
 Partial or suffix Match records that start with the given string.
@@ -2926,6 +2964,7 @@ Summary or $ Show just the summary, even if there’s only one match.
 SUBdisplay or % Show the users of the specified host, the hosts on the specified network, etc.
 These keywords are all useful, but they’re way too much trouble to remember.
 In fact, most people don’t even know that they exist.
+They just type “whois Harold” at the command line and sort through the mess that comes back.
 A good whois client doesn’t rely on users remembering arcane keywords; rather, it shows them the options.
 Supplying this requires a graphical user interface for end users and a better API for client programmers.
 A Network Client Library It’s best to think of network protocols like whois in terms of the bits and bytes that move across the network, whether as packets, datagrams, or streams.
@@ -2940,6 +2979,7 @@ The lookUp Names() method returns a String containing the whois response to a gi
 The arguments specify the string to search for, what kind of record to search for, which database to search in, and whether an exact match is required.
 I could have used strings or int constants to specify the kind of record to search for and the database to search in, but because there are only a small number of valid values, lookUpNames() defines enums with a fixed number of members instead.
 This solution provides much stricter compile-time type-checking and guarantees the Whois class won’t have to handle an unexpected value.
+String prefix = category.label + " " + group.label; String query = prefix + target + suffix;
 This interface has a text field to enter the name to be searched for and a checkbox to determine whether the match should be exact or partial.
 A group of radio buttons lets users specify which group of records they want to search.
 Another group of radio buttons chooses the fields that should be searched.
@@ -2950,7 +2990,7 @@ The main() method is the usual block of code to start up a standalone applicatio
 It constructs a Whois object and then uses that to construct a WhoisGUI object.
 Because you’d probably use a visual designer to build such an application, I won’t describe it in detail here.
 When the constructor returns, the main() method attaches an anonymous inner class to the window that will close the application when the window is closed.
-This isn’t in the constructor because other programs that use this class may not want to exit the program when the window closes.) main() then packs and shows the window.
+This isn’t in the constructor because other programs that use this class may not want to exit the program when the window closes.
 From that point on, all activity takes place in the event dispatch thread.
 The first event this program must respond to is the user typing a name in the Whois: search box and either clicking the Find button or hitting Enter.
 In this case, the Lookup Names inner class sets the main text to the empty string and executes a SwingWorker to make the network connection.
@@ -2997,7 +3037,6 @@ The server and the client interact according to an agreed-upon protocol until it
 The server returns to step 2 and waits for the next connection.
 When a client connects, the server sends the time in a human-readable format and closes the connection.
 First, create a server socket that listens on port 13:
-That is, the program stops here and waits, possibly for hours or days, until a client connects on port 13
 When a client does connect, the accept() method returns a Socket object.
 The daytime protocol requires the server (and only the server) to talk, so get an OutputStream from the socket.
 Now get the current time and write it onto the stream.
@@ -3031,7 +3070,6 @@ If you are running the server in the background on a Unix system, stop it by fin
 When a client connects, accept() returns a Socket, which is stored in the local variable connection, and the program continues.
 It calls getOutputStream() to get the output stream associated with that Socket and then chains that output stream to a new Out putStreamWriter, out.
 The content is sent to the client by writing its string representation on out with write()
-If you run this program on Unix (including Linux and Mac OS X), you need to run it as root in order to connect to port 13
 Serving Binary Data Sending binary, nontext data is not significantly harder.
 You just use an Output Stream that writes a byte array rather than a Writer that writes a String.
 Once again, the current time is found by creating a new Date object.
@@ -3049,8 +3087,6 @@ On the other hand, if the protocol is simple and quick and allows the server to 
 The operating system stores incoming connection requests addressed to a particular port in a first-in, first-out queue.
 By default, Java sets the length of this queue to 50, although it can vary from operating system to operating system.
 Some operating systems (not Solaris) have a maximum queue length.
-For instance, on FreeBSD, the default maximum queue length is 128
-On these systems, the queue length for a Java server socket will be the largest operating-system allowed value less than or equal to 50
 After the queue fills to capacity with unprocessed connections, the host refuses additional connections on that port until slots in the queue open up.
 Many (though not all) clients will try to make a connection multiple times if their initial attempt is refused.
 Several ServerSocket constructors allow you to change the length of the queue if its default length isn’t large enough.
@@ -3117,6 +3153,7 @@ Nonetheless, the principle still applies that a log record no one will ever look
 Do not follow the common antipattern of logging everything you can think of just in case someone might need it someday.
 In practice, programmers are terrible at guessing in advance which log messages they might need for debugging production problems.
 Once a problem occurs, it is sometimes obvious what messages you need; but it is rare to be able to anticipate this in advance.
+Adding “just in case” messages to logfiles usually means that when a problem does occur, you’re frantically hunting for the relevant messages in an even bigger sea of irrelevant data.
 Although you can load a logger on demand, it’s usually easiest to just create one per class like so:
 Loggers are thread safe, so there’s no problem storing them in a shared static field.
 Indeed, they almost have to be because even if the Logger object were not shared between threads, the logfile or database would be.
@@ -3174,9 +3211,8 @@ A port chosen by the system like this is sometimes called an anonymous port beca
 This is often useful in multisocket protocols such as FTP.
 In passive FTP the client first connects to a server on the well-known port 21, so the server has to specify that port.
 However, when a file needs to be transferred, the server starts listening on any available port.
-The server then tells the client what other port it should connect to for data using the command connection already open on port 21
 Thus, the data port can change from one session to the next and does not need to be known in advance.
-Active FTP is similar except the client listens on an ephemeral port for the server to connect to it, rather than the other way around.)
+Active FTP is similar except the client listens on an ephemeral port for the server to connect to it, rather than the other way around.
 All these constructors throw an IOException, specifically, a BindException, if the socket cannot be created and bound to the requested port.
 An IOException when creating a ServerSocket almost always means one of two things.
 You can take advantage of this to write a variation on the LowPortScanner program of the previous chapter.
@@ -3200,6 +3236,7 @@ This method lets you find out what port you’re listening on.
 You might use this in a peer-to-peer multisocket program where you already have a means to inform other peers of your location.
 Or a server might spawn several smaller servers to perform particular operations.
 The well-known server could inform clients on what ports they can find the smaller servers.
+Of course, you can also use getLocalPort() to find a nonanonymous port, but why would you need to? Example 9-9 demonstrates.
 At least on this system, the ports aren’t truly random, but they are indeterminate until runtime.
 If the ServerSocket has not yet bound to a port, getLocalPort() returns –1
 As with most Java objects, you can also just print out a ServerSocket using its to String() method.
@@ -3234,6 +3271,7 @@ The underlying socket implementation is not required to respect any of these req
 They only provide a hint to the TCP stack about the desired policy.
 As you saw in Chapter 5, a full-featured HTTP server must respond to requests for files, convert URLs into filenames on the local system, respond to POST and GET requests, handle requests for files that don’t exist, interpret MIME types, and much, much more.
 However, many HTTP servers don’t need all of these features.
+For example, many sites simply display an “under construction” message.
 Such a site is a candidate for a custom server that does only one thing.
 Java’s network class library makes writing simple servers like this almost trivial.
 High-traffic sites like Yahoo! are also candidates for custom servers because a server that does only one thing can often be much faster than a general-purpose server such as Apache or Microsoft IIS.
@@ -3260,7 +3298,6 @@ If the client request doesn’t contain the string HTTP, the server omits the he
 The main() method just reads parameters from the command line.
 The name of the file to be served is read from the first command-line argument.
 If no file is specified or the file cannot be opened, an error message is printed and the program exits.
-Assuming the file can be read, its contents are read into the byte array data using the Path and Files classes introduced in Java 7
 The URLConnection class makes a reasonable guess about the content type of the file, and that guess is stored in the contentType variable.
 Next, the port number is read from the second command-line argument.
 You could easily use this class as part of some other program.
@@ -3268,13 +3305,12 @@ If you added a setter method to change the content, you could easily use it to p
 However, that would raise some additional issues of thread safety that Example 9-10 doesn’t have to address because the data is immutable.
 Here’s what you see when you connect to this server via Telnet (the specifics depend on the exact server and file):
 A Redirector Redirection is another simple but useful application for a special-purpose HTTP server.
-In this section, you develop a server that redirects users from one website to another— for example, from cnet.com to www.cnet.com.
+In this section, you develop a server that redirects users from one website to anotherfor example, from cnet.com to www.cnet.com.
 In this example, I chose to use a new thread rather than a thread pool for each connection.
 This is perhaps a little simpler to code and understand but somewhat less efficient.
 If you connect to this server via Telnet, this is what you’ll see:
 If, however, you connect with a web browser, you should be sent to http://www.cafeconleche.org/ with only a slight delay.
 The main() method provides a very simple interface that reads the URL of the new site to redirect connections to and the local port to listen on.
-If the port is not specified, Redirector listens on port 80
 If the site is omitted, Redirector prints an error message and exits.
 The start() method of Redirector binds the server socket to the port, prints a brief status message, and then enters an infinite loop in which it listens for connections.
 Every time a connection is accepted, the resulting Socket object is used to construct a Redi rectThread.
@@ -3314,6 +3350,7 @@ The main() method of the JHTTP class sets the document root directory from args[
 You submit one RequestProcessor thread per incoming connection into the pool.
 Each connection is handled by the run() method of the RequestProcessor class shown in Example 9-13
 It gets input and output streams from the socket and chains them to a reader and a writer.
+The reader reads the first line of the client request to determine the version of HTTP that the client supports—you want to send a MIME header only if this is HTTP/1.0 or later—and the requested file.
 Assuming the method is GET, the file that is requested is converted to a filename on the local filesystem.
 If the file requested is a directory (i.e., its name ends with a slash), you add the name of an index file.
 You use the canonical path to make sure that the requested file doesn’t come from outside the document root directory.
@@ -3325,6 +3362,8 @@ The byte array containing the file’s contents is written onto the output strea
 If the file cannot be found or opened, you send the client a 404 response instead.
 If the client sends a method you don’t support, such as POST, you send back a 501 error.
 If an exception occurs, you log it, close the connection, and continue.
+Support for other request methods, such as POST, HEAD, and PUT.
+Support for multiple document roots so individual users can have their own sites.
 Finally, spend a little time thinking about ways to optimize this server.
 If you really want to use JHTTP to run a high-traffic site, there are a couple of things that can speed this server up.
 Keep track of the requests you’ve received and store the data from the most frequently requested files in a Map so that they’re kept in memory.
@@ -3371,11 +3410,13 @@ Now Angela and Gus both know the secret key, but Edgar doesn’t.
 Therefore, Gus and Angela can now use faster secret-key encryption to communicate privately without Edgar listening in.
 Edgar still has one good attack on this protocol, however.
 Important: the attack is on the protocol used to send and receive messages, not on the encryption algorithms used.
-This attack does not require Edgar to break Gus and Angela’s encryption and is completely independent of key length.) Edgar can not only read Gus’s public key when he sends it to Angela, but he can also replace it with his own public key! Then when Angela thinks she’s encrypting a message with Gus’s public key, she’s really using Edgar’s.
+This attack does not require Edgar to break Gus and Angela’s encryption and is completely independent of key length.
+Edgar can not only read Gus’s public key when he sends it to Angela, but he can also replace it with his own public key! Then when Angela thinks she’s encrypting a message with Gus’s public key, she’s really using Edgar’s.
 When she sends a message to Gus, Edgar intercepts it, decrypts it using his private key, encrypts it using Gus’s public key, and sends it on to Gus.
 Working alone on an insecure channel, Gus and Angela have no easy way to protect against this.
 The solution used in practice is for both Gus and Angela to store and verify their public keys with a trusted third-party certification authority.
 Rather than sending each other their public keys, Gus and Angela retrieve each other’s public key from the certification authority.
+This scheme still isn’t perfect—Edgar may be able to place himself in between Gus and the certification authority, Angela and the certification authority, and Gus and Angela—but it makes life harder for Edgar.
 As this example indicates, the theory and practice of encryption and authentication, both algorithms and protocols, is a challenging field that’s fraught with mines and pitfalls to surprise the amateur cryptographer.
 It is much easier to design a bad encryption algorithm or protocol than a good one.
 And it’s not always obvious which algorithms and protocols are good and which aren’t.
@@ -3398,7 +3439,7 @@ The autoClose argument determines whether the underlying proxy socket should be 
 If autoClose is true, the underlying socket will be closed; if false, it won’t be.
 Once the secure socket has been created, you use it just like any other socket, through its getInput Stream(), getOutputStream(), and other methods.
 Each order is sent as an ASCII string using a single TCP connection.
-I’m leaving out a lot of details that would be necessary in a real-world system, such as the server sending a response code telling the client whether the order was accepted.) The orders that clients send look like this:
+I’m leaving out a lot of details that would be necessary in a real-world system, such as the server sending a response code telling the client whether the order was accepted.
 There’s enough information in this message to let someone snooping packets use John Smith’s credit card number for nefarious purposes.
 The simplest way to do that without burdening either the server or the client with a lot of complicated, error-prone encryption code is to use a secure socket.
 The following code sends the order over a secure socket:
@@ -3409,6 +3450,7 @@ Here are the first few lines of output from this program when you connect to the
 When I tested this program for the previous edition, it initially refused to connect to www.usps.com because it couldn’t verify the identity of the remote server.
 The problem was that the root certificates shipped with the version of the JDK I was using (1.4.2_02-b3) had expired.
 Upgrading to the latest minor version (1.4.2_03-b2) fixed the problem.
+If you see any exception messages like “No trusted certificate found,” try upgrading to the latest minor version of the JDK.
 When you run this program, you may notice that it’s slower to respond than you expect.
 There’s a noticeable amount of both CPU and network overhead involved in generating.
 Even over a fast network, it can take a few seconds to establish a connection.
@@ -3472,7 +3514,7 @@ To get encryption as well, server-side secure sockets require more initializatio
 The details vary from JSSE implementation to JSSE implementation, but to create a secure server socket in the reference implementation, you have to:
 Create a KeyManagerFactory for the type of key material you’ll be using.
 Fill the KeyStore object with keys and certificates; for instance, by loading them from the filesystem using the passphrase they’re encrypted with.
-The last two can be null if you’re willing to accept the defaults.)
+The last two can be null if you’re willing to accept the defaults.
 Example 10-2 demonstrates this procedure with a complete SecureOrderTaker for accepting orders and printing them on System.out.
 Of course, in a real application, you’d do something more interesting with the orders.
 What this example doesn’t show you is how that file was created.
@@ -3530,7 +3572,6 @@ Are there any situations in which asynchronous I/O does beat classic I/O? Maybe.
 The one situation I can still imagine is a server that needs to support a colossal number of long-lived, simultaneous connections, say 10,000+, but where each client doesn’t send very much data very frequently.
 For instance, imagine a central server in the home office collecting transactions from each cash register in a nationwide chain of convenience stores.
 This scenario is tailor-made for NIO, and can probably be implemented much more efficiently with asynchronous or nonblocking on-demand processing in just a few threads.
-For experts only) OK, do it but only after you have clear and unambiguous measurements proving you have a problem, and that will clearly show whether your changes have fixed the problem.
 An Example Client Although the new I/O APIs aren’t specifically designed for clients, they do work for them.
 I’m going to begin with a client program using the new I/O APIs because it’s a little simpler.
 In particular, many clients can be implemented with one connection at a time, so I can introduce channels and buffers before talking about selectors and nonblocking I/O.
@@ -3542,6 +3583,7 @@ However, chargen can transmit a lot of data over a relatively few connections an
 It’s thus a good candidate for the new I/O APIs.
 Chargen is not commonly used these days, and may be blocked by local firewalls even if it’s turned on.
 It’s vulnerable to a “ping-pong” denialof-service attack, in which spoofed Internet packets cause two hosts to spew an unlimited amount of data at each other.
+Furthermore, because it’s almost infinitely asymmetric—the server sends an unlimited amount of data in response to the smallest of client requests—it’s very easy for even a few dozen compromised hosts, much less a large botnet, to convince a chargen server to saturate its local bandwidth.
 For example, this fragment connects the channel to rama.poly.edu on port 19:
 The channel is opened in blocking mode, so the next line of code won’t execute until the connection is established.
 If the connection can’t be established, an IOException is thrown.
@@ -3564,7 +3606,7 @@ In this specific case, though, it’s a blocking channel and it will either do s
 You shouldn’t create a new buffer for each read and write.
 You’ll need to clear the buffer before reading into it again:
 Flipping leaves the data in the buffer intact, but prepares it for writing rather than reading.
-The old data is still present; it’s not overwritten, but it will be overwritten with new data read from the source as soon as possible.)
+The old data is still present; it’s not overwritten, but it will be overwritten with new data read from the source as soon as possible.
 Because chargen is by design an endless protocol, you’ll need to kill the program using Ctrl-C.
 So far, this is just an alternate vision of a program that could have easily been written using streams.
 The really new feature comes if you want the client to do something besides copying all input to output.
@@ -3585,7 +3627,6 @@ To bind it to a port, retrieve its ServerSocket peer object with the socket() me
 For example, this code fragment binds the channel to a server socket on port 19:
 As with regular server sockets, binding to port 19 requires you to be root on Unix (including Linux and Mac OS X)
 Nonroot users can only bind to ports 1024 and higher.
-The server socket channel is now listening for incoming connections on port 19
 To accept one, call the accept() method, which returns a SocketChannel object:
 On the server side, you’ll definitely want to make the client channel nonblocking to allow the server to process multiple simultaneous connections:
 By default, this accept() method blocks until there’s an incoming connection, like the accept() method of ServerSocket.
@@ -3597,6 +3638,7 @@ Instead, in the new I/O API, you create a Selector that enables the program to i
 To construct a new Selector, just call the static Selector.open() factory method:
 Next, you need to register each channel with the selector that monitors it using the channel’s register() method.
 When registering, specify the operation you’re interested in using a named constant from the SelectionKey class.
+For the server socket, the only operation of interest is OP_ACCEPT; that is, is the server socket channel ready to accept a new connection?
 However, you’re only going to need to use that key for the client channels, because there can be more than one of them.
 This is normally used to hold an object that indicates the current state of the connection.
 In this case, you can store the buffer that the channel writes onto the network.
@@ -3655,7 +3697,7 @@ The methods in each subclass have appropriately typed return values and argument
 For example, the DoubleBuffer class has methods to put and get doubles.
 The IntBuffer class has methods to put and get ints.
 The common Buffer superclass only provides methods that don’t need to know the type of the data the buffer contains.
-The lack of primitive-aware generics really hurts here.) Network programs use Byte Buffer almost exclusively, although occasionally one program might use a view that overlays the ByteBuffer with one of the other types.
+Network programs use Byte Buffer almost exclusively, although occasionally one program might use a view that overlays the ByteBuffer with one of the other types.
 Besides its list of data, each buffer tracks four key pieces of information.
 All buffers have the same methods to set and get these values, regardless of the buffer’s type: position.
 The next location in the buffer that will be read from or written to.
@@ -3720,6 +3762,7 @@ These put methods insert the data from the specified array or subarray, beginnin
 The get methods read the data into the argument array or subarray beginning at the current position.
 Both put and get increment the position by the length of the array or subarray.
 Data Conversion All data in Java ultimately resolves to bytes.
+Any primitive data type—int, double, float, etc.—can be written as bytes.
 Any sequence of bytes of the right length can be interpreted as a primitive datum.
 For example, any sequence of four bytes corresponds to an int or a float (actually both, depending on how you want to read it)
 A sequence of eight bytes corresponds to a long or a double.
@@ -3727,7 +3770,6 @@ The ByteBuffer class (and only the ByteBuffer class) provides relative and absol
 In the world of new I/O, these methods do the job performed by DataOutputStream and DataInputStream in traditional I/O.
 These methods do have an additional ability not present in DataOutputStream and DataInputStream.
 You can choose whether to interpret the byte sequences as big-endian or little-endian ints, floats, doubles, and so on.
-By default, all values are read and written as big endian (i.e., most significant byte first.
 The two order() methods inspect and set the buffer’s byte order using the named constants in the ByteOrder class.
 For example, you can change the buffer to little-endian interpretation like so:
 Suppose instead of a chargen protocol, you want to test the network by generating binary data.
@@ -3745,7 +3787,6 @@ Then the buffer is rewound and the content of the buffer is read with getInt()
 The program then clears the buffer, increments the previous value by one, and fills the buffer with the new value using putInt()
 Finally, it flips the buffer so it will be ready to be drained the next time the channel becomes writable.
 View Buffers If you know the ByteBuffer read from a SocketChannel contains nothing but elements of one particular primitive data type, it may be worthwhile to create a view buffer.
-This is a new Buffer object of appropriate type (e.g., DoubleBuffer, IntBuffer, etc.), that draws its data from an underlying ByteBuffer beginning with the current position.
 Changes to the view buffer are reflected in the underlying buffer and vice versa.
 However, each buffer has its own independent limit, capacity, mark, and position.
 View buffers are created with one of these six methods in ByteBuffer:
@@ -3760,7 +3801,8 @@ Finally, if you’re working in nonblocking mode, be careful that all the data i
 Nonblocking mode provides no guarantee that the buffer will still be aligned on an int, double, or char.
 It’s completely possible for a nonblocking channel to write half the bytes of an int or a double.
 When using nonblocking I/O, be sure to check for this problem before putting more data in the view buffer.
-If it weren’t for invocation chaining, these six methods could have been replaced by one method in the common Buffer superclass.) Compacting shifts any remaining data in the buffer to the start of the buffer, freeing up more space for elements.
+If it weren’t for invocation chaining, these six methods could have been replaced by one method in the common Buffer superclass.
+Compacting shifts any remaining data in the buffer to the start of the buffer, freeing up more space for elements.
 Any data that was in those positions will be overwritten.
 The buffer’s position is set to the end of the data so it’s ready for writing more data.
 Compacting is an especially useful operation when you’re copying—reading from one channel and writing the data to another using nonblocking I/O.
@@ -3775,7 +3817,6 @@ Unlike chargen, however, an echo server must both read and write from the connec
 One thing I noticed while writing and debugging this program: the buffer size makes a big difference, although perhaps not in the way you might think.
 If the buffer is large enough to hold complete test cases without being flipped or drained, it’s very easy to not notice that the buffer isn’t being flipped or compacted at the right times because the test cases never actually need to do that.
 Before shipping your program, try turning the buffer size down to something significantly lower than the input you’re expecting.
-In this case, I tested with a buffer size of 10
 This test degrades performance, so you shouldn’t ship with such a ridiculously small buffer, but you absolutely should test your code with small buffers to make sure it behaves properly when the buffer fills up.
 Duplicating Buffers It’s often desirable to make a copy of a buffer to deliver the same information to two or more channels.
 The duplicate() methods in each of the six typed buffer classes do this:
@@ -3802,7 +3843,8 @@ When a SocketChannel is accepted, the same Selector object is registered with it
 Initially it’s registered for reading because the HTTP protocol requires the client to send a request before the server responds.
 The program reads as many bytes of input as it can up to 4K.
 Then it resets the interest operations for the channel to writability.
-A more complete server would actually attempt to parse the HTTP header request here and choose the file to send based on that information.) Next, the content buffer is duplicated and attached to the channel.
+A more complete server would actually attempt to parse the HTTP header request here and choose the file to send based on that information.
+Next, the content buffer is duplicated and attached to the channel.
 The next time the program passes through the while loop, this channel should be ready to receive data (or if not the next time, the time after that; the asynchronous nature of the connection means we won’t see it until it’s ready)
 At this point, you get the buffer out of the attachment, and write as much of the buffer as you can onto the channel.
 It’s no big deal if you don’t write it all this time.
@@ -3810,7 +3852,6 @@ You’ll just pick up where you left off the next pass through the loop.
 Although many incoming clients might result in the creation of many buffer objects, the real overhead is minimal because they’ll all share the same underlying data.
 The name of the file to be served is read from the first command-line argument.
 If no file is specified or the file cannot be opened, an error message is printed and the program exits.
-Assuming the file can be read, its contents are read into a ByteBuffer using the convenient Path and Files classes from Java 7
 A reasonable guess is made about the content type of the file, and that guess is stored in the contentType variable.
 Next, the port number is read from the second command-line argument.
 The encoding is read from the third command-line argument if present.
@@ -3854,7 +3895,7 @@ Specifically, use this approach if you want to open the channel without blocking
 With a nonblocking channel, the connect() method returns immediately, even before the connection is established.
 The program can do other things while it waits for the operating system to finish the connection.
 However, before it can actually use the connection, the program must call finishConnect():
-For a blocking channel, this method returns true immediately.) If the connection is now ready for use, finishConnect() returns true.
+If the connection is now ready for use, finishConnect() returns true.
 If the connection has not been established yet, finishConnect() returns false.
 Finally, if the connection could not be established, for instance because the network is down, this method throws an exception.
 If the program wants to check whether the connection is complete, it can call these two methods:
@@ -3864,7 +3905,6 @@ To read from a SocketChannel, first create a ByteBuffer the channel can store da
 The channel fills the buffer with as much data as it can, then returns the number of bytes it put there.
 When it encounters the end of stream, the channel fills the buffer with any remaining bytes and then returns –1 on the next call to read()
 If the channel is blocking, this method will read at least one byte or return –1 or throw an exception.
-If the channel is nonblocking, however, this method may return 0
 Because the data is stored into the buffer at the current position, which is updated automatically as more data is added, you can keep passing the same buffer to the read() method until the buffer is filled.
 For example, this loop will read until the buffer is filled or the end of stream is detected:
 It is sometimes useful to be able to fill several buffers from one source.
@@ -3926,6 +3966,7 @@ For example, here’s a simple CompletionHandler that prints whatever it receive
 When you read from the channel you pass a buffer, an attachment, and a Completion Handler to the read() method:
 This is one way to push the data read from the network into the CompletionHandler where it can handle it.
 Another common pattern is to make the CompletionHandler an anonymous inner class and the buffer a final local variable so it’s in scope inside the completion handler.
+One thread can read and another thread can write simultaneously, though.
 The options have the same meaning in the underlying TCP stack whether set on a socket or a channel.
 However, the interface to these options is a little different.
 Rather than individual methods for each supported option, the channel classes each have just three methods to get, set, and list the supported options:
@@ -3934,12 +3975,14 @@ The type parameter <T> determines whether the option is a boolean, Integer, or N
 Example 11-7 is a simple program to list all supported socket options for the different types of network channels.
 Here’s the output showing which options are supported by which types of channels, and what the default values are:
 Readiness Selection For network programming, the second part of the new I/O APIs is readiness selection, the ability to choose a socket that will not block when read or written.
+This is primarily of interest to servers, although clients running multiple simultaneous connections with several windows open—such as a web spider or a browser—can take advantage of it as well.
 In order to perform readiness selection, different channels are registered with a Selec tor object.
 The program can then ask the Selector object for the set of keys to the channels that are ready to perform the operation you want to perform without blocking.
 Normally, a new selector is created by invoking the static factory method Selector.open():
 The next step is to add channels to the selector.
 There are no methods in the Selec tor class to add a channel.
 The register() method is declared in the SelectableChan nel class.
+Not all channels are selectable—in particular, FileChannels aren’t selectable —but all network channels are.
 Thus, the channel is registered with a selector by passing the selector to one of the channel’s register methods:
 This approach feels backward to me, but it’s not hard to use.
 The first argument is the selector the channel is registering with.
@@ -3955,7 +3998,6 @@ For instance, a channel could be ready for reading but not writing.
 They differ in how long they wait to find a ready channel.
 It returns immediately if no connections are ready to be processed now:
 The first method waits until at least one registered channel is ready to be processed before returning.
-The second waits no longer than timeout milliseconds for a channel to be ready before returning 0
 These methods are useful if your program doesn’t have anything to do when no channels are ready to be processed.
 When you know the channels are ready to be processed, retrieve the ready channels using selectedKeys():
 You iterate through the returned set, processing each SelectionKey in turn.
@@ -3992,7 +4034,9 @@ For example, in real-time audio or video, lost or swapped packets of data simply
 Static is tolerable, but awkward pauses in the audio stream, when TCP requests a retransmission or waits for a wayward packet to arrive, are unacceptable.
 In other applications, reliability tests can be implemented in the application layer.
 For example, if a client sends a short UDP request to a server, it may assume that the packet is lost if no response is returned within an established period of time; this is one way the Domain.
-The latest version of NFS can use either UDP or TCP.) In these protocols, the application is responsible for reliability; UDP doesn’t take care of it (the application must handle missing or out-of-order packets)
+In fact, you could implement a reliable file transfer protocol using UDP, and many people have: Network File System (NFS), Trivial FTP (TFTP), and FSP, a more distant relative of FTP, all use UDP.
+The latest version of NFS can use either UDP or TCP.
+In these protocols, the application is responsible for reliability; UDP doesn’t take care of it (the application must handle missing or out-of-order packets)
 This is a lot of work, but there’s no reason it can’t be done—although if you find yourself writing this code, think carefully about whether you might be better off with TCP.
 The difference between TCP and UDP is often explained by analogy with the phone system and the post office.
 When you dial a number, the phone is answered and a connection is established between the two parties.
@@ -4025,6 +4069,7 @@ All the data you stuff into a single datagram is sent as a single packet and is 
 Given two packets, there is no way to determine which packet was sent first and which was sent second.
 Instead of the orderly queue of data that’s necessary for a stream, datagrams try to crowd into the recipient as quickly as possible, like a crowd of people pushing their way onto a bus.
 And occasionally, if the bus is crowded enough, a few packets, like people, may not squeeze on and will be left waiting at the bus stop.
+As in “Reading from Servers with Sockets” on page Technology (NIST) and ask it for the current time.
 Recall that the daytime server listens on port 13, and that the server sends the time in a human-readable format and closes the connection.
 Now let’s see how to retrieve this same data programmatically using UDP.
 The socket does not know the remote host or address.
@@ -4044,11 +4089,9 @@ The constructor and send() and receive() methods can each throw an IOException, 
 In Java 6 and earlier, you’ll want to explicitly close the socket in a finally block to release resources the socket holds:
 Typical output is much the same as if you connected with TCP:
 Begin by opening a datagram socket on a well-known port.
-As with TCP sockets, on Unix systems (including Linux and Mac OS X) you need to be running as root in order to bind to a port below 1024
 You can either use sudo to run the program or simply change the port to something 1024 or higher.
 Next, create a packet into which to receive a request.
 You need to supply both a byte array in which to store incoming data, the offset into the array, and the number of bytes to store.
-This call blocks indefinitely until a UDP packet arrives on port 13
 When it does, Java fills the byte array with data and the receive() method returns.
 This has four parts: the raw data to send, the number of bytes of the raw data to send, the host to send to, and the port on that host to address.
 In this example, the raw data comes from a String form of the current time, and the host and the port are simply the host and port of the incoming packet:
@@ -4063,14 +4106,15 @@ The UDP header includes source and destination port numbers, the length of every
 Because port numbers are given as two-byte unsigned integers, 65,536 different possible UDP ports are available per host.
 These are distinct from the 65,536 different TCP ports per host.
 Because the length is also a two-byte unsigned integer, the number of bytes in a datagram is limited to 65,536 minus the eight bytes for the header.
-The exact number depends on the size of the IP header.) The checksum field is optional and not used in or accessible from application layer programs.
+The exact number depends on the size of the IP header.
+The checksum field is optional and not used in or accessible from application layer programs.
 If the checksum for the data fails, the native network software silently discards the datagram; neither the sender nor the receiver is notified.
 Although the theoretical maximum amount of data in a UDP datagram is 65,507 bytes, in practice there is almost always much less.
 And implementations are not required to accept datagrams with more than 576 total bytes, including data and headers.
 Consequently, you should be extremely wary of any program that depends on sending or receiving UDP packets with more than 8K of data.
 Most of the time, larger packets are simply truncated to 8K of data.
 For maximum safety, the data portion of a UDP packet should be kept to 512 bytes or less, although this limit can negatively affect performance compared to larger packet sizes.
-This is a problem for TCP datagrams too, but the stream-based API provided by Socket and ServerSocket completely shields programmers from these details.)
+This is a problem for TCP datagrams too, but the stream-based API provided by Socket and ServerSocket completely shields programmers from these details.
 In Java, a UDP datagram is represented by an instance of the DatagramPacket class:
 This class provides methods to get and set the source or destination address from the IP header, to get and set the source or destination port, to get and set the data, and to get and set the length of the data.
 The remaining header fields are inaccessible from pure Java code.
@@ -4111,12 +4155,14 @@ For example, file transfer is more efficient with large buffers; the only requir
 Several factors are involved in choosing the optimal packet size.
 If the network is highly unreliable, such as a packet radio network, smaller packets are preferable because they’re less likely to be corrupted in transit.
 On the other hand, very fast and reliable LANs should use the largest packet size possible.
+Eight kilobytes—that is, 8,192 bytes—is a good compromise for many types of networks.
 It’s customary to convert the data to a byte array and place it in data before creating the DatagramPacket, but it’s not absolutely necessary.
 Changing data after the datagram has been constructed and before it has been sent changes the data in the datagram; the data isn’t copied into a private buffer.
 For example, you could store data that changes over time in data and send out the current datagram (with the most recent data) every minute.
 However, it’s more important to make sure that the data doesn’t change when you don’t want it to.
 This is especially true if your program is multithreaded, and different threads may write into the data buffer.
 If this is the case, copy the data into a temporary buffer before you construct the DatagramPacket.
+For instance, this code fragment creates a new DatagramPacket filled with the data “This is a test” in UTF-8
 Most of the time, the hardest part of creating a new DatagramPacket is translating the data into a byte array.
 The get Methods DatagramPacket has six methods that retrieve different parts of a datagram: the actual data plus several fields from its header.
 These methods are mostly used for datagrams received from the network.
@@ -4143,7 +4189,7 @@ You must specify the offset and the length when constructing the ByteArrayInput 
 The array returned by packet.getData() probably has extra space in it that was not filled with data from the network.
 The data can then be read using the DataInputStream’s readInt(), readLong(), read Char(), and other methods.
 Of course, this assumes that the datagram’s sender uses the same data formats as Java; it’s probably the case when the sender is written in Java, and is often (though not necessarily) the case otherwise.
-Most modern computers use the same floating-point format as Java, and most network protocols specify two’s complement integers in network byte order, which also matches Java’s formats.)
+Most modern computers use the same floating-point format as Java, and most network protocols specify two’s complement integers in network byte order, which also matches Java’s formats.
 The getLength() method returns the number of bytes of data in the datagram.
 This is not necessarily the same as the length of the array returned by getData() (i.e., getDa ta().length)
 The int returned by getLength() may be less than the length of the array returned by getData()
@@ -4157,6 +4203,7 @@ These methods might be important in a situation where the time to create and gar
 In some situations, reusing objects can be significantly faster than constructing new ones: for example, in a networked twitch game that sends a datagram for every bullet fired or every centimeter of movement.
 However, you would have to use a very speedy connection for the improvement to be noticeable relative to the slowness of the network itself.
 The setData() method changes the payload of the UDP datagram.
+You might use this method if you are sending a large file (where large is defined as “bigger than can comfortably fit in one datagram”) to a remote host.
 You could repeatedly send the same DatagramPacket object, just changing the data each time.
 This overloaded variant of the setData() method provides an alternative approach to sending a large quantity of data.
 Instead of sending lots of new arrays, you can put all the data in one array and send it a piece at a time.
@@ -4167,7 +4214,6 @@ The setAddress() method changes the address a datagram packet is sent to.
 This might allow you to send the same datagram to many different recipients.
 Whether this is a sensible choice depends on the application.
 If you’re trying to send to all the stations on a network segment, as in this fragment, you’d probably be better off using the local broadcast address and letting the network do the work.
-The local broadcast address is determined by setting all bits of the IP address after the network and subnet IDs to 1
 For more widely separated hosts, you’re probably better off using multicasting.
 However, it uses different IP addresses and a MulticastSocket instead of a DatagramSocket.
 The setPort() method changes the port a datagram is addressed to.
@@ -4176,6 +4222,7 @@ It could be used in a port scanner application that tried to find open ports run
 Another possibility might be some sort of networked game or conferencing server where the clients that need to receive the same information are all running on different ports as.
 In this case, setPort() could be used in conjunction with se tAddress() to change destinations before sending the same datagram out again.
 The setSocketAddress() method changes the address and port a datagram packet is sent to.
+For example, this code fragment receives a datagram packet and responds to the same address with a packet containing the string “Hello there”:
 You could certainly write the same code using InetAddress objects and ports instead of a SocketAddress.
 The setLength() method changes the number of bytes of data in the internal buffer that are considered to be part of the datagram’s data as opposed to merely unfilled space.
 This method is useful when receiving datagrams, as we’ll explore later in this chapter.
@@ -4242,13 +4289,14 @@ Because this is a discard client, you don’t need to worry about data coming ba
 The datagram’s buffer should be large enough to hold the data received.
 If it’s not, receive() places as much data in the buffer as it can hold; the rest is lost.
 Remember that the maximum size of the data portion of a UDP datagram is 65,507 bytes.
+Some application protocols that use UDP further restrict the maximum number of bytes in a packet; for instance, NFS uses a maximum packet size of 8,192 bytes.
 If there’s a problem receiving the data, receive() may throw an IOException.
 In practice, this is rare because problems like dropped packets that would shut down a TCP stream are silently discarded by the network or network stack before Java ever sees them.
 Example 12-6 shows a UDP discard server that receives incoming datagrams.
 Just for fun, it logs the data in each datagram to System.out so that you can see who’s sending what to your discard server.
 This is a simple class with a single method, main()
 It reads the port the server listens to from the command line.
-If the port is not specified on the command line, it listens on port 9
+It then opens a DatagramSocket on that port and creates a DatagramPacket with a 65,507-byte buffer—large enough to receive any possible packet.
 Then the server enters an infinite loop that receives packets and prints the contents and the originating host on the console.
 Indeed, there’s no particular reason these packets have to be text at all.
 As each datagram is received, the length of packet is set to the length of the data in that datagram.
@@ -4462,7 +4510,6 @@ You can use the read and write methods to implement a simple UDP echo client.
 On the client side, it’s easy to connect before sending.
 Because packets may be lost in transit (always remember UDP is unreliable), you don’t want to tie up the sending while waiting to receive a packet.
 Thus, you can take advantage of selectors and nonblocking I/O.
-These work for UDP pretty much exactly like they worked for TCP in Chapter 11
 You’ll print out the values returned so it will be easy to figure out if any packets are being lost.
 There is one major difference between selecting TCP channels and selecting datagram channels.
 Because datagram channels are truly connectionless (despite the connect() method), you need to notice when the data transfer is complete and shut down.
@@ -4476,7 +4523,6 @@ Like all channels, in Java 7 DatagramChannel implements AutoCloseable so you can
 Prior to Java 7, close it in a finally block if you can.
 Integer Size of the buffer used for sending datagram packets.
 Integer Size of the buffer used for receiving datagram packets.
-The last three are used by multicast sockets, which we’ll take up in Chapter 13
 The getOption() method tells you the current value of any of these.
 For example, suppose you want to send a broadcast message.
 SO_BROADCAST is usually turned off by default, but you can switch it on like so:
@@ -4504,6 +4550,7 @@ Multicasting Multicasting is broader than unicast, point-to-point communication 
 Multicasting sends data from one host to many different hosts, but not to everyone; the data only goes to clients that have expressed an interest by joining a particular multicast group.
 People can come and go as they please, leaving when the discussion no longer interests them.
 Before they arrive and after they have left, they don’t need to process the information at all: it just doesn’t reach them.
+On the Internet, such “public meetings” are best implemented using a multicast socket that sends a copy of the data to a location (or a group of locations) close to the parties that have declared an interest in the data.
 In the best case, the data is duplicated only when it reaches the local network serving the interested clients: the data crosses the Internet only once.
 More realistically, several identical copies of the data traverse the Internet; but, by carefully choosing the points at which the streams are duplicated, the load on the network is minimized.
 The good news is that programmers and network administrators aren’t responsible for choosing the points where the data is duplicated or even for sending multiple copies; the Internet’s routers handle all that.
@@ -4528,7 +4575,6 @@ Indeed, the BBC has been running a multicast trial covering both TV and radio fo
 However, audio and video are only the tip of the iceberg.
 Other possibilities include multiplayer games, distributed filesystems, massively parallel computing, multiperson conferencing, database replication, content delivery networks, and more.
 Multicasting can be used to implement name services and directory services that don’t require the client to know a server’s address in advance; to look up a name, a host could multicast its request to some well-known address and wait until a response is received from the nearest server.
-Zeroconf) and Apache’s River both use IP multicasting to dynamically discover services on the local network.
 Multicasting has been designed to fit into the Internet as seamlessly as possible.
 Most of the work is done by routers and should be transparent to application programmers.
 An application simply sends datagram packets to a multicast address, which isn’t fundamentally different from any other IP address.
@@ -4562,6 +4608,7 @@ You can look at this with the X Window utility sdr or the Windows/Unix multikit 
 The idea is to allow the possible group membership to be established in advance without relying on less-than-reliable TTL values.
 Clients and Servers When a host wants to send data to a multicast group, it puts that data in multicast datagrams, which are nothing more than UDP datagrams addressed to a multicast group.
 If you think about it, multicast over TCP would be next to impossible.
+If you’re developing a multicast application that can’t tolerate data loss, it’s your responsibility to determine whether data was damaged in transit and how to handle missing data.
 For example, if you are building a distributed cache system, you might simply decide to leave any files that don’t arrive intact out of the cache.
 Earlier, I said that from an application programmer’s standpoint, the primary difference between multicasting and using regular UDP sockets is that you have to worry about the TTL value.
 Each time the packet passes through a router, its TTL field is decremented by at least one; some routers may decrement the TTL by two or more.
@@ -4574,7 +4621,6 @@ Generally, the farther away a site is, the more routers a packet has to pass thr
 Packets with small TTL values won’t travel as far as packets with large TTL values.
 Table 13-3 provides some rough estimates relating TTL values to geographical reach.
 Estimated TTL values for datagrams originating in the continental United States.
-High-bandwidth sites in the same country, generally those fairly close to the backbone 32
 Once the data has been stuffed into one or more datagrams, the sending host launches the datagrams onto the Internet.
 The sending host begins by transmitting a multicast datagram to the local network.
 This packet immediately reaches all members of the multicast group in the same subnet.
@@ -4605,7 +4651,6 @@ Alternatively, some sites may be connected by special multicast tunnel software 
 If you have trouble getting the examples in this chapter to produce the expected results, check with your local network administrator or ISP to see whether multicasting is actually supported by your routers.
 As you would expect, MulticastSocket’s behavior is very similar to DatagramSocket’s: you put your data in DatagramPacket objects that you send and receive with the Mul ticastSocket.
 Therefore, I won’t repeat the basics; this discussion assumes that you already know how to work with datagrams.
-If you’re jumping around in this book rather than reading it cover to cover, now might be a good time to go back and read Chapter 12
 To receive data that is being multicast from a remote site, first create a MulticastSock et with the MulticastSocket() constructor.
 As with other kinds of sockets, you need to know the port to listen on.
 This code fragment opens a MulticastSocket that listens on port 2300:
@@ -4658,12 +4703,12 @@ The data is sent to every host that belongs to the multicast group to which the 
 By default, multicast sockets uses a TTL of 1 (that is, packets don’t travel outside the local subnet)
 The getTimeToLive() method returns the default TTL value of the Multi castSocket:
 For example, this code fragment sets a TTL of 64:
-Loopback mode Whether or not a host receives the multicast packets it sends is platform dependent— that is, whether or not they loop back.
+Loopback mode Whether or not a host receives the multicast packets it sends is platform dependentthat is, whether or not they loop back.
 Passing true to setLoopback() indicates you don’t want to receive the packets you send.
 Passing false indicates you do want to receive the packets you send:
 Because loopback mode may not be followed on all systems, it’s important to check what the loopback mode is if you’re both sending and receiving packets.
 Mode() method returns true if packets are not looped back and false if they are.
-I suspect this method was written by a programmer following the ill-advised convention that defaults should always be true.)
+I suspect this method was written by a programmer following the ill-advised convention that defaults should always be true.
 If the system is looping packets back and you don’t want it to, you’ll need to recognize the packets somehow and discard them.
 If the system is not looping the packets back and you do want it to, store copies of the packets you send and inject them into your internal data structures manually at the same time you send them.
 You can ask for the behavior you want with setLoopback(), but you can’t count on it.
@@ -4709,4 +4754,5 @@ His open source projects include the XOM Library for processing XML with Java an
 These small carnivores are found in all major waterways of the United States and Canada, and in almost every habitat except the tundra and the hot, dry regions of the southwestern United States.
 They weigh about 20 pounds and are approximately two and a half feet long, and females tend to be about a third smaller than males.
 Their diet consists mainly of aquatic animals like fish and frogs, but since they spend about two-thirds of their time on land, they also eat the occasional bird or rodent.
+Two layers of fur—a coarse outer coat and a thick, dense inner coat—protect a river otter from the cold, and, in fact, they seem to enjoy playing in snow and ice.
 These animals are sociable and domesticated easily, and in Europe, a related species was once trained to catch fish for people to eat.

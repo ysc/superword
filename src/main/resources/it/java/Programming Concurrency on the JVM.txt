@@ -1,4 +1,5 @@
 An excellent book! Venkat skillfully leads us through the many design and implementation decisions that today’s JVM developer faces in multithreaded programming.
+His easy-to-read style and the many examples he provides—using a variety of current open source tools and JVM languages—make this complex topic very approachable.
 If the JVM is your platform of choice, then this book is an absolute must-read.
 Buy it, read it, and then buy a copy for all your team members.
 You will well be on your way to finding a good solution to concurrency issues.
@@ -32,6 +33,7 @@ We’re soon drawn into a battle to coordinate threads and ensure they’re hand
 To get from point A to point B quickly, we have several options, based on how critical the travel time is, the availability of transport, the budget, and so on.
 We can walk, take the bus, drive that pimped-up convertible, take a bullet train, or fly on a jet.
 There are three prominent options for concurrency on the JVM:
+I call the familiar Java Development Kit (JDK) synchronization model “synchronize and suffer” because the results are unpredictable if we forget to synchronize shared mutable state or synchronize it at the wrong level.
 If we’re lucky, we catch the problems during development; if we miss, it can.
 We get no compilation errors, no warning, and simply no sign of trouble with that ill-fated code.
 Programs that fail to synchronize access to shared mutable state are broken, but the Java compiler won’t tell us that.
@@ -53,7 +55,9 @@ My goal in this book is to help you learn the set of tools and approaches that a
 This book will help us explore and learn about three separate concurrency solutions—the modern Java JDK concurrency model, the Software Transactional Memory (STM), and the actor-based concurrency model.
 This chapter will set the stage for the three concurrency models we’ll explore in this book.
 The Java concurrency API has evolved quite a bit since the introduction of Java.
+There’s no clear distinction between these two terms in the industry, and the number of answers we’ll hear is close to the number of people we ask for an explanation (and don’t ask them concurrently…or should I say in parallel?)
 We may run programs on a single core with multiple threads and later deploy them on multiple cores with multiple threads.
+When our code runs within a single JVM, both these deployment options have some common concerns—how do we create and manage threads, how do we ensure integrity of data, how do we deal with locks and synchronization, and are our threads crossing the memory barrier at the appropriate times...?
 Whether we call it concurrent or parallel, addressing these concerns is core to ensuring that our programs run correctly and efficiently.
 Today, the word Java stands more for the platform than for the language.
 The Java Virtual Machine, along with the ubiquitous set of libraries, has evolved into a very powerful platform over the years.
@@ -68,10 +72,10 @@ I’ve taken extra effort to keep the syntactical nuances and the language-speci
 Where there is a choice, I’ve leaned toward something that’s easier to read and familiar to programmers mostly comfortable with Java.
 The following are the version of languages and libraries used in this book:
 When showing performance measures between two versions of code, I’ve made sure these comparisons are on the same machine.
+All the examples, unless otherwise noted, were run in server mode with the “Java HotSpot(TM) 64-Bit Server VM” Java virtual machine.
 All the examples were compiled and run on both the Mac and Windows machines mentioned previously.
 In the listing of code examples, I haven’t shown the import statements (and the package statements) because these often become lengthy.
 When trying the code examples, if you’re not sure which package a class belongs to, don’t worry, I’ve included the full listing on the code website.
-Go ahead and download the entire source code for this book from its website (http://pragprog.
 If not for the generosity and inspiration from some of the great minds I’ve come to know and respect over the years, this book would have remained a great idea in my mind.
 I first thank the reviewers who braved to read the draft of this book and who offered valuable feedback—this is a better book because of them.
 However, any errors you find in this book are entirely a reflection of my deficiencies.
@@ -122,6 +126,7 @@ We can click a button to start the watch, and it will run until we click the but
 A naively written1 bit of code for this is shown next (only the action handler for the button is shown; you can download the full program from the website for this book):
 In the examples, we’ll simply let exceptions propagate instead of logging or handling them—but be sure to handle exceptions properly in your production code.
 When we run the little stopwatch application, a window with a Start button and a “0” label will appear.
+Unfortunately, when we click the button, we won’t see any change—the button does not change to “Stop,” and the label does not show the time count.
 What’s worse, the application will not even respond to a quit request.
 We need an additional thread, or a timer that in turn would use an additional thread, to make the application responsive.
 We need to delegate the task of counting and relieve the main event dispatch thread of that responsibility.
@@ -146,6 +151,7 @@ The wait time could be brought down to a mere second or two by delegating the re
 Concurrency can help make apps responsive, reduce latency, and increase throughput.
 We can leverage multiple cores of the hardware and the concurrency of tasks in applications to gain speed and responsiveness.
 However, there are some hard challenges, as we’ll discuss next, that we have to tackle before we can reap those benefits.
+Right now, you’re probably thinking “I can get better throughput by breaking up my problem and letting multiple threads work on these parts.” Unfortunately, problems rarely can be divided into isolated parts that can be run totally independent of each other.
 Often, we can perform some operations independently but then have to merge the partial results to get the final result.
 This requires threads to communicate the partial results and sometimes wait for those results to be ready.
 This requires coordination between threads and can lead to synchronization and locking woes.
@@ -174,6 +180,8 @@ In the following code, the main thread creates a thread, sleeps for two seconds,
 The thread created, in the meantime, loops over the flag, as long as it’s false.
 Let’s compile and run the code and see what happens:
 If we tried the same command on a Mac, we’d notice that the thread that’s watching over the flag never finished, as we see in the output:
+Wait, don’t put the book down and tweet “Windows Rocks, Mac sucks!” The problem is a bit deeper than the two previous runs revealed.
+Let’s try again—this time on Windows, run the program using the command java -server RaceCondition (asking it to be run in server mode on Windows), and on the Mac, run it using the command java -d32 RaceCondition (asking it to be run in client mode on the Mac)
 However, now on the Mac, we’ll see something like this:
 By default, Java runs in client mode on 32-bit Windows and in server mode on the Mac.
 The behavior of our program is consistent on both platforms—the program terminates in client mode and does not terminate in server mode.
@@ -194,8 +202,10 @@ The synchronized marker helps here, since it is one of the primitives that makes
 What’s This Memory Barrier? Simply put, it is the copying from local or working memory to main memory.
 A change made by one thread is guaranteed to be visible to another thread only if the writing thread crosses the memory barriera and then the reading thread crosses the memory barrier.
 The changes are first made locally in the registers and caches and then cross the memory barrier as they are copied to the main memory.
+The sequence or ordering of these crossing is called happens-before—see “The Java Memory Model,” Appendix Practice [Goe06]
 The write has to happens-before the read, meaning the writing thread has to cross the memory barrier before the reading thread does, for the change to be visible.
 Quite a few operations in the concurrency API implicitly cross the memory barrier: volatile, synchronized, methods on Thread such as start() and interrupt(), methods on ExecutorService, and some synchronization facilitators like CountDownLatch.
+Unfortunately, the consequence of forgetting to do either—using volatile or synchronized where needed—is quite unpredictable.
 The real worry is not that we’d forget to synchronize.
 The core problem is that we’re dealing with shared mutability.
 However, great books such as Joshua Bloch’s Effective Java [Blo08] have advised us to promote immutability.
@@ -228,6 +238,7 @@ Lean toward shared immutability to make programming concurrency easy, safe, and 
 Next, we’ll discuss ways to determine the number of threads and to partition applications.
 Division of Labor The long-awaited multicore processor arrives tomorrow, and you can’t wait to see how the app you’re building runs on it.
 You’ve run it several times on a single core, but you’re eager to see the speedup on the new machine.
+Is the speedup going to be in proportion to the number of cores? More? Less? A lot less? I’ve been there and have felt the struggle to arrive at a reasonable expectation.
 You should’ve seen my face the first time I ran my code on a multicore and it performed much worse than I had expected.
 How could more cores yield slower speed? That was years ago, and I’ve grown wiser since and learned a few lessons along the way.
 Now I have better instinct and ways to gauge speedup that I’d like to share with you in this chapter.
@@ -255,6 +266,8 @@ When a task performs an IO operation, its thread gets blocked.
 The processor immediately context switches to run other eligible threads.
 If we had only as many threads as the number of available cores, even though we have tasks to perform, they can’t run because we haven’t scheduled them on threads for the processors to pick up.
 If tasks spend 50 percent of the time being blocked, then the number of threads should be twice the number of available cores.
+If they spend less time being blocked—that is, they’re computation intensive—then we should have fewer threads but no less than the number of cores.
+If they spend more time being blocked—that is, they’re IO intensive—then we should have more threads, specifically, several multiples of the number of cores.
 So, we can compute the total number of threads we’d need as follows:
 To determine the number of threads, we need to know two things:
 The first one is easy to determine; we can look up that information, even at runtime, as we saw earlier.
@@ -336,6 +349,7 @@ The threads in this pool will execute the tasks that belong to each part.
 In the sample run, we had forty stocks; if we create twenty threads (for a two-core processor), then half the parts get scheduled right away.
 The other half are enqueued and run as soon as threads become available.
 This will take little effort on our part; let’s write the code to get this stock price concurrently.
+We then place each part—to fetch the price for each ticker symbol—into the anonymous code block of the Callable interface.
 This interface provides a call() method that returns a value of the parameterized type of this interface (Double in the example)
 We then schedule these parts on the fixed-size pool using the invokeAll() method.
 The executor takes the responsibility of concurrently running as many of the parts as possible.
@@ -346,12 +360,9 @@ In contrast to the sequential run, the concurrent run took less than a second.
 We can vary the number of threads in the pool by varying the presumed blocking coefficient and see whether the speed varies.
 We can also try different numbers of stocks as well and see the result and speed change between the sequential and concurrent versions.
 In this problem, the executor service pretty much eliminated any synchronization concerns—it allowed us to nicely delegate tasks and receive their results from a coordinating thread.
-The only mutable variable we have in the previous code is netAssetValue, which we defined on line 25
-The only place where we mutate this variable is on line 27
 This mutation happens only in one thread, the main thread—so we have only isolated mutability here and not shared mutability.
 Since there is no shared state, there is nothing to synchronize in this example.
 With the help of Future, we were able to safely send the result from the threads fetching the data to the main thread.
-We’re iterating through the Future objects in the loop on line 26
 Use the CompletionService if you’d like to fetch the results as they complete and rather not wait for all tasks to finish.
 Even if one of the later parts finishes first, we won’t process its results until we process the results of parts before that.
 In this particular example, that may not be an issue.
@@ -386,6 +397,7 @@ Now that we have the parts on hand, let’s schedule their execution.
 In the final step, line 33, we total the results received from the parts.
 I have two cores, so if I create two threads and two parts, I expect to get about twice the speedup (it should take about half the time as the sequential run)
 The number of primes in our sequential and concurrent runs are the same, so that’s good, and the same amount of work was done in the two versions.
+However, I expected the runtime to be around three seconds with two cores, but we came a little over four seconds—a rather measly 1.5 times the speedup instead of twice the speedup.
 It’s time to go back to the drawing board to figure out what we missed.
 However, since this is computationally intensive, we already know that increasing the threads to more than the number of cores will not help.
 Let’s try to justify that and arrive at a solution.
@@ -438,7 +450,6 @@ First, in order to benefit from concurrency, we must be able to partition proble
 If a problem has a significant part that can’t be partitioned, then the application may not really see much performance gain by making it concurrent.
 If tasks are IO intensive or have significant IO operations, then having more threads will help.
 In this case, the number of threads should be much greater than the number of cores.
-We can estimate the number of threads using the formula presented in Determining the Number of Threads, on page 16
 However, we’ll benefit by having at least as many threads as the number of cores, assuming the problem can be partitioned into at least as many tasks as the number of threads.
 Although the number of threads affects performance, it is not the only thing.
 The workload of each part and how much time each part takes to complete relative to others both affect performance.
@@ -532,6 +543,7 @@ This last approach is common in functional programming and is achieved using fun
 We’d use methods like foldLeft(), reduce(), or inject() in languages such as Scala, Clojure, Groovy, and JRuby to implement such operations.
 This approach also does not have any concerns of concurrency.
 It took a bit of effort to organize or compose this sequence of operations, but we were able to achieve the result with total immutability.
+If the number of people is very large, we can even partition them into smaller groups—forming a tree instead of a line—to allow greater concurrency and speed.
 In the pure immutable design for the net work-years example, we asked each person to create a new total.
 As we go through the chain of people, a new number is created while an old number is discarded—not a big deal since the numbers are relatively small.
 The data we have to deal with may not be that small; it could be a list, tree, or matrix.
@@ -570,6 +582,7 @@ While Bagwell’s tries were not immutable, Rich Hickey, the creator of Clojure,
 A trie with a branching factor of thirty-two requires at most four levels to hold up to 1 million elements.
 An operation to change any element requires copying only up to four elements—close to constant time operation.
 We can use tries to implement different data structures such as trees, hashmaps, and even lists.
+Tries remove that restriction and allow us to “add” and “remove” elements at any index in an immutable list.
 Since all the nodes are immutable, in order to accomplish this task, we’d have to copy the Sara, Jill, and root nodes; the rest of the nodes are unaffected.
 Figure 5—Using a trie to store a list of people.
 Rather than having to copy all elements, we had to copy only three nodes, the affected node and its ancestors.
@@ -598,9 +611,9 @@ It handles threads and provides thread safety but doesn’t quite consider perfo
 Even though threads are relatively lightweight, it takes time and resources to create them.
 Also, thread safety is provided at the expense of scalability—overly conservative synchronization limits performance.
 So, even though it’s been around the longest and is still available, the old threading API is not the right choice if we want maintainable code with better scalability and throughput.
-It’s a new century, and there’s a newer concurrency API released with Java 5
 It’s quite an overhaul of the threading API, and it’s better in three main ways:
 It’s less painful and more efficient to deal with threads, especially thread pools.
+The new synchronization primitives offer finer granularity—thus more control—than the original primitives.
 The new data structures are scalable—thread safety with reasonable concurrent performance.
 To learn the benefits and challenges of this API, let’s create a disk utility that will find the total size of all the files in a directory.
 For large directory hierarchies, a sequential run of this program would take a long time.
@@ -609,7 +622,6 @@ To find the directory size, we could split the operation into parts, with each t
 Since each task has to run in a separate thread, we could start an instance of Thread.
 But threads are not reusable—we can’t restart them, and scheduling multiple tasks on them is not easy.
 We certainly don’t want to create as many threads as the number of subdirectories we find—it’s not scalable and is the quickest way to fail.
-We met the ExecutorService and the different types of executors in Concurrent Computation of Net Asset Value, on page 21
 The ExecutorService, the Executors factory, and the related API ease the pain of working with pools of threads.
 They conveniently separate the types of pools from the operations we perform on them.
 Rather than tying the lifetime of a thread to the task it runs, ExecutorService separates how we create the thread from what it runs.
@@ -645,9 +657,7 @@ We can divide the problem into tasks where each task accepts a directory and ret
 The Callable interface is a good fit for this because its call() method can return a result when done.
 As we loop through each file in the directory, we can schedule the task using the submit() method of ExecutorService.
 We can then gather up all the partial results by simply calling the get() method of the Future object; this object acts as a delegate that will provide us with the result when available.
-For each file or subdirectory, we create a task for finding its size and schedule it on the pool on line 14
 Once we’ve scheduled tasks for all files and subdirectories under a directory, we wait for their size to be returned through the Future objects.
-To compute the total size for a directory, we then iterate over futures on line 22
 We don’t want to block endlessly for a result to arrive, so there’s a time limit for the get() method to respond.
 In other words, we bail out with an error if a task doesn’t finish within that time.
 Let’s take the code for a drive and see how it performs:
@@ -661,6 +671,7 @@ Once it schedules all these tasks, this method awaits response from each one of 
 If we had only a few directories, then it’s no big deal.
 But if we have a deep hierarchy, this method will get stuck.
 While threads wait for response from the tasks they create, these tasks end up waiting in the ExecutorService’s queue for their turn to run.
+This is a potential “pool induced deadlock,” if we didn’t have the timeout.
 Since we used a timeout, we’re able to at least terminate unfavorably rather than wait forever.
 Making code concurrent is not trivial—it’s time to go back to the drawing board to fix this code.
 We want to delegate the computation of size for various directories to different threads but not hold on to the calling thread while we wait for these tasks/threads to respond.1
@@ -704,7 +715,6 @@ When this count goes to zero, we release the latch by calling countDown()
 See how easy it is to fall into this trap of using shared mutability?
 The mechanics of exploring directories is done, so we now need code to create the pool of threads, set the exploration of directories running, and wait on the latch.
 This is because of the extra synchronization in all the threads—shared mutability requires protection for thread safety, and that lowers concurrency.
-In the previous example we used CountDownLatch as a simple switch by setting the latch value to 1
 We could also use higher value and let multiple threads wait on it.
 That would be useful if we want multiple threads to reach a coordination point before continuing to perform some task.
 Once it’s used for a synchronization, it must be discarded.
@@ -728,9 +738,9 @@ Each task keeps a tab of the total size of files directly under a given director
 Any subdirectories discovered by the tasks are explored in separate tasks/threads.
 The main thread set the previous code in motion and simply loops through the queue to total the file sizes it receives from the tasks until all subdirectories have been explored.
 This version is comparable in performance to the previous one, but the code is a notch simpler—the blocking queue helped with exchanging and synchronizing the data between the threads.
-Next we’ll see how we can improve on these solutions even further with the new API introduced in Java 7
 ExecutorService manages a pool of threads and allows us to schedule tasks for execution by threads in its pool.
 It is, however, up to us to decide how many threads will be in the pool, and there is no distinction between tasks we schedule and subtasks these tasks create.
+Java 73 brings a specialization of ExecutorService with improved efficiency and performance—the fork-join API.
 The ForkJoinPool class dynamically manages threads based on the number of available processors and task demand.
 Fork-join employs work-stealing where threads pick up (steal) tasks created by other active tasks.
 Subtasks created by active tasks are scheduled using different methods than external tasks.
@@ -746,7 +756,6 @@ The fork-join API is very useful for problems that can be broken down recursivel
 The multiple smaller parts are scheduled to run at the same time, utilizing the threads from the pool managed by ForkJoinPool.
 Let’s use the fork-join API to solve the file size problem.
 That solution was quite simple, but we ran into the problem of pool-induced deadlock for larger directory hierarchies.
-All Java examples in this book, except this section, use Java 6
 The fork-join API puts an end to that problem with work-stealing.
 When a task waits for a subtask to finish, the thread that’s executing the task picks up a new task to run.
 Let’s take a look at the code for the file size problem using the fork-join API.
@@ -854,6 +863,7 @@ You may ask, therefore, why I discuss it further in this chapter.
 The reason is quite simple: it’s been the way of life in Java, and you’re likely to confront legacy code that’s using shared mutability.
 I certainly hope you’ll heavily lean toward isolated mutability or pure immutability for any new code, even in existing projects.
 My goal in this chapter is to help cope with legacy code—the menacing code you’ve soldiered to refactor.
+You may be thinking “Gee, all my fields are private, so I have nothing to worry about,” but it’s not that simple.
 A shared variable is accessed, for read or write, by more than one thread.
 On the other hand, a variable that’s never accessed by more than one thread—ever—is isolated and not shared.
 Shared mutable variables can really mess things up if we fail to ensure visibility or avoid race conditions.
@@ -875,6 +885,7 @@ Let’s first glance at the code that’s crying for our help:
 There are a few easy-to-spot problems but some hidden treasures as well, so take your time.
 So, the nonfinal private variable level is a shared mutable variable, but it’s not thread safe.
 We have unprotected access to it, from a threadsafety viewpoint, in most of the methods.
+That leads to both the visibility concern—calling thread may not see the change, because it was not asked to cross the memory barrier—and race condition.
 The replenish() method spends most of the time sleeping, but it’s wasting an entire thread.
 If we try to create a large number of EnergySources, we’ll get an OutOfMemoryError because of the creation of too many threads—typically the JVM will allow us to create only a few thousand threads.
 The EnergySource breaks the class invariant.1 A well-constructed object ensures that none of its methods is called before the object itself is in a valid state.
@@ -894,6 +905,7 @@ We could put a flag to deal with that, but that’d lead to ugly duplicated code
 We also have to prevent the thread-starting method from being called more than once on any instance.
 On the one hand, we shouldn’t start threads from constructors, and on the other hand, we don’t want to open up the instance for any use without fully creating it to satisfaction.
 There’s gotta be a way to get out of this pickle.
+The answer is in the first item in Effective Java [Blo08]: “Consider static factory methods instead of constructors.” Create the instance in the static factory method and start the thread before returning the instance to the caller.
 We could perform simple calculations in the constructor but avoid any method calls here.
 The private method init() does the bulk of the work we did earlier in the constructor.
 Invoke this method from within the static factory method create()
@@ -927,9 +939,11 @@ Evaluate those situations to see whether you can use a periodic task scheduler l
 The memory barrier has to be crossed at the appropriate time.
 Crossing it in the constructor is not good, and we fixed that problem in the example.
 However, we must ensure that other methods that access the shared mutable variable level cross the memory barrier.
+See What's This Memory Barrier?, on page 9 to refresh your memory about why to cross the memory barrier.
 If we consider race conditions only, we may argue against synchronizing getter methods; we may get convinced that the slightly old copy of a variable’s value is adequate.
 The motivation to synchronize or lock getters is as much about visibility as race conditions—if we fail to cross the memory barrier, our thread is not guaranteed to see the change for an unpredictable duration of time in the future.
 Let’s ensure that the methods of EnergySource cross the memory barrier; using the synchronized keyword is the easiest way to achieve that.
+Let’s use that now to provide visibility and then improve on it later—I try to follow the “make it work; make it better” motto.
 Each method that touches the mutable variable level to read or write needs to cross the memory barrier, so we’ll mark them all as synchronized.
 The original version will not allow the replenish() method to be marked synchronized since it looped indefinitely.
 The latest version here has no such problem, since it’s a short, quick method invoked from the timer.
@@ -1058,6 +1072,7 @@ I’m sure you’re eager to learn more about STM now.
 The separation of identity from state helps STM solve the two major concerns with synchronization: crossing the memory barrier and preventing race conditions.
 We’ll first look at STM in the context of Clojure and then use it in Java.
 Clojure keenly watches over and coordinates the activities of threads.
+If there are no conflicts—for example, threads working with different accounts—then no locks are involved, and there are no delays, resulting in maximum concurrency.
 When two threads try to access the same data, the transaction manager steps in to resolve the conflict, and again, no explicit locking is involved in our code.
 By design, values are immutable, and identities are mutable only within transactions in Clojure.
 There’s simply no way to change the state, and no programming facility for that, in Clojure.
@@ -1066,12 +1081,10 @@ If conflicts arise, Clojure will automatically roll back transactions and retry.
 It’s our responsibility to ensure that the code within the transactions is idempotent—in functional programming we try to avoid side effects, so this goes well with the programming model in Clojure.
 A ref provides coordinated synchronous change1 to the identity of the immutable state it represents.
 We defined a variable named balance and marked it as mutable using ref.
-Now balance represents a mutable identity with an immutable value of 0
 Next we attempt to modify balance using the command ref-set.
 If this succeeded, we should see the new balance printed by the last statement.
 Vars that we will not cover here; please refer to Clojure documentation or books for more details.
 Refer to Clojure documentation on how to install and run it on your system.
-The first two statements worked well: we were able to print the initial balance of 0
 We made the Clojure gods angry by mutating the variable outside of transactions.
 Contrast this clear failure to the nefarious behavior of Java when we modify a shared mutable variable without synchronization.
 This is quite an improvement since we’d much rather have our code behave right or fail loudly than quietly produce unpredictable results.
@@ -1081,6 +1094,7 @@ Structurally this feels like the synchronized block in Java, but there are quite
 We get a clear warning if we forget to place dosync around mutating code.
 Rather than create an exclusive lock, dosync lets code compete fairly with other threads by wrapping in a transaction.
 Since we don’t perform any explicit locks, we don’t have to worry about lock order and can enjoy a deadlock-free concurrency.
+Rather than forcing design-time forethoughts of “who locks what and in which order,” STM provides a simple runtime transactional composition of locks.
 Having no explicit locks means no programmer placed conservative mutually exclusive blocks of code.
 The result is maximum concurrency dictated directly and dynamically by the application behavior and data access.
 However, as soon as Clojure finds that some other transaction has progressed far ahead in a way to jeopardize this transaction, it quietly rolls back the changes and repeats the transaction.
@@ -1121,7 +1135,6 @@ If we do any of these, we’re responsible for reversing the operations or deali
 In general, it’s better to gather up these side-effect actions and perform them after the transaction succeeds.
 Contrary to my advice, we’ll see print statements within transactions in the examples.
 We already know how to change the balance within a transaction.
-Thread sleep 2000) (alter balance - amount) (println "done with withdraw of" amount))))
 We created two transactions in this example, one for deposit and the other for withdrawal.
 In the function deposit() we first get a local copy of the given balance.
 We then simulate a delay to set the transactions on a collision course.
@@ -1155,6 +1168,7 @@ When the second add item succeeds, it in turn shares internally the other two it
 Imagine we have a checking account and a savings account in a bank that has placed minimum total balance requirements of $1,000 between the two accounts.
 We can withdraw up to $100 from either one of these accounts but not both.
 If a withdraw of $100 is attempted on each of these accounts sequentially, the first attempt will succeed but not the second.
+The so-called write skew anomaly will not prevent these two transactions if done concurrently—both transactions see the total balance is more than $1,000 and proceed to modify two different values with no write conflicts.
 The net result, a balance of $900, is less than the permitted limit.
 Let’s create this anomaly in code, then figure out how to fix it.
 We start with the given balances for the two accounts.
@@ -1312,9 +1326,7 @@ Contrast that code with the latest version, but first get rid of the delay and p
 There was so much dancing around with ordering and locking in the old version that it’s easy to mess up.
 The code we don’t write has the fewest bugs, hands down.
 In the new version, we reduced both the code and the complexity.
-Hoare’s words: “There are two ways of constructing a software design.
 One way is to make it so simple that there are obviously no deficiencies.
-And the other way is to make it so complicated that there are no obvious deficiencies.” Less code, lesser complexity and more time to devote to the application logic.
 The Java version of the transfer method using nested transactions is already concise.
 Sure, nested transactions removed the synchronization cruft, but there’s still some Java syntax that can use cleaning.
 Scala’s expressiveness and elegance will play a role in that, as we’ll see next:
@@ -1323,6 +1335,7 @@ We see the same advantage in the Scala version of AccountService:
 This version sets the transactions on a collision course just like the Java version did.
 Not surprisingly, the output is the same as the Java version’s:
 We’ve already compared the synchronized version of transfer with the Java version using nested transaction (which is repeated next):
+It reminds me of the quotation by Alan Perlis: “A programming language is low level when its programs require attention to the irrelevant.”
 We know how to create transactions in Akka and how to compose nested transactions.
 That’s only a start; Akka allows us to configure transactions, as we’ll see next.
 Akka assumes a number of default settings, but it allows us to change these either programmatically or through the configuration file akka.conf.
@@ -1346,6 +1359,7 @@ A transaction may depend on a variable that’s expected to change, and the fail
 As a response to that failure, we may return an error code and ask the transaction to retry after a delay.
 However, there’s no point repeating the request until another task has changed the dependent data.
 Akka gives us a simple facility, retry(), which will roll back and block the transaction until one of the reference objects the transaction depends on changes or the configurable block timeout is exceeded.
+I like to call this a “sensible wait” because that sounds better than “blocking.” Let’s put blocking, I mean sensible wait, to use in an example in Java first and then in Scala.
 Programmers in general are addicted to caffeine, so anyone volunteering to get some coffee knows not to return with empty cups.
 Let’s write a fillCup() method with sensible wait using retry():
 In the fillCup() method, we configured the transaction with blockingAllowed = true and set a timeout of six seconds for the transaction to complete.
@@ -1381,7 +1395,6 @@ In addition to that, we also provide code to run in case of transaction success 
 Exercise the UseCounter to see the code blocks associated with transaction success and failure run as appropriate:
 When the transaction completed on the first call to decrement(), the code block provided to the deferred() method is invoked.
 In the second call to decrement(), as soon as we hit the exception, the transaction was rolled back, and the code block provided to the compensating() method was called.
-We also see the rollback because of an unexpected retry at the top that’s due to the speculative configuration we discussed earlier in Nested Transactions in Java, on page 112
 The deferred() handler is a great place to complete work activity in order to make actions permanent.
 So, feel free to print, display messages, send notifications, commit the database transactions, and so on, from here.
 If we want anything to stick around, this is the place for that.
@@ -1408,7 +1421,6 @@ Rather than deal with synchronization and locks, we decide to handle the updates
 In the updateScore() method, we set the score value for a player and increment the update count in a transaction.
 Both the fields scoreValue of type TransactionalMap and updates of type Ref are managed.
 The TransactionalMap supports methods we’d expect on a Map, but these methods are transactional—any changes we make to them are discarded if the transaction is rolled back.
-To see this effect in action, we roll back the transaction after making the change if the score value is 13
 The Scores class is ready; we now need a class to exercise its methods:
 Then we add another score value that will result in the transaction rollback.
 Finally, we iterate over the scores in the transactional map.
@@ -1434,7 +1446,6 @@ The rest of the code in Portfolio and the code in UsePortfolio remains unchanged
 Because of the nondeterministic nature of concurrent execution, we can’t predict which of the two transactions will win.
 We can see the difference between the output here, with the ending balances of the two accounts being different and the output in Handling Write Skew Anomaly, on page 100, where the ending balance was equal.
 We may notice differences in both examples when we run them several times.
-The previous example was in Java; if we’re using Scala, we can configure the transaction properties writeSkew and trackReads using the syntax we saw in Configuring Transactions in Scala, on page 121
 We no longer have to worry if we forgot to synchronize or if we synchronized at the wrong level.
 There are no issues of failing to cross the memory barrier or race conditions.
 If our application has a lot of write contention, we should look beyond STM.
@@ -1510,9 +1521,9 @@ This is equivalent to the dereferencing we saw in Clojure using the @ prefix.
 Now let’s see how to update it in a transaction.
 For us to run a piece of code in a transaction, we have to send it to the runInTransaction() method.
 Groovy provides a rich syntax to implement interfaces, especially interfaces with only one method.
+Simply create a closure—a code block—and call the as operator on it.
 Under the covers Groovy will implement the required method of that interface with the provided code block as the implementation.
 Let’s write the deposit() method of the Account class, which needs to run its operations in a transaction.
-The deposit modifies the current balance in a transaction if the amount is greater than 0
 Otherwise, it causes the transaction to fail by throwing an exception.
 Implementing withdraw() is not much different; we merely have an extra check to perform.
 Let’s write a separate function that will perform the transfer so we can see nested transactions in action.
@@ -1551,7 +1562,6 @@ So, wrapping code in a transaction is as simple as wrapping it in the Callable i
 We’ll implement the account transfer example using Clojure STM in Java.
 First let’s create a class Account that will hold a managed reference to its immutable state represented by the variable balance:
 To obtain the current balance, we use the deref() method, which is the Java-side API for the @ prefix we used in Clojure to dereference.
-The deposit modifies the current balance in a transaction if the amount is greater than 0
 Implementing withdraw() is not much different; it’s just an extra check to perform:
 Let’s focus on the transfer now; we’ll write that in a separate class.
 To see the effect of a deposit being discarded by the failed withdraw, let’s perform the deposit first followed by the withdraw:
@@ -1595,7 +1605,6 @@ Let’s see what’s in store when we run the code:
 This error did more than fail the first transfer’s transaction—it also cost us significant time and hair loss.
 This is the error we alluded in the beginning of this section.
 Let’s understand where this came from and why things are failing suddenly in the JRuby version when the other language versions worked flawlessly.
-By default Multiverse (and so Akka STM) uses speculative transactions, which we discussed in Nested Transactions in Java, on page 112
 In the Multiverse layer, it handles this exception and retries the transaction, this time allowing for change to a managed ref.
 OK, that’s Multiverse’s business, and it seems to work fine so far in other languages, so let’s figure out why things went wrong with JRuby.
 This is JRuby placing the exception in its own wrapper exception.
@@ -1636,6 +1645,7 @@ We have to ensure that values are immutable and transactions are idempotent.
 For applications with frequent reads and reasonable write collisions, we can make use of STM from any JVM language.
 But when huge write collisions creep in, STM may not be suitable.
 In that case, to avoid synchronization and shared mutability nightmares, we can benefit from the actor-based model we discuss in the next chapter.
+Favoring Isolated Mutability “If it hurts, stop doing it” is a doctor’s good advice.
 With the JDK threading API, it’s easy to create threads, but it soon becomes a struggle to prevent them from colliding and messing up.
 The STM eases that pain quite a bit; however, in languages like Java, we must still be very careful to avoid unmanaged mutable variables and side effects.
 Letting multiple threads converge and collide on data is an approach we’ve tried in vain.
@@ -1655,6 +1665,8 @@ Java turned OOP into mutability-driven development,3 while functional programmin
 If everything is mutable, we have to tackle visibility and race conditions.
 Even pure functional languages provide restricted areas of code that allow side effects and ways to sequence them.
 Whichever programming model we favor, it’s clear we must avoid shared mutability.
+Shared mutability—the root of concurrency problems—is where multiple threads can modify a variable.
+Isolated mutability—a nice compromise that removes most concurrency concerns—is where only one thread (or actor) can access a mutable variable, ever.
 In OOP, we encapsulate so only the instance methods can manipulate the state of an object.
 However, different threads may call these methods, and that leads to concurrency concerns.
 In the actor-based programming model, we allow only one actor to manipulate the state of an object.
@@ -1662,12 +1674,12 @@ While the application is multithreaded, the actors themselves are single-threade
 Actors request operations to be performed, but they don’t reach over the mutable state managed by other actors.
 We take a different design approach when programming with actors compared to programming merely with objects.
 We divide the problem into asynchronous computational tasks and assign them to different actors.
-We confine any mutable state to within at most one actor, period (see Figure 11, Actors.
 Imagine how boring it would be if we had just one good solution to pick.
 Java had other partners in this crime, so it doesn’t deserve all the blame.
 We also ensure that the messages we pass between actors are totally immutable.
 In this design approach, we let each actor work on part of the problem.
 Once they complete their assigned task, they send the results, as immutable objects, to the calling actor or another designated post-processing actor.
+We can think of this as taking OOP to the next level where select objects—mutable and active—run in their own threads.
 The only way we’re allowed to manipulate these objects is by sending messages to them and not by directly calling methods.
 An actor is a free-running activity that can receive messages, process requests, and send responses.
 Each actor has a built-in message queue much like the message queue behind a cell phone.
@@ -1716,7 +1728,6 @@ All right, to run the example, let’s compile the code using javac and remember
 We can simply run the program as we would run regular Java programs.
 Again, we must remember to provide the necessary JARs in the classpath.
 We need to define the AKKA_JARS environment variable appropriately for our operating system to match the location where we have Scala and Akka installed.
-By default Akka prints extra log messages on the standard output; we saw how to configure that in Creating Transactions in Java, on page 105
 Let’s compile and run the code to watch our actor responding to messages:
 The actor responds to the messages one at a time.
 The output also lets us peek at the thread that’s running the actor, and it’s not the same thread each time.
@@ -1772,11 +1783,13 @@ We instantiated the actor using the new keyword and then passed the instance to 
 This turns the regular object that extends from Actor into an Akka actor.
 The rest of the code is similar to the Java version.
 Let’s run the code and ensure the output is similar to the Java version’s output:
+We can send just about any type of message to an actor—String, Integer, Long, Double, List, Map, tuples, Scala case classes…all of which are immutable.
 I have a special liking for tuples, not because it’s amusing when we mispronounce them as “two-ples” but because they’re lightweight, immutable, and one of the easiest instances to create.
 Scala’s case classes are ideal to serve as message types—they’re immutable, work well with pattern matching, and are quite easy to make copy of.
 In Java we could pass an unmodifiable Collection as messages to send more than one object in.
 When we pass a message to an actor, by default we’re passing the message’s reference if both the sender and the receiver are within the same JVM.5 It’s our responsibility to ensure that the messages we pass are immutable, especially if we decide to send instances of our own classes.
 We may also ask Akka to serialize a message so a copy of the message is delivered instead of a reference.
+The simplest way to communicate with an actor is “fire and forget.” That is, send a message and move on.
 This is also the preferred way from the performance point of view.
 The send is nonblocking, and the calling actor/thread proceeds with its work.
 We use the sendOneWay() method, or the ! method in Scala, to send a one-way message.
@@ -1805,6 +1818,7 @@ We’ll take a look at using these later in an example.
 We have to be ready for some differences from the Java API if we want to send/receive messages to actors from Scala:
 We can directly use the self property to get access to the actor.
 Using this property, we can call the reply() method, which is the unsafe equivalent on the Scala side, or we can use the replySafe() method.
+We could call the sendRequestReply() method, or we could call a more elegant !! method—they say beauty is in the eyes of the beholder.
 Instead of returning an Object, the sendRequestReply() method returns a Scala Option.
 If the response arrived, this would be an instance of Some[T], which holds the result, and None in the case of a timeout.
 So, unlike the Java version, there’s no exception in the case of a timeout.
@@ -1830,8 +1844,6 @@ This gives us an instance of Scala Option—think of this as a fancy union that 
 We get the Integer value from that object finally by calling the get() method.
 OK, let’s drive the code using the command-line parameters for the number and parts:
 Our last step is to write the PrimeFinder that will do the actual work of computing the primes in a range:
-Let’s compare the code and output in this section with the code and output in Concurrent Computation of Prime Numbers, on page 27
-In both versions we set the number of partitions to 100
 There is no pool size to set in the Akka version of primes counting.
 So, they’re fairly close in performance, and there is slightly less ceremony in the Akka version than in ExecutorService.
 This difference becomes more prominent when we need more coordination between the threads/actors, as we progress further in this chapter.
@@ -1955,6 +1967,7 @@ These two methods will serve well; we can start the timer in the preStart() meth
 It seems like a good plan, but that opens up another problem.
 The glitch is that the timers run in their own threads, and we don’t want to touch the mutable state of our actor from those threads.
 Remember, we want the state to be isolated mutable, not shared mutable.
+What we need is a way to cause internal method calls—I call these murmurs—to be executed properly by the actor.
 These murmurs will not be visible to the outside user of our typed actor but run as asynchronous messages, like those externally invoked messages that are sequenced and interleaved with other messages.
 The base class TypedActor’s receive() method receives the messages from the proxies and dispatches the appropriate method on our class.
 We can override this method to implement a special message for the murmurs, the internal operations.
@@ -2094,7 +2107,6 @@ Let’s take a look at the implementation of the Account interface now:
 By extending TypedActor, we indicated that this is an actor.
 Instead of using simple local fields, we’re using the managed STM Refs.
 We don’t write any code specific to transactions here; however, all the methods in this class will run within a transaction since the relevant interface methods are marked with @Coordinated.
-The deposit() increases the balance if amount is greater than 0
 The withdraw() method decreases the balance if sufficient money is available.
 Otherwise, it throws an exception indicating the failure of the operation and the encompassing transaction.
 The methods will participate in their own transaction if one is not provided.
@@ -2155,6 +2167,7 @@ Actors can handle only one message request at a time.
 So, both action messages and messages requesting a response or state run sequentially.
 This can result in lower concurrency for the tasks that are interested only in reading the value.
 It is better to design applications with coarse-grain messages instead of fine-grain messages.
+Also, we can reduce waits by designing with one-way “fire and forget” messages instead of two-way messages.
 Actors serve well when we can divide the problem into parts that can run quite independently and need to communicate only sporadically.
 If frequent interaction is required or the parts or tasks need to coordinate to form a quorum, the actor-based model is not suitable.
 We may have to mix other concurrency models or consider significant redesign.
@@ -2370,6 +2383,7 @@ Rather than spending valuable time and effort preventing race conditions, these 
 Upgrade to the modern JDK concurrency API as the first step to programming concurrency.
 Reduce the use of the old multithreading API that shipped with the first versions of Java.
 Several libraries now make use of this modern API, and concurrency libraries (such as Akka and GPars) provide a layer of abstraction on top of this modern API.
+If your job responsibilities include “mutable state wrangler,” you know the frustrations of ensuring thread-safety and achieving concurrent performance.
 Make use of the ExecutorService class to graciously manage a pool of threads and the concurrent data structures to coordinate between threads/tasks.
 Utilize the Lock interface and related facilities for fine-grained synchronization, improved concurrency, and better control on lock timeouts.
 Make fields and local variables final by default and relent only as an exception.
@@ -2455,7 +2469,6 @@ While the actions run concurrently, we’ll see that multiple actions sent to a 
 Let’s first create a function that will ask an actor to play a role and add the role to the list of roles played.
 In the code shown next, the act() method receives two parameters: actor and role.
 The actor is a tuple with two elements: the name of the actor and a list of roles played.
-Then, after a simulated delay to show the sequencing of concurrent calls to the same agent, we return the new state for the actor,
 The agent will take as its new state the value we return from the action.
 The let statement binds name and roles to the first and second elements in the actor tuple, respectively.
 The last line of code returns a tuple with name as the first element and the new list as the second element.
@@ -2502,9 +2515,9 @@ We can contrast this with the Akka transactors where we mixed actors with transa
 This page discusses various data structures in Clojure, including the persistent data structures.
 Rich Hickey discuses the Clojure model of separating the identify and state and his approach to balance the imperative and functional styles of programming.
 This is the online version of the book by Ian Foster with the same title.
-This is the javadoc for the Lock interface introduced in Java 5
 In an email exchange, Alan Kay discusses the meaning of OOP.
 Multiverse, founded by Peter Veentijer, is a Java-based implementation of STM that can be used from multiple languages on the JVM.
+These are my notes and code from my presentation entitled “Test-Driving Multithreaded Code.”
 Java Development Kit (JDK) synchronization model, see JDK synchronization model, old.
 Java Virtual Machine (JVM) language options, xiv summary of concurrency.
 Learn a New Language This Year Want to be a better programmer? Each new programming language you learn teaches you something new about computing.
@@ -2543,6 +2556,7 @@ This book will get you up to speed quickly and painlessly with the 35 key JavaSc
 Behaviour-Driven Development (BDD) gives you the best of Test Driven Development, Domain Driven Design, and Acceptance Test Driven Planning techniques, so you can create better software with self-documenting, executable tests that bring users and developers together with a common language.
 Rails Test Prescriptions is a comprehensive guide to testing Rails applications, covering Test-Driven Development from both a theoretical perspective (why to test) and from a practical perspective (how to test effectively)
 Pragmatic Practices Pragmatic Programmers think about their practices and improve them.
+You’re well educated on how to work with software and hardware, but what about wetware—our own brains? Learning new skills and new technology is critical to your career, and it’s all in your head.
 In this book by Andy Hunt, you’ll learn how our brains are wired, and how to take advantage of your brain’s architecture.
 You’ll learn new tricks and tips to learn more, faster, and retain more of what you learn.
 The titles continue the well-known Pragmatic Programmer style and continue to garner awards and rave reviews.

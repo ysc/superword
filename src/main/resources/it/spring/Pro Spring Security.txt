@@ -59,6 +59,7 @@ Application-level security is achieved by implementing several techniques, and t
 These are the main concerns that Spring Security addresses to provide your applications with comprehensive protection against threats.
 Authentication The process of authentication allows an application to validate that a particular user is who she claims she is.
 In the authentication process, a user presents the application with information about herself (normally, a username and a password) that no one else knows.
+The application takes this information and tries to match it against information it has stored—normally, in a database or LDAP1 (Lightweight Directory Access Protocol) server.
 If the information input by the user matches a record in the authentication server, the user is said to have successfully authenticated herself in the system.
 The application will normally create an internal abstraction representing this authenticated user in the system.
 Authorization When a user is authenticated, that only means that the user is known to the system and has been recognized by it.
@@ -69,6 +70,7 @@ On the other hand, if no match is found, access is denied.
 ACLs Access control lists (ACLs) are part of the authorization process explained in the previous section.
 The key difference is that ACLs normally work at a finer grained level in the application.
 ACLs are simply a collection of mappings between resources, users, and permissions.
+With ACLs, you can establish rules like “User John has administrative permission on the blog post X” or “User Luis has read permission on blog post X.” You can see the three elements: user, permission, and resource.
 Figure 1-2 shows how ACLs work, as they are just a special case of the general authorization process.
 Authentication and Authorization: General Concepts In this section, I shall introduce and explain some fundamental security concepts that you will be coming across frequently in the rest of the book:
 The use of encryption achieves, among other things, two other security goals:
@@ -120,6 +122,7 @@ If you read the online documentation, you will find out that Spring Security sta
 It was originally known as The Acegi Security System for Spring, and it was not the big and powerful framework it is today.
 Originally, it dealt only with authorization and leveraged container-provided authentication.
 Because of public demand, the project started to get traction, as more people started using it and contributing to its continuously growing code base.
+This eventually led to it becoming a Spring Framework portfolio project, and then later it was rebranded as “Spring Security.”
 So the project, for many years now, has been under the SpringSource umbrella of projects, powered by The Spring Framework itself.
 It makes sense to give an overview of it at this point, because many of the Spring Security characteristics I will cover in the rest of the book rely on the building blocks of Spring.
 I love Spring and have loved it for many years now.
@@ -159,7 +162,9 @@ Again, remember this simple idea and Spring AOP should be easier to understand.
 An Initial Spring Security Secured Application Spring Security builds upon the concepts defined in the previous section and integrates nicely into the general Spring ecosystem.
 You need to understand those concepts well to take maximum advantage of Spring Security.
 However, you could start using Spring Security without really knowing all these details, and then learn them as you progress and look to do more advanced things.
+As many other programming books do, I will show an initial example of the subject with the familiar “Hello World” application.
 It will need a tweak to make sense for our purposes.
+So I’ll show the “Hello World” message just to authorized users and not allow unauthorized users to see the message.
 In this example, we will create a simple web project powered by Spring Security.
 To make sure that the examples in the book work as expected, try to use the same versions.
 From the command line, go to any folder you want to use as the root of your projects and execute the following:
@@ -167,10 +172,14 @@ To do that, make the pom.xml file look like Listing 2-1
 As you can see from the pom.xml listing, I included the Jetty plugin dependency.
 I will be working throughout the book mostly with the Jetty server because it embeds nicely in the Maven life cycle.
 Using any other container (like Apache Tomcat) to run the code from the book should be no problem, and it should work without issues.
+The next task is to create a simple Servlet that will render the “Hello World” message.
 Note N  Remember that you have to keep the conventional Maven file structure.
 This means you have to create the /src/main/java folders for your source classes if you don’t have them yet.
 Look at the Maven documentation online at http://maven.apache.org/ for more details.
 In the command line, in the root of the project (where the pom.xml file resides), execute the following:
+You’ll see the expected “Hello World” message, as shown in Figure 2-2
+Now we want to secure this page and allow only authenticated users to be able to read the super top-secret “Hello World” message.
+Let’s say that only the Scarvarez family (whose members are Carl, Mon, Bea, and Andr) is allowed to see this “Hello World” message.
 To make this work, you need to do the following:
 Configure the users and roles that will be part of the system.
 I’ll give more detail about each of these steps in the next four sections.
@@ -203,7 +212,8 @@ Because we are working in the master branch of the framework, a lot of code is b
 It is not under my control if this build fails at any given time.
 Later, you will simply use a stable tag for developing the examples in the book.
 You should now have the project built and available in your current Maven repository.
-Yes, when using Gradle, the dependencies can be simply stored in the Maven repository.) You can see that it is very straightforward to build the project from the source code.
+Yes, when using Gradle, the dependencies can be simply stored in the Maven repository.
+You can see that it is very straightforward to build the project from the source code.
 Setting the project build aside for now, take another look at the contents of the top project directory.
 Most of the folders in the directory correspond to individual subprojects or modules that break the functionality of Spring Security into more discrete and specialized units.
 For our project example, you need to depend on the core, web, and config modules.
@@ -224,6 +234,7 @@ Go to the command line, execute mvn jetty:run again, point your browser to the U
 You should see a login page asking you to provide the user name and password as Figure 2-4 shows.
 Go ahead, impersonate a Scarvarez family member, and try to log in.
 For example, use car as the user name and scarvarez as the password.
+You should now be allowed access to the same “Hello World” page as Figure 2-2 showed before.
 If you instead tried to log in as a nonexistent user, you should get the page shown in Figure 2-5
 As a matter of fact, we haven’t written any code; we just did some XML configuration.
 Now our Servlet-based application is secured to allow access only for authenticated users.
@@ -274,6 +285,7 @@ Spring Security’s interception model of security applies to two main areas of 
 Spring Security wraps around these two entry points of your application and allows access only when the security constraints are satisfied.
 Both the method call and the filter-based security depend on a central Security Interceptor, where the main logic resides to make the decision whether or not access should be granted.
 In Figure 3-2, you can see this more detailed overview of the framework.
+The 100-Foot View Spring Security might seem simple conceptually, but internally there is a lot going on—in a very well-built software tool.
 This next overview will show you the main collaborating parts that participate in the general process of ensuring that your security constraints are enforced.
 This is particularly achievable with an open source project like Spring Security which allows you to get into the framework itself and appreciate its design and architecture by accessing directly the source code..
 For me, what follows is the best way to understand Spring Security from the inside.
@@ -302,6 +314,7 @@ This will trigger the voting mechanism, // and in case that access is // not gra
 Every call to a secured resource in Spring Security passes through this interceptor.
 This, once again, sh-ows the effort put into the design and implementation of the framework.
 Figure 3-4 shows the interceptor in a UML (Unified Modeling Language) class diagram.
+We know how the Security Interceptors work, but how do they come to be? How do they know what to intercept? The answer to that lies in the next few components, so keep reading.
 The XML Namespace The XML namespace is of extreme importance to the general appeal and usability of the framework, yet it is, in theory, not strictly necessary.
 If you know how the Spring Framework’s namespaces work, you probably have a good idea of what is going on when you define your security-specific XML configuration in your application context definition files.
 If you don’t know how they work, maybe you think Spring is somehow made aware of how to treat these specific elements and how to load them in the general Spring application context.
@@ -313,7 +326,7 @@ At the end of the day, you still end up with standard Spring beans and objects.
 Since then, a lot of projects have made use of this facility, making them more attractive to work with.
 An XML custom namespace is simply an XML-based Domain Specific Language (DSL), guided by the rules of an XML schema (xsd) file, that allow developers to create Spring beans using concepts and a syntax more in synch with the programming concerns they are trying to model.
 To make Spring aware of a new namespace is really simple.
-That’s not to say it is simple to actually parse the information of the XML and convert it to beans—this depends on the complexity of your DSL.) All you need is the following:
+That’s not to say it is simple to actually parse the information of the XML and convert it to beans—this depends on the complexity of your DSL.
 In Chapter 8 you will see some examples of how to create a new namespace element and integrate it with Spring Security.
 In Figure 3-6, you can see the expanded structure of the config module as seen in the Eclipse integrated development environment (IDE)
 The files spring.handlers and spring.schemas should reside on the META-INF directory in the classpath so that Spring can find them there.
@@ -328,7 +341,6 @@ The filter chain in Spring Security preprocesses and postprocesses all the HTTP 
 The Spring Security filter chain is made up of Spring beans; however, standard servlet-based web applications don’t know about Spring beans.
 For this reason, a special servlet filter is needed that can cross the boundaries between the standard servlet API and life cycle and the Spring application where the bean filters will reside.
 The filter in the web.xml file has the same name as the bean in the Spring application context so that the listener can find it.
-The filter chain will be fully explained in Chapter 4
 However, here I’ll provide an overview of which filters are available and what they do.
 The enums are then referenced later in the startup process when instantiating the bean definitions for each filter.
 For example, for our study purposes, ROLE_ADMIN is a ConfigAttribute.
@@ -371,7 +383,6 @@ The satisfaction or not of the conditions is given  by analyzing the Authenticat
 In practice this basically means that the Authentication’s authorities are compared against the resource’s security attributes looking for matches.
 The voters model is yet another one in the framework that is open for extension and customization.
 You could easily create your own implementation and add it to the framework.
-You will see how to do this in Chapter 8
 UserDetailsService makes use of the provided user name for looking up the rest of the required user data from the datastore.
 It defines just one method, as you see in Listing 3-9
 It is also made available to be accessed later in the system from any point that has access to SecurityContext.
@@ -381,18 +392,18 @@ However, this is another of those configurable points of the framework, and you 
 This means, in a general way, assigning an ID to each domain object in your application and creating a relationship between these objects and the different users of the application.
 These relationships determine whether or not a determined user is allowed access to a particular domain.
 The ACL model offers a fine-grained, access-level configuration you can use to define different rules for accessing the objects depending on who is trying to access it.
-For example, a user might be allowed read access while another user will have write/read access over the same domain object.)
+For example, a user might be allowed read access while another user will have write/read access over the same domain object.
 The current support for ACLs is configured to get the configuration rules from a relational database.
 The DDL (Data Definition Language) for configuring the database comes along with the framework itself, and it can be found in the ACL module.
 The tags are simple to use and, at the same time, very convenient for making a more usable web site.
 They help you adapt the UI of your application on a per-user (or more commonly, per-role) basis.
-The taglib will be covered in depth in Chapter 4
 One of the great aspects of working with open source software is that you can (and I would say you should) look at the source code and understand the software at a new, deeper level.
 Also, you can look at the way the software is built, at what is good, and at what is bad (at least by your own subjective standards) and just learn how other developers work.
 This can have a great impact on the way you work, because you might discover a way of doing things that you couldn’t have learned on your own.
 Sometimes, of course, you will find things you don’t like, but that is good as well.
 You can learn from other people’s mistakes as much as you can learn from their successes.
 For me, Spring in general and Spring Security in particular have achieved something that I found invaluable in the Java development space—that is, they can make us better developers even without us noticing it.
+For instance, I often ask myself, “How many people would be using a template pattern for accessing databases if they weren’t using Spring, instead of a more awkward DB access layer?” or “How many people would be just programming against implementation classes all the time, creating unnecessary coupling if it wasn’t for Spring’s DI support?” or “How many people would have cross-cutting concerns, like transactions, all over their code base if it wasn’t for how easily Spring brings AOP into the development process?.”
 I think helping good practices almost without noticing is really a great achievement for Spring.
 It won’t create great developers by itself for sure, but it helps the average developer to not make mistakes that he might make if he didn’t have the support of the framework, and its principles to adhere to.
 As you might see from the description of the main components of the framework, Spring Security itself is built with good design principles and patterns in mind.
@@ -401,12 +412,12 @@ This section won’t really help you to do more with Spring Security, but it wil
 Strategy Pattern A big part of the pluggability and modularity of the framework is achieved thanks to the wide use of the Strategy pattern.
 Covering design patterns is outside the scope of this book but as a reminder of the strategy pattern’s power I leave you with this definition from the Wikipedia.
 The strategy pattern defines a family of algorithms, encapsulates each one, and makes them interchangeable.
-Strategy lets the algorithm vary independently from clients that use it”
 That definition shows a great deal of the power that comes when working with interfaces.
 You could have different implementations of the same interface and pass any of them to a client class for doing different kinds of work.
 The client classes don’t need to know or care about the implementation details that it is working with.
 Knowing the interface or contract is enough to leverage its job.
 Decorator Pattern Built into Spring’s core AOP framework, you can find the Decorator pattern—mostly in the way that your annotated business classes and methods get security constraints applied to them.
+Basically, your objects have only certain meta information related to the security constraints that should be applied to them, and then by some “Spring magic” they get wrapped with security handling.
 In the listing, you can see how the objects are decorated with prefunctionality and postfunctionality that surrounds the invocation of the actual method.
 There are many examples of it around the framework, because any object you choose seems to have one and only one responsibility.
 A lot more examples like this can be extracted from the framework.
@@ -416,6 +427,7 @@ And like this, most of the framework is built by composing components together t
 Summary This was a complex chapter, but going through the inner workings of a software tool is definitely the best way to understand it and take advantage out of it.
 You looked at an in-depth explanation of Spring Security’s architecture, its major components, and the way it works from the inside.
 You should now understand how the XML namespace works, how AOP fits into the framework, and how, in general, the Servlet Filter functionality is used to enforce web-level security.
+I demystified the “Spring magic” by going through all the components that help you add security to your applications in a seemingly simple way.
 You looked at some code snippets from the framework itself to get a greater appreciation of the work done in it, as well as to understand better why things work the way they do.
 You also studied the modularity inherent in the framework and saw how it helps to create software that is both flexible and extensible.
 Even with all we covered in this chapter, it is basically an introduction and a reference to have in hand when you read the upcoming chapters and you start looking at the options to secure your applications.
@@ -426,12 +438,12 @@ You will use all your current knowledge of the framework to tweak the configurat
 In this chapter, I will explain how to apply security at the web layer for Java web-based applications.
 You will see in detail the inner work of the security filter chain and the different metadata options at your disposal to define security constraints in your application.
 I will also cover the Taglib facility for enforcing security constraints at the view level.
+Introducing the Simple Example Application In this chapter, you will be working on a dummy test application: an “action movies” web application.
 However, I will try to cover most of the options available for securing web applications with Spring Security, even if some of the options don’t seem realistic for an application of this kind.
 As in Chapter 2, we will use Maven to start up and build the project.
 Again, I will assume certain versions of the different tools we need.
 Go to the command line, to a directory you like, and do the following:
 Press enter on each prompt you get from the command line.
-At the moment, we will use the same dependencies that we had in our program from Chapter 2
 So make sure your pom.xml file has the content from Listing 4-1
 Just to test that it works, go to the command line, and execute the following in the root of the application:
 Note N  Jetty (http://jetty.codehaus.org/jetty/ and http://www.eclipse.org/jetty/) is both an HTTP server and a Java Servlet container in the same way as Apache Tomcat.
@@ -462,19 +474,21 @@ The RequestBody annotation in the method parameter simply tells Spring to popula
 And the ResponseBody annotation at the method level tells Spring to use the return value of the method as the body content of the response.
 First, make sure you restart the application by pressing Ctrl+C and mvn jetty:run again as you did before.
 You will be using curl for this first simple example.
-Later,  you will be using the user interface of the application itself.) Curl is a command-line tool you use to send HTTP requests to a server.
+Later,  you will be using the user interface of the application itself.
+Curl is a command-line tool you use to send HTTP requests to a server.
 It can be configured to use any HTTP method, add any arbitrary headers, use certificates, and so on.
 For testing your new functionality, you start your application (using mvn jetty:run as I explained in Chapter 2)
 Then, from the command line in another terminal, execute the following:
+If you look back in the first terminal where the application is running, you should see the text “Adding movie!! Die Hard” printed in the console as Figure 4-5 clearly shows.
 You are reaching the endpoint with your POST request to create movies.
 But in a real application context, maybe only an admin user should be allowed to create new movies on the system.
 You have defined your first user and your first role.
+But what is an admin user? In this case, an admin user will simply be a user with a ROLE_ADMIN role.
 You need to decide where you are going to store your users and your roles.
 Because this is a greenfield fake application, you can decide to do whatever you want.
 For starters, you will do the easiest thing and store your users and roles in memory with the application.
 You will then modify this to a more realistic database-backed solution in later chapters.
 In later chapters, you will also fully explore some of the other providers you can use and even implement your own.
-For defining your admin user and roles in memory, you will use the same user-service as in Chapter 2
 Here, you can see you are defining your new admin user.
 The next step is to secure your URL, allowing access only to your newly defined admin user.
 You will make sure that only users with the ROLE_ADMIN role are able to reach your AdminController.
@@ -494,6 +508,7 @@ This interaction is really simple and is shown in Figure 4-9
 LogoutFilter no-op interaction when the logout URL is not requested.
 As with the previous filter, this interaction is simple and can be explained with the same diagram.
 As in the previous two filters, this interaction is simple and can be explained with the same diagram.
+This filter looks for HTTP Basic Authentication headers in the request (the header “Authorization” with a value starting with “Basic”)
 Because none are found, the filter forwards the request to the next filter in the chain.
 As in the previous three filters, this interaction is simple and can be explained with the same simple diagram.
 So it forwards the original request to the next filter.
@@ -510,6 +525,7 @@ You see the interaction of this filter in Figure 4-12
 You finally arrive at the last filter in the default-configured chain shown in Figure 4-7
 I talked a lot about this filter in previous chapters, but I will refresh the information here in the context of our request.
 When the request arrives in this filter, the filter creates a new FilterInvocation object that contains the request.
+If it matches, it retrieves the required authorities from the “access” attribute contained in the <intercept-url> element.
 The interceptor also extracts the Authentication object from the Security Context and sends these two elements (the Authentication object and the required authorities or config attributes) to the AffirmativeBased access-decision manager, which in turn sends them to the configured RoleVoter instance.
 The voter will not find any matches, so it will vote to deny access to the resource.
 The catch block in this filter will see that the current Authentication object stored in the SecurityContext is an Anonymous authentication and will start a new authentication process to obtain a complete Authentication from a user.
@@ -539,6 +555,7 @@ With the new configuration in place, restart the application and try to access t
 Error 404 that appears when defining a new login handler page.
 Let’s create a LoginController controller next to the AdminController in the project.
 LoginController that handles the /custom_login URL specified in the configuration file.
+The last line in the showLogin method returns a “logical view name,” in Spring MVC parlance.
 This will be the name of the JSP file that has your login form.
 Now you create the fantastically designed login.jsp from Listing 4-10 in the folder WEB-INF/views in your application.
 If you type admin as both the username and password, you get access to the movie x page as you did before with the default login form.
@@ -559,13 +576,15 @@ Basic HTTP Authentication Sometimes, you can’t really use a login form for aut
 For instance, if your application is meant to be called by other systems instead of a human user, it doesn’t make sense to show a login form to the other application.
 Web services talk to each other without user interaction, ESB systems integrate systems with one another, and JMS clients produce and consume messages from other systems.
 In the context of HTTP-exposed interfaces that require no human user to access them, a common approach is to use HTTP basic authentication headers.
+The header is appropriately named “Authorization.” When using this header, the client that is sending the request (for example, a browser) concatenates the username and the password with a colon between them and then Base64 encodes the resulting string, sending the result of this.
 For example, if you use the  username bart and the password simpson, the client creates the string bart:simpson and encodes it prior to sending it in the header.
 After replacing it, you restart the application and go to the URL http://localhost:8080/ admin/movies in the browser.
 A standard HTTP authentication box pops up asking you for your authentication details, as Figure 4-21 shows.
 Type admin as the username and password, and send the request.
 You successfully arrive in the movie x page that you already saw a couple of times before.
 The client should know how to handle this code and work accordingly.
-In the case of a browser, it simply shows the authentication pop up.)
+In the case of a browser, it simply shows the authentication pop up.
+This filter checks the request headers, looking for the “Authorization” header starting with “Basic.” The filter extracts the content of the header and uses Base64.decode to decode the string, and then it extracts the username and password.
 The authentication manager will ask the authentication provider to retrieve the user and then create an Authentication object with it.
 This process is standard and independent of using Basic Authentication or form authentication.
 Its main purpose is to avoid sending clear text passwords on the wire, as Basic Authentication does, by hashing the password prior to sending it to the server.
@@ -576,6 +595,7 @@ In the authentication process, both the server and client do the digest computat
 This class sets the header “WWW-Authenticate” with the correct values (including the nonce) so that the client agent (the browser) knows it has to start the digest authentication process.
 To configure it, let’s add the filter to the filter chain.
 Also, it needs to be added as a child of the <http> element.
+You also need to give the ID “userService” to the configured <user-service> in the same file.
 If you restart the application and try to go to the URL http://localhost:8080/admin/movies, you will be presented with a browser dialog box asking for a username and password exactly like the one that was shown for Basic Authentication.
 As I explained before, the entry point will fill the response object with the required headers so that the browser knows it needs to show the login form.
 Log in with a username and password of admin, and you should be able to access the requested URL.
@@ -596,14 +616,16 @@ Remember-me authentication is typically supported by sending a cookie to the bro
 How does remember-me functionality work in Spring Security? Remember-me functionality in Spring Security is supported mainly by two components: the.
 Let’s see how they work in the context of a request.
 Go and visit the URL http://localhost:8080/admin/movies, and log in with admin as the username and password.
-If the property alwaysRemember is set to true in the service, it will also apply the remember-me functionality.) Because you didn’t send this request, nothing will happen.
+If the property alwaysRemember is set to true in the service, it will also apply the remember-me functionality.
 So let’s add the parameter to the login form you have.
+As a value attribute, you can use any of the following values: “yes”, “on”, “1”, or “true”
 You should now see a check box along with the username and password fields.
 It extracts the username and password from the Authentication object and creates a token with this information and a time to expire.
 It basically concatenates these three values and the remember-me key specified in the XML element (terror-key)
 And it creates an MD5 encoding out of the resulting string.
 You should be able to access the page without logging in.
 The first thing the filter does is check that there is no current Authentication in the SecurityContext.
+This implementation’s autoLogin method tries to parse the incoming cookie into its composing elements, which are the username, the hashed value of the combined elements (username + “:” + tokenExpiryTime + “:” + password + “:” + key), and the expiry time of the token.
 Then it retrieves the UserDetails from the UserDetailsService with the username, recomputes the hashed value with the retrieved user, and compares it with the arriving one.
 If they do match, the UserDetails is checked and an Authentication object is created and returned to the caller.
 This Authentication object will be used by the Security Interceptor to allow access to the requested URL.
@@ -639,11 +661,13 @@ After restarting the application, logging in, and logging out, you can go to the
 By default, this URL is the root of the application.
 The target URL can be configured using either a request parameter or the referrer header from the request.
 And somewhere else in the same file, define the following bean:
+Both the successful authentication and successful logout use a redirection strategy for request handling.
 In Spring Security, at a low level, this is still the case.
 However, as I mentioned before, Spring Security introduces some new concepts for handling user-session information.
 In an application using Spring Security, you will rarely access the Session object directly for retrieving user details.
 Go ahead and modify the current AdminController to look like Listing 4-16
 Remember not to remove the package declaration or the imports from the file.
+You should get the message “User admin is accessing movie x” in the browser window, as shown in Figure 4-24
 Let’s make it more interesting and add more information to your Users.
 You will make your users have a last name and first name.
 A message with username information extracted from the Authentication object.
@@ -651,6 +675,7 @@ You want to keep the InMemory model of storing and retrieving users, but you nee
 Our user model needs to implement directly or indirectly the UserDetails interface.
 You also need to create your own InMemory user details service, because the default one will create Spring Security’s own User instance and not your custom class instances.
 Let’s restart the application, visit the URL http://localhost:8080/admin/movies, and log in.
+You can see the message “User Scarioni is accessing movie x” as Figure 4-25 shows.
 Application using a custom User object and accessing the last name of the user.
 SpEL makes it possible to use programming expressions inside bean definitions and other parts of the Spring portfolio—for example, in some annotations you will see later, which allows you to manipulate objects at runtime.
 It basically allows the developer to embed code in the configuration files as simple strings and then evaluate those strings at runtime, very much like a dynamic language would allow you to.
@@ -671,6 +696,7 @@ Restart the application, visit http://127.0.0.1:8080/admin/movies, and log in wi
 You should be able to access the page without a problem.
 Suppose that you want to support an expression such as “over18.” For that, you need to add your own ExpressionHandler to the configuration:
 Define the following as a child element of the <http> element:
+Alter the User class to add an “age” attribute as shown in Listing 4-21
 This class is the one that will include the new method  you want to make available to the SpEL expressions.
 Restart the application, go to http://127.0.0.1:8080/admin/movies, and log in with admin/admin.
 You should be able to reach the page without problems.
@@ -687,6 +713,7 @@ In this case, they will be secured with a ROLE_ADMIN attribute.
 Add the following two lines as children of the <http> element in the configuration file:
 Add the filter into the filter chain, because it is not configured by default.
 Restart the application, visit http://127.0.0.1:8080/movies/member/1, and log in with admin/admin.
+You will get an “Access Denied” message as you saw before.
 This will take care of switching to the user paco.
 The way this whole process works is by creating a new Authentication object with the user whom you are trying to impersonate as the principal.
 When you decide to exit the switched user, you can get back to your original Authentication.
@@ -701,8 +728,10 @@ By default, this strategy determines that a maximum of one session can be active
 In the following step-by-step explanation, I assume Chrome and Firefox are accessible to you:
 You should be able to access the page without a problem.
 You should be able to access the page without a problem.
+You will get the following message: “This session has been expired (possibly due to multiple concurrent logins being attempted as the same user).” This message explicitly indicates what the problem is.
 Restart the application, and follow the same flow as before.
 This time, you should have both sessions active at the same time.
+Using Different Pattern Matchers for Matching Requests So far in your <intercept-url> elements, you have been using Ant expressions for the “pattern” attribute.
 Spring Security offers a few RequestMatcher implementations beyond the Ant one.
 It basically supports standard Java regular expressions and standard Java case-insensitive regular expressions.
 To enable support for using these matchers, you simply need to add the attribute request-matcher to the <http> element specifying the type of matcher your patterns will use within the values ant, regex, and ciRegex.
@@ -720,6 +749,7 @@ If you do this, however, your current application won’t work.
 The problem is that the Maven Jetty plugin  you use to start the application, by default, doesn’t recognize the 8443 port for SSL communication.
 So the only thing you need to do here is replace the current pom.xml’s plugin section with the one in Listing 4-29
 After that last step, you can restart the application and visit the URL http://localhost:8080/admin/movies as you have always done in this chapter.
+The browser will probably show the typical “insecure certificate” warning, which you can see in Figure 4-29, but you can safely proceed by clicking the “Proceed anyway” option, or the similar option in other browsers.
 When the application starts up, the namespace parsing mechanism will note the presence of the attribute.
 When a request is made, it will, as normal, travel through the filter chain.
 The decision manager, with the aid of certain helper classes, decides if the request can proceed or if, on the contrary, the requested channel is not admitted by the requested URL.
@@ -728,7 +758,6 @@ Using the JSP Taglib Spring Security’s web offering comes with a nice suite of
 The taglib is oriented mostly to JSPs as a view technology, although in Spring Security 3.1 a new class hierarchy was introduced to support different view-rendering technologies.
 The taglib comes packed with plenty of security-oriented tags and attributes.
 Here is a full list of supported tags and their attributes:
-I will cover the first two tags here; for the third, please refer to Chapter 7
 First, let’s create a new method in MovieController that allows both.
 Create the method from Listing 4-30 in the MovieController class.
 This new method simply creates one list of movies and passes it to the view as a ModelAndView Spring MVC object.
@@ -738,10 +767,12 @@ You can see that users with the role ROLE_USER can see the movie name.
 Users with the role ROLE_VIP can see the movie budget.
 Restart the application now, visit the URL http://localhost:8080/movies/, and log in with a username of paco and a password of tous.
 Then visit the URL http://localhost:8080/movies/ again, and log in with the username lucas and the password fernandez.
+You can see how you are using both “authentication” and “authorize” tags in the jsp and how they work.
 In the “authentication” one, you are accessing the principal and the last name of the user.
 In the “authorize” one, you are allowing only certain content to be shown based on the role of the logged-in user.
 If you want to use the same conditions again later in the page, you can use the var attribute to cache the result of the condition evaluation so that you don’t need to evaluate it again.
 For example, replace your movies.jsp with the content from Listing 4-32
+Now if you log in with a username of lucas, a password of fernandez and visit the URL http://localhost:8080/movies/, you will see the text “You are a very appreciated VIP user” on the page.
 If you do the same when logging in with the username of paco  and a password of tous, you won’t see the message output on the page.
 Role Hierarchies So far, you have worked with simple roles assigned to users.
 Spring allows you to do exactly that with the use of hierarchical roles.
@@ -756,7 +787,6 @@ In previous examples, you would not be able to access the page; however, thanks 
 Summary In this chapter, I covered one of the biggest concerns of the framework: web support in Spring Security.
 You saw that the main functionality comes in the form of Servlet filters.
 This is a good thing from a standards point of view, because it means you can leverage Spring Security web support in other frameworks that use the standard Java servlet model.
-It can be used for simple Servlet applications as well, as shown in Chapter 2
 You should now know a lot of details about the main filters that build the framework, how they work internally, and how they fit within each other and with the rest of the framework.
 I explained all this in a practical way, trying to solve real-life scenarios (although in a not very real use-case)
 I also explained how to attack them in a step-by-step process.
@@ -823,6 +853,7 @@ As I said, you shouldn’t have been allowed access to that page, as you have co
 Refer to that chapter for an explanation of the startup process.
 You can see that if you try to access the URL http://localhost:8080/admin/movies, you get redirected to the already familiar login form.
 This means that the security annotation is now finally working.
+Remember that the main difference is that, in this case, Spring AOP mechanisms get into action to enforce security by decorating the method call, while in the filter case, the Servlet Filter standard itself helps to validate and enforce the constraints by intercepting the HTTP request.
 Login form shown after ensuring that the @Secured annotation is being picked up.
 This proxy has all the information it needs to enforce security at the method level.
 Creating a Business Layer in Your Application Although I have shown you how to use security annotations at the method level for your controllers, the truth is that you can use these annotations in any layer of your application, and normally they are used at the business service layer.
@@ -860,8 +891,12 @@ Now if you restart the application and access "http://localhost:8080/movies/die 
 Again, it behaves pretty much like the RoleVoter, but it will make a decision based on the jsr250 annotations.
 Securing the Application Using SpEL Expressions As in the case of web-based security, at the method level, you can use SpEL expressions to define security constraints.
 This attribute gives you access to four different annotations in your methods.
+However, the before and after processing are the same in both cases and it is inherited (both pre and post processing functionality) from the abstract class.
 Let’s take a look at the use of these annotations one by one.
 You will be denied access and shown the login form.
+Fill the login form with the username “lucas” and the password “fernandez”
+You will get redirected to the correct page—the same one you saw in Figure 5-5
+You will be denied access again, getting an “Access is denied” message page as shown in Figure 5-6
 The EvaluationContext is the context in which the SpEL expressions will be evaluated.
 This means you can use the same expressions I talked about before, like getAuthentication, isAnonymous, hasRole, and so on.
 Access denied page you get because the SpEL expression in a @PreAuthorize failed an evaluation.
@@ -870,8 +905,10 @@ The expression context is set up the same way it was for the @PreAuthorize use c
 After this is done, if you restart the application and visit the URL http://localhost:8080/movies/two days in paris, you should be able to access it without a problem.
 In this case, you don’t even need to log in, as you are not making constraints on the authenticated user.
 Figure 5-9 shows the screen you see if you are following along.
+However, if you visit the URL http://localhost:8080/movies/die hard, you will get an “Access denied” message.
 Note N  Actually, you will get first the familiar login form.
 You get the login form here and not in the previous case because that is the standard way Spring Security handles Access Denied errors in the framework when there is not a fully authenticated user accessing the system.
+Spring Security will show the form, offering the user the opportunity to log in.
 You can see from this example that you have access to the returned object from the method in the SpEL expression thanks to the getReturnObject() expression.
 This allows you to do any kind of validation you need on the returned object.
 Here, I will explain the general usage of these annotations and leave the ACL coverage for the next chapter.
@@ -887,6 +924,7 @@ Basically, when you are using this annotation, the expression handler iterates t
 Next we see the listings for the jsp, controller and service updates referenced in the previous paragraphs.
 This is the code needed for showing a form to the user and allow him to create movies.
 The difference is that @PostFilter annotations are evaluated after the target method returns, and the SpEL expression in the annotation is evaluated against the returned collection from the target method.
+Note that I’m saying the “returned collection.” This is a condition required for the @PostFilter annotation to work.
 As with the @PreFilter annotation, it applies only to collections and arrays.
 Let’s create a couple new methods and a new simple jsp file.
 For the rest of the users, these movies will be filtered out from the returned collection so that the jsp won’t have access to them.
@@ -896,6 +934,7 @@ Finally, you create the jsp file that will support showing all the movies.
 You create the file allMovies.jsp from Listing 5-12 in the folder WEB-INF/views.
 Note N  In a real application, of course, you wouldn’t ask your users to manually visit the URL http://localhost:8080/j_spring_security_logout.
 You would most likely have a Log Out link the user could click to log out.
+This time, you should only see the movie “two days in paris” because “die hard” was filtered out.
 You can see how powerful security is when it’s based on the SpEL expression.
 You can use this approach to define and combine different expressions to achieve security at different levels of granularity.
 In the current example, I was explaining only the way the annotation works and how to use useful expressions to filter out elements from a collection.
@@ -913,6 +952,7 @@ So your MoviesServiceImpl class should now look like Listing 5-13
 Next, you add the required XML configuration to guarantee that these methods are called only by a ROLE_ADMIN user.
 For that, you simply add the dependency from Listing 5-14 to your pom.xml.
 If you restart the application and visit the URL http://localhost:8080/movies/, you will be redirected to the login screen.
+If you login with "lucas", "fernandez", you will receive an “Access Denied” screen (the one you have seen many times before), as this user doesn’t have ROLE_ADMIN.
 On the other hand, if you log in with "admin", "admin", you are granted access to the page and will be able to see the movies on the page, which looks like Figure 5-13 again.
 You can see how powerful the XML configuration can be in grouping many methods into a single expression to secure them all at the same time.
 The AspectJ expression language for pointcuts offers a lot of flexibility to determine which methods to match against.
@@ -1014,13 +1054,13 @@ Database-Provided Authentication Database-provided authentication works almost e
 The only difference is that the users are stored in the database and not in memory.
 This happens at runtime when you define them in the application context configuration file.
 To configure the provisioning of users from the database is pretty simple, as you will see.
-We will clean up and build on the application from Chapter 2
 The first thing you do is define the database schema you need in order to make the authentication mechanism work.
 The tables you need to make the authentication work are shown in Figure 6-1
 Figure 6-1 shows a simple schema model for supporting authentication backed by a database.
 Just by looking at the tables, you should be able to see how they work.
 It is basically a one-to-one mapping from the in-memory implementation you have been using so far.
 In the USER table, you store the user details—mainly, the username and the password.
+In the AUTHORITIES table, you store the relationship between the usernames and the granted authorities for that member—for example, ROLE_MEMBER.
 Figure 6-2 shows an extended default option you can use to define groups and establish authorities related to those groups instead of to individual users.
 This time, the schema allows you to create named groups and establish authorities belonging to these groups.
 At the same time, users now can belong to groups as well, meaning that users can inherit the authorities defined for the groups to which they belong.
@@ -1059,6 +1099,7 @@ They simply need to be made part of the group.
 Of course, a user can belong to more than one group at the same time.
 Using Existing Schemas JdbcDaoImpl, by default, is configured to use the database schema and queries you have looked at already.
 However, the schema configuration is flexible, and you can adapt your existing database user schema (if any) to be used by Spring Security JDBC UserDetails support instead of writing a custom schema just for Spring Security.
+Of course, certain concepts need to exist in your current schema, like a “user” abstraction, an “authorities” or “role” definition, and a “group” abstraction if you will be also using groups.
 If you have those abstractions in place in your database, accessing the information from Spring Security’s JDBC support is straightforward.
 The first one represents the username, and the second one represents a particular authority.
 Here you use the query needed to retrieve users using their username.
@@ -1104,7 +1145,9 @@ I will be importing a couple of users using an LDIF file.
 An LDIF file is a text file that uses LDIF formatting, a standard format for describing directory entries in LDAP.
 It allows you to import and export your directory data into or from another LDAP directory in a standard way or just to create new data or modify existing data.
 You use it here to import the data with your users.
+You can see in Listing 6-5 the hierarchical nature of the directory and how everything inherits the DN dc=example,dc=com.
 You can also see how the different entries use different standard object classes.
+You also established that “car” is a member of the “users” group and “mon” is a member of the “administrators” group.
 The password for both users is “scarvarez.” In this example, they are shown in plain text, although they could easily be stored in encrypted form.
 Graphically, the hierarchy is simple enough and looks like Figure 6-9
 The next thing you need to do is configure the example application to be able to connect to the LDAP server and query the information stored on it.
@@ -1112,6 +1155,7 @@ You have a clean application at the moment, with only the bootstrap components.
 First, you add the Spring Security LDAP dependency to the pom.xml file.
 Listing 6-7 shows all the configuration needed to make your application work with LDAP-based authentication.
 If you restart the application now with that configuration, you should be able to access the URL http://localhost:8080/hello only if you log in with the username mon and the password scarvarez.
+If you log in with the username car and the password scarvarez, you get an “access denied” message.
 The element <ldap-server> allows you to configure the LDAP server you will be connecting to from the application, and here, you are specifying the local ApacheDS server you configured in previous steps.
 You also specify the Distinguished Name you will be using as part of the connection URL in this same <ldap-server> element.
 This is basically the root path of your directory, as you specified before.
@@ -1160,13 +1204,14 @@ In the new Identity text field, I type my OpenID identifier http://carlo8172.myo
 I get redirected to the MyOpenID site, which shows me a form to type in my password.
 The MyOpenID site asking me for my password to authenticate me.
 After I correctly enter my password in the MyOpenID site, I get redirected back to the application.
+Now, if I visit the localhost URL /hello, I get the familiar “Hello World” message, meaning that I have been correctly authenticated and the correct authorities have been assigned to my user.
 This time, however, the filter sees that OpenID is enabled in the application and generates one extra form like this:
 The form has a text field for entering the OpenID identifier like this:
 The filter then extracts the parameter openid_identifier from the request.
 With the username it uses the openid4java library to discover the OpenID server provider to which the authentication.
 Then it creates an OpenID authentication request with this information and redirects the response to the corresponding OpenID provider site.
 However, this time the URL contains a set of parameters that MyOpenID has included in the invocation.
-This parameter was added by the OpenID provider, as I just said.)
+This parameter was added by the OpenID provider, as I just said.
 Then the information sent by the provider is verified to see if it was successful.
 As normal, the Authentication gets stored in the SecurityContext of the running application.
 When you visit the URL /hello again, the normal process of authorization will start.
@@ -1184,6 +1229,7 @@ For example, let’s say that you want to retrieve the email of the user attempt
 Attribute exchange configuration for fetching the email of the user.
 Listing 6-10 shows how to retrieve a particular attribute from the OpenID account when logging in.
 You can see that the type attribute specifies a particular URI that identifies how to retrieve this value in the particular OpenID provider.
+I say in the “particular provider” because although there is some effort to standardize the AX attributes, each provider often uses different ways to refer to the same things.
 The name attribute specifies the name that the attribute has in the local Authentication object after it is retrieved.
 If you restart the application now and do the whole authentication process again, this time your email will be returned with a successful authentication with the OpenID provider.
 As I said before, there are many other OpenID providers out there, including Google and Yahoo, and they work in a similar manner to what you saw in this section with MyOpenID.
@@ -1208,7 +1254,6 @@ However, we will use a test environment with our common Maven-configured Jetty i
 It is pretty straightforward to do, and we will use the openssl tool to do it:
 Generate a certificate by executing the following command and pressing Enter at every prompt:
 When executing that last step, it is important that when asked to introduce your name by the command-line prompt, you use the name “car” because that is the username you configured in the application configuration file.
-The command line will show you the following prompt Common Name (e.g.
 The next thing you need to do is to make Jetty trust the certificate authority associated with this certificate.
 Note N  A truststore is a repository of certificates that are trusted by the JRE that uses such a truststore.
 By default the JRE truststore trusts any certificates signed by a recognised Certificate Authority (CA)
@@ -1219,7 +1264,7 @@ The first thing to do is create a p12 file that contains information about the c
 This is the file needed by the browser to identify the user.
 To generate that file from the command line, in the same directory where you previously generated the key and the certificate, execute the following command.
 To import that file into the client certificates of Firefox, do the following.
-This example is on a Mac computer, and it should be similar on other systems.)
+This example is on a Mac computer, and it should be similar on other systems.
 Locate client.p12 in the directory where it is stored, and double-click it.
 The certificate is imported, and you should see a screen like Figure 6-20
 Finally, the configuration is complete, and the application is ready.
@@ -1247,7 +1292,9 @@ The only high-level bean you need to define is for the authentication provider i
 The properties you defined in this bean are all important, and here is what they specify:
 The pss_jaas.config file that specifies the class implementing LoginModule in the application.
 If you restart the application now with all this configuration in place and try to access the URL http://localhost:8080/hello, you get the form to log in that you have seen many times before.
+If you log in with the username car and the password scarvarez, you should be able to access the “Hello World” page as in the previous examples.
 The preceding code is very simple, and all it’s doing is simulating a user data store with an in-memory map.
+Then it assigns the role ROLE_ADMINISTRATOR to a user “car.” The only method that it is implementing from the interface grant is in charge of returning a java.util.Set of authorities given a username.
 Listing 6-16 shows the main class you need to create to support JAAS authentication with Spring Security.
 It is the main class in the JAAS authentication scheme because it is the one that takes charge of the real authentication of the users into the application.
 People or companies that want to implement a custom authentication solution to be plugged into JAAS definitely need to create an implementation of LoginModule.
@@ -1354,7 +1401,8 @@ The first thing we’ll do is review the required database schema to support ACL
 It will be in the src/main/resources folder in the source code, which means it will be in the root of the classpath.
 To understand the meaning of these tables, you need to appreciate the main abstractions in SpringSecurity’s ACL support:
 Let’s break down the database tables into their main attributes to see their meaning.
-I won’t explain the ID attributes because they are the surrogate identifiers of each row in the pertinent table, and they serve to, well, identify the particular entry.) Figure 7-2 shows the tables in graphical form followed by the explanation of the attributes.
+I won’t explain the ID attributes because they are the surrogate identifiers of each row in the pertinent table, and they serve to, well, identify the particular entry.
+Figure 7-2 shows the tables in graphical form followed by the explanation of the attributes.
 Here are the main attributes (columns) in the tables from the previous figure:
 You can easily create your own class and define extra permissions if you want to do so.
 The BasePermission class with the default permissions to use in the ACL system.
@@ -1386,6 +1434,7 @@ A lookup strategy is in charge of retrieving the object identities (as explained
 It will try to load the ACLs from the cache, and if they are not there, it will look them up on the database and cache the results.
 The lookup to the database is done in batches so that many items can be loaded to the cache at the same time to improve performance.
 The default implementation we are using in the bean definition file receives in the constructor three instances of GrantedAuthority, which determine the entities that will have the permissions mentioned before.
+In our example—and, in general, this is the most common approach—I am setting the ROLE_ADMIN to be the one that will have the mentioned permissions.
 The last bean, with the ID "aclService", is the main component of the whole framework.
 The interfaces AclService and MutableAclService allow access to all the ACL-related operations, such as reading ACLs by ID, creating ACLs, deleting ACLs, and updating ACLs.
 These are all the beans needed in the application to work with ACLs.
@@ -1394,6 +1443,9 @@ In case it is needed, the web.xml I provided already has the appropriate configu
 Now let’s make a bean to create the database schema for ACL.
 You normally will not do this in a standard application, but we’ll do it here just for convenience.
 The file is provided in the source code of the book.
+If you want to create it yourself, simply take the one that comes with the framework and uncomment the beginning lines that have the commented “drop table” statements.
+Remember that the database is an in-memory HSQL database named aclexample that we.
+This bean will be instantiated by the context as normal when starting up, and the constructor will take care of setting up the schema.
 Now we can create ACLs for domain objects, so let’s create our classes to set up the whole process.
 This will involve a bit of coding because we’ll need a controller, service, domain object and JSP file.
 A simple domain model that we’ll use for trying ACL rules.
@@ -1416,14 +1468,16 @@ When you start the application, navigate to the URL http://localhost:8080/forum/
 You will be shown a very small form with just a text box.
 When you submit the form, it will be stored on the map and the corresponding ACL will be stored on the database.
 You won’t see that on the screen, but it is happening.
-You could use a SQL client to look at it.) What is happening under the covers inside the framework is simply the execution of some SQL scripts that are in charge of populating the tables mentioned before with the corresponding data.
+You could use a SQL client to look at it.
+What is happening under the covers inside the framework is simply the execution of some SQL scripts that are in charge of populating the tables mentioned before with the corresponding data.
 The ACL system offers the APIs that can be used to manipulate this data using classes, which you can see in the ForumServiceImpl class.
 Internally, all the requests are translated to SQL instructions against the configured database.
 It’s also worth mentioning that among the internal workings of the framework is the use of the authentication’s principal as the owner of the ACL and the caching of the ACLs after they have been persisted to the database.
 Accessing Secured Objects The next logical step is to make sure the rules are actually working by trying to access the created posts.
 To do that, we’ll set up a couple more users and finish our service and controller so that they handle the new options.
 Remember that we are re-creating the database every time we restart the app.
-Again, that’s not what we want in a production environment.) Also, the posts are in an in-memory map, so they are lost when we shut down the application.
+Again, that’s not what we want in a production environment.
+Also, the posts are in an in-memory map, so they are lost when we shut down the application.
 So let’s make all the code changes now step by step.
 You need to create an AclEntryVoter instance for each of the operations you want ACLs to vote on.
 For example, in our case, we’ll create three voters: one for voting on reading access, one for voting on update permission, and one for voting on delete permission.
@@ -1444,6 +1498,7 @@ Before doing so, you need to update the ForumController, adding the method from 
 You also need to replace the form.jsp file with the content of Listing 7-19
 Then if I click the delete button, the application redirects me to the familiar login screen shown in Figure 7-5
 This is what happened here: When I clicked the delete button, the request got all the way to the AffirmativeBased access decision manager, as I explained in previous chapters.
+One of the voters will get into action—the one dealing with ACL_POST_DELETE config attribute.
 In our case, it is found, and it is actually the only parameter that the deletePost method expects.
 If the object that arrives in this parameter is null, the voter will simply abstain from voting.
 The next thing the voter does is try to retrieve an ObjectIdentity instance from the domain object.
@@ -1455,7 +1510,6 @@ After obtaining the ObjectIdentity, the voter tries to retrieve the SIDs from th
 The next step for the voter is to retrieve the actual ACL for that particular ObjectIdentity and the SIDs.
 It does this with the help of the configured AclService, which I already talked about.
 In the next step, the retrieved ACL is consulted by its isGranted method to see whether or not access should be granted.
-It compares the permissions one by one against the permissions on the ACE,
 If it finds a match, it allows access; if it doesn’t find any match, it rejects access by throwing an exception, which is caught by the voter to return ACCESS_DENIED.
 In our case, because the current authenticated user is ANONYMOUS, this whole flow is what happens.
 The same thing as before is happening: the logged-in user car and its roles ROLE_USER don’t match the rules required to execute the deletePost action on that particular post.
@@ -1464,9 +1518,11 @@ First I log out by visiting the URL http://localhost:8080/j_spring_security_logo
 This time, the Acl.isGranted method returns true and the voter returns ACCESS_GRANTED because the match exists between the role of the authenticated user and the authorities required to perform the required action.
 This means that the code execution will finally reach the deletePost method in the ForumServiceImpl.
 This is a very simple method that removes the entry from the ACL for that object and, of course, deletes the object from the store.
-Remember, we are using a java.util.Map as our in-memory store, which is not the most realistic simulation but works for the purposes of the example.) Figure 7-6 shows the most important aspects of the process I just explained.
+Remember, we are using a java.util.Map as our in-memory store, which is not the most realistic simulation but works for the purposes of the example.
+Figure 7-6 shows the most important aspects of the process I just explained.
 Filtering Returned Objects So we successfully tested the DELETE action with a Post domain instance that should be allowed only to ROLE_ADMIN users.
 Let’s secure the READ one so that only users with role ROLE_USER can read them.
+Normally, your users wouldn’t need to have both roles defined, but for the sake of the example, it is OK to do it this way.
 In our example, we want to secure the method getPosts in the ForumServiceImpl class in such a way that when the posts are returned, they are filtered out by the rules explained in the last paragraph.
 If you are following along with the code, you should change all the classes and files that depend on this method, including the form.jsp file.
 The getPosts method now returns a collection of posts and not the map.
@@ -1481,13 +1537,14 @@ Remember that posts now will show only for ROLE_USER users.
 If you log in to the application with the username car and the password scarvarez and again go to the URL http://localhost:8080/forum/, you will see the post in the page and the delete button.
 The following paragraphs explain how it all works under the hood.
 As you probably recall as well, the interceptors work in a pre-process, process, post-process flow.
+The actual business logic happens in the “process” phase, and both the “pre-process” and “post-process” phases are used for the framework itself to apply all the security concerns, regarding authorization and access control, that are needed to secure the application.
 The “pre-process” phase is taken care of mainly by the access decision managers and the access decision voters that decide whether or not access should be allowed to a particular resource (be it a method, a domain object, or a URL)
 This handler checks that the returned value from the business method with the @PostFilter annotation was indeed a collection or an array (and throws an exception if it wasn’t)
 Then it iterates through this collection, evaluating the SpEL expression on each object and discarding the object to which the evaluation of the expression gives the value false.
 This method (hasPermission) uses the permission evaluator we defined in Listing 7-22 to decide if the authentication has the required permissions on the object being passed.
 This evaluator uses the same suites of classes and helpers that the AclEntryVoter uses to decide whether or not to grant access, such as the AclService and the method isGranted in the ACL interface.
 When we tried to access the list with the anonymous user, the only existing post was discarded from the return elements because the user didn’t match the permissions required to read the object.
-ACL’s isGranted method returned false.) When we logged in as car, scarvarez, we acquired the role ROLE_USER.
+When we logged in as car, scarvarez, we acquired the role ROLE_USER.
 This role is indeed allowed to read post objects, as specified by the ACL rules that we created when we first created the post.
 Let’s see how filtering works in an example with more than one post.
 This time, we’ll create a post with a user with the role ROLE_ADMIN.
@@ -1505,7 +1562,6 @@ Test Scenario 7-1 To execute this new configuration, I used the following steps:
 I restarted the application, and then visited http://localhost:8080/spring_security_login and logged in with the username car and the password scarvarez.
 The sceen that is generated after an admin user creates a post.
 I visited the URL http://localhost:8080/j_spring_security_logout to log out of the application.
-Then I visited the URL http://localhost:8080/spring_security_login and logged in with the username mon" and password scarvarez.
 I visited the URL http://localhost:8080/j_spring_security_logout to log out of the application.
 Then I visited the URL http://localhost:8080/spring_security_login and logged in with the username bea and the password scarvarez.
 The screen that is generated after a user with the role ROLE_USER creates a post.
@@ -1587,6 +1643,7 @@ It should be simple enough to test this functionality for different event types.
 Looking at how these different authentication providers are set up in your application and the nice way they are contained in their own “modules,” you could think that you should be able to use your own authentication provider.
 The truth is, of course, that you can, and here I will show you how with a simple example.
 First of all, let’s review how the authentication providers work in your application.
+When you use the namespace to define an authentication manager and an authentication provider as shown in the listing, the framework instantiates two ProviderManager objects and sets one as the parent of the other.
 This scheme is used by the ProviderManager which is able to establish a hierarchy of authentication managers.
 This parent–child relationship is managed by Spring at startup time.
 So these are the two providers that are used by default when you use the common definition from Listing 8-2
@@ -1601,7 +1658,9 @@ If the authenticate method doesn’t find UserDetails in the cache, it will quer
 In the example, I will also introduce the option to exchange password encoders in order to use different algorithms to cypher the passwords, instead of storing them in plain text.
 The first thing we’ll do is get the code from Chapter 2, as you will use it as a base for all your examples in this chapter.
 In my case, I changed the pom.xml a little bit to use a different project and artifact name.
-If you do not, next is a quick step-by-step reminder on how to configure the applications from this chapter.) You can do the same with your configuration or simply start from scratch, remembering to copy the required dependencies in your pom.xml.
+I also removed all the files from the “discard” package and configured the <intercept-url> element to intercept all URLs.
+If you do not, next is a quick step-by-step reminder on how to configure the applications from this chapter.
+You can do the same with your configuration or simply start from scratch, remembering to copy the required dependencies in your pom.xml.
 For you to have a running application and to not leave you guessing exactly what parts of Chapter 2 to grab here, I give you the step-by-step guide to get all the needed application setup.
 I won’t explain the steps, as they have already been covered; I will just give a quick list of the steps to help you follow along with the examples.
 In future sections when a new project is started to test some new functionality, you can refer to this part to create a new project from scratch:
@@ -1613,6 +1672,7 @@ Like many other examples in this book, the implementation I’ll show you will b
 First of all, let’s add the MongoDB dependencies to our pom.xml.
 You will be using Spring Data to set up and use MongoDB.
 It is not really required, but because you are working with Spring it seems like a good idea.
+According to the Spring Data for MongoDB (http://www.springsource.org/spring-data/mongodb) website, it “aims to provide a familiar and consistent Spring-based programming model for new datastores while retaining store-specific features and capabilities.” So you have a Spring-based application and are using MongoDB, which is a good fit for it.
 The dependency you need to add to the pom.xml file is shown in Listing 8-8
 You can download it from its official site at http://www.mongodb.org/downloads.
 After you download it (and assuming you are working on either Linux or Mac OSX), you can simply unpack the file somewhere and it is ready to run.
@@ -1633,6 +1693,7 @@ The loadUserByUsername method uses this template to retrieve the user from the M
 As you can see, the loadUserByUsername method calls the findOne method in the mongoTemplate to try and retrieve the user by username, telling it (in the second parameter to findOne) the class of the object it expects its result to be unmarshalled to and the Mongo collection where it is trying to find the specified document.
 The User class, which is an implementation of UserDetails, is the class of the objects that we expect to get back from the method call.
 That is all specified by the following simple method call:
+Actually, returning null from UserDetailsService is a “contract violation” for the interface, and you will be informed of this if you accidentally do it.
 The next thing you need to do is configure the application so that it is actually aware that it will be using MongoDB.
 You can see that this file is using a <mongo:> namespace.
 This is part of the Spring Data project’s MongoDB support.
@@ -1657,17 +1718,19 @@ To do this, you will use the password encoder defined and retrieved from your Us
 For that, you make the main method from the UserInserter class look like Listing 8-18
 If you execute this code now, you will insert the user with the password hashed with the SHA-256 algorithm.
 You can check that by querying your MongoDB database, as explained in Figure 8-5 and its preceding paragraph.
+After doing this, you can restart your application and use “car” and “scarvarez” to log in as you did before.
 You should be able to log in without any problems, with no apparent difference from a user interface point of view.
 However, now, under the hood your passwords are not stored in plain text anywhere in the application, so they cannot be compromised easily.
 I explained this process in detail in Chapter 7, so I won’t go into it any further here.
-I will start again from the simple code I explained in the first example of this chapter (refer to that part of the.
 Again, do any modifications required to the pom.xml file if you would like to name the application differently.
-You could implement this solution using a SpEL expression, but we want to show the use of custom voters, so this example will do.) The first thing you will do is create the voter implementation itself.
+You could implement this solution using a SpEL expression, but we want to show the use of custom voters, so this example will do.
+The first thing you will do is create the voter implementation itself.
 This code specifies that this voter supports any ConfigAttribute that starts with the string USERNAME_
 Then, when it is time to vote on the authentication request, it will compare the username of the requesting Authentication with the ConfigAttribute substring (after the USERNAME_ prefix) to see if the user should be allowed access to the secured resource.
 If it matches, access is granted; if it doesn’t, access is denied.
 This is because, as you know, the UsernameVoter doesn’t read this property; instead, it simply queries the username property of the principal of the Authentication object.
 Basically, this is an arbitrary string here as authorities is a required attribute of the <user-element>, but you know you are not using it in our example so you choose a descriptive name to point out this fact.
+If you restart the application with this new configuration and log in with the username “car” and the password “scarvarez”, you should be able to access the http://localhost:8080/hello URL without problems.
 Basically, they work by iterating through a list of voters to which they delegate the intermediate decision of whether or not to allow access.
 Again, this is not going to be a very common piece of the framework to customize, as the voter system is very flexible and well designed.
 The class is a toy, so it would break if method security interception were enabled.
@@ -1696,6 +1759,8 @@ You can also see that the filter extends from the class GenericFilterBean, which
 As you can see from Listing 8-24, it is pretty easy to configure a custom filter in the security filter chain.
 You use the namespace element <custom-filter> and put in a reference to a filter implementation bean.
 Also, you can specify where the filter will be within the chain.
+If, on the other hand, you do the same with the Firefox browser, you will be allowed access to the now very familiar “Hello World” page.
+If you do the same but log in with “mon” and “scarvarez” and access the URL http://localhost:8080/hello/, you will be able to access the functionality of the page (the “Hello World” message) from any browser.
 An error you receive when logging in with Chrome instead of Firefox.
 This was a simple example of configuring your own security filter to add additional behavior to the security implementation you are configuring in your application.
 You could think of many different implementations in which you could improve or modify the security treatment through the filter chain.
@@ -1726,6 +1791,7 @@ Listing 8-28 shows the security interceptor implementation from Spring Integrati
 See the License for the specific language governing permissions and * limitations under the License.
 In the code, you can see that ChannelInvocation wraps a MethodInvocation before calling the beforeInvocation method on the parent class.
 Apart from wrapping, it will also do some inner processing to make the current executing channel available to be queried for ConfigAttributes.
+Also note that the interceptor will do its security validations only if the method being invoked is one of the standard “send” and “receive” methods of Spring Integration.
 It is very unlikely you will override the security interceptor in your own applications.
 However, it is good to know that you could do it and also understand why you would want to do it.
 As the example for Spring Integration shows, one reason you would want to replace a security interceptor (or add an additional one) is because you have certain abstractions, to which you want to apply interception-based security, that don’t fit either URL interception or simple method interceptions.
@@ -1757,6 +1823,7 @@ I will not go into any of these frameworks or languages in much detail, because 
 The purpose of this chapter is simply to explain how to use Spring Security in a wider context.
 True, Struts is not as common as it used to be, with new and more friendly frameworks coming out all the time.
 Even version 2 is getting rather old, although it is still well maintained.
+However, it is still widely used and is as good a candidate as any other external Servlet-based framework to integrate with Spring and Spring Security.
 Struts 2 is a popular Java web framework built by merging the original Struts project and the WebWork project.
 Struts 2 was always intended to be a complete evolution from the original Struts framework, adapted to a new generation of powerful web frameworks, and it really kept little of the original Struts principles and implementations.
 Struts 2 is an MVC (model view controller) framework built on top of the standard Java Servlets technology, so many of the web-based security principles you have read about in this book apply without modification.
@@ -1771,7 +1838,6 @@ After the action finishes, a result object representing the view is created and 
 The first thing we’ll do is create a new project.
 From the command line in a directory of your choice, execute the command mvn archetype:generate –DarchetypeCatalog=http://struts.
 Then follow the prompts by selecting a new starter project at the first prompt and selecting some relevant groupId and artifactId names.
-You could use the same to follow along in the examples easily)
 Executing the last Maven command is a fantastic first step for creating our example because it creates a simple, functional Struts 2 web application with the components we need to create our test, including Spring integration (although it uses an old DTD version of the configuration XML file)
 The file structure we have after executing that command is shown in Figure 9-2
 Struts 2 application file structure after executing the Maven command.
@@ -1779,7 +1845,8 @@ In Listing 9-1, the important part to note is the definition of the two actions.
 In the first action, "index" you can see that in the class attribute of the action element, a class name is defined.
 The second action, on the other hand, doesn’t define a class name on the attribute class.
 When a request comes in, the framework looks at the definitions from this file to determine how to handle the particular request.
-This definition is simplistic, but it’s good enough to make the point.) If it sees the name of a class in the action attribute, the framework instantiates a new object of that class to handle the request.
+This definition is simplistic, but it’s good enough to make the point.
+If it sees the name of a class in the action attribute, the framework instantiates a new object of that class to handle the request.
 If the framework detects that it is not a class, it looks for a bean with that ID in the Spring configuration and gets the object from there.
 Next, you need to add the Spring Security filter to the web.xml.
 This filter should execute before the Struts 2 filter, so an authentication object is populated before reaching the action.
@@ -1787,6 +1854,7 @@ Remember that Struts 2 works with filters and not with servlets.
 Listing 9-4 shows the web.xml file you can use as a test.
 I also removed some filter definitions I don’t care to use in the example.
 The web.xml with the Spring Security filter and Struts 2 filter.
+Next, I simplified the jsp files inside the jsp folder like this: the file helloWorld.jsp just contains the string “Pagina Segura” inside, nothing else.
 Struts 2 has a built-in system to handle the exceptions that might be thrown in your application.
 For example, when showing a login form, you need to deactivate the Struts 2 exception-handling mechanism.
 Now if you restart your application and visit http://localhost:8080/struts-example/helloWorld, you’ll be presented with the standard Spring Security login form.
@@ -1823,6 +1891,7 @@ As I said before, each of these view states will map to a physical view file in 
 The view files, by default behavior, should be located in the same directory as this flow file and should be named according to the view states concatenated with .jsp at the end.
 The buy.jsp for the buy view state of the flow.
 If you visit http://localhost:8080/product, you’ll be taken to the main view state.
+At the moment, you can click on both links—Review and Buy—without a problem.
 In a real application, you probably would want to allow anybody to read the product review but limit the ability to buy the product only to authenticated users.
 Spring Security and Spring Web Flow integrate nicely because both are part of the Spring portfolio.
 All you need to do now is decide which parts of the flow to secure and what constraints to define to secure them.
@@ -1849,7 +1918,7 @@ If you now restart the application, you should get the same behavior as before.
 The "buy" state will be secured, and you’ll need to log in with a user with the role ROLE_USER to access it.
 Spring Security in Other JVM Languages I am not an expert in any of the languages that follow, and maybe I won’t be using them in the examples in the most idiomatic way.
 I know Ruby best because I often use it both at work and during my leisure time.
-It’s one of my favorite languages.) However, my objective is just to show that, with some tweaking, you can integrate Spring Security into your projects that are written in a language other than Java.
+However, my objective is just to show that, with some tweaking, you can integrate Spring Security into your projects that are written in a language other than Java.
 So it should be possible to integrate it into any Java (Java JVM) application you have.
 Of course, not all functionality will apply to any application.
 For example, the filter chain won’t make sense in a non-web application.
@@ -1901,6 +1970,7 @@ The next step is to enable our Rails application to be run in a standard Java we
 Warbler is a JRuby exclusive gem you use to convert different kinds of Ruby applications into standard Java packaging artifacts, such as Jar and War files.
 In our case, we’ll obviously be creating a War file.
 Warbler uses internally the gem jruby-rack and packs it into the War-based application.
+This gem is the core of the integration between Ruby Rack–based applications (such as Rails applications) and Java web servlet–based applications, which is what we need.
 Of course, there is a lot more detail regarding warbler and jruby-rack, but for the moment, the explanations presented here should be enough for you to continue with the example.
 In Figure 9-7, you can see a graphical illustration of how jruby-rack works.
 Then you need to edit it and make it look like Listing 9-23
@@ -1911,9 +1981,12 @@ To do that, you execute the command "jruby –S warble config" in the root of ou
 That execution generates a warble.rb file inside the config directory of the application.
 In the file, you are ensuring JRuby will be compatible with Ruby 1.9 and that the Spring configuration file will be included in the WEB-INF directory in the generated War file when warbler builds this file.
 That’s all you need, so let’s create the War file again.
-You should execute just warble and set the JRUBY_ OPTS variable separately.) That generates the War file with our Rails application embedded on it.
+You should execute just warble and set the JRUBY_ OPTS variable separately.
+That generates the War file with our Rails application embedded on it.
 After it is deployed, you can visit the corresponding URLs.
+On my computer, the behavior is as follows: when I visit the URL http://localhost:8080/demo/standard/message, I get the message on the screen “Anybody can read this meaningless message.”
 However, if I visit the URL http://localhost:8080/demo/admin/message, the familiar login page is shown.
+After I log in with the username car and the password scarvarez, I see the following message on the page: “This is top secret code.” This is the behavior we expected.
 We have secured our Rails application with basic web-layer security.
 The web.xml.erb in the config folder, including configuration for Spring Security.
 Spring Security, Groovy, and Grails Groovy is one of the strongest contenders for the number one spot in the non-Java JVM language space.
@@ -1974,7 +2047,8 @@ In these last two sections, I just scratched the surface of the functionality av
 You can do virtually everything you can do using the standard Java support.
 For a comprehensive guide to using the Grails plugin, take a look at its official page at http://grails-plugins.github.com/grails-spring-security-core/docs/manual/
 Spring Security and Scala Scala is probably the strongest language (in the sense of number of adopters and the liveliness of the community around it) running on top of the Java Virtual Machine apart from Java itself.
-Scala also has a version that runs on the .NET platform.) Scala is a very powerful, general-purpose programming language that tries to merge the best of the object-oriented and functional programming paradigms.
+Scala also has a version that runs on the .NET platform.
+Scala is a very powerful, general-purpose programming language that tries to merge the best of the object-oriented and functional programming paradigms.
 Scala is a language that aims to provide a concise and elegant alternative to the world of enterprise Java programming, while keeping the type safety of Java.
 As I said, it comes with functional programming features built in, adding a whole new layer of power for the seasoned object-oriented programmer that increases productivity.
 I am not an expert in Scala or functional programming (far from it as I have just recently started to look at them) but I will give you the core definitions and the main characteristics of both and show you how to use them with Spring and Spring Security.
@@ -1992,10 +2066,10 @@ You can try it a bit from the command line.
 Figure 9-8 shows some interaction with this command-line REPL (read-eval-print loop) interpreter.
 The preceding figure shows a simple set of commands in the Scala REPL interpreter.
 First, you perform a simple sum operation using two integer values.
-Then you define the value entero of type Int (implicit) and assign it the value 5
 The next line defines a new function called suma that receives two Int parameters and returns an Int value.
 Note N  Scala makes a distinction between values and variables.
 Values are like constants in other programming languages, and they are values that can’t change.
+If you try to modify the entero value shown in Figure 9-8, you’ll get an error message such as “error: reassignment to val.” Values are defined with the val keyword.
 Variables, on the other hand, are much like variables in any other language, and you can reassign values to them whenever you want.
 OK, that was your introduction to Scala! It was a very simple introduction, I know.
 However, as I said, covering the language in depth is outside the scope of this book and there are a lot of great books dedicated to the topic.
@@ -2080,6 +2154,7 @@ I’m talking about Kevin Shea, who was my main editorial contact and made sure 
 I’m talking about Tom Welsh, who had the great responsibility of reading every chapter as I was writing them and gave great input on each section, including helping with my use of English grammar as well as ways to make the different parts more attractive to potential readers.
 I am talking about Manuel Jordan, who not only read every single chapter in a very detailed way, but also took on the laborious job of evaluating and executing every single line of code and made sure that the book provides code samples that can be reproduced by the readers in their own environments.
 His input is greatly appreciated, and it is the difference between having a full book or a half a book.
+There were, of course, many more people in Apress involved in the full review phases of the book, and I want to say “thank you for your help” to all of them.
 I would like to also thank the creators, committers and community of Spring and Spring Security for creating such an amazing piece of software and making it available to everyone.
 A big thank you to them for letting all developers share their knowledge and ways of work by freely distributing the source code of the different projects covered by the SpringSource umbrella.
 Finally, I want to thank my wife for being with me all the time and motivating me to keep going forward.

@@ -106,6 +106,7 @@ Don would like to thank the support he got from coworkers at Greenplum, who prov
 Also, thanks to Andy O’Brien for contributing the chapter on Postgres.
 Adam would like to thank his family, friends, and caffeine.
 MapReduce is a computing paradigm for processing data that resides on hundreds of computers, which has been popularized recently by Google, Hadoop, and many others.
+The paradigm is extraordinarily powerful, but it does not provide a general solution to what many are calling “big data,” so while it works particularly well on some problems, some are more challenging.
 This book will teach you what problems are amenable to the MapReduce paradigm, as well as how to use it effectively.
 At first glance, many people do not realize that MapReduce is more of a framework than a tool.
 You have to fit your solution into the framework of map and reduce, which in some situations might be challenging.
@@ -132,13 +133,14 @@ None of the patterns in this very popular book were new and many had been in use
 The reason why it was and still is so influential is the authors took the time to document the most important design patterns across the field of object-oriented programming.
 Since the book was published in 1994, most individuals interested in good design heard about patterns from word of mouth or had to root around conferences, journals, and a barely existent World Wide Web.
 Design patterns have stood the test of time and have shown the right level of abstraction: not too specific that there are too many of them to remember and too hard to tailor to a problem, yet not too general that tons of work has to be poured into a pattern to get things working.
+Simply saying “abstract factory” is easier than explaining what an abstract factory is over and over.
 Also, when looking at a stranger’s code that implements an abstract factory, you already have a general understanding of what the code is trying to accomplish.
 MapReduce design patterns fill this same role in a smaller space of problems and solutions.
 They provide a general framework for solving your data computation issues, without being specific to the problem domain.
 Experienced MapReduce developers can pass on knowledge of how to solve a general problem to more novice MapReduce developers.
 This is extremely important because MapReduce is a new technology with a fast adoption rate and there are new developers joining the community every day.
 MapReduce design patterns also provide a common language for teams working together on MapReduce problems.
-The MapReduce world is in a state similar to the object-oriented world before 1994
+Suggesting to someone that they should use a “reduce-side join” instead of a “map-side replicated join” is more concise than explaining the lowlevel mechanics of each.
 Patterns today are scattered across blogs, websites such as StackOverflow, deep inside other books, and inside very advanced technology teams at organizations across the world.
 The intent of this book is not to provide some groundbreaking new ways to solve problems with MapReduce that nobody has seen before, but instead to collect patterns that have been developed by veterans in the field so that they can be shared with everyone else.
 Even provided with some design patterns, genuine experience with the MapReduce paradigm is still necessary to understand when to apply them.
@@ -190,7 +192,6 @@ One major differentiator between MapReduce design patterns is the semantics of t
 It takes the intermediate keys from the mapper and applies a user-provided method to aggregate values in the small scope of that one mapper.
 For example, because the count of an aggregation is the sum of the counts of each part, you can produce an intermediate count and then sum those intermediate counts for the final result.
 In many situations, this significantly reduces the amount of data that has to move over the network.
-Sending (hello world, 3) requires fewer bytes than sending (hello.
 Combiners will be covered in more depth with the patterns that use them extensively.
 Many new Hadoop developers ignore combiners, but they often provide extreme performance gains with no downside.
 We will point out which patterns benefit from using a combiner, and which ones cannot use a combiner.
@@ -213,11 +214,14 @@ Like the map function, the re duce function will change from job to job since it
 This can typically be customized to provide richer output formats, but in the end, the data is written out to HDFS, regardless of format.
 Like the record reader, customizing your own output format is outside of the scope of this book, since it simply deals with I/O.
 Hadoop Example: Word Count Now that you’re refreshed on the steps of the whole MapReduce process, let’s dive into a quick and simple example.
+The “Word Count” program is the canonical example in MapReduce, and for good reason.
 It is a straightforward application of MapReduce and MapReduce can handle it extremely efficiently.
+Many people complain about the “Word Count” program being overused as an example, but hopefully the rest of the book makes up for that!
 In this particular example, we’re going to be doing a word count over user-submitted comments on StackOverflow.
 The content of the Text field will be pulled out and preprocessed a bit, and then we’ll count up how many times we see each word.
 The first chunk of code we’ll look at is the driver.
 The driver takes all of the components that we’ve built for our MapReduce job and pieces them together to be submitted to execution.
+This code is usually pretty generic and considered “boiler plate.” You’ll find that in all of our patterns the driver stays the same for the most part.
 The purpose of the driver is to orchestrate the jobs.
 The first few lines of main are all about parsing command line arguments.
 Then we start setting up the job object by telling it what classes to use for computations and what input paths and output paths to use.
@@ -225,6 +229,7 @@ That’s about it! It’s just important to make sure the class names match up w
 One way you’ll see this code change from pattern to pattern is the usage of job.setCom binerClass.
 In some cases, the combiner simply cannot be used due to the nature of the reducer.
 In other cases, the combiner class will be different from the reducer class.
+The combiner is very effective in the “Word Count” program and is quite simple to activate.
 Next is the mapper code that parses and prepares the text.
 Once some of the punctuation and random text is cleaned up, the text string is split up into a list of words.
 Then the intermediate key produced is the word and the value produced is simply “1.” This means we’ve seen this word once.
@@ -232,7 +237,6 @@ Even if we see the same word twice in one line, we’ll output the word and “1
 Eventually, all of these ones will be summed together into the global count of that word.
 You’ll see it used in a number of our examples.
 It basically takes a line of the StackOverflow XML (which has a very predictable format) and matches up the XML attributes with the values into a Map.
-This code is a bit more complicated than the driver (for good reason!)
 The mapper is where we’ll see most of the work done.
 The first major thing to notice is the type of the parent class:
 We don’t care about the key of the input in this case, so that’s why we use Object.
@@ -243,6 +247,7 @@ The default implementation is the Tex tInputFormat, which provides the number of
 These key/value data types are likely to change if you are using different input formats.
 Up until we start using the StringTokenizer towards the bottom of the code, we’re just cleaning up the string.
 We unescape the data because the string was stored in an escaped manner so that it wouldn’t mess up XML parsing.
+Next, we remove any stray punctuation so that the literal string Hadoop! is considered the same word as Hadoop? and Hadoop.
 Finally, for each token (i.e., word) we emit the word with the number 1, which means we saw the word once.
 The framework then takes over to shuffle and sorts the key/value pairs to reduce tasks.
 The reduce function gets called once per key grouping, in this case each word.
@@ -261,6 +266,7 @@ Each reducer will create one file, so if you want to coalesce them together you�
 Now that we’ve gotten a straightforward example out of the way, let’s dive into some design patterns!
 Pig and Hive There is less need for MapReduce design patterns in a ecosystem with Hive and Pig.
 However, we would like to take this opportunity early in the book to explain why MapReduce design patterns are still important.
+They provide an interface that has nothing to do with “map” or “reduce,” but the systems interpret the higher-level language into a series of MapReduce jobs.
 Much like how a query planner in an RDBMS translates SQL into actual operations on data, Hive and Pig translate their respective languages into MapReduce operations.
 As will be seen throughout this book in the resemblances sections, Pig and SQL (or HiveQL) can be significantly more terse than the raw Hadoop implementations in Java.
 For example, it will take several pages to explain total order sorting, while Pig is able to get the job done in a few lines.
@@ -320,8 +326,6 @@ The output of the job will be a set of part files containing a single record per
 Each record will consist of the key and all aggregate values.
 The application outputs each word of a document as the key and “1” as the value, thus grouping by words.
 The reduce phase then adds up the integers and outputs each unique word with the sum.
-An example of a word count application can be seen in Chapter 1
-Record count A very common analytic to get a heartbeat of your data flow rate on a particular interval (weekly, daily, hourly, etc.)
 Min/Max/Count An analytic to determine the minimum, maximum, and count of a particular event, such as the first time a user posted, the last time a user posted, and the number of times they posted in between that time period.
 You don’t have to collect all three of these aggregates at the same time, or any of the other use cases listed here if you are only interested in one of them.
 A combiner can be used for all three, but requires a more complex approach than just reusing the reducer implementation.
@@ -374,6 +378,7 @@ After the iteration, simply divide the sum by the count and output the average.
 However, if we do it this way we cannot use this same reducer implementation as a combiner, because calculating an average is not an associative operation.
 Instead, our mapper will output two “columns” of data, count and average.
 For each input record, this will simply be “1” and the value of the field.
+The reducer will multiply the “count” field by the “average” field to add to a running sum, and add the “count” field to a running count.
 It will then divide the running sum with the running count and output the count with the calculated average.
 With this more round-about algorithm, the reducer code can be used as a combiner as associativity is preserved.
 The following descriptions of each code section explain the solution to the problem.
@@ -468,6 +473,7 @@ It’s important to parse the incoming records as efficiently as possible to imp
 If the number of unique keys and the number of identifiers is large, more data will be sent to the reducers.
 If more data is going to the reducers, you should increase the number of reducers to increase parallelism during the reduce phase.
 Inverted indexes are particularly susceptible to hot spots in the index keys, since the index keys are rarely evenly distributed.
+For example, the reducer that handles the word “the” in a text search application is going to be particularly busy since “the” is seen in so much text.
 This can slow down your entire job since a few reducers will take much longer than the others.
 To avoid this problem, you might need to implement a custom partitioner, or omit common index keys that add no value to your end goal.
 Building an inverted index is a straightforward MapReduce application and is often the second example newcomers to MapReduce experience after the word count application.
@@ -570,6 +576,7 @@ Your data set is large and you want to take a subset of this data to focus in on
 The subset might be a significant portion of the data set or just a needle in the haystack.
 Either way, you need to use the parallelism of MapReduce to wade through all of your data and find the keepers.
 For example, you might be interested only in records that have something to do with Hadoop: Hadoop is either mentioned in the raw text or the event is tagged by a “Hadoop” tag.
+Filtering can be used to keep records that meet the “something to do with Hadoop” criteria and keep them, while tossing out the rest of the records.
 Big data and processing systems like Hadoop, in general, are about bringing all of your organization’s data to one location.
 Filtering is the way to pull subsets back out and deliver them to analysis shops that are interested in just that subset.
 Filtering is also used to zoom in on a particular set of records that match your criteria that you are more curious about.
@@ -646,7 +653,6 @@ First, we want to filter the record based on some sort of set membership operati
 For example: keep or throw away this record if the value in the user field is a member of a predetermined list of users.
 Second, the set membership is going to be evaluated with a Bloom filter, described in the Appendix A.
 In one sense, Bloom filtering is a join operation in which we don’t care about the data values of the right side of the join.
-This pattern is slightly related to the replicated join pattern covered later in Chapter 5
 It is comparing one list to another and doing some sort of join logic, using only map tasks.
 Instead of replicating the hot list everywhere with the distributed cache, as in the replicated join, we will send a Bloom filter data object to the distributed cache.
 This allows a filter like operation with a Bloom filter instead of the list itself, which allows you to perform this operation across a much larger data set because the Bloom filter is much more compact.
@@ -663,7 +669,6 @@ In this case, if we accidentally keep some records, we still achieved our goal o
 The following criteria are necessary for Bloom filtering to be relevant:
 A feature can be extracted from each record that could be in a set of hot values.
 There is a predetermined set of items for the hot values.
-Some false positives are acceptable (i.e., some records will get through when they.
 Figure 3-2 shows the structure of Bloom filtering and how it is split into two major components.
 First, the Bloom filter needs to be trained over the list of values.
 Next is the filtering MapReduce job, which has the same structure as the previous filtering pattern in this chapter, except it will make use of the distributed cache as well.
@@ -680,6 +685,7 @@ Therefore, updating the Bloom filter in a lazy fashion (i.e., only updating it w
 The output of the job will be a subset of the records in that passed the Bloom filter membership test.
 You should expect that some records in this set may not actually be in the set of hot values, because Bloom filters have a chance of false positives.
 The most straightforward use case is cleaning out values that aren’t hot.
+For example, you may be interested only in data that contains a word in a list of 10,000 words that deal with Hadoop, such as “map,” “partitioning,” etc.
 You take this list, train a Bloom filter on it, then check text as it is coming in to see whether you get a Bloom filter hit on any of the words.
 If you do, forward the record, and if not don’t do anything.
 The fact that you’ll get some false positives isn’t that big of a deal, since you still got rid of most of the data.
@@ -688,6 +694,7 @@ For example, you might have to hit a webservice or an external database to check
 The situations in which this may be the case are far and few between, but they do crop up in larger organizations.
 Instead of dumping this list periodically to your cluster, you can instead have the originating system produce a Bloom filter and ship that instead.
 Once you have the Bloom filter in place and filter out most of the data, you can do a second pass on the records that make it through to double check against the authoritative source.
+Later, in Chapter 5, we’ll see a pattern called “Reduce Side Join with Bloom Filtering” where a Bloom filter is used to reduce the amount of data going to reducers.
 By determining whether a record will be relevant ahead of time, we can reduce network usage significantly.
 Bloom filters are relatively new in the field of data analysis, likely because the properties of big data particularly benefit from such a thing in a way previous methodologies have not.
 In both SQL and Pig, Bloom filters can be implemented as user-defined functions, but as of the writing of this book, there is no native functionality out of the box.
@@ -719,6 +726,7 @@ In the map method, the comment is extracted from each input record.
 The comment is tokenized into words, and each word is cleaned of any extraneous characters.
 If the word is a member, the entire record is output to the file system.
 A Bloom filter is trained on the bytes of the word.
+The important thing of this is that the words “the” and “The” may look the same, but the bytes are different.
 Unless case sensitivity matters in you algorithm, it is best to trim the string and make the string all lower case when training and testing the filter.
 Because this is a map-only job, there is no combiner or reducer.
 All output records will be written directly to the file system.
@@ -757,6 +765,7 @@ The reason why this pattern is particularly interesting springs from a compariso
 In SQL, you might be inclined to sort your data set by the ranking value, then take the top K records from that.
 In MapReduce, as we’ll find out in the next chapter, total ordering is extremely involved and uses significant resources on your cluster.
 This pattern will instead go about finding the limited number of high-values records without having to sort the data.
+Plus, seeing the top ten of something is always fun! What are the highest scoring posts on Stack Overflow? Who is the oldest member of your service? What is the largest single order made on your website? Which post has the word “meow” the most number of times?
 This pattern requires a comparator function ability between two records.
 That is, we must be able to compare one record to another to determine which is “larger.”
 The number of output records should be significantly fewer than the number of input records because at a certain point it just makes more sense to do a total ordering of the data set.
@@ -771,6 +780,7 @@ In the reduce function, we’ll do what we did in the mapper: keep an array of K
 The reason we had to select the top K from every mapper is because it is conceivable that all of the top records came from one file split and that corner case needs to be accounted for.
 They may be the users that are having difficulty using your system, or power users of your website.
 Outliers, like filtering and grouping, may give you another perspective from your data set.
+Select interesting data If you are able to score your records by some sort of value score, you can pull the “most valuable” data.
 This is particularly useful if you plan to submit data to followon processing, such as in a business intelligence tool or a SQL database, that cannot handle the scale of your original data set.
 Value scoring can be as complex as you make it by applying advanced algorithms, such as scoring text based on how grammatical it is and how accurate the spelling is so that you remove most of the junk.
 Catchy dashboards This isn’t a psychology book, so who knows why top ten lists are interesting to consumers, but they are.
@@ -806,6 +816,7 @@ There is a fuzzy line in which just doing a total ordering of the data set is li
 Determining the top ten records of a data set is an interesting use of MapReduce.
 Each mapper determines the top ten records of its input split and outputs them to the reduce phase.
 The mappers are essentially filtering their input split to the top ten records, and the reducer is responsible for the final ten.
+Just remember to configure your job to only use one reducer! Multiple reducers would shard the data and would result in multiple “top ten” lists.
 The following descriptions of each code section explain the solution to the problem.
 Problem: Given a list of user information, output the information of the top ten users based on reputation.
 The mapper processes all input records and stores them in a TreeMap.
@@ -968,6 +979,7 @@ All we do differently is create a MultipleInputs object and add the comments pat
 The paths for the posts and comments data are provided via the command line, and the program retrieves them from the args array.
 In this case, there are two mapper classes, one for comments and one for posts.
 In both, we extract the post ID to use it as the output key.
+We output the input value prepended with a character (“P” for a post or “C” for a comment) so we know which data set the record came from during the reduce phase.
 All the values are iterated to get the post record and collect a list of comments.
 We know which record is which by the flag we added to the value.
 These flags are removed when assigning post or adding the list.
@@ -991,8 +1003,10 @@ For an answer, we will extract ParentId as the key and label it as an answer.
 The reducer code is very similar to the that in the previous example.
 It iterates through the input values and grabs the question and answer, being sure to remove the flag.
 It then nests the answers inside the question in the same fashion as the previous example.
+The difference is that tags are “question” instead of the “post” and “answer” instead of “comment.” The helper functions are omitted here for brevity.
 Partitioning Pattern Description The partitioning pattern moves the records into categories (i.e., shards, partitions, or bins) but it doesn’t really care about the order of records.
 The intent is to take similar records in a data set and partition them into distinct, smaller data sets.
+If you want to look at a particular set of data—such as postings made on a particular date—the data items are normally spread out across the entire data set.
 So looking at just one of these subsets requires an entire scan of all of the data.
 Partitioning means breaking a large set of data into smaller subsets, which can be chosen by some criterion relevant to your analysis.
 To improve performance, you can run a job that takes the data set and breaks the partitions out into separate files.
@@ -1000,7 +1014,6 @@ Then, when a particular subset for the data is to be analyzed, the job needs onl
 Partitioning by date is one of the most common schemes.
 This helps when we want to analyze a certain span of time, because the data is already grouped by that criterion.
 For instance, suppose you have event data that spans three years in your Hadoop cluster, but for whatever reason the records are not ordered at all by date.
-If instead you had the events partitioned into months (i.e., you have a file with January data, a file with February data, etc.), you would only need to run your MapReduce job over the January and February partitions.
 It would be even better if they were partitioned by day!
 Partitioning can also help out when you have several different types of records in the same data set, which is increasingly common in NoSQL.
 For example, in a HTTP server logs, you’ll have GET and POST requests, internal system messages, and error messages.
@@ -1014,7 +1027,6 @@ The one major requirement to apply this pattern is knowing how many partitions y
 For example, if you know you are going to partition by day of the week, you know that you will have seven partitions.
 You can get around this requirement by running an analytic that determines the number of partitions.
 For example, if you have a bunch of timestamped data, but you don’t know how far back it spans, run a job that figures out the date range for you.
-This pattern is interesting in that it exploits the fact that the partitioner partitions data (imagine that!)
 There is no actual partitioning logic; all you have to do is define the function that determines what partition a record is going to go to in a custom partitioner.
 But this pattern can do additional processing in the reducer if needed.
 Data is still going to get grouped and sorted, so data can be deduplicated, aggregated, or summarized, per partition.
@@ -1023,6 +1035,8 @@ Since each category will be written out to one large file, this is a great place
 You have some sort of continuous variable, such as a date or numerical value, and at any one time you care about only a certain subset of that data.
 Partitioning the data into bins will allow your jobs to load only pertinent data.
 Partition pruning by category Instead of having some sort of continuous variable, the records fit into one of several clearly defined categories, such as country, phone area code, or language.
+Sharding A system in your architecture has divisions of data—such as different disks—and you need to partition the data into these existing shards.
+This allows “partition pruning” which allows the database to exclude large portions of irrelevant data before running the SQL.
 Other patterns This pattern is similar to the binning pattern in this chapter.
 In most cases, binning can perform the same partitioning behavior as this pattern.
 The main performance concern with this pattern is that the resulting partitions will likely not have similar number of records.
@@ -1030,6 +1044,7 @@ Perhaps one partition turns out to hold 50% of the data of a very large data set
 If implemented naively, all of this data will get sent to one reducer and will slow down processing significantly.
 Split very large partitions into several smaller partitions, even if just randomly.
 Assign multiple reducers to one partition and then randomly assign records into each to spread it out a bit better.
+For example, consider the “last access date” field for a user in StackOverflow.
 If we partitioned on this property equally over months, the most recent month will very likely be much larger than any other month.
 To prevent skew, it may make sense to partition the most recent month into days, or perhaps just randomly.
 This method doesn’t affect processing over partitions, since you know that these set of files represent one larger partition.
@@ -1039,7 +1054,6 @@ This is done by creating a custom partitioner to assign record to a particular p
 The following descriptions of each code section explain the solution to the problem.
 Problem: Given a set of user information, partition the records based on the year of last access date, one partition per year.
 The job needs to be configured to use the custom built partitioner, and this partitioner needs to be configured.
-The minimum last access year needs to be configured, which is 2008
 The reason for this is explained in the partitioner code section.
 Also, the number of reducers is important to make sure the full range of partitions is accounted for.
 Users can fall into these dates as well as those in between, meaning the job is configured to have exactly 4 reducers.
@@ -1099,6 +1113,7 @@ This may be fixed in a newer version of Hadoop.
 Total Order Sorting Pattern Description The total order sorting pattern is concerned with the order of the data from record to record.
 You want to sort your data in parallel on a sort key.
 Sorting in MapReduce, or more generally in parallel, is not easy.
+This is because the typical “divide and conquer” approach is a bit harder to apply here.
 Each individual reducer will sort its data by key, but unfortunately, this sorting is not global across all data.
 What we want to do here is a total order sorting where, if you concatenate the output files, the records are sorted.
 If we just concatenate the output of a simple MapReduce job, segments of the data will be sorted, but the whole set will not be.
@@ -1496,8 +1511,10 @@ The Cartesian product produces a massive explosion in data size, as even a self-
 It should be used very sparingly because it will use up many map slots for a very long time.
 This will dramatically increase the run time of other analytics, as any map slots taken by a Cartesian product are unusable by other jobs until completion.
 If the number of tasks is greater than or equal to the total number of map slots in the cluster, all other work won’t get done for quite some time.
+Each input split is paired up with every other input split—effectively creating a data set of O(n2), n being the number of bytes.
 A single record is read from the left input split, and then the entire right input split is read and reset before the second record from the left input split is read.
 If a single input split contains a thousand records, this means the right input split needs to be read a thousand times before the task can finish.
+This is a massive amount of processing time! If a single task fails for an odd reason, the whole thing needs to be restarted! You can see why a Cartesian product is a terrible, terrible thing to do in MapReduce.
 This example demonstrates how to perform a self-join using the StackOverflow comments.
 This self-join inspects a pair of comments and determines how similar they are to one another based on common words used between the two.
 If they are similar enough, the pair is output to the file system.
@@ -1505,6 +1522,7 @@ Common words are removed from each comment along with other extra data in a prep
 This example is different than all other examples in the book, in that it pays special attention to how the data is read.
 Here, we create a custom input format to generate the Cartesian product of the input splits for the Job.
 The record reader of each map task performs the actual Cartesian product and presents each pair to the mapper for processing.
+It accomplishes this by reading a single record from the “left” data set, then pairing it with all the records from the “right” data set.
 The next record is read from the left data set, the reader of the right data set is reset, and it is used to pair up again.
 This process continues until there are no more records in the left set.
 The following descriptions of each code section explain the solution to the problem.
@@ -1528,11 +1546,13 @@ At this point, the record reader has given the Cartesian product of both input s
 Some of the more simple methods to adhere to the RecordReader interface are missing for brevity, such as close() and getPos()
 There are also some optimization opportunities that could be implemented, such as forcing the record reader to the next left record if you know it is not going to be useful.
 In this example, if the left record contains only one word in it and we are looking for pairs of comments that have a minimum of 3 common words, it doesn’t make much sense to read the entire right input split because no output is going to be made.
+Record readers to get key value pairs private RecordReader leftRR = null, rightRR = null;
 Store configuration to re-create the right record reader private FileInputFormat rightFIF; private JobConf rightConf; private InputSplit rightIS; private Reporter rightReporter;
 For each Text object, it reads the word tokens into a set.
 The sets are then iterated to determine how many common words there are between the two.
 If there are more then ten words, the pair is output to the file system.
 This chapter is different from the others in that it doesn’t contain patterns for solving a particular problem, but patterns that deal with patterns.
+The term metapatterns is directly translated to “patterns about patterns.” The first method that will be discussed is job chaining, which is piecing together several patterns to solve complex, multistage problems.
 The second method is job merging, which is an optimization for performing several analytics in the same MapReduce job, effectively killing multiple birds with one stone.
 Job Chaining Job chaining is extremely important to understand and have an operational plan for in your environment.
 Many people find that they can’t solve a problem with a single MapReduce job.
@@ -1628,7 +1648,8 @@ Leaving any intermediate output will fill up a cluster quickly and require you t
 If you won’t be needing the intermediate output for any other analytics, by all means delete it in the code.
 The driver in parallel job chaining is similar to the previous example.
 The only big enhancement is that jobs are submitted in parallel and then monitored until completion.
-However, they require the previous example to have completed successfully.) This has the added benefit of utilizing cluster resources better to have them execute simultaneously.
+However, they require the previous example to have completed successfully.
+This has the added benefit of utilizing cluster resources better to have them execute simultaneously.
 The following descriptions of each code section explain the solution to the problem.
 Problem: Given the previous example’s output of binned users, run parallel jobs over both bins to calculate the average reputation of each user.
 The mapper splits the input value into a string array.
@@ -1774,7 +1795,6 @@ This entire flow is executed in one MapReduce job using ChainMapper and ChainRed
 This example uses the deprecated mapred API, because ChainMapper and ChainReducer were not available in the mapreduce package when this example was written.
 The following descriptions of each code section explain the solution to the problem.
 Problem: Given a set of user posts and user information, bin users based on whether their reputation is below or above 5,000
-This mapper implementation gets the user ID from the input post record and outputs it with a count of 1
 This mapper implementation is fed the output from the previous mapper.
 It reads the users data set during the setup phase to create a map of user ID to reputation.
 This map is used in the calls to map to enrich the output value with the user’s reputation.
@@ -1823,6 +1843,7 @@ The other method is to separate the code into two helper map functions that proc
 In the mapper, change the writing of the key and value to “tag” the key with the map source.
 Tagging the key to indicate which map it came from is critical so that the data from the different maps don’t get mixed up.
 There are a few ways to do this depending on the original data type.
+If it is a string, you can simply make the first character the tag, so for instance you could change “parks” to “Aparks” when it comes from the first map, and “Bparks” when it comes from the second map.
 The general way to tag is to make a custom composite tuple-like key that stores the tag separately from the original data.
 This is definitely the cleaner way of doing things, but takes a bit more work.
 In the reducer, parse out the tag and use an if-statement to switch what reducer code actually gets executed.
@@ -1848,6 +1869,7 @@ The map method simply passes the parameters to two helper functions, each of whi
 The map methods were slightly changed from their original respective examples in order to both output Text objects as the key and value.
 This is a necessary change so we can have the same type of intermediate key/value pairs we had in the separate map logic.
 The anonymizeMap method generates an anonymous record from the input value, whereas the distinctMap method grabs the user ID from the record and outputs it.
+Each intermediate key/value pair written out from each helper map method is tagged with either “A” for anonymize or “D” for distinct.
 Each helper math method parses the input record, but this parsing should instead be done inside the actual map method, The resulting Map<String,String> can then be passed to both helper methods.
 Any little optimizations like this can be very beneficial in the long run and should be implemented!
 The reducer’s calls to setup and cleanup handle the creation and closing of the MultipleOutputs utility.
@@ -1857,6 +1879,7 @@ For the anonymous call, all the input values are iterated over and written to a 
 Adding the slash and the “part” creates a folder under the configured output directory that contains a number of part files equivalent to the number of reduce tasks.
 For the distinct reduce call, the input key is written to MultipleOutputs with a Null Writable to a named output of distinct/part.
 Again, this will create a folder called distinct underneath the job’s configured output directory.
+In this example, we are outputting the same essential format—a Text object and a NullWritable object— from each of the reduce calls.
 This won’t always be the case! If your jobs have conflicting output key/value types, you can utilize the Text object to normalize the outputs.
 The driver code looks just like any other driver that uses MultipleOut puts.
 All the logic of merging jobs is done inside the mapper and reducer implementation.
@@ -1892,7 +1915,6 @@ As long as you can express the input as InputSplit objects and key/value pairs, 
 Just be sure to keep in mind what an input split represents and try to take advantage of data locality.
 The implementation of getSplits typically uses the given JobContext object to retrieve the configured input and return a List of InputSplit objects.
 The input splits have a method to return an array of machines associated with the locations of the data in the cluster, which gives clues to the framework as to which TaskTracker should process the map task.
-This method is also a good place to verify the configuration and throw any necessary exceptions, because the method is used on the front-end (i.e.
 Typically, a new instance is created and immediately returned, because the record reader has an initialize method that is called by the framework.
 RecordReader The RecordReader abstract class creates key/value pairs from a given InputSplit.
 While the InputSplit represents the byte-oriented view of the split, the RecordReader makes sense out of it for processing by a mapper.
@@ -1945,6 +1967,7 @@ Typically you’ll generate a bunch of the data at once then use it over and ove
 However, when you do need to generate data, MapReduce is an excellent system for doing it.
 The most common use case for this pattern is generating random data.
 Building some sort of representative data set could be useful for large scale testing for when the real data set is still too small.
+It can also be useful for building “toy domains” for researching a proof of concept for an analytic at scale.
 Generating random data is also used often used as part of a benchmark, such as the commonly used TeraGen/TeraSort and DFSIO.
 Unfortunately, the implementation of this pattern isn’t straightforward in Hadoop because one of the foundational pieces of the framework is assigning one map task to an input split and assigning one map function call to one record.
 In this case, there are no input splits and there are no records, so we have to fool the framework to think there are.
@@ -2012,6 +2035,7 @@ This example is a basic means for writing to a number of Redis instances in para
 It is often referred to as a data structure server, since keys can contain strings, hashes, lists, sets, and sorted sets.
 Redis is written in ANSI C and works in most POSIX systems, such as Linux, without any external dependencies.
 In order to work with the Hadoop framework, Jedis is used to communicate with Redis.
+Jedis is an open-source “blazingly small and sane Redis java client.” A list of clients written for other languages is available on their website.
 Unlike other examples in this book, there is no actual analysis in this example (along with the rest of the examples in this chapter)
 It focuses on how to take a data set stored in HDFS and store it in an external data source using a custom FileOutputFormat.
 In this example, the Stack Overflow users data set is written to a configurable number of Redis instances, specifically the user-to-reputation mappings.
@@ -2149,7 +2173,6 @@ Problem: Given a set of user data, partition the user-to-reputation mappings by 
 To help better store information, a custom Writable Comparable is implemented in order to allow the mapper to set information needed by the record writer.
 This class contains methods to set and get the field name to be stored in Redis, as well as the last access month.
 The last access month accepts a zero-based integer value for the month, but is later turned into a string representation for easier querying in the next example.
-Take the time to implement the compareTo, toString, and hashCode methods (like every good Java developer!)
 This output format is extremely basic, as all the grunt work is handled in the record writer.
 The main thing to focus on is the templated arguments when extending the InputFormat class.
 This output format accepts our custom class as the output key and a Text object as the output value.
@@ -2169,8 +2192,10 @@ Even better, we need to read only from the hashes that are holding the specific 
 This is much better than having to connect to all the desired instances and read all the data, only to throw most of it away!
 The sections below with its corresponding code explain the following problem.
 Problem: Given a query for user to reputation mappings by months, read only the data required to satisfy the query in parallel.
+The input split shown here is very similar to the input split in “External Source Input Example” (page 197)
 Instead of storing one hash key, we are going to store multiple hash keys.
 This is because the data is partitioned based on month, instead of all the data being randomly distributed in one hash.
+Much like the output format we showed earlier in “OutputFormat code” (page 207), this output format writes RedisKey objects, this input format reads the same objects and is templated to enforce this on mapper implementations.
 It initially creates a hash map of host-to-input splits in order to add the hash keys to the input split, rather than adding both months of data to the same split.
 If a split has not been created for a particular month, a new one is created and the month hash key is added.
 Otherwise, the hash key is added to the split that has already been created.
@@ -2193,6 +2218,7 @@ New features and new systems are popping up every day and new users are out in d
 More importantly for the subject of MapReduce Design Patterns, a growing number of users brings along a growing number of experts.
 These experts are the ones that will drive the community’s documentation of design patterns not only by sharing new ones, but also by maturing the already existing ones.
 In this chapter, we’ll discuss and speculate what the future holds for MapReduce design patterns.
+Where will they come from? What systems will benefit from design patterns? How will today’s design patterns change with the technology? What trends in data will affect the design patterns of today?
 Trends in the Nature of Data MapReduce systems such as Hadoop aren’t being used just for text analysis anymore.
 Increasing number of users are deploying MapReduce jobs that analyze data once thought to be too hard for the paradigm.
 New design patterns are surely to arise to deal with this to transform a solution from pushing the limits of the system to making it daily practice.
@@ -2218,6 +2244,7 @@ As in the previous section about large media files, this gap is likely to be fil
 Some new operational patterns for storing data of this nature might crop up as users take this problem more seriously in production.
 New patterns for doing streaming-like analysis in the framework of batch MapReduce will mature.
 Novel systems that deal with streaming data in Hadoop have cropped up, most notably the commercial product HStreaming and the open-source Storm platform, recently released by Twitter.
+The authors actually considered some “streaming patterns” to be put into this book, but none of them were anywhere near mature enough or vetted enough to be officially documented.
 The map task starts up and streams data into the RecordReader instead of loading already existing data from a file.
 This has significant operational concerns that make it difficult to implement.
 The second is splitting up the job into several one-map task jobs that get fired off every time some data comes in.
@@ -2251,19 +2278,23 @@ For example, some people may be surprised how resource intensive sorting is in a
 How might have you solved this problem otherwise? Finding some examples outside of a MapReduce context (such as we did with SQL and Pig) is useful as a metaphor that helps conceptually bridge to a MapReducespecific solution.
 Overview Conceived by Burton Howard Bloom in 1970, a Bloom filter is a probabilistic data structure used to test whether a member is an element of a set.
 Bloom filters have a strong space advantage over other data structures such as a Java Set, in that each element uses the same amount of space, no matter its actual size.
+Bloom filters are introduced as part of a pattern in “Bloom Filtering” (page 49)
 While the data structure itself has vast memory advantages, it is not always 100% accurate.
+This means the result of each test is either a definitive “no” or “maybe.” You will never get a definitive “yes.” With a traditional Bloom filter, elements can be added to the set, but not removed.
 There are a number of Bloom filter implementations that address this limitation, such as a Counting Bloom Filter, but they typically require more memory.
 As more elements are added to the set, the probability of false positives increases.
 Once they have been sized and trained, they cannot be reverse-engineered to achieve the original set nor resized and still maintain the same data set representation.
 The following variables are used in the more detailed explanation of a Bloom filter below: m.
 A Bloom filter is represented by a continuous string of m bits initialized to zero.
-For each element in n, k hash function values are taken modulo m to achieve an index from zero to m - 1
 The bits of the Bloom filter at the resulting indices are set to one.
 As elements are added to the Bloom filter, some bits may already be set to one from previous elements in the set.
 When testing whether a member is an element of the set, the same hash functions are used to check the bits of the array.
+If a single bit of all the hashes is set to zero, the test returns “no.” If all the bits are turned on, the test returns “maybe.” If the member was used to train the filter, the k hashs would have set all the bits to one.
 The result of the test cannot be a definitive “yes” because the bits may have been turned on by a combination of other elements.
+If the test returns “maybe” but should have been “no,” this is known as a false positive.
 Thankfully, the false positive rate can be controlled if n is known ahead of time, or at least an approximation of n.
 The following sections describe a number of common use cases for Bloom filters, the limitations of Bloom filters and a means to tweak your Bloom filter to get the lowest false positive rate.
+A code example of training and using a Hadoop Bloom filter can be found in “Bloom filter training” (page 53)
 Use Cases This section lists a number of common use cases for Bloom filters.
 In any application that can benefit from a Boolean test prior to some sort of expensive operation, a Bloom filter can most likely be utilized to reduce a large number of unneeded operations.
 Representing a Data Set One of the most basic uses of a Bloom filter is to represent very large data sets in applications.
@@ -2315,4 +2346,5 @@ Shook graduated with a BS in Computer Science from the University of Maryland, B
 Seeking new challenges, he enrolled in the graduate program at UMBC with a focus on distributed computing technologies.
 Shook is involved in developing and instructing training curriculum for both Hadoop and Pig.
 He spends what little free time he has working on side projects and playing video games.
+In China this deer is sometimes known as sibuxiang or “like none of the four” because it has characteristics of four animals and yet is none of them.
 Many remark that it has the tail of a donkey, the hoofs of a cow, the neck of a camel, and the antlers of a deer.

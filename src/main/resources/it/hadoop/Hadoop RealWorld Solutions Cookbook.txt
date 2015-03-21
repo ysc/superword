@@ -36,6 +36,7 @@ Each chapter contains a set of recipes that pose, and then solve, technical chal
 A recipe breaks a single problem down into discrete steps that are easy to follow.
 This book covers unloading/loading to and from HDFS, graph analytics with Giraph, batch data analysis using Hive, Pig, and MapReduce, machine-learning approaches with Mahout, debugging and troubleshooting MapReduce jobs, and columnar storage and retrieval of structured data using Apache Accumulo.
 This book will give readers the examples they need to apply the Hadoop technology to their own problems.
+What this book covers Chapter 1, Hadoop Distributed File System – Importing and Exporting Data, shows several approaches for loading and unloading data from several popular databases that include MySQL, MongoDB, Greenplum, and MS SQL Server, among others, with the aid of tools such as Pig, Flume, and Sqoop.
 Chapter 2, HDFS, includes recipes for reading and writing data to/from HDFS.
 It shows how to use different serialization libraries, including Avro, Thrift, and Protocol Buffers.
 Also covered is how to set the block size and replication, and enable LZO compression.
@@ -67,7 +68,9 @@ Hadoop beginners can use the recipes to accelerate the learning curve and see re
 For more experienced Hadoop developers, many of the tools and techniques might expose them to new ways of thinking or help clarify a framework they had heard of but the value of which they had not really understood.
 Conventions In this book, you will find a number of styles of text that distinguish between different kinds of information.
 Here are some examples of these styles, and an explanation of their meaning.
+Code words in text are shown as follows: “All of the Hadoop filesystem shell commands take the general form hadoop fs –COMMAND.”
 When we wish to draw your attention to a particular part of a code block, the relevant lines or items are set in bold:
+Words that you see on the screen, in menus or dialog boxes for example, appear in the text like this: “To build the JAR file, download the Jython java installer, run the installer, and select Standalone from the installation menu”
 Warnings or important notes appear in a box like this.
 Let us know what you think about this book—what you liked or may have disliked.
 Reader feedback is important for us to develop titles that you really get the most out of.
@@ -75,6 +78,7 @@ Customer support Now that you are the proud owner of a Packt book, we have a num
 Downloading the example code You can download the example code files for all Packt books you have purchased from your account at http://www.packtpub.com.
 If you purchased this book elsewhere, you can visit http://www.packtpub.com/support and register to have the files e-mailed directly to you.
 Errata Although we have taken every care to ensure the accuracy of our content, mistakes do happen.
+If you find a mistake in one of our books—maybe a mistake in the text or the code—we would be grateful if you would report this to us.
 By doing so, you can save other readers from frustration and help us improve subsequent versions of this book.
 If you find any errata, please report them by visiting http://www.packtpub.com/support, selecting your book, clicking on the errata submission form link, and entering the details of your errata.
 Once your errata are verified, your submission will be accepted and the errata will be uploaded on our website, or added to any list of existing errata, under the Errata section of that title.
@@ -116,7 +120,9 @@ Downloading the example code for this book You can download the example code fil
 If you purchased this book elsewhere, you can visit http://www.packtpub.
 The Hadoop shell commands are a convenient wrapper around the HDFS FileSystem API.
 The same applies to copying the data from HDFS to the local filesystem.
+The copyFromLocal command takes the general form of hadoop fs –copyFromLocal LOCAL_FILE_PATH URI.
 If the URI is not explicitly given, a default is used.
+The copyToLocal command takes the general form of hadoop fs –copyToLocal [-ignorecrc] [-crc] URI LOCAL_FILE_PATH.
 If the URI is not explicitly given, a default is used.
 The copyToLocal command does a Cyclic Redundancy Check (CRC) to verify that the data copied was unchanged.
 A failed copy can be forced using the optional –ignorecrc argument.
@@ -457,6 +463,7 @@ See also Apache Pig will be used with the following recipes in this chapter:
 Using Apache Pig to sort web server log data by timestamp.
 In this recipe, we will demonstrate the method of writing a simple Pig script to sort a dataset using the distributed processing power of the Hadoop cluster.
 Perform the following steps to sort data using Apache Pig:
+Next, order the web server log records by the timestamp field in the ascending order: ordered_weblogs = ORDER nobots BY timestamp;
 The Pig relational operator ORDER BY has the capability to provide total ordering of a dataset.
 The Pig ORDER BY relational operator sorts data by multiple fields, and also supports sorting data in the descending order.
 For example, to sort the nobots relationship by the ip and timestamp fields, we would use the following expression:
@@ -955,7 +962,6 @@ We reset the internal value for outKey to the string found on that line's positi
 For our example, this will be the IP value for the row.
 We emit the value of the newly reset outKey variable along with the value of outValue to mark one occurrence of that given IP address.
 Without the assistance of the combiner, this would present the reducer with an iterable collection of 1s to be counted.
-The implementation of the reduce() method will sum the integers and arrive at the correct total, but there's nothing that requires the integer values to be limited to the number 1
 We can use a combiner to process the intermediate key-value pairs as they are output from each mapper and help improve the data throughput in the shuffle phase.
 Since the combiner is applied against the local map output, we may see a performance improvement as the amount of data we need to transfer for an intermediate key/value can be reduced considerably.
 For counting the occurrences of distinct IPs, we can use the same code in our reducer as a combiner for output in the map phase.
@@ -984,7 +990,6 @@ The second argument to datediff() is the start date, which for our query is the 
 The series of function calls operate in almost the exact same manner as our previous argument, except that when we call unix_timestamp(), we must tell the function that our argument is in the SimpleDateFormat format that is yyyy-MM-dd.
 We alias the output column of datediff() as days_since for each row.
 The outer SELECT statement takes these three columns per row and sorts the entire output by event_date in descending order to get reverse chronological ordering.
-We arbitrarily limit the output to only the first 20
 The net result is the 20 most recent events with the number of days that have passed since that event occurred.
 The date UDFs can help tremendously in performing string date comparisons.
 Date format strings follow Java SimpleDateFormat guidelines Check out the Javadocs for SimpleDateFormat to learn how your custom date strings can be used with the date transform UDFs.
@@ -1109,6 +1114,7 @@ Trim Outliers from the Audioscrobbler dataset using Pig and datafu.
 Datafu is a Pig UDF library open sourced by the SNA team at LinkedIn.
 This recipe will use play counts from the Audioscrobbler dataset and the Quantile UDF from datafu to identify and remove outliers.
 Register the datafu JAR file and construct the Quantile UDF:
+Group all of the data: plays_grp = group plays ALL;
 This recipe takes advantage of the datafu library open sourced by LinkedIn.
 Once a JAR file is registered, all of its UDFs are available to the Pig script.
 The constructor of the Quantile UDF will then create an instance that will produce the ninetieth percentile of the input vector it is passed.
@@ -1223,8 +1229,10 @@ Once there are no more messages to process by any vertex in the graph, the job w
 Second superstep (S1) After the previous superstep, every single vertex in the graph voted to halt the execution.
 The only vertex that messaged its edges was the source vertex, therefore the framework will reactivate only the vertices connected by the source edges.
 The source vertex told each edge that they were one hop away, which is less than Integer.MAX and immediately takes the place as the current vertex value.
+Each vertex receiving the message turns around and notifies its edges that they are min + 1 hops away from the source, and the cycle continues.
 Should any connected edge receive a message lower than its current vertex value, that indicates there is a path from the source ID to the current vertex that involves fewer hops, and we need to re-notify each edge connected to the current vertex.
 Eventually, every vertex will know its minimum distance and no more messages will be sent at the current superstep N.
+When starting superstep N + 1, there will be no vertices that need to be reactivated to process incoming messages, and the overall job will finish.
 Now we need to output each vertex's current value denoting the minimum number of hops from the source vertex.
 We set a Text member variable valOut to reuse while outputting the integer values as strings.
 The framework automatically handles invoking writeVertex() for each vertex contained in our dataset.
@@ -1249,8 +1257,6 @@ This is explained in more detail in the following paragraph.
 Starting at the first superstep, we send a message to each edge from the source ID.
 If we find the supplied source IDs and destination IDs in the dataset vertices, we increment the counters to let the user know.
 This will help us quickly see any incorrectly entered command-line arguments for source/destination vertex IDs.
-After the first superstep, both these counters should be set to 1
-We define a private constant member variable msg that is set to 1
 If during any superstep a vertex receives a message, we forward that message along to each of its edges.
 If the destination vertex ever receives a message, we set its value to the integer 1 contained in the message.
 The framework handles this automatically by calling the writeVertex() method for each vertex in our dataset.
@@ -1416,12 +1422,10 @@ This value must be set to false for applications that process the records asynch
 In such cases, applications should increment this counter on their own.
 User can stop writing skipped records by giving the value none.
 This is the number of acceptable skip records surrounding the bad record per bad record in the mapper.
-To turn the feature of detection/skipping of bad records off, set the value to 0
 The framework tries to narrow down the skipped range by retrying until this threshold is met or all attempts get exhausted for this task.
 Set the value to the value of Long.MAX_VALUE to indicate that the framework need not try to narrow down.
 Whatever records (depends on the application) get skipped, are acceptable.
 This is the number of acceptable skip groups surrounding the bad group per bad group in the reducer.
-To turn the feature of detection/skipping of bad groups off, set the value to 0
 The framework tries to narrow down the skipped range by retrying until this threshold is met or all attempts get exhausted for this task.
 Set the value to the value of Long.MAX_VALUE to indicate that the framework need not try to narrow down.
 Whatever groups (depends on the application) get skipped, are acceptable.
@@ -1485,6 +1489,7 @@ You can validate the installation of these applications by using the following c
 Carry out the following steps to start Hadoop in pseudo-distributed mode:
 This is not specifically required to get Hadoop running in pseudo-distributed mode, but it is a common and good security practice.
 Generate an ssh public and private key pair to allow password-less login to the node using the Hadoop user account.
+When asked for a passphrase, hit the Enter key, ensuring no passphrase will be used: $ su – hadoop.
 If you have more than one node, you will need to copy this key to every node in the cluster.
 You should be able to ssh to localhost using your hadoop account without providing a password: $ ssh localhost.
 Start all of the Hadoop HDFS and MapReduce services: $ bin/start-all.sh.
@@ -1514,6 +1519,7 @@ Perform the following steps to start Hadoop in fully-distributed mode:
 Update the masters and slaves configuration files on the head node.
 The masters configuration file contains the hostname of the node which will run the Secondary NameNode.
 The slaves configuration file contains a list of the hosts which will run the TaskTracker and DataNode services: $ vi conf/masters.
+Format the Hadoop NameNode from the head node: $ bin/hadoop namenode –format.
 From the head node as the hadoop user, start all of the Hadoop services: $ bin/start-all.sh.
 Confirm that all of the correct services are running on the proper nodes:
 On the master: Both the NameNode and JobTracker services should running.
@@ -1521,7 +1527,6 @@ On the secondary: The Secondary NameNode service should be running.
 On the worker nodes: The DataNode and TaskTracker services should be running.
 First we changed the Hadoop configuration files core-site.xml, hdfs-site.xml, and mapred-site.xml on every node in the cluster.
 These configuration files need to be updated to tell the Hadoop services running on every node where to find the NameNode and JobTracker services.
-In addition, we changed the HDFS replication factor to 3
 It is not necessary to run the Secondary NameNode on a separate node.
 You can run the Secondary NameNode on the same node as the NameNode and JobTracker, if you wish.
 To do this, stop the cluster, modify the masters configuration file on the master node, and restart all of the services:
@@ -1549,6 +1554,10 @@ Hardware might have failed, or machines might need to be upgraded.
 In this recipe, we will show you the steps to safely remove a worker node from a Hadoop cluster.
 Getting ready It is assumed that your cluster is up and running and you have configured the following properties in mapred-site.xml:
 Perform the following steps to decommission a node in the Hadoop cluster:
+Notify the NameNode to re-read the exclude list and disconnect the worker node which will be decommissioned: $ hadoop dfsadmin –refreshNodes.
+Notify the JobTracker to re-read the exclude list and disconnect the worker node which will be decommissioned: $ hadoop mradmin –refreshNodes.
+Next, we issued the hadoop dfsadmin –refreshNodes command to notify the NameNode to disconnect from all of the hosts listed in the dfs_excludes file.
+Similarly, we issued the hadoop mradmin refreshNodes command to notify the JobTracker to stop using the TaskTrackers on the nodes listed in the mapred_excludes file.
 Recovering from a NameNode failure The NameNode is the single most important Hadoop service.
 It maintains the locations of all of the data blocks in the cluster; in addition, it maintains the state of the distributed filesystem.
 When a NameNode fails, it is possible to recover from a previous checkpoint generated by the Secondary NameNode.
@@ -1613,8 +1622,6 @@ Specifically, the code in this recipe shows the generation logic that we can tur
 To verify that the key generator works as expected, we will build and run unit tests with some sample row data.
 Some basic familiarity with the TestNG testing API will help make sense of the unit tests.
 This recipe makes use of a specific type of quadtree data structure that is useful for grouping geospatial data into indexed ranges.
-It will help to have some familiarity with a Z-order curve (a.k.a.
-Morton curve) to build this type of quadtree for use over 2D geospatial data.
 Follow these steps to implement a geospatial, reverse chronological row key generator:
 This code will serve as the basis for generating geospatial/reverse chronological row keys.
 It exists as an independent component outside of any code that loads data to Accumulo.
@@ -1626,7 +1633,6 @@ The getZOrderedCurve() method takes lat and lon strings as arguments.
 A point is not required to contain a decimal portion, but it must at least contain an integral portion.
 Moving on, we offset each point by +90 to avoid negative numbers, which would otherwise corrupt the Z-order interpretation.
 If after these checks our point is still considered valid, it is time to start formatting it for proper Z-order interpretation.
-Depending on the length of the point, we want to zero-pad the beginning such that the integral portion is always of length 3
 This will make more sense when we examine how getZOrderCurve() uses the result.
 If applicable, add the fractional portion back to the reformatted string representation without the decimal place.
 Once both latitude and longitude points have been properly formatted, we are ready to start shuffling the numbers to build the quadtree.
@@ -1759,7 +1765,6 @@ If you have an existing table by that name from an earlier recipe, delete and re
 It is also highly recommended that you complete the Using MapReduce to bulk import geographic event data into Accumulo recipe earlier in this chapter.
 This will give you some sample data to experiment with.
 Write some sample data with the exact same rowID eventA, column family, and qualifier:
-You should see the following console printout when the application finishes: eventA: fatalities: 15
 You should now see twice the count for each event:
 We write two mutations for two different versions of the same key containing the rowID eventA.
 We also write one mutation with the key containing the rowID eventB with a value of 7 for the qualifier fat.

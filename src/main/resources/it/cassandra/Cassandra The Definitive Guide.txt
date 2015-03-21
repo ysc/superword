@@ -4,18 +4,18 @@ Where those designations appear in this book, and O’Reilly Media, Inc.
 While every precaution has been taken in the preparation of this book, the publisher and author assume no responsibility for errors or omissions, or for damages resulting from the use of the information contained herein.
 This original version of Cassandra was written primarily by an ex-employee from Amazon and one from Microsoft.
 It was strongly influenced by Dynamo, Amazon’s pioneering distributed key/ value database.
+Cassandra implements a Dynamo-style replication model with no single point of failure, but adds a more powerful “column family” data model.
 I became involved in December of that year, when Rackspace asked me to build them a scalable database.
 This was good timing, because all of today’s important open source scalable databases were available for evaluation.
 Despite initially having only a single major use case, Cassandra’s underlying architecture was the strongest, and I directed my efforts toward improving the code and building a community.
 Cassandra was accepted into the Apache Incubator, and by the time it graduated in March 2010, it had become a true open source success story, with committers from Rackspace, Digg, Twitter, and other companies that wouldn’t have written their own database from scratch, but together built something important.
-As Cassandra matured and began attracting more mainstream users, it became clear that there was a need for commercial support; thus, Matt Pfeil and I cofounded Riptano in April 2010
+Today’s Cassandra is much more than the early system that powered (and still powers) Facebook’s inbox search; it has become “the hands down winner for transaction processing performance,” to quote Tony Bain, with a deserved reputation for reliability and performance at scale.
 Helping drive Cassandra adoption has been very rewarding, especially seeing the uses that don’t get discussed in public.
 Like many open source projects, Cassandra’s documentation has historically been weak.
 And even when the documentation ultimately improves, a book-length treatment like this will remain useful.
 Thanks to Eben for tackling the difficult task of distilling the art and science of developing against and deploying Cassandra.
 You, the reader, have the opportunity to learn these new concepts in an organized fashion.
 Why Apache Cassandra? Apache Cassandra is a free, open source, distributed data storage system that differs sharply from relational database management systems.
-Cassandra first started as an incubation project at Apache in January of 2009
 Shortly thereafter, the committers, led by Apache Cassandra Project Chair Jonathan Ellis, released version 0.3 of Cassandra, and have steadily made minor releases since that time.
 Though as of this writing it has not yet reached a 1.0 release, Cassandra is being used in production by some of the biggest properties on the Web, including Facebook, Twitter, Cisco, Rackspace, Digg, Cloudkick, Reddit, and more.
 Cassandra has become so popular because of its outstanding technical features.
@@ -60,6 +60,7 @@ Chapter 9, Monitoring Once your cluster is up and running, you’ll want to moni
 Cassandra has a rich Java Management Extensions (JMX) interface baked in, which we put to use to monitor all of these and more.
 Chapter 10, Maintenance The ongoing maintenance of a Cassandra cluster is made somewhat easier by some tools that ship with the server.
 We see how to decommission a node, load-balance the cluster, get statistics, and perform other routine operational tasks.
+Chapter 11, Performance Tuning One of Cassandra’s most notable features is its speed—it’s very fast.
 But there are a number of things, including memory settings, data storage, hardware choices, caching, and buffer sizes, that you can tune to squeeze out even more performance.
 Chapter 12, Integrating Hadoop In this chapter, written by Jeremy Hanna, we put Cassandra in a larger context and see how to integrate it with the popular implementation of Google’s Map/Reduce algorithm, Hadoop.
 Appendix Many new databases have cropped up in response to the need to scale at Big Data levels, or to take advantage of a “schema-free” model, or to support more recent initiatives such as the Semantic Web.
@@ -119,6 +120,7 @@ It’s used in the form of Microsoft Access in sole proprietorships, and in gian
 Relational databases store invoices, customer records, product catalogues, accounting ledgers, user authentication schemes—the very world, it might appear.
 There is no question that the relational database is a key facet of the modern technology and business landscape, and one that will be with us in its various forms for many years to come, as will IMS in its various forms.
 The relational model presented an alternative to IMS, and each has its uses.
+So the short answer to the question, “What’s wrong with relational databases?” is “Nothing.” There is, however, a rather longer answer that I gently encourage you to consider.
 This answer takes the long view, which says that every once in a while an idea is born that ostensibly changes things, and engenders a revolution of sorts.
 And yet, in another way, such revolutions, viewed structurally, are simply history’s business as usual.
 They each build on prior art, they each attempt to solve certain problems, and so they’re each good at certain things—and less good at others.
@@ -157,6 +159,8 @@ There are free databases that come installed and ready to use with a $4.95 month
 Often the database we end up using is dictated to us by architectural standards within our organization.
 Even absent such standards, it’s prudent to learn whatever your organization already has for a database platform.
 Our colleagues in development and infrastructure have considerable hard-won knowledge.
+If by nothing more than osmosis—or inertia—we have learned over the years that a relational database is a one-size-fits-all solution.
+So perhaps the real question is not, “What’s wrong with relational databases?” but rather, “What problem do you have?” That is, you want to ensure that your solution matches the problem that you have.
 There are certain problems that relational databases solve very well.
 If massive, elastic scalability is not an issue for you, the trade-offs in relative complexity of a system such as Cassandra may simply not be worth it.
 No proponent of Cassandra that I know of is asking anyone to throw out everything they’ve learned about relational databases, surrender their years of hard-won knowledge around such systems, and unnecessarily jeopardize their employer’s carefully constructed systems in favor of the flavor of the month.
@@ -169,6 +173,7 @@ But some of this infrastructure is starting to bend under the weight.
 In 1966, a company like IBM was in a position to really make people listen to their innovations.
 They had the problems, and they had the brain power to solve them.
 As we enter the second decade of the 21st century, we’re starting to see similar innovations, even from young companies such as Facebook and Twitter.
+So perhaps the real question, then, is not “What problem do I have?” but rather, “What kinds of things would I do with data if it wasn’t a problem?” What if you could easily achieve fault tolerance, availability across multiple data centers, consistency that you tune, and massive scalability even to the hundreds of terabytes, all from a client language of your choosing? Perhaps, you say, you don’t need that kind of availability or that level of scalability.
 You’re certainly right, in fact, because if your current database didn’t suit your current database needs, you’d have a nonfunctioning system.
 It is not my intention to convince you by clever argument to adopt a non-relational database such as Apache Cassandra.
 It is only my intention to present what Cassandra can do and how it does it so that you can make an informed decision and get started working with it in practical ways if you find it applies.
@@ -192,6 +197,7 @@ If you decide to change your application implementation language (or your RDBMS 
 In addition to the features mentioned already, RDBMS and SQL also support transactions.
 A key feature of transactions is that they execute virtually at first, allowing the programmer to undo (using ROLLBACK) any changes that may have gone awry during execution; if all has gone well, the transaction can be reliably committed.
 The debate about support for transactions comes up very quickly as a sore spot in conversations around non-relational data stores, so let’s take a moment to revisit what this really means.
+Atomic means “all or nothing”; that is, when a statement is executed, every update within the transaction must succeed in order to be called successful.
 There is no partial failure where one update was successful and another related update failed.
 The common example here is with monetary transfers at an ATM: the transfer requires subtracting money from one account and adding it to another account.
 Consistent Consistent means that data moves from one correct state to another correct state, with no possibility that readers could view different values that don’t make sense together.
@@ -201,10 +207,11 @@ That is, if two different transactions attempt to modify the same data at the sa
 Durable Once a transaction has succeeded, the changes will not be lost.
 This doesn’t imply another transaction won’t later modify the same data; it just means that writers can be confident that the changes are available for the next transaction to work with as necessary.
 On the surface, these properties seem so obviously desirable as to not even merit conversation.
-Presumably no one who runs a database would suggest that data updates don’t have to endure for some length of time; that’s the very point of making updates— that they’re there for others to read.
+Presumably no one who runs a database would suggest that data updates don’t have to endure for some length of time; that’s the very point of making updatesthat they’re there for others to read.
 However, a more subtle examination might lead us to want to find a way to tune these properties a bit and control them slightly.
 There is, as they say, no free lunch on the Internet, and once we see how we’re paying for our transactions, we may start to wonder whether there’s an alternative.
 When you first attempt to horizontally scale a relational database, making it distributed, you must now account for distributed.
+Gregor Hohpe, a Google architect, wrote a wonderful and often-cited blog entry called “Starbucks Does Not Use Two-Phase Commit.” It shows in real-world terms how difficult it is to scale two-phase commit and highlights some of the alternatives that are mentioned here.
 The problems that 2PC introduces for application developers include loss of availability and higher latency during partial failures.
 So once you’ve had the good fortune of being successful enough to necessitate scaling your database past a single machine, you now have to figure out how to handle transactions across multiple machines and still make the ACID properties apply.
 But it’s now a much, much bigger pill to swallow.
@@ -224,6 +231,7 @@ It’s often useful to contextualize events at runtime against other events that
 Although event streams could be represented in terms of a relational database, it is an uncomfortable stretch.
 And if you’re an application developer, you’ll no doubt be familiar with the many object-relational mapping (ORM) frameworks that have sprung up in recent years to help ease the difficulty in mapping application objects to a relational model.
 But it also introduces new problems of its own, such as extended memory requirements, and it often pollutes the application code with increasingly unwieldy mapping code.
+Here’s an example of a Java method using Hibernate to “ease the burden” of having to write the SQL code:
 Is it certain that we’ve done anything but move the problem here? Of course, with some systems, such as those that make extensive use of document exchange, as with services or XML-based applications, there are not always clear mappings to a relational database.
 Sharding and shared-nothing architecture If you can’t split it, you can’t scale it.
 Another way to attempt to scale a relational database is to introduce sharding to your architecture.
@@ -234,6 +242,8 @@ The least disruptive thing (for the programming staff, anyway) is to vertically 
 When you do so, do you just copy the data so that all of the machines have it? Or do you instead divide up that single customer table so that each database has only some of the records, with their order preserved? Then, when clients execute queries, they put load only on the machine that has the record they’re looking for, with no load on the other machines.
 It seems clear that in order to shard, you need to find a good key by which to order your records.
 For example, you could divide your customer records across 26 machines, one for each letter of the alphabet, with each hosting only the records for customers whose last names start with that particular letter.
+It’s likely this is not a good strategy, however—there probably aren’t many last names that begin with “Q” or “Z,” so those machines will sit idle while the “J,” “M,” and “S” machines spike.
+You could shard according to something numeric, like phone number, “member since” date, or the name of the customer’s state.
 It all depends on how your specific data is likely to be distributed.
 There are three basic strategies for determining shard structure: Feature-based shard or functional segmentation.
 This is the approach taken by Randy Shoup, Distinguished Architect at eBay, who in 2006 helped bring their architecture into maturity to support many billions of queries per day.
@@ -244,12 +254,14 @@ This approach depends on understanding your domain so that you can segment data 
 Key-based sharding In this approach, you find a key in your data that will evenly distribute it across shards.
 So instead of simply storing one letter of the alphabet for each server as in the (naive and improper) earlier example, you use a one-way hash on a key data element and distribute data across machines according to the hash.
 It is common in this strategy to find time-based or numeric keys to hash on.
+Lookup table In this approach, one of the nodes in the cluster acts as a “yellow pages” directory and looks up which node has the data you’re trying to access.
 The first is that you’ll take a performance hit every time you have to go through the lookup table as an additional hop.
 The second is that the lookup table not only becomes a bottleneck, but a single point of failure.
 To read about how they used data sharding strategies to improve performance at Flixster, see http://lsvp.wordpress.com/2008/06/20
 Sharding can minimize contention depending on your strategy and allows you not just to scale horizontally, but then to scale more precisely, as you can add power to the particular shards that need it.
 Sharding could be termed a kind of “shared-nothing” architecture that’s specific to databases.
 A shared-nothing architecture is one in which there is no centralized (shared) state, but each node in a distributed system is independent, so there is no client contention for shared resources.
+The term was first coined by Michael Stonebraker at University of California at Berkeley in his 1986 paper “The Case for Shared Nothing.” Shared Nothing was more recently popularized by Google, which has written systems such as its Bigtable database and its MapReduce implementation that do not share state, and are therefore capable of near-infinite scaling.
 The Cassandra database is a shared-nothing architecture, as it has no central controller and no notion of master/ slave; all of its nodes are the same.
 If you take a look, you’ll see that many of the features of sharednothing distributed data architecture, such as ease of high availability and the ability to scale to a very large number of machines, are the very things that Cassandra excels at.
 MongoDB also provides auto-sharding capabilities to manage failover and node balancing.
@@ -271,6 +283,7 @@ The size of the world’s data stores have grown somewhat since then.
 As you can see, there is great variety to the kinds of data that need to be stored, processed, and queried, and some variety to the businesses that use such data.
 Consider not only customer data at familiar retailers or suppliers, and not only digital video content, but also the required move to digital television and the explosive growth of email, messaging, mobile phones, RFID, Voice Over IP (VoIP) usage, and more.
 We now have Blu-ray players that stream movies and music.
+As we begin departing from physical consumer media storage, the companies that provide that content—and the third-party value-add businesses built around them—will require very scalable data solutions.
 Consider too that as a typical business application developer or database.
 You might then be surprised to learn that within corporations, around 80% of data is unstructured.
 Or perhaps you think the kind of scale afforded by NoSQL solutions such as Cassandra don’t apply to you.
@@ -279,6 +292,7 @@ But I’m not asking you to envision your database and its data as they exist to
 That would be a very difficult exercise, with a payoff that might be hard to see.
 It’s almost analytic that the database you have today is exactly the right one for your application of today.
 But if you could incorporate a wider array of rich data sets to help improve your applications, what kinds of qualities would you then be looking for in a database? The question becomes what kind of application would you want to have if durability, elastic scalability, vast storage, and blazing-fast writes weren’t a problem? In a world now working at web scale and looking to the future, Apache Cassandra might be one part of the answer.
+The Cassandra Elevator Pitch Hollywood screenwriters and software startups are often advised to have their “elevator pitch” ready.
 This is a summary of exactly what their product is all about—concise, clear, and brief enough to deliver in just a minute or two, in the lucky event that they find themselves sharing an elevator with an executive or agent or investor who might consider funding their project.
 Cassandra has a compelling story, so let's boil it down to an elevator pitch that you can present to your manager or colleagues should the occasion arise.
 Of course, if you were to recite that to your boss in the elevator, you'd probably get a blank look in return.
@@ -293,6 +307,7 @@ Cassandra, however, is decentralized, meaning that every node is identical; no C
 Instead, Cassandra features a peer-to-peer protocol and uses gossip to maintain and keep in sync a list of nodes that are alive or dead.
 The fact that Cassandra is decentralized means that there is no single point of failure.
 All of the nodes in a Cassandra cluster function exactly the same.
+This is sometimes referred to as “server symmetry.” Because they are all doing the same thing, by definition there can’t be a special host that is coordinating activities, as with the master/slave setup that you see in MySQL, Bigtable, and so many others.
 In many distributed data solutions (such as RDBMS clusters), you set up multiple copies of data on different servers in a process called replication, which copies the data to multiple machines so that they can all serve simultaneous requests and improve performance.
 Typically this process is not decentralized, as in Cassandra, but is rather performed by defining a master/slave relationship.
 That is, all of the servers in this kind of cluster don’t function in the same way.
@@ -309,6 +324,7 @@ To avoid this, you often need to add some complexity to the environment in the f
 Because all of the replicas in Cassandra are identical, failures of a node won’t disrupt service.
 In short, because Cassandra is distributed and decentralized, there is no single point of failure, which supports high availability.
 Elastic Scalability Scalability is an architectural feature of a system that can continue serving a greater number of requests with little degradation in performance.
+Vertical scaling—simply adding more hardware capacity and memory to your existing machine—is the easiest way to achieve this.
 Horizontal scaling means adding more machines that have all or some of the data on them so that no one machine has to bear the entire burden of serving requests.
 But then the software itself must have an internal mechanism for keeping its data in sync with the other nodes in the cluster.
 Elastic scalability refers to a special property of horizontal scalability.
@@ -329,7 +345,11 @@ Consider two customers are attempting to put the same item into their shopping c
 If I place the last item in stock into my cart an instant after you do, you should get the item added to your cart, and I should be informed that the item is no longer available for purchase.
 This is guaranteed to happen when the state of a write is consistent among all nodes that have that data.
 But there’s no free lunch, and as we’ll see later, scaling data stores means making certain trade-offs between data consistency, node availability, and partition tolerance.
+Cassandra is frequently called “eventually consistent,” which is a bit misleading.
 Out of the box, Cassandra trades some consistency in order to achieve total availability.
+But Cassandra is more accurately termed “tuneably consistent,” which means it allows you to easily decide the level of consistency you require, in balance with the level of availability.
+Let’s take a moment to unpack this, as the term “eventual consistency” has caused some uproar in the industry.
+Some practitioners hesitate to use a system that is described as “eventually consistent.” For detractors of eventual consistency, the broad argument goes something like this: eventual consistency is maybe OK for social web applications where data doesn’t really matter.
 After all, you’re just posting to mom what little Billy ate for breakfast, and if it gets lost, it doesn’t really matter.
 But the data I have is actually really important, and it’s ridiculous to think that I could allow eventual consistency in my model.
 Set aside the fact that all of the most popular web applications (Amazon, Facebook, Google, Twitter) are using this model, and that perhaps there’s something to it.
@@ -343,6 +363,7 @@ Let’s take a look at these models so we can understand the trade-offs:
 Strict consistency This is sometimes called sequential consistency, and is the most stringent level of consistency.
 It requires that any read will always return the most recently written value.
 That sounds perfect, and it’s exactly what I’m looking for.
+I’ll take it! However, upon closer examination, what do we find? What precisely is meant by “most recently written”? Most recently to whom? In one single-processor machine, this is no problem to observe, as the sequence of operations is known to the one clock.
 But in a system executing across a variety of geographically dispersed data centers, it becomes much more slippery.
 Achieving this implies some sort of global clock that is capable of timestamping all operations, regardless of the location of the data or the user requesting it or how many (possibly disparate) services are required to determine the response.
 Causal consistency This is a slightly weaker form of strict consistency.
@@ -354,6 +375,7 @@ But if one write occurs after another, we might infer that they are causally rel
 Causal consistency dictates that causal writes must be read in sequence.
 Weak (eventual) consistency Eventual consistency means on the surface that all updates will propagate throughout all of the replicas in a distributed system, but that this may take some time.
 Eventual consistency becomes suddenly very attractive when you consider what is required to achieve stronger forms of consistency.
+When considering consistency, availability, and partition tolerance, we can achieve only two of these goals in a given distributed system (we explore the CAP Theorem in the section “Brewer’s CAP Theorem” on page 19)
 At the center of the problem is data update replication.
 To achieve a strict consistency, all update operations will be performed synchronously, meaning that they must block, locking all replicas until the operation is complete, and forcing competing clients to wait.
 A side effect of such a design is that during a failure, some of the data will be entirely unavailable.
@@ -363,6 +385,7 @@ A design approach must decide whether to resolve these conflicts at one of two p
 That is, a distributed database designer must choose to make the system either always readable or always writable.
 Dynamo and Cassandra choose to be always writable, opting to defer the complexity of reconciliation to read operations, and realize tremendous performance gains.
 The alternative is to reject updates amidst network and server failures.
+In Cassandra, consistency is not an all-or-nothing proposition, so we might more accurately term it “tuneable consistency” because the client can control the number of replicas to block on for all updates.
 This is done by setting the consistency level against the replication factor.
 The replication factor lets you decide how much you want to pay in performance to gain more consistency.
 You set the replication factor to the number of nodes in the cluster you want the updates to propagate to (remember that an update means any add, update, or delete operation)
@@ -371,14 +394,15 @@ That’s the part where Cassandra has pushed the decision for determining consis
 So if you like, you could set the consistency level to a number equal to the replication factor, and gain stronger consistency at the cost of synchronous blocking operations that wait for all nodes to be updated and declare success before returning.
 This is not often done in practice with Cassandra, however, for reasons that should be clear (it defeats the availability goal, would impact performance, and generally goes against the grain of why you’d want to use Cassandra in the first place)
 So if the client sets the consistency level to a value less than the replication factor, the update is considered successful even if some nodes are down.
+Brewer’s CAP Theorem In order to understand Cassandra’s design and its label as an “eventually consistent” database, we need to understand the CAP theorem.
 The CAP theorem is sometimes called Brewer’s theorem after its author, Eric Brewer.
 The theorem states that within a large-scale distributed data system, there are three.
 All database clients will read the same value for the same query, even given concurrent updates.
 Availability All database clients will always be able to read and write data.
 Partition Tolerance The database can be split into multiple machines; it can continue functioning in the face of network segmentation breaks.
 Brewer’s theorem is that in any given system, you can strongly support only two of the three.
+This is analogous to the saying you may have heard in software development: “You can have it good, you can have it fast, you can have it cheap: pick two.” We have to choose between them because of this sliding mutual dependency.
 The more consistency you demand from your system, for example, the less partition-tolerant you’re likely to be able to make it, unless you make some concessions around availability.
-The CAP theorem was formally proved to be true by Seth Gilbert and Nancy Lynch of MIT in 2002
 In distributed systems, however, it is very likely that you will have network partitioning, and that at some point, machines will fail and cause others to become unreachable.
 Figure 1-1 illustrates visually that there is no overlapping segment where all three are obtainable.
 It might prove useful at this point to see a graphical depiction of where each of the nonrelational data stores we’ll look at falls within the CAP spectrum.
@@ -392,6 +416,7 @@ This is typically achieved by defining a single master server, which could itsel
 Graph databases such as Neo4J and the set of databases derived at least in part from the design of Google’s Bigtable database (such as MongoDB, HBase, Hypertable, and Redis) all are focused slightly less on Availability and more on ensuring Consistency and Partition Tolerance.
 If you’re interested in the properties of other Big Data or NoSQL databases, see this book’s Appendix.
 However, this does not mean that they dismiss Consistency as unimportant, any more than Bigtable dismisses Availability.
+If you think of each of these letters (C, A, P) as knobs you can tune to arrive at the system you want, Dynamo derivatives are intended for employment in the many use cases where “eventual consistency” is tolerable and where “eventual” is a matter of milliseconds, read repairs mean that reads will return consistent values, and you can achieve strong consistency if you want to.
 So what does it mean in practical terms to support only two of the three facets of CAP? CA.
 To primarily support Consistency and Availability means that you’re likely using two-phase commit for distributed transactions.
 It means that the system will block when a network partition occurs, so it may be that your system is limited to a single data center cluster in an attempt to mitigate this.
@@ -399,12 +424,12 @@ If your application needs only this level of scale, this is easy to manage and a
 Your data will be consistent, but you still run the risk of some data becoming unavailable if nodes fail.
 Note that this depiction is intended to offer an overview that helps draw distinctions between the broader contours in these systems; it is not strictly precise.
 For example, it’s not entirely clear where Google’s Bigtable should be placed on such a continuum.
+The Google paper describes Bigtable as “highly available,” but later goes on to say that if Chubby (the Bigtable persistent lock service) “becomes unavailable for an extended period of time [caused by Chubby outages or network issues], Bigtable becomes unavailable” (section 4)
+On the matter of data reads, the paper says that “we do not consider the possibility of multiple copies of the same data, possibly in alternate forms due to views or indices.” Finally, the paper indicates that “centralized control and Byzantine fault tolerance are not Bigtable goals” (section 10)
 Given such variable information, you can see that determining where a database falls on this sliding scale is not an exact science.
 Row-Oriented Cassandra is frequently referred to as a “column-oriented” database, which is not incorrect.
 It’s not relational, and it does represent its data structures in sparse multidimensional hashtables.
-Sparse” means that for any given row you can have one or more columns, but each row doesn’t need to have all the same columns as other rows like it (as in a relational model)
 Each row has a unique key, which makes its data accessible.
-So although it’s not wrong to say that Cassandra is columnar or columnoriented, it might be more helpful to think of it as an indexed, row-oriented store, as we examine more thoroughly in Chapter 3
 I list the data orientation as a feature, because there are several data models that are easy to visualize and use in a nonrelational model; it’s a weird mixture of laziness and possibly inviting far more work than necessary to just assume that the relational model is always best, regardless of your application.
 Cassandra stores data in what can be thought of for now as a multidimensional hash table.
 That means you don’t have to decide ahead of time precisely what your data structure must look like, or what fields your records will need.
@@ -424,7 +449,6 @@ It consistently can show very fast throughput for writes per second on a basic c
 As you add more servers, you can maintain all of Cassandra’s desirable properties without sacrificing performance.
 Cassandra originated at Facebook in 2007 to solve that company’s inbox search problem, in which they had to deal with large volumes of data in a way that was difficult to scale with traditional methods.
 Specifically, the team had requirements to handle huge volumes of data in the form of message copies, reverse indices of messages, and many random reads and many simultaneous random writes.
-The code was released as an open source Google Code project in July 2008
 During its tenure as a Google Code project in 2008, the code was updateable only by Facebook engineers, and little community was built around it as a result.
 Cassandra today presents a kind of paradox: it feels new and radical, and yet it’s solidly rooted in many standard, traditional computer science concepts and maxims that successful predecessors have already institutionalized.
 Cassandra is a realist’s kind of database; it doesn’t depart from the relational model to be a fun art project or experiment for smart developers.
@@ -454,12 +478,13 @@ According to the project wiki, Cassandra has been used to create a variety of ap
 Geographical Distribution Cassandra has out-of-the-box support for geographical distribution of data.
 You can easily configure Cassandra to replicate data across multiple data centers.
 If you have a globally deployed application that could see a performance benefit from putting the data near the user, Cassandra could be a great fit.
+Evolving Applications If your application is evolving rapidly and you’re in “startup mode,” Cassandra might be a good fit given its schema-free data model.
 This makes it easy to keep your database in step with application changes as you rapidly deploy.
+Who Is Using Cassandra? Cassandra is still in its early stages in many ways, not yet seeing its 1.0 release at the time of this writing.
 There are few easy, graphical tools to help manage it, and the community has not settled on certain key internal and external design questions that have been revisited.
 But what does it say about the promise, usefulness, and stability of a data store that even in its early stages is being used in production by many large, well-known companies?
 It is a logical fallacy, informally called the Bandwagon Fallacy, to argue that just because something is growing in popularity means that it is “true.” Cassandra is without a doubt enjoying skyrocketing growth in popularity, especially over the past year or so.
 Still, my point here is that the many successful production deployments at a variety of companies for a variety of purposes is sufficient to suggest its usefulness and readiness.
-These companies include: • Twitter is using Cassandra for analytics.
 Facebook still uses it for inbox search, though they are using a proprietary fork.
 Rackspace uses it for its cloud service, monitoring, and logging.
 Ooyala uses it to store and serve near real-time video analytics data.
@@ -467,7 +492,6 @@ SimpleGeo uses it as the main data store for its real-time location infrastructu
 Onespot uses it for a subset of its main data store.
 Cassandra is also being used by Cisco and Platform64, and is starting to see use at Comcast and bee.tv for personalized television streaming to the Web and to mobile devices.
 A wide variety of companies are finding use cases for Cassandra and seeing success with it.
-Many more companies are currently evaluating Cassandra for production use in different projects, and a services company called Riptano, cofounded by Jonathan Ellis, the Apache Project Chair for Cassandra, was started in April of 2010
 As more features are added and better tooling and support options are rolled out, anticipate even broader adoption.
 Summary In this chapter, we’ve taken an introductory look at Cassandra’s defining characteristics, history, and major features.
 We have seen which major companies are using it and what they’re using it for.
@@ -487,7 +511,6 @@ Let’s take a moment to look around and see what we have.
 It also has scripts to run the nodetool, which is a utility for inspecting a cluster to determine whether it is properly configured, and to perform a variety of maintenance operations.
 It also has scripts for converting SSTables (the datafiles) to JSON and back.
 There are three basic functions: the storage-conf.xml file allows you to create your data store by configuring your keyspace and column families; there are files related to setting up authentication; and finally, the log4j properties let you change the logging levels to suit your needs.
-We see how to use all of these when we discuss configuration in Chapter 6
 The interface is defined using the Thrift syntax and provides an easy means to generate clients.
 For a quick way to see all of the operations that Cassandra supports, open this file in a regular text editor.
 Note that JavaDoc reflects only the comments that are stored directly in the Java code, and as such does not represent comprehensive documentation.
@@ -563,6 +586,7 @@ Connecting to a Server Starting the client this way does not automatically conne
 So to connect to a particular server after you have started Cassandra this way, use the connect command:
 As a shortcut, you can start the client and connect to a particular server instance by passing the host and port parameters at startup, like this:
 Also make sure that you’re using the new 0.7 syntax as described earlier, as it has changed from previous versions.
+The CLI indicates that you’re connected to a Cassandra server cluster called “Test Cluster”
 That’s because this cluster of one node at localhost is set up for you by default.
 In a production environment, be sure to remove the Test Cluster from the configuration.
 Describing the Environment After connecting to your Cassandra instance Test Cluster, if you’re using the binary distribution, an empty keyspace, or Cassandra database, is set up for you to test with.
@@ -605,6 +629,7 @@ Summary Now you should have a Cassandra installation up and running.
 You’ve worked with the CLI client to insert and retrieve some data, and you’re ready to take a step back and get the big picture on Cassandra before really diving into the details.
 In this chapter, we’ll gain an understanding of Cassandra’s design goals, data model, and some general behavior characteristics.
 For developers and administrators coming from the relational world, the Cassandra data model can be very difficult to understand initially.
+Some terms, such as “keyspace,” are completely new, and some, such as “column,” exist in both worlds but have different meanings.
 It can also be confusing if you’re trying to sort through the Dynamo or Bigtable source papers, because although Cassandra may be based on them, it has its own model.
 So in this chapter we start from common ground and then work through the unfamiliar terms.
 Then, we do some actual modeling to help understand how to bridge the gap between the relational world and the world of Cassandra.
@@ -645,7 +670,9 @@ For example, some people have a second phone number and some don’t, and in an 
 Instead of storing null for those values we don’t know, which would waste space, we just won’t store that column at all for that row.
 So now we have a sparse, multidimensional array structure that looks like Figure 3-3
 It may help to think of it in terms of JavaScript Object Notation (JSON) instead of a picture:
+The Musician column family has two rows, “bootsy” and “george”
 These two rows have a ragged set of columns associated with them: the bootsy record has two columns (email and instrument), and the george record has only one column.
+The second column family is Band, and it also has a “george” row, with a column named “pfunk”
 Columns in Cassandra actually have a third aspect: the timestamp, which records the last time the column was updated.
 This is not an automatic metadata property, however; clients have to provide the timestamp along with the value when they perform writes.
 You cannot query by the timestamp; it is used purely for conflict resolution on the server side.
@@ -693,6 +720,7 @@ There are a few good reasons not to go too far with the idea that a column famil
 First, Cassandra is considered schema-free because although the column families are defined, the columns are not.
 You can freely add any column to any column family at any time, depending on your needs.
 Second, a column family has two attributes: a name and a comparator.
+The comparator value indicates how columns will be sorted when they are returned to you in a query—according to long, byte, UTF8, or other ordering.
 In a relational database, it is frequently transparent to the user how tables are stored on disk, and it is rare to hear of recommendations about data modeling based on how the RDBMS might store tables on disk.
 That’s another reason to keep in mind that a column family is not a table.
 Because column families are each stored in separate files on disk, it’s important to keep related columns defined together in the same column family.
@@ -732,6 +760,7 @@ The data types for the name and value are Java byte arrays, frequently supplied 
 Because the name and value are binary types, they can be of any length.
 Cassandra 0.7 introduced an optional time to live (TTL) value, which allows columns to expire a certain amount of time after creation.
 Here’s an example of a column you might define, represented with JSON notation just for clarity of structure:
+In this example, this column is named “email”; more precisely, the value of its name attribute is “email”
 But recall that a single column family will have multiple keys (or row keys) representing different rows that might also contain this column.
 This is why moving from the relational model is hard: we think of a relational table as holding the same set of columns for every row.
 But in Cassandra, a column family holds many rows, each of which may hold the same, or different, sets of columns.
@@ -739,7 +768,6 @@ On the server side, columns are immutable in order to prevent multithreading iss
 This wasn’t the case for early versions of Cassandra, but as of version 0.6, rows for the same column family are stored together on disk.
 If you have designed a data model and find that you need something like a join, you’ll have to either do the work on the client side, or create a denormalized second column family that represents the join results for you.
 Performing joins on the client should be a very rare case; you really want to duplicate (denormalize) the data instead.
-Wide Rows, Skinny Rows When designing a table in a traditional relational database, you’re typically dealing with “entities,” or the set of attributes that describe a particular noun (Hotel, User, Product, etc.)
 Not much thought is given to the size of the rows themselves, because row size isn’t negotiable once you’ve decided what noun your table represents.
 However, when you’re working with Cassandra, you actually have a decision to make about the size of your rows: they can be wide or skinny, depending on the number of columns the row contains.
 A wide row means a row that has lots and lots (perhaps tens of thousands or even millions) of columns.
@@ -752,6 +780,7 @@ Skinny rows are slightly more like traditional RDBMS rows, in that each row will
 They differ from RDBMS rows, however, because all columns are essentially optional.
 Another difference between wide and skinny rows is that only wide rows will typically be concerned about sorting order of column names.
 In Cassandra, you specify how column names will be compared for sort order when results are returned to the client.
+Columns are sorted by the “Compare With” type defined on their enclosing column family, and you can choose from the following: AsciiType, BytesType, LexicalUUIDType, Integer Type, LongType, TimeUUIDType, or UTF8Type.
 This sorts by directly comparing the bytes, validating that the input can be parsed as US-ASCII.
 US-ASCII is a character encoding mechanism based on the lexical order of the English alphabet.
 BytesType This is the default, and sorts by directly comparing the bytes, skipping the validation step.
@@ -761,7 +790,6 @@ Although this may seem like a good default type, that’s probably because it’
 In Cassandra, however, you should use UTF8Type only if you want your data validated.
 Custom You can create your own column sorting mechanism if you like.
 Column names are stored in sorted order according to the value of compare_with.
-Rows, on the other hand, are stored in an order defined by the partitioner (for example, with RandomPartitioner, they are in random order, etc.)
 It is not possible in Cassandra to sort by value, as we’re used to doing in relational databases.
 This may seem like an odd limitation, but Cassandra has to sort by column name in order to allow fetching individual columns from very large rows without pulling the entire row into memory.
 Performance is an important selling point of Cassandra, and sorting at read time would harm performance.
@@ -782,6 +810,8 @@ But for super columns, it becomes more like a five-dimensional hash:
 To use a super column, you define your column family as type Super.
 Then, you still have row keys as you do in a regular column family, but you also reference the super column, which is simply a name that points to a list or map of regular columns (sometimes called the subcolumns)
 Here is an example of a super column family definition called PointOfInterest.
+In the hotelier domain, a “point of interest” is a location near a hotel that travelers might like to visit, such as a park, museum, zoo, or tourist attraction:
+This query is asking: in the PointOfInterest column family (which happens to be defined as type Super), use the row key “Central Park”; for the super column named “Waldorf=Astoria”, get me the value of the “desc” column (which is the plain language text describing the point of interest)
 Composite Keys There is an important consideration when modeling with super columns: Cassandra does not index subcolumns, so when you load a super column into memory, all of its columns are loaded as well.
 It might be fixed in a future release, but the change is pending an update to the underlying storage file (the SSTable)
 You can use a composite key of your own design to help you with queries.
@@ -821,7 +851,6 @@ If you want to change the order, you just modify your query, and you can sort by
 In Cassandra, however, sorting is treated differently; it is a design decision.
 Column family definitions include a CompareWith element, which dictates the order in which your rows will be sorted on reads, but this is not configurable per query.
 Where RDBMS constrains you to sorting based on the data type stored in the column, Cassandra only stores byte arrays, so that approach doesn’t make sense.
-What you can do, however, is sort as if the column were one of several different types (ASCII, Long integer, TimestampUUID, lexicographically, etc.)
 You can also use your own pluggable comparator for sorting if you wish.
 Otherwise, there is no support for ORDER BY and GROUP BY statements in Cassandra as there is in SQL.
 There is a query type called a SliceRange, which we examine in Chapter 4; it is similar to ORDER BY in that it allows a reversal.
@@ -888,6 +917,7 @@ Even if you have to use several complex subqueries or join statements, this is u
 By contrast, in Cassandra you don’t start with the data model; you start with the query model.
 For this example, let’s use a domain that is easily understood and that everyone can relate to: a hotel that wants to allow guests to book a reservation.
 Our conceptual domain includes hotels, guests that stay in the hotels, a collection of rooms for each hotel, and a record of the reservation, which is a certain guest in a certain room for a certain period of time (called the “stay”)
+Hotels typically also maintain a collection of “points of interest,” which are parks, museums, shopping galleries, monuments, or other places near the hotel that guests might want to visit during their stay.
 Both hotels and points of interest need to maintain geolocation data so that they can be found on maps for mashups, and to calculate distances.
 Obviously, in the real world there would be many more considerations and much more complexity.
 For example, hotel rates are notoriously dynamic, and calculating them involves a wide array of factors.
@@ -911,7 +941,6 @@ It is by no means the only way to transfer the relational design into this model
 There is a lot of low-level plumbing here that uses the Thrift API.
 Thrift is (probably) changing to Avro, so although the basic ideas here work, you don’t want to follow this example in a real application.
 Instead, check out Chapter 8 and use one of the many available third-party clients for Cassandra, depending on the language that your application uses and other needs that you have.
-The application we’re building will do the following things: 1
 Search for a list of hotels in a given city.
 But we’ll walk through the major parts, and finishing the implementation is just a matter of creating a variation of what is shown.
 Creating the Database The first step is creating the schema definition.
@@ -931,6 +960,7 @@ We also have a Constants class, which keeps commonly used strings in one easy-to
 Holding these commonly used strings make the code clearer and more concise, and you can easily change these values to reflect what makes sense in your environment.
 Getting a Connection For convenience, and to save repeating a bunch of boilerplate code, let’s put the connection code into one class, called Connector, shown in Example 4-5
 When we need to execute a database operation, we can use this class to open a connection and then close the connection once we’re done.
+This is a rather long example, but it attempts to show something more than “hello, world”—there are a number of insert and batch_mutate operations shown with standard column families and super column families.
 I have also included multiple rows for each type so that more sophisticated queries are required.
 This class is the first to execute in our sample application, and once the prepopulate method is complete, your database will have all the data that the search functions need to work with.
 The Search Application Example 4-7 is the Java class with the main method that you should execute.
@@ -939,7 +969,7 @@ The user picks one hotel, and the application fetches the nearby points of inter
 You can then implement the remaining parts of the application to book a reservation if you like.
 I interspersed the code with comments to illustrate the purpose of the different statements.
 The output of running the application is shown in Example 4-8
-Again, you typically don’t want to write against Thrift or Avro yourself, but instead should use one of the clients listed in Chapter 8
+They have animals here.--Sounds fun! DEBUG 09:49:50,911 Now to book a room...
 The purpose here is to give you an idea of how the plumbing works, and to show a complete, working application that performs inserts and various searches and that resembles real-world usage.
 Twissandra When you start thinking about how to design for Cassandra, take a look at Twissandra, written by Eric Florenzano.
 Visit http://www.twissandra.com to see a fully working Twitter clone that you can download and try out.
@@ -966,6 +996,7 @@ Any changes written to the master are passed on to slaves.
 This model is optimized for reading data, as it allows data to be read from any slave.
 This has an important ramification: all writes must be sent to the master, which means that it is a potential single point of failure.
 In a master/slave setup, the master node can have far-reaching effects if it goes offline.
+By contrast, Cassandra has a peer-to-peer distribution model, such that any given node is structurally identical to any other node—that is, there is no “master” node that acts differently than a “slave” node.
 The aim of Cassandra’s design is overall system availability and ease of scaling.
 The peer-to-peer design can improve general database availability, because while taking any given Cassandra node offline may have a potential impact on overall throughput, it is a graceful degradation that does not interrupt service.
 Assuming that you are using a reasonable replication strategy, the data on a failed node will still be available for reads and writes.
@@ -977,13 +1008,14 @@ For this reason, the P2P design makes both scaling up and scaling down an easier
 Gossip and Failure Detection To support decentralization and partition tolerance, Cassandra uses a gossip protocol for intra-ring communication so that each node can have state information about other nodes.
 Hinted handoff is triggered by gossip, when a node notices that a node it has hints for has just come back online.
 Anti-entropy, on the other hand, is a manual process; it is not triggered by gossip.
+Gossip protocols (sometimes called “epidemic protocols”) generally assume a faulty network, are commonly employed in very large, decentralized network systems, and are often used as an automatic mechanism for replication in distributed databases.
 They take their name from the concept of human gossip, a form of communication in which peers can choose with whom they want to exchange information.
+The term “gossip protocol” was originally coined in 1987 by Alan Demers, a researcher at Xerox’s Palo Alto Research Center, who was studying ways to route information through unreliable networks.
 When a server node is started, it registers itself with the gossiper to receive endpoint state information.
 Because Cassandra gossip is used for failure detection, the Gossiper class maintains a list of nodes that are alive and dead.
 Periodically (according to the settings in its TimerTask), the G=gossiper will choose a random node in the ring and initialize a gossip session with it.
 When the gossiper determines that another endpoint is dead, it “convicts” that endpoint by marking it as dead in its local list and logging that fact.
 Cassandra has robust support for failure detection, as specified by a popular algorithm for distributed computing called Phi Accrual Failure Detection.
-This manner of failure detection originated at the Advanced Institute of Science and Technology in Japan in 2004
 The first general idea is that failure detection should be flexible, which is achieved by decoupling it from the application being monitored.
 The second and more novel idea challenges the notion of traditional failure detectors, which are implemented by simple “heartbeats” and decide whether a node is dead or not dead based on whether a heartbeat is received or not.
 But accrual failure detection decides that this approach is naive, and finds a place in between the extremes of dead and alive—a suspicion level.
@@ -1026,13 +1058,14 @@ When the number of objects stored in the memtable reaches a threshold, the conte
 This flushing is a nonblocking operation; multiple memtables may exist for a single column family, one current and the rest waiting to be flushed.
 They typically should not have to wait very long, as the node should flush them very quickly unless it is overloaded.
 Each commit log maintains an internal bit flag to indicate whether it needs flushing.
-When a write operation is first received, it is written to the commit log and its bit flag is set to 1
 There is only one bit flag per column family, because only one commit log is ever being written to across the entire server.
 All writes to all column families will go into the same commit log, so the bit flag indicates whether a particular commit log contains anything that hasn’t been flushed for a particular column family.
 Once the memtable has been properly flushed to disk, the corresponding commit log’s bit flag is set to 0, indicating that the commit log no longer has to maintain that data for durability purposes.
 Like regular logfiles, commit logs have a configurable rollover threshold, and once this file size threshold is reached, the log will roll over, carrying with it any extant dirty bit flags.
 Once a memtable is flushed to disk as an SSTable, it is immutable and cannot be changed by the application.
 Despite the fact that SSTables are compacted, this compaction changes only their on-disk representation; it essentially performs the “merge” step of a mergesort into new files and removes the old files on success.
+The idea that “SSTable” is a compaction of “Sorted String Table” is somewhat of a misnomer for Cassandra, because the data is not stored as strings on disk.
+Each SSTable also has an associated Bloom filter, which is used as an additional performance enhancer (see “Bloom Filters” on page 95)
 All writes are sequential, which is the primary reason that writes perform so well in Cassandra.
 No reads or seeks of any kind are required for writing a value to Cassandra because all writes are append operations.
 This makes one key limitation on performance the speed of your disk.
@@ -1043,7 +1076,6 @@ On reads, Cassandra will check the memtable first to find the value.
 A write request is sent to Cassandra, but the node where the write properly belongs is not available due to network partition, hardware failure, or some other reason.
 In order to ensure general availability of the ring in such a situation, Cassandra implements a feature called hinted handoff.
 You might think of a hint as a little post-it note that contains the information from the write request.
-If the node where the write belongs has failed, the Cassandra node that receives the write will create a hint, which is a small reminder that says, “I have the write information that is intended for node B.
 This allows Cassandra to be always available for writes, and reduces the time that a failed node will be inconsistent after it does come back online.
 We discussed consistency levels previously, and you may recall that consistency level ANY, which was added in 0.6, means that a hinted handoff alone will count as sufficient toward the success of a write operation.
 That is, even if only a hint was able to be recorded, the write still counts as successful.
@@ -1077,6 +1109,7 @@ The filters are stored in memory and are used to improve performance by reducing
 So, in a way, a Bloom filter is a special kind of cache.
 When a query is performed, the Bloom filter is checked first before accessing disk.
 Because false-negatives are not possible, if the filter indicates that the element does not exist in the set, it certainly doesn’t; but if the filter thinks that the element is in the set, the disk is accessed to make sure.
+Tombstones In the relational world, you might be used to the idea of a “soft delete.” Instead of actually executing a delete SQL statement, the application will issue an update statement that changes a value in a column called something like “deleted”
 Programmers sometimes do this to support audit trails, for example.
 This is how all deletes work and is therefore automatically handled for you.
 When you execute a delete operation, the data is not immediately deleted.
@@ -1113,7 +1146,6 @@ In this chapter, we look at how to configure Cassandra.
 We walk through creating keyspaces, setting up replication, and using a proper replica placement strategy.
 Cassandra works out of the box with no configuration at all; you can simply download and decompress, and then execute the program to start the server with its default configuration.
 We will focus on aspects of Cassandra that affect node behavior in a cluster, performance, and meta-operations such as replication, partitioning, and snitches.
-Performance tuning is considered a separate topic and gets its own treatment in Chapter 11
 Cassandra development is moving quickly, and there have been many inveterate changes.
 I’ve tried my best to keep up with them here.
 Keyspaces Keyspaces used to be defined statically in an XML configuration file, but as of 0.7, you can use the API to create keyspaces and column families.
@@ -1131,6 +1163,7 @@ So we can switch to a different keyspace using the use keyspace command:
 Now that we’ve switched to our new keyspace on the CLI, we can add a column family to it:
 You can specify additional settings as you like when creating the keyspace or column family using the with flag, and more settings using the and flag:
 It’s also possible to use the API to do this, as shown in Example 6-1
+So all you need to do to create a new keyspace is give it a name, a replica placement strategy (see “Replica Placement Strategies” on page 104), and a replication factor, then define any column families you want that keyspace to hold, and you’re set.
 Now you are ready to start inserting values into your new MyCF column family.
 Cassandra will provide the default replication strategy if you don’t name one; I’m just trying to be explicit in this example to show the syntax.
 Creating a Column Family To create a column family, you also use the CLI or the API.
@@ -1150,11 +1183,12 @@ For a given key range, there may be some Cassandra nodes that are not replicas f
 If the replication factor is set to 1, writes are written only to a single node.
 If that node goes down, the values stored on that node are not accessible.
 If the replication factor is set to 2, two of the nodes in your cluster will get the value written to them on every write, and they will be.
-So if your replication factor is set to N, then each node will act as a replica for N ranges, even if N is set to 1
 A Cassandra cluster, or collection of hosts, is typically referred to as a ring, for reasons we’ll see now.
 Each node in the ring is assigned a single, unique token.
 Each node claims ownership of the range of values from its token to the token of the previous node.
 Exactly how a token is represented is dependent on the partitioner you’re using.
+For more information on partitioners, see “Partitioners” on page 110 later in this chapter.
+When creating a replica, the first replica is always placed in the node claiming the key range of its token.
 All remaining replicas are distributed according to a configurable replication strategy, which we’ll look at now.
 The purpose of this setting is to configure the way that the node picker works.
 The strategy is outlined in the common abstract class, allowing different implementations of an algorithm (different strategies for accomplishing the same work)
@@ -1181,7 +1215,6 @@ It’s mainly used to distribute data across different racks in the same data ce
 This class, as the original name suggests, is indeed aware of the placement in data center racks.
 This strategy will place some replicas in DC1, putting each in a different available rack.
 It will also ensure that another replica is placed in DC2
-The Rack-Aware Strategy is specifically for when you have nodes in the same Cassandra cluster spread over two data centers and you are using a replication factor of 3
 Use this strategy when you want to ensure higher availability at the potential cost of some additional latency while the third node in the alternate data center is contacted.
 There is no point in using Rack-Aware Strategy if you are only running Cassandra in a single data center.
 Cassandra is optimized for running in different data centers, however, and taking advantage of its high availability may be an important consideration for you.
@@ -1247,6 +1280,7 @@ It’s worth noting that OPP isn’t more efficient for range queries than rando
 It has the disadvantage of creating a ring that is potentially very lopsided, because real-world data typically is not written to evenly.
 As an example, consider the value assigned to letters in a Scrabble game.
 With OPP, you’ll likely eventually end up with lots of data on some nodes and much less data on other nodes.
+The nodes on which lots of data is stored, making the ring lopsided, are often referred to as “hot spots.” Because of the ordering aspect, users are commonly attracted to OPP early on.
 However, using OPP means that your operations team will need to manually rebalance nodes periodically using Nodetool’s loadbalance or move operations.
 If you want to perform range queries from your clients, you must use an orderpreserving partitioner or a collating order-preserving partitioner.
 Like OPP, it requires that the keys are UTF-8 strings.
@@ -1260,7 +1294,6 @@ Inferring data centers is the job of the replication strategy.
 It operates by simply comparing different octets in the IP addresses of each node.
 If two hosts have the same value in the second octet of their IP addresses, then they are determined.
 If two hosts have the same value in the third octet of their IP addresses, then they are determined to be in the same rack.
-Determined to be” really means that Cassandra has to guess based on an assumption of how your servers are located in different VLANs or subnets.
 Simple Snitch was renamed in 0.7; prior to that it was called endpoint snitch.
 You configure which endpoint snitch implementation to use by updating the value for the <EndPointSnitch> element in the configuration file.
 This snitch was contributed by Digg, which uses Cassandra and regularly contributes to its development.
@@ -1283,6 +1316,7 @@ A new node in a cluster needs what’s called a seed node.
 If node A acts as a seed for node B, when node B comes online, it will use node A as a reference point from which to get data.
 Seed nodes will ignore the AutoBootstrap setting because it is assumed that they will be the first nodes in the cluster.
 Changing the Cluster Name Cassandra clusters are given names in order to prevent machines in one cluster from joining another that you don’t want them to be a part of.
+The name of the default cluster in the config file is “Test Cluster”
 If you have written data to an existing Cassandra cluster and then change the cluster name, Cassandra will warn you with a cluster name mismatch error as it tries to read the datafiles on startup, and then it will shut down.
 Adding Nodes to a Cluster The configuration file has an element that is set to false by default.
 Say that you have been running a cluster or a single node and added data to it, and now you want to introduce more nodes to the cluster.
@@ -1433,6 +1467,7 @@ There are several consistency levels that you can specify, and they mean somethi
 The possible consistency levels, and the implications of specifying each one for read queries, are shown in Table 7-1
 The consistency levels are based on the replication factor specified in the configuration file, not on the total number of nodes in the system.
 You cannot specify CL.ZERO for read operations because it doesn’t make sense.
+This would amount to saying “give me the data from no nodes.”
 A background thread is created to check that record against the same record on other replicas.
 If any are out of date, a read repair is then performed to sync them all to the most recent value.
 Then, if necessary, perform a read repair in the background on all remaining replicas.
@@ -1458,6 +1493,7 @@ That means that writes at CL.ONE are durable, so this level is the minimum level
 If this node goes down immediately after the write operation, the value will have been written to the commit log, which can be replayed when the server is brought back up to ensure that it still has the value.
 For both reads and writes, the consistency levels of ZERO, ANY, and ONE are considered weak, whereas QUORUM and ALL are considered strong.
 Consistency is tuneable in Cassandra because clients can specify the desired consistency level on both reads and writes.
+There is an equation that is popularly used to represent the way to achieve strong consistency in Cassandra: R + W > N = strong consistency.
 In this equation, R, W, and N are the read replica count, the write replica count, and the replication factor, respectively; all client reads will see the most recent write in this scenario, and you will have strong consistency.
 Basic Read Properties There are a few basic properties of reading data from Cassandra that are worth noting.
 First, it’s easy to read data because clients can connect to any node in the cluster to perform reads, without having to know whether a particular node acts as a replica for that data.
@@ -1483,6 +1519,7 @@ This is obviously an expensive proposition, because you might incur additional n
 That’s because it’s possible that an update happening at the same time as your row scan will miss the updates made earlier in the index than what you are currently processing.
 There is another thing that can be confusing at first.
 When you are using Random Partitioner, you must recall that range queries first hash the keys.
+So if you are using a range of “Alice” to “Alison”, the query will first run a hash on each of those keys and return not simply the natural values between Alice and Alison, but rather the values between the hashes of those values.
 Here is the basic flow of a read operation that looks for a specific key when using Random Partitioner.
 First, the key is hashed, and then the client connects to any node in the cluster.
 That node will route the request to the node with that key.
@@ -1491,9 +1528,8 @@ Once the key is found in the Bloom filter, it is used to consult the correspondi
 Setup and Inserting Data We’ll look at inserts first, because you need to have something in the database to query.
 In this section we set up a Java project and walk through a complete example that does an insert and then reads the data back.
 Now let’s create a new project to test some of our work.
-First, create a new project, and then add a few JARs to your classpath: a Log4J JAR to output log statements (don’t forget to set the properties file for your.
 In Eclipse, you can add the log4j.properties file by creating a new Run Configuration.
-Click the Arguments tab, and then in the VM Arguments text field, enter the parameter specified in the previous code sample— of course using the actual path to your properties file.
+Click the Arguments tab, and then in the VM Arguments text field, enter the parameter specified in the previous code sampleof course using the actual path to your properties file.
 To keep this simple, we’ll use the default keyspace and configuration.
 Now start the server, and create a class that looks like the one shown in Example 7-1
 This example will open a connection to Cassandra and write a new row with two columns: name and age.
@@ -1538,6 +1574,7 @@ If you don’t know their names, or for another reason want to retrieve a range 
 But it is not uncommon to see many, many columns defined per row in Cassandra, so don’t let these examples mislead you.
 It’s a big data store and can hold two billion columns per row in version 0.7
 To use the slice predicate, you create a predicate object populated with the column names you want, and pass it to your read operation.
+Getting Particular Column Names with Get Slice If you want to get just the columns called “a” and “b” in a single row, you can use the predicate with the column names specified.
 You can get a set of columns contained in a column parent using a get_slice operation.
 It will retrieve values by column name or a range of names, and will return either columns or super columns.
 In this example, only the specified columns will be retrieved, and the other columns will be ignored.
@@ -1548,6 +1585,7 @@ When executed with a get_slice operation, this query will return the two columns
 For example, if this row also had an “email” column, it would be returned in the results as well.
 You must consider the column names according to their comparator, and specify start and finish in the proper order.
 For example, trying to set a start of name and a finish of age will throw an exception like this:
+Recall that “returning a column” doesn’t mean that you get the value, as in SQL; it means that you get the complete column data structure, which is the name, the value, and the timestamp.
 You can limit the number of columns returned by your slice range by using the count attribute of the Slice Range structure.
 Let’s say we have a row with hundreds of columns.
 We could specify a range that might include many of these columns, but limit our result set to only the first 10 columns like this:
@@ -1562,6 +1600,7 @@ One major distinction here is that you can get either keys or tokens in a range 
 Key ranges are start-inclusive, whereas token ranges are start-exclusive; because of ring distribution, tokens can wrap around so that the end token is less than the start token.
 The API defines the operation get_range_slices for you to use.
 For a complete listing that shows using a range slice, see Example 7-4
+Though the names involving “slice” and “range” may seem unusual at first, they turn out to be innocuous.
 Just remember that slices mean sets of columns and ranges mean sets of keys.
 So in this example, we’re getting multiple columns for multiple row keys.
 Multiget Slice With get_slice, we saw how to get a set of column names for a single specified row key.
@@ -1580,6 +1619,8 @@ So we have a couple of row keys in the database, with identifiers I’ve kept pu
 We have a variety of column sets between the two rows but we’re only interested in retrieving the a and c columns, so we use a slice predicate and specify the column_names to limit the results.
 We also want to specify more than one row, so we use a list of byte arrays to indicate which row keys we’re after.
 Running this code elicits the following result: Running Multiget Slice.
+As you can see, there was no column named “b” defined for the row with key “k2”, and Cassandra didn’t return anything for it.
+There was a value for column “b” in row “k1”, but we didn’t ask for it in our slice, so we didn’t get it.
 Because we’re using Thrift as the underlying RPC mechanism to communicate with Cassandra, the results will come back to you unordered and you’ll have to sort them on the client.
 A multiget is actually just a wrapper over a series of get requests.
 Deleting Deleting data is not the same in Cassandra as it is in a relational database.
@@ -1598,6 +1639,7 @@ On compaction, tombstones are accounted for, merged data is sorted, a new index 
 The assumption is that 10 days is plenty of time for you to bring a failed node back online before compaction runs.
 If you feel comfortable doing so, you can reduce that grace period to reclaim disk space more quickly.
 Let’s run an example that will delete some data that we previously inserted.
+Note that there is no “delete” operation in Cassandra, it’s remove, and there’s really no “remove,” it’s just a write (of a tombstone flag)
 Because a remove operation is really a tombstone write, you still have to supply a timestamp with the operation, because if there are multiple clients writing, the highest timestamp wins—and those writes might include a tombstone or a new value.
 Cassandra doesn’t discriminate here; whichever operation has the highest timestamp will win.
 Batch Mutates There were many examples of using batch mutate to perform multiple inserts in Chapter 4, so I won’t rehash that here.
@@ -1618,6 +1660,7 @@ This map uses a byte array key to point to the deletions you want to make, so yo
 These keys point to another map, which itself uses a string as the key to name the column family to modify.
 That map key points to a list of mutations that should be performed.
 There is a second way to specify items to delete using the Deletion structure: you can use a SliceRange instead of a List of columns, so you can delete by range instead of explicitly listing column names.
+Range Ghosts You may sometimes hear people refer to “range ghosts” in Cassandra.
 This means that even if you have deleted all of the columns for a given row, you will still see a result returned for that row in a range slice, but the column data will be empty.
 This is valid, and is just something to keep in mind as you iterate result sets on the client.
 Programmatically Defining Keyspaces and Column Families You can create keyspaces and column families through the API as well.
@@ -1628,6 +1671,7 @@ Cassandra is somewhat different in that there are no drivers for it.
 If you’ve decided to use Python to interact with Cassandra, you don’t go out and find a Cassandra driver for Python; there is no such thing.
 Instead of just abstracting the database interactions from the developer’s point of view, the way JDBC does, an entirely different mechanism is used.
 This is a client generation layer, provided by the Thrift API and the Avro project.
+But there are also high-level Cassandra clients for Java, Scala, Ruby, C#, Python, Perl, PHP, C++, and other languages, written as conveniences by third-party developers.
 There are benefits to these clients, in that you can easily embed them in your own applications (which we’ll see how to do) and that they frequently offer more features than the basic Thrift interface does, including connection pooling and JMX integration and monitoring.
 In the following sections, we see how Thrift and Avro work and how they’re used with Cassandra.
 Then, we move on to examine more robust client projects that independent developers have written in various languages to offer different options for working with the database.
@@ -1639,7 +1683,6 @@ For example, there are a number of bugs in Thrift that have remained open for ov
 It is not clear at the time of this writing how long Thrift will be supported in addition to Avro; they’re both in the now-current tree.
 Because it is currently unclear which will ultimately be supported, I’ve included a little about them both here.
 Thrift Thrift is the driver-level interface; it provides the API for client implementations in a wide variety of languages.
-Thrift was developed at Facebook and donated as an Apache project with Incubator status in 2008
 It’s available at http://incubator.apache.org/ thrift, though you don’t need to download it separately to use Cassandra.
 Its goal is to provide an easy way to support efficient RPC calls in a wide variety of popular languages, without requiring the overhead of something like SOAP.
 To use it, you create a language-neutral service definition file that describes your data types and service interface.
@@ -1683,7 +1726,7 @@ Partly because the Thrift project is still nascent, has limitations with transpo
 Avro The Apache Avro project is a data serialization and RPC system targeted as the replacement for Thrift in Cassandra, starting with version 0.7
 Avro was created by Doug Cutting, most famous perhaps for creating Apache Hadoop, the implementation of Google’s MapReduce algorithm.
 Avro provides many features similar to those of Thrift and other data serialization and RPC mechanisms such as Google’s Protocol Buffer, including:
-Robust data structures • An efficient, small binary format for RPC calls • Easy integration with dynamically typed languages such as Python, Ruby, Smalltalk, Perl, PHP, and Objective-C Avro has certain advantages that Thrift doesn’t, in particular the fact that static code generation is not required to use RPC for your application, though you can use it for.
+Easy integration with dynamically typed languages such as Python, Ruby, Smalltalk, Perl, PHP, and Objective-C Avro has certain advantages that Thrift doesn’t, in particular the fact that static code generation is not required to use RPC for your application, though you can use it for.
 The project is somewhat more mature (the current release version is 1.3.2) and more active.
 When you execute the Cassandra Ant file, the build target calls, among other things, the avro-generate target, which generates the Avro interfaces.
 These files are in the same interface directory where Thrift-generated files are.
@@ -1705,7 +1748,8 @@ It generates code that remote clients can use to interact with the database.
 It’s well-supported in the community and has the strength of growing out of the larger and very well-known Hadoop project.
 You can read more about Avro at its Apache project page: http://avro.apache.org.
 A Bit of Git Cassandra doesn’t use Git directly, but understanding at least a bit about Git will help you use a variety of client projects that do use Git.
-If you’re already familiar with Git, feel free to skip this section.) Many open source projects have started moving to GitHub recently.
+If you’re already familiar with Git, feel free to skip this section.
+Many open source projects have started moving to GitHub recently.
 Git is a relatively new, free source code revision system, written by Linus Torvalds to help him develop the Linux kernel.
 GitHub is a Git project hosting site, written in Ruby on Rails, that offers free and commercial options.
 The following client libraries, which we’ll look at individually, all use Git: the Web Console, Hector, Pelops, and other Cassandra-related satellite projects such as Twissandra (as discussed in the example of Twitter implementation using Cassandra)
@@ -1736,7 +1780,6 @@ Cassandra Web Console There’s a web console available from Suguru Namura, who 
 The console makes it easy to interact with Cassandra to perform a.
 I’m starting with this console before getting into the real clients you will use to interact with the database because it gives you a very user-friendly view into the configuration of your Cassandra instance.
 If you want to modify the source code, either fork it with Git or just grab one of the binaries from the Downloads page of the project.
-If you want to compile the project, you’ll need Maven 2
 The console allows you to view keyspace properties and add, rename, and drop a keyspace.
 You can view the configuration information about each keyspace as well, including the column families.
 Column families You can add or drop column families and view their keys.
@@ -1781,6 +1824,7 @@ This may take a while and will require you to restart your computer.
 Once Visual Studio is installed, open the HectorSharp project so you can view the source code and add it as a reference to our own project.
 The Express version of Visual Studio may complain about not doing Solution files, but don’t worry about that.
 Build the HectorSharp source by right-clicking the HectorSharp project name in the Solution Explorer window.
+You should see a notice in the bottom-left corner saying “Build Succeeded”
 This will produce the HectorSharp .dll client that we can use in our own application.
 You’ll be presented with a shell class called Program.cs with a main method.
 Now let’s reference the HectorSharp DLL so we can use its classes.
@@ -1801,6 +1845,7 @@ The get command is using the parameterized execute method, as are other sibling 
 For our sample application, we’ll just keep it simple, but this is a reasonable pattern to follow for such a use case.
 Your application should look like the listing in Example 8-1
 Compile this code into a console application by choosing Debug > Build Solution.
+Now open a second console and navigate to the directory where you have your “ExecuteHector” project, then switch into the bin\Release directory.
 As you can see, if you’re creating a C# application and want to use Cassandra as the backing database, it is very easy to get started with HectorSharp, and its object model is very high-level, intuitive, and easy to use.
 Just be aware that as of this writing, HectorSharp is still in the nascent stages, so make sure that your requirements are supported before going too far.
 Chirper If you’re a .NET developer, you might be interested in Chirper.
@@ -1815,7 +1860,8 @@ You likely already have it if you’re on Linux; you can download the binary if 
 Just uncompress the download into a directory and manually add the bin subfolder to the system’s path environment variable.
 Pelops (Java) Pelops is a free, open source Java client written by Dominic Williams.
 It is similar to Hector in that it’s Java-based, but it was started more recently.
-To create a simple, easy-to-use client • To completely separate concerns for data processing from lower-level items such.
+To completely separate concerns for data processing from lower-level items such.
+To act as a close follower to Cassandra so that it’s readily up to date.
 And the API is much simpler than using the low-level stuff exposed by Thrift and Avro.
 To write data, you just need a Mutator class; to read data, just use a Selector.
 Here’s a brief sample from Williams’ website that creates a connection pool to a list of Cassandra servers, then writes multiple subcolumn values to a super column:
@@ -1823,6 +1869,7 @@ Consider how much easier that is than using the API provided out of the box.
 If you’re using Cassandra from a Java application, I encourage you to give Pelops a try.
 Kundera (Java ORM) Kundera is an object-relational mapping (ORM) implementation for Cassandra written using Java annotations.
 According to its author, Impetus Labs, the aim of Kundera is:
+Kundera does not reinvent the wheel by making another client library; rather it leverages the existing libraries and builds—on top of them—a wrap-around API to help developers do away with unnecessary boiler plate codes, and program a neater-and-cleaner code that reduces codecomplexity and improves quality.
 This library is quite new at the time of this writing, so it has yet to be seen how readily it will be adopted.
 Still, it does appear promising, and it speaks to burgeoning interest in Cassandra among general application developers.
 If you envision using Cassandra from Ruby, this might fit the bill.
@@ -1875,7 +1922,7 @@ Instrumentation refers to putting a wrapper around application code that provide
 Such tools include monitoring agents, data analysis tools, profilers, and more.
 Low available memory detection, including the size of each graduation space on the heap.
 Thread information such as deadlock detection, peak number of threads, and current live threads.
-Log level control • General information such as application uptime and the active classpath.
+General information such as application uptime and the active classpath.
 In these applications, JMX is simply one way of managing the container; JBoss Application Server, on the other hand, uses JMX as the primary way of interacting with the container.
 For example, the WebLogic server provides a very wide range of activities via JMX.
 You can, for example, monitor the number of available JDBC connections in a pool or see the number of stateless session beans loaded in the container in a given state.
@@ -1965,6 +2012,7 @@ This means you’re able to quickly determine exactly how many objects are in a 
 For each of these stages you can see the counts for active, completed, and pending tasks.
 Some of the stages, such as for reading and writing data, maintain their own thread pools, and the MBeans allow you to see the pool size.
 All of the stage objects expose only attributes and don’t allow you to perform any operations.
+You can view information about a variety of caches that Cassandra maintainsincluding the caches for column family key and row hints—for location information of keys, rows, and migrations.
 The cache information contains attributes for the cache’s current size, capacity, number of cache requests, cache hits, and recent cache activity.
 Column Family Stores is another set of MBeans, but these give you a richer variety of attribute values, and also allow you to perform some operations.
 These give you a view into your memtables, SSTables, and Bloom filter usage.
@@ -2001,6 +2049,7 @@ There are two basic ideas here: a stream source and a stream destination.
 Each node can stream its data to another node in order to perform load balancing, and this class supports these operations.
 The MBean methods give you a necessary view into the data that is moving between nodes in the cluster.
 The getStatus operation is not an enumeration with some set list of possible statuses.
+It rather returns a string in the form of ReceivingFrom: [node] SendingTo: [node]
 So in conjunction with the Storage-Service MBean, if you’re concerned that a node is not receiving data as it should, or that a node is unbalanced or even down, these two services working together can give you very rich insight into exactly what’s happening in your cluster during a snapshot in time.
 Custom Cassandra MBeans Let’s quickly write a very simple MBean so that you can do this kind of work yourself if there’s a new feature you’d like to JMX-enable.
 First, we get the source code and create our MBean interface next to the Cassandra source file it wraps.
@@ -2035,6 +2084,8 @@ Now that we have captured our heap data, let’s use JHAT to check it out.
 To run JHAT, open a terminal and type something like the following, replacing my heap dump file location with yours:
 Now that the server is started, you can open a browser to http://localhost:7000 to view the file.
 The heap dump file is also portable, so you can move it to another box after you generate it and view it there in JHAT.
+The generated website offers a variety of options, including limiting your view to only:
+Heap histogram, showing all classes with the number of instances that have been.
 If there’s a problem with Cassandra, an hprof file will be created, as we can see in the following output:
 The file will be created in <cassandra-home>, and you can open it like this:
 The file will be analyzed, the server will be created, and you can open a browser to see what the state of your objects were at the time of the crash.
@@ -2056,6 +2107,7 @@ The window on the left will show you a list of threads and pools, and you can cl
 If you see any threads in a stuck state, that’s a sign that your server is not releasing resources as it should, and you will start to see performance bottlenecks around this thread.
 If many stuck threads begin to queue up in a stuck state, your server will eventually crash.
 If you’re seeing unusual growth in heap usage where garbage collection is not reclaiming space, you might have an issue with stuck threads, and you can check this area of the console to determine thread state.
+In Java, a “stuck” thread is a thread that the application has transitioned to the “stuck” state following a timeout period; that is, the application has decided that after a certain amount of time during which work is not being completed, the thread will never complete its work.
 This can prevent it from getting returned to the thread pool, which means fewer threads will be available for new work, which means performance will start crumbling.
 Finally, you can click the Detect Deadlock button if you’re concerned that you might have internal deadlocked threads.
 Health Check There are a few basic things that you’ll want to look for to ensure that nodes in your cluster are healthy:
@@ -2094,11 +2146,13 @@ You can get basic information on an individual node or on all the nodes particip
 Info The most straightforward command to issue is the info command.
 It tells Nodetool to connect with a single node and get some basic data about its current state.
 Just pass it the address of the node you want info for:
+The only item here that might not be entirely obvious is the “Generation No” field.
 Ring To determine what nodes are in your ring and what state they’re in, use the host and ring switches on Nodetool, like this:
 Here we see the IP addresses of all the nodes in the ring.
 The load column represents the byte count of the data each node is holding.
 Cassandra assigns each node in the cluster a unique token, called the Range Token, which determines what keys that node will be the primary replica for.
 The range column shown using the ring switch indicates the token each node is responsible for.
+There is a special range called the “wrapping range.” The node with the lowest token value gets assigned all the keys that are less than that token, as well as all the keys greater than the range of the largest token; i.e., it wraps from the largest back around to the lowest.
 Getting Statistics Nodetool also lets you gather statistics about the state of your server down to the data level.
 This is much more detailed information about your data than is gathered by the info switch.
 There are two basic commands: cfstats and tpstats, both of which we examine now.
@@ -2132,6 +2186,7 @@ So although Cassandra takes care of such matters automatically on occasion, you 
 Anti-entropy is used in Amazon’s Dynamo, and Cassandra’s implementation is modeled on that (see Section 4.7 of the Dynamo paper if you have an academic interest)
 The repair command, unlike other Nodetool commands, requires passing the name of the particular keyspace you want to repair:
 After running the tool, you’ll see some moderate output in your server logs, similar to this:
+What’s a Merkle tree? A Merkle tree, named for its inventor, Ralph Merkle, is also known as a “hash tree.” It’s a data structure represented as a binary tree, and it’s useful because it summarizes in short form the data in a larger data set.
 In a hash tree, the leaves are the data blocks (typically files on a filesystem) to be summarized.
 Every parent node in the tree is a hash of its direct child node, which tightly compacts the summary.
 Merkle trees are used in Cassandra to ensure that the peer-to-peer network of nodes receives data blocks unaltered and unharmed.
@@ -2179,6 +2234,7 @@ When you call decommission on Nodetool, you’re calling the decommission operat
 You can issue the decommission argument to Nodetool to pull one of the nodes out of service, as shown here:
 After issuing this command, it will wait for some time, as configured.
 Nodetool won’t print anything further, but the server logs will.
+On our 1.5 node—the node that we’re keeping—we see the following output after issuing the decommission command:
 The gossiper tells 1.5 that it’s in a leaving state.
 Meanwhile, in the server logs for the node we decommissioned, we see the following output:
 The node starts out aware of 1.5, then receives the decommission command.
@@ -2261,7 +2317,6 @@ In general, the defaults provided by Cassandra out of the box are very good.
 But you might want to update the concurrent_reads setting immediately before you start your server.
 That’s because the concurrent_reads setting is optimal at two threads per processor core.
 By default, this setting is 8, assuming a four-core box.
-If you have an eight-core box, tune it up to 16
 This should match the number of clients that will write concurrently to the server.
 If Cassandra is backing a web application server, you can tune this setting from its default of 32 to match the number of threads the application server has available to connect to Cassandra.
 Caching There are several settings related to caching, both within Cassandra and at the operating system level.
@@ -2273,6 +2328,7 @@ Your caching strategy should therefore be tuned in accordance with a few factors
 Consider your queries, and use the cache type that best fits your queries.
 Consider the ratio of your heap size to your cache size, and do not allow the cache.
 Consider the size of your rows against the size of your keys.
+The keys_cached setting indicates the number of key locations—not key values—that will be saved in memory.
 If you use a fraction, you’re indicating a percentage of keys to cache, and an integer value indicates an absolute number of keys whose locations will be cached.
 The keys_cached setting is a per-column family setting, so different column families can have different numbers of key locations cached if some are used more frequently than others.
 This setting will consume considerable memory, but can be a good trade-off if your locations are not hot already.
@@ -2309,6 +2365,7 @@ Make sure that you have Python 2.6 or better installed so that you can take adva
 Then, in the directory where you decompressed it, execute the following command on Linux to establish some dependencies:
 Thrift might not run on your system if you don’t have the C++ Boost libraries properly installed.
 Now, to build Thrift, run a series of commands as root from the Thrift home directory:
+On Ubuntu Linux, you might see an error such as “autoscan: not found” when trying to install Thrift.
 In order to get autoscan, which the Thrift bootstrap needs, you’ll have to run this command: $ sudo apt-get install automake.
 You can tell whether you have autoscan installed by executing the command $which autoscan.
 If Thrift is installed properly, you should be able to run the Thrift program and see help output:
@@ -2326,6 +2383,7 @@ But this is using the defaults, and is on a Cassandra server that already has 1G
 Let’s give the test more threads to see if we can squeeze a little better performance out of it:
 What we’ve done here is used the -t flag to use 10 threads at once.
 You should run the test several times to get an idea of the right number of threads given your hardware setup.
+Depending on the number of cores on your system, you’re going to see worse—not better—performance if you set the number of threads arbitrarily high, because the processor will devote more time to managing the threads than doing your work.
 You want this to be a rough match between the number of threads and the number of cores available to get a reasonable test.
 Now that we have all of this data in the database, let’s use the test to read some values too:
 As you can see, Cassandra doesn’t read nearly as fast as it writes; it takes about 80 seconds to read one million values.
@@ -2341,6 +2399,7 @@ To tune these, set them higher (see following note) and to the same value.
 Assertions By default, the JVM is passed the -ea option to enable assertions.
 Changing this option from -ea to -da (disable assertions) can have a positive effect on performance.
 Survivor Ratio The Java heap is broadly divided into two object spaces: young and old.
+The young space is subdivided into one for new object allocation (called “eden space”) and another for new objects that are still in use.
 Older objects still have some reference, and have therefore survived a few garbage collections, so the Survivor Ratio is the ratio of eden space to survivor space in the young object part of the heap.
 Increasing the ratio makes sense for applications with lots of new object creation and low object preservation; decreasing it makes sense for applications with longer-living objects.
 This is fairly low, because the objects are living longer in the memtables.
@@ -2475,9 +2534,9 @@ He noted that the turnaround time from idea to execution with Pig was very quick
 He could traverse all of the data in 10–15, minutes rather than hours.
 As a result, Raptr is able to explore new possibilities in analyzing their data.
 He notes that a nice side effect of this is that the analytics engine scales with the data.
+Imagini: Dave Gardner Imagini provides publishers with tools to profile all their site visitors through “visual quizzes” and an inference engine.
 Behind the scenes, this involves processing large amounts of behavioral data and then making the results available for real-time access.
 After looking at several alternatives, Imagini went with Cassandra because of its fault tolerance, decentralized architecture (no single point of failure), and large write capacity.
-This is nearly all accessed via simple key lookup.” Currently Imagini aggregates data from a variety of sources into Hadoop’s distributed filesystem, HDFS.
 Using Hadoop Streaming, they use PHP to MapReduce over their data and output directly to Cassandra via Thrift in their reducers.
 The results reside in Cassandra to provide real-time access to the data.
 Looking forward, Imagini hopes to simplify their workflow once Hadoop Streaming becomes available with Cassandra.
@@ -2490,6 +2549,7 @@ We’ve lately become familiar with the term “NoSQL” to describe a set of da
 I have been using the term “nonrelational” in acknowledgment that these databases are frequently grouped together in the popular imagination.
 But part of the point of this appendix is to illustrate that we probably should stop talking this way.
 It is specious to compare NoSQL databases to relational databases; as you’ll see, none of the so-called “NoSQL” databases have the same implementation, goals, features, advantages, and disadvantages.
+So comparing “NoSQL” to “relational” is really a shell game.
 So in this appendix we review a variety of popular nonrelational databases.
 So my aim here is to help you understand Cassandra’s place in the constellation of competing nonrelational databases so that you are best armed to make the right choice of database for your needs.
 If you already know that you want to employ Cassandra, this survey should still prove useful in understanding some of the design decisions and trade-offs made in Cassandra.
@@ -2505,7 +2565,7 @@ If that’s the case, it may prove helpful to understand some of the competing p
 So let’s take a brief look at some of these alternatives to help you see how they differ from what you might already be familiar with.
 I have tried to characterize each database in terms of the same general categories in order to make the comparison clear.
 In general, these databases are distributed, which means that their design allows for more than one node of the database that contains copies of the data, and they handle the replication automatically for you.
-There are some exceptions, however, such as Amazon’s SimpleDB.) They have a variety of features to help handle massive scale, which is important for many new web applications.
+They have a variety of features to help handle massive scale, which is important for many new web applications.
 On the negative side, however, what these databases generally share is a lack of great tooling and framework support.
 Many of the solutions here are new, which means that the developers are focusing on the core product and that you’ll have to forego, at least for the time being, tools such as graphical consoles, which we’ve become used to in the RDBMS world.
 To employ any of these solutions, including Cassandra, you’ll need to feel comfortable working with a command-line interface, simple shell tools, and getting your hands dirty with some plumbing.
@@ -2513,15 +2573,19 @@ Because many of these databases are becoming more popular and widely understood,
 Object Databases The purpose of an object database is to avoid the object-relational impedance mismatch that occurs when trying to use a relational database under an application written in an object-oriented programming language.
 Object databases store data not in terms of relations and columns and rows, but in terms of the objects themselves, making it straightforward to use the database from an object-oriented application.
 This allows you to avoid writing extensive SQL code or stored procedures to map from application.
+So-called “XML native” databases soon sprang up, one of the first being Tamino from Software AG.
 They are now employed in a variety of use cases, such as content management and supply chain systems, document management, publishing, and support of SOA initiatives.
+This architecture is called “symmetrical” or sometimes “zero-translation” because it uses XML in every tier of an application.
 On the client side, XRX uses XForms, which is a W3C-recommendation XML format distinct from HTML forms; XForms is capable of expressing the kinds of controls required in forms, but it does not dictate the final presentation form.
 That is, XForms can be rendered in web pages, but also in other applications, such as Open Office and Lotus documents.
 It accomplishes this flexibility by using a Model View Controller (MVC) design, which allows advanced features such as form validation against an XML schema document, and in-page data refreshes.
 Currently, no browser natively supports XForms, though plug-ins are available for Firefox, and libraries exist to allow serverside translation of XForms into XHTML.
 In the middle tier, XRX uses RESTful services, sometimes only as a facade around the database; on the backend, XRX employs a native XML database to store and query documents using XQuery, and frequently these databases expose a RESTful interface.
+Working directly with XML in the data tier can be a relief to developers facing the notorious “impedance mismatch” between object-oriented application languages and relational databases.
 Although they are often not stored directly in their “native” format, developers can work with the documents using APIs as if they were.
 Use of XML-friendly query mechanisms such as XPath and XQuery.
 XPath is the mechanism to address the variety of data items in a document, such as elements and attributes.
+XQuery affords a robust querying mechanism in the form of FLOWR queries (so named because they allow you to use statements such as “For”, “Let”, “Where”, “Order,” and “Return”)
 Performance improvements when you’re using XML directly within your application.
 Some applications that work with XML will map these documents to a relational database, but there are a variety of advantages to skipping this step and using an XML database instead.
 For example, XML documents typically represent hierarchical data structures, which may map poorly to a relational model.
@@ -2530,11 +2594,11 @@ Features that are familiar from working with relational databases, such as joins
 Flexible use of XML throughout the stack, such as when using XForms in the presentation tier.
 Other features, such as storage of non-XML documents (for example, full plaintext [unstructured] documents)
 If you’re not familiar with XPath as a means to find data in an XML document, consider the following example XML document:
+Given this XML document, the following XPath expression will give us the value “6.95”, which is the result of navigating to the value of the price element inside the play element whose value for the name attribute is “King Lear”:
 There are a variety of XML databases in open source projects and commercial offerings.
 They typically employ one of two data storage mechanisms: text-based or model-based.
 Text-based XML databases typically will store their data as large text files, character large objects (CLOBs), or even as a binary large object (BLOB) in an underlying relational database, performing the translation for you.
 Model-based XML databases don’t directly store the text of the XML document; instead, they parse documents into an internal proprietary object model that appears to the developer as an XML document.
-Often this boils down to breaking down the various parts of an XML document (elements, attributes, etc.) and storing them as fragments within a relational database.
 The following sections offer a quick overview of some of the popular XML databases.
 SoftwareAG Tamino Tamino was one of the earliest XML-native databases.
 It’s a mature commercial offering that supports a wide variety of the kinds of functions you’d expect in an “enterpriseready” database, such as high availability.
@@ -2546,11 +2610,11 @@ The Berkeley database is specifically geared toward developers rather than DBAs,
 You can use Berkeley XML DB to store a mixture of XML documents and lessstructured documents.
 MarkLogic Server MarkLogic is a server backed by an XML database that supports XQuery for Create, Read, Update, and Delete (CRUD) operations; full-text searching; XML searching; and transactions.
 Although MarkLogic is a commercial product, there is a free community license available for small projects and nonprofit organizations.
-Apache Xindice The Apache Xindice project was one of the early XML databases, with work beginning in 2001
 It was designed for working only with small and medium-sized documents.
 The importance of XML databases in this context is that some of this work serves as a predecessor to the more recent document-oriented databases, which we explore in a moment.
 More to the point, however, is that these databases highlight some of the advantages that can be realized by considering how your database maps to the specific needs of your application architecture, rather than simply assuming that a relational database is a one-size-fits-all solution.
 Of course, if you are storing only small XML documents and your application doesn’t require document collections, then you are not likely to find any performance benefit in an XML database.
+Document-Oriented Databases In a relational database, data is stored in terms of tables, requiring data that might otherwise be repeated to be “broken apart” in order to use relational keys.
 You then can employ complex queries written to pull your relational data back together for a single query result that captures the data in a two-dimensional grid of rows and columns.
 The basic unit of storage in a document database is a complete document itself.
 A document can store any number of fields of any length, and each field can store multiple values.
@@ -2571,7 +2635,6 @@ Client: The most recent versions of the Lotus client for end users have been cre
 To interact with a Domino database, you can access APIs provided in C, C++, or Java.
 Notes databases are not relational, but you can use a SQL driver with them, and the Domino XML Language provides XML views of all data so you can use these processing tools.
 Production use: Lotus is used as an end-user collaboration tool throughout many.
-This is not entirely surprising, as its creator, Damien Katz, worked on Lotus Notes at IBM before deciding to embark on this project, with the idea that it would be a database ”of the Web.” The documents stored by CouchDB do not need to share the same schema, and query capabilities are made available via views, which are constructed as JavaScript functions.
 CouchDB is interesting in part for what it terms Multi-Version Concurrency Control (MVCC)
 In order to support this, all writes occur as appends to the document store, making it much harder to corrupt datafiles.
 This implementation is somewhat similar to Cassandra; using an append-only model means that files can grow very large very quickly, requiring a background process to run compactions.
@@ -2582,6 +2645,7 @@ Production use: CouchDB is not yet in a 1.0 release as of this writing, but it i
 Additional features: MapReduce, incremental replication, and fault-tolerance are all supported.
 It purports to combine the best of keyvalue stores, document databases, object databases, and RDBMS.
 That is, it shards automatically as with a key-value store, allows JSON-based dynamic schema documents, and offers a rich query language in the manner of a relational database.
+Schema: JSON-style documents are stored, and you can use dynamic schemas.
 CAP: MongoDB uses a single master for any shard, making it completely.
 There’s a very neat web interface that lets you try MongoDB in your browser using a JavaScript shell.
 Riak Riak is a hybrid database based on Amazon Dynamo that acts as a document-oriented database and also a distributed key-value store.
@@ -2607,6 +2671,7 @@ Figure A-1 shows a graph database with five nodes and five edges.
 The edges describe a variety of relationships, but in this example, each has only a single property of the edge name.
 We can see that one of the edges is bidirectional.
 Each node in this example has a single property (“name”), but they could all have a variety of additional properties.
+One nice thing about a graph database is that it’s “whiteboard friendly”; that is, the data model looks like how we often think when mapping things out at the whiteboard, and we don’t need additional translation steps to make the data fit our database’s constraints.
 Graph databases differ from other nonrelational offerings such as key-value stores in that they represent the edges as first-class citizens, and not just the nodes.
 That is to say that whereas many programming languages and databases we’re used to allow us to infer a relationship, the relationship itself is only indirectly represented (say, via a foreign key relation or a pointer)
 In graph databases, the relationships are given equal status with the nodes, as the relationship between the nodes is considered central to certain use cases.
@@ -2623,6 +2688,7 @@ The large-scale availability of the high-speed Internet infrastructure allowed s
 Many more people were suddenly connected, and the Web was offering new ways for them to interact, rather than just read.
 The need to manage data on a very large scale is increasing, and will continue to do so.
 It is at this point where the Web starts to employ that important second layer of semantics, accompanied by the explosion in volume of data, and where the largest web properties are forced to start looking at alternatives to the relational database.
+Some semantic web researchers and enthusiasts have recently suggested that we are entering a new era, Web 3.0, where RDF, microformats, and ontologies will support a superconnected “web of data” culminating in a gigantic graph of the world’s knowledge base some years from now.
 As such, the usefulness of graph databases, which directly support the idea of a semantic relationship between two nodes, becomes more immediately apparent.
 Like many document-oriented databases, graph databases typically allow for free-form schemas, allowing your application to evolve easily as your data set grows and changes.
 Because there is no relational model, joins are not necessary, which can offer more efficient queries as your data set grows.
@@ -2637,18 +2703,20 @@ There is also a Google project called Pregel, which they’ve been using interna
 FlockDB In April 2010, Twitter announced that they were open-sourcing to GitHub their new graph database called FlockDB.
 They created FlockDB to store the adjacency lists for followers on Twitter, so they could readily understand who follows whom and who blocks whom.
 It scales horizontally and is designed for online, low-latency, highthroughput environments.
+Schema: The schema is very straightforward, as FlockDB does not attempt to solve.
 The graph contains entries with four attributes: a source ID, a destination ID, a position, and a state.
 Client: FlockDB uses the Thrift 0.2 client, and Twitter has also written a Ruby frontend that offers a richer interface.
-It uses Kestrel as a loosely coupled, reliable message queue that picks a server at random to write to, so there is no cross-server communication (no clustering, no multicast, etc.)
+Additional features: FlockDB allows you to quickly page through result sets that.
 It’s transactional, supporting JTA/JTS, two-phase commit, deadlock detection, and MVCC.
 It has been in production use since 2003, making it one of the older data stores presented here, and is capable of scaling to billions of entities (nodes, edges, properties) in a single JVM.
 Neo4J can be embedded as a small JAR file, so it’s easy to get up and running and use in a flexible way in your applications.
-Schema: Schema-less graph of nodes, edges, and optional properties • Client: There are a few options here.
+Created: Created and used in production since 2003 by Neo Technologies.
 You can run Neo4J as a REST server so that.
 Neoclipse is a plug-in to the Eclipse IDE that offers a graphical representation of your graph and an interface with Grails.
 Replication: As of this writing, Neo4J replication is still in the works.
 It uses a master/slave replication design based on the one used in MySQL, where you can write to any slave instance, and lock coordination and change distribution are handled by the master.
 You can tune the consistency level desired, so you can achieve strong consistency by having Neo4J write synchronously to the write master and slave, or you can improve performance using eventual consistency by propagating writes to slaves asynchronously.
+Additional features: Because it is a graph database, Neo4J can be used to good.
 It allows you to execute SPARQL Protocol and RDF Query Language (SPARQL) queries for interacting with Resource Description Framework (RDF) and acts as a partial Web Ontology Language (OWL) store.
 Integration with Apache Lucene/Solr is available to store external indexes and perform fast global searches.
 An index in distributed databases can be thought of like a dictionary—a direct pointer from a key to a value.
@@ -2659,6 +2727,7 @@ Your domain rather becomes a bucket into which you can drop data items; the data
 All data relevant to that key is therefore stored with the key, resulting in a sharp contrast to the normalized model prized in relational databases: data is frequently duplicated.
 There are some variations here, though, and some conceptual overlap results with the columnar databases.
 When working with relational databases, we tend to think hard about the schema, trusting that any question we want to ask the database will be answerable.
+Because the questions—the queries—are secondary in this model, they can become very complex.
 You’ve surely seen elaborate SQL statements that use several joins, subqueries, aggregate functions, temporary tables, and so forth.
 In the columnar model, however, we tend to think of the query first, and the queries we’ll execute help dictate the design of the buckets we’ll need.
 The assumption in columnar databases that supports this is that we want replication in order for the database to be available, and that data duplication is OK because disk space is inexpensive.
@@ -2674,9 +2743,12 @@ Though it’s not usable by developers, it’s still important to discuss becaus
 The paper is rather technical, but it is clear, concise, and very well written.
 Dynamo was born, as were many of the systems described in this chapter, from the need to honor strict requirements for realizing high performance under continuous growth, meeting service-level agreements (SLAs), remaining available under strenuous load and failures, gracefully handling those failures, and allowing horizontal scale.
 Therefore, with respect to the CAP theorem, Dynamo, like Cassandra, is highly available and eventually consistent.
+Failure handling in both of these systems is regarded as a “normal case without impacting availability or performance.” This is achievable because of the trade-off Dynamo makes with consistency.
 Dynamo is used for Amazon’s shopping cart, and of course consistency is important to Amazon.
 For a service such as a web-based shopping cart, which does not have competing readers, it is more than worth the trade-offs and will not be problematic.
+Although consistency is not the main focus of this system, it is a “tuneable” property, such that “eventual” is perhaps a misnomer.
 As in Cassandra, consistency in Dynamo works where a configurable property allows the user to decide what number of replicas must successfully respond before it can be determined that an operation was successful.
+To achieve this, communication between replicas is based on a peer-to-peer (P2P) communication protocol called “gossip,” which we’ll examine further in terms of Cassandra inherits.
 In order to support a highly available model, the team decided to tune down the consistency “knob.” Again, this is perfectly acceptable for their given use case.
 They also wanted a very easy-to-use query model, so the data is referenced using unique keys and stored simply as byte arrays.
 This eliminates the need for any sophisticated schema design and allows Amazon to put effort toward low-latency and high-throughput performance optimizations and their other primary goals.
@@ -2688,12 +2760,12 @@ Although I very much encourage you to read the Dynamo paper, be aware that Cassa
 In short, Cassandra derives its design around consistency and partition tolerance from Dynamo, and its data model is based on Bigtable.
 Project Voldemort Voldemort was started as a project within LinkedIn when they encountered problems with simple data partitioning to meet their scalability needs, similar to how Cassandra was started within Facebook.
 Voldemort is a distributed, very simple key-value store, based on Amazon’s Dynamo and Memcached.
+Schema: The primary aims of Voldemort are high performance and availability.
 As a result, the database supports only the most minimal schema.
 Because Voldemort allows you to specify your schema with JSON, it supports all the data types that JSON supports.
 According to the Voldemort website, it supports pluggable serialization and integrates with Thrift, Avro, and Google Protocol Buffers.
 Replication: Data is automatically replicated over multiple servers; this is configurable.
 Storage: Voldemort allows for pluggable storage on disk using BerkeleyDB or MySQL.
-Production use: LinkedIn • Additional features: Can be used in conjunction with Hadoop.
 Redis Redis is not a “plain” key-value store, as it supports a variety of values in different data structures such as binary-safe strings (strings that don’t contain a space or newline character), lists and sets of binary-safe strings, and sorted sets, which contain a floatingnumber score.
 In March of 2010, VMWare took over as project sponsor of Redis.
 Schema: Key-value store, using server:key-name to store and retrieve values.
@@ -2713,6 +2785,7 @@ You can think of these columnar databases as multidimensional key-value stores o
 Google’s Bigtable is really the parent of the modern columnar databases.
 It is proprietary, but there are a few published papers on its design, and each of the other columnar databases discussed are implementations that closely follow Bigtable’s design or, as in the case of Cassandra, take certain key ideas from Bigtable.
 Google Bigtable Bigtable is Google’s internally used custom database, designed to scale into the petabyte range.
+Bigtable is described in the paper published by Google in 2006 called “Bigtable: A Distributed Storage System for Structured Data.” The goals of the project are stated in that paper: “wide applicability, scalability, high performance, and high availability.” Bigtable is used extensively within Google as the underlying data store, supporting more than 60 projects, including Gmail, YouTube, Google Analytics, Google Finance, Orkut, Personalized Search, and Google Earth.
 Bigtable runs on top of the Google File System (GFS)
 It is useful to understand Bigtable, at least to a certain degree, because many of its attributes and design decisions are explicitly copied in Cassandra.
 Although Cassandra gets its design for consistency and partition tolerance from Amazon Dynamo, Cassandra’s data model is based more closely on Bigtable’s.
@@ -2735,19 +2808,20 @@ The map is indexed using a row key, a column key, and a timestamp; the values th
 Queries are also sometimes written in a scripting language developed at Google called Sawzall.
 Initially, the Sawzall API did not support writing values to the database, but did allow data filtering, transformation, and summarizing.
 MapReduce is typically used as both an input source and an output source.
-Open source: No • Additional features: While Bigtable itself is not directly available for your own.
+Additional features: While Bigtable itself is not directly available for your own.
 Bigtable was designed with use of the MapReduce algorithm in mind.
 There are a few clones of Bigtable, and Hadoop is an open source implementation of MapReduce.
 HBase HBase is a clone of Google’s Bigtable, originally created for use with Hadoop (it’s actually a subproject of the Apache Hadoop project)
 In the way that Google’s Bigtable uses the Google File System (GFS), HBase provides database capabilities for Hadoop, allowing you to use it as a source or sink for MapReduce jobs.
 Unlike some other columnar databases that provide eventual consistency, HBase is strongly consistent.
 Perhaps it is interesting to note that Microsoft is a contributor to HBase, following their acquisition of Powerset.
+Created: HBase was created at Powerset in 2007 and later donated to Apache.
 Pseudodistributed mode means that you have several instances of HBase, but they’re all running on the same host.
 To do so, data is organized into column families (a term that appears in discussions of Apache Cassandra)
 You address an individual record, called a “cell” in HBase, with a combination of row key, column family, cell qualifier, and timestamp.
 As opposed to RDBMS, in which you must define your table well in advance, with HBase you can simply name a column family and then allow the cell qualifiers to be determined at runtime.
 This lets you be very flexible and supports an agile approach to development.
-Production use: HBase has been used at Adobe since 2008
+Client: You can interact with HBase via Thrift, a RESTful service gateway, Protobuf (see “Additional Features” below), or an extensible JRuby shell.
 Additional features: Because HBase is part of the Hadoop project, it features tight integration with Hadoop.
 There is a set of convenience classes that allow you to easily execute MapReduce jobs using HBase as the backing data store.
 Zookeeper, also part of the Hadoop project, is a centralized service for maintaining configuration information and distributed synchronization across nodes in a cluster.
@@ -2761,11 +2835,13 @@ It can run on a distributed filesystem such as HFS or the Kosmos File System.
 Hypertable uses MultiVersion Concurrency Control (MVCC) to allow user transactions to execute in a private memory space, which are readable by other clients only once the transaction has committed.
 Like Cassandra and other Bigtable derivatives, it uses Bloom filters and commit logs to minimize disk access and improve performance.
 Unlike many of the other nonrelational solutions, it is not used frequently to back websites.
+Created: Hypertable was started in February of 2007 at Zvents.
 Schema: Hypertable stores data as a multidimensional table represented as a flat, sorted list of key-value pairs.
 The key is essentially the concatenation of four dimension keys (row, column family, column qualifier, and timestamp)
 Additional features: Hypertable has its own query language called Hypertable Query Language (HQL)
 The query here looks a lot like SQL, but includes a modified syntax.
 Polyglot Persistence The different styles of persistence that we’ve toured in this chapter highlight one fact: each of them is good at solving a particular problem, or has particular strengths where the others don’t.
+You may have heard the term “polyglot programming,” which is largely credited to Neal Ford.
 The idea with polyglot programming is that different programming languages are good at different things, and that you can combine programming languages in a single solution in order to realize the maximum benefit.
 Dean Wampler of http://polyglotprogramming.com offers the overwhelming success of Emacs as an example of how polyglot programming can be helpful: Emacs uses C for its kernel, which made it fast, and a scripting dialect of Lisp called Emacs Lisp (ELisp), which made it easy to extend.
 Polyglot programming as a concept has been enabled by a variety of advances in the last few years, including the ability of the Java Virtual Machine to run a variety of languages.
@@ -2779,6 +2855,8 @@ In this vision, relational databases will live side by side with nonrelational d
 Summary In the previous sections, we took a whirlwind tour of a variety of nonrelational databases in order to properly contextualize Cassandra in light of the overall NoSQL movement.
 The purpose was to shed some light on how the industry has been thinking about data over the last few years and to compare and contrast some of these systems in order to understand their broader theoretical underpinnings.
 We also took a tour of the many so-called NoSQL offerings in order to understand the alternatives to relational databases that have sprung up in recent years.
+These databases, in their variety of forms, are different ways of trying to respond to the growing need for handling data at massive “web scale.” Another purpose of this tour was to illustrate that NoSQL databases exist for a reason, though some pundits and industry experts may object.
+They are being used by many large companies with strenuous data requirements and cannot be dismissed as newfangled “art projects.” They are strongly rooted in important ideas surrounding data scalability from some of the best minds in the industry, sometimes going back decades.
 And, though it’s true that they have (very public) problems at times, that’s also the case with relational databases.
 So my purpose in this book has not been to convince you to throw away all your relational databases and replace them with the new flavor of the month.
 It’s been to help you understand the advantages and disadvantages of alternatives to relational databases, and to understand Cassandra in-depth, so that when you’re presented with your next data problem, you’re ready to take a step back and select not just the default tool, but the best tool for the job.
@@ -2821,7 +2899,6 @@ Cassandra foresaw the destruction of her city of Troy, but was powerless to stop
 The data store itself is an Apache project available at http://cassandra.apache.org.
 It has the following key properties: it is decentralized, elastic, fault-tolerant, tuneably consistent, highly available, and designed to massively scale on commodity servers spread across different data centers.
 Cassandra was originally written at Facebook to solve their Inbox Search problem.
-The code was released as an open source Google Code project in July of 2008
 It is easy to see why the Cassandra database is aptly named: its community asserts that Cassandra and other related NoSQL databases are the future.
 Despite widespread use of eventually consistent databases at companies such as Amazon, Google, Facebook, and Twitter, there remain many skeptics (“nonbelievers”) of such a model.
 It is further speculated that by naming the database Cassandra, after the Greek seer of the future, its creators are making a kind of joking reference to the Oracle database.
@@ -2841,6 +2918,7 @@ Column Family A column family is roughly analogous to a table in a relational mo
 It is a container for an ordered collection of columns.
 Because each column family is stored in a separate file, be sure to define columns that you are likely to access together in the same column family.
 You define your application’s column families in the Cassandra configuration file.
+You can supply global (per-keyspace) values for the size of the row cache, the size of the key cache, and the “read repair chance.” Column families can be one of two types: standard or super.
 Column Name The name part of the name/value pair stored within a Row.
 Column Value The value part of the name/value pair stored within a Row.
 The size of a column value is limited by machine memory.
@@ -2863,6 +2941,7 @@ In this case, the Stage Manager uses an anti-entropy stage.
 Compression Data compression on return is on the road map for future versions, but as of 0.6 it is not yet supported.
 Consistency Consistency means that a transaction does not leave the database in an illegal state, and that no integrity constraints are violated.
 This is considered a crucial aspect of transactions in relational databases and is one of the ACID properties (Atomic, Consistent, Isolated, Durable)
+In Cassandra, the relative degree of consistency can be calculated by the following: N = the number of nodes that store replicas of the data W = the number of replicas that must acknowledge receipt of a write before it can be said to be successful R = the number of replicas that are contacted when a data object is accessed in a read operation W + R > N = strong consistency W + R <= N = eventual consistency.
 Consistency Level This configurable setting allows you to decide how many replicas in the cluster must acknowledge a write operation or respond to a read operation in order to be considered successful.
 The consistency level is set according to your stated Replication Factor, not the raw number of nodes in the cluster.
 There are multiple levels of consistency that you can tune for performance.
@@ -2895,12 +2974,12 @@ From Dynamo, Cassandra gets the following: a key-value store, a symmetric peer-t
 Elastic Read and write throughput can increase linearly as more machines are added to the cluster.
 Eventual Consistency Consistency is the property that describes the internal integrity of the data following an operation.
 In practical terms for a strongly consistent database, this means that once a client has performed a write operation, all readers will immediately see the new value.
+Eventual consistency is sometimes called “weak consistency.” Eventual consistency has become popular in the last few years because it offers the ability to support massive scalability.
 Although it is possible to achieve high scalability in traditional fully consistent databases, the management overhead can become a burden.
 Of course, eventual consistency presents certain disadvantages, such as additional complexity in the programming model.
 Though the design of eventual consistency in Cassandra is based on how it is used in Amazon’s Dynamo, Cassandra is probably better characterized as “tuneably” consistent, rather than eventually consistent.
 That is, Cassandra allows you to configure the Consistency Level across the spectrum—including ensuring that Cassandra blocks until all replicas are readable (which is equivalent to full consistency)
 Failure Detection Failure detection is the process of determining which nodes in a distributed faulttolerant system have failed.
-Cassandra’s implementation is based on the idea of Accrual Failure Detection, first advanced by the Advanced Institute of Science and Technology in Japan in 2004
 Accrual failure detection is based on two primary ideas: that failure detection should be flexible by being decoupled from the application being monitored, and outputting a continuous level of “suspicion” regarding how confident the monitor is that a node has failed.
 This is desirable because it can take into account fluctuations in the network environment.
 Suspicion offers a more fluid and proactive indication of the weaker or stronger possibility of failure based on interpretation (the sampling of heartbeats), as opposed to a simple binary assessment.
@@ -2916,6 +2995,7 @@ When a server node is started, it registers itself with the gossiper.
 Hector An open source project created by Ran Tavory of Outbrain and hosted at GitHub, Hector is a Cassandra client written in Java.
 It wraps Thrift and offers JMX, connection pooling, and failover.
 Hinted Handoff This is a mechanism to ensure availability, fault tolerance, and graceful degradation.
+If a write operation occurs and a node that is intended to receive that write goes down, a note (the “hint”) is given (“handed off”) to a different live node to indicate that it should replay the write operation to the unavailable node when it comes back online.
 This does two things: it reduces the amount of time that it takes for a node to get all the data it missed once it comes back online, and it improves write performance in lower consistency levels.
 That is, a hinted handoff does not count as a sufficient acknowledgment for a write operation if the consistency level is set to ONE, QUORUM, or ALL.
 A hint does count as a write for consistency level ANY, however.
@@ -2929,6 +3009,7 @@ Within a given Cassandra cluster, you can have one or more keyspaces, typically 
 Lexicographic Ordering Lexicographic ordering is the natural (alphabetic) ordering of the product of two ordered Cartesian sets.
 Memtable An in-memory representation of data that has been recently written.
 Once the memtable is full, it is flushed to disk as an SSTable.
+Merkle Tree Perhaps better known as a “hash tree,” a Merkle tree is a binary tree data structure that summarizes in short form the data in a larger dataset.
 In a hash tree, the leaves are the data blocks (typically files on a filesystem) to be summarized.
 Every parent node in the tree is a hash of its direct child node, which tightly compacts the summary.
 Merkle trees are used in Cassandra to ensure that the peer-to-peer network of nodes receives data blocks unaltered and unharmed.
@@ -2936,8 +3017,10 @@ They are used in cryptography as well to verify the contents of files and transm
 Multiget Query by column name for a set of keys.
 Multiget Slice Query to get a subset of columns for a set of keys.
 Node Tool This is an executable file with the path bin/ nodetool that inspects a cluster to determine whether it is properly configured and performs a variety of maintenance operations.
+The commands available on nodetool are cleanup, clearsnapshot, compact, cfstats, decommission, drain, flush, info, loadba lance, move, repair, ring, snapshot [snap shotname], removetoken, and tpstats.
 For example, you can use nodetool drain to prevent the commit log from accepting any new writes.
 NoSQL “NoSQL” is a general name for the collection of databases that do not use Structured Query Language (SQL) or a relational data model.
+It is sometimes used to mean “Not Only SQL” to indicate that the proponents of various nonrelational databases do not suggest that relational databases are a bad choice—but rather that they are not the only choice for data storage.
 This term was coined by Cassandra committer Eric Evans of Rackspace, but he has since distanced himself from the term in preference of the term “Big Data” to highlight the fact that this family of nonrelational databases is defined not by what they’re not (implementations of SQL), but rather by what they do (handle huge data loads)
 This term, in my view, has reached the end of its useful life, because it’s confusing.
 It has proven too tempting to discuss a set of databases together that really have few goals, design decisions, or features in common.
@@ -2979,6 +3062,7 @@ Row Key Sometimes called simply “key,” a row key is analogous to a primary k
 It represents a way to identify a single row of columns and is an arbitrary length string.
 This overhead is due to scheduling, lock contention, and cache misses.
 The effect of SEDA is that work is not started and completed by the same thread; this can make a more complex code base, but also yield better performance.
+Therefore, much of the key work in Cassandra—such as reading, mutation, gossiping, memtable flushing, and compaction—are performed as stages (the “S” in SEDA)
 As events enter the incoming queue, the event handler supplied by the application is invoked.
 The controller is capable of dynamically tuning the number of threads allocated to each stage as demand dictates.
 The advantages of SEDA are higher concurrency and better management of CPU, disk, and network resources.
@@ -3022,7 +3106,6 @@ Vector Clock Vector clocks allow for partial, causal ordering of events in a dis
 A vector clock maintains an array of logical clocks, one for each process, and each process contains a local copy of the clock.
 In order to keep the entire set of processes in a consistent logical state, one process will send its clock to another process, which is then updated.
 In order to ensure consistency, some version of the following steps are typically followed.
-Each time a process experiences an event, its clock is incremented by 1
 Each time a process prepares to send a message, this too counts as an event, so it increments its clock by 1 and then sends its entire vector to the external process along with the message.
 Each time a process receives a message, this too counts as an event, so it updates its own clock by 1 and then compares its vector to the vector wrapped in the incoming message from the external process.
 It updates its own clock with the maximum value from the comparison.
@@ -3030,7 +3113,6 @@ A vector clock event synchronization strategy will likely be introduced in a fut
 Weak Consistency For reads, weak consistency improves performance by first returning results, and afterward performing any necessary Read Repair.
 We’d like to hear your suggestions for improving our indexes.
 Cassandra, 24 periodic and batch settings for commit log sync.
-Avro definitions written as, 163 defining for Cassandra database (example),
 About the Author Eben Hewitt is the Director of Application Architecture for a global corporation, where he is responsible for system strategy and design.
 He has contributed documentation to the Apache Cassandra project and is the author of several technology books, including Java SOA Cookbook (O'Reilly)
 He contributed to 97 Things Every Software Architect Should Know (O'Reilly) and has served as technical reviewer for several software books.

@@ -22,6 +22,7 @@ Sqoop helps the data engineer tasked with scripting such transfers by providing 
 The internals of Sqoop are described in its online user guide, and Hadoop: The Definitive Guide (O’Reilly) includes a chapter covering its fundamentals.
 But for most users who want to apply Sqoop to accomplish specific imports and exports, The Apache Sqoop Cookbook offers guided lessons and clear instructions that address particular, common data management tasks.
 Informed by the multitude of times they have helped individuals with a variety of Sqoop use cases, Kathleen and Jarcec put together a comprehensive list of ways you may need to move or transform data, followed by both the commands you should run and a thorough explanation of what’s taking place under the hood.
+The incremental structure of this book’s chapters will have you moving from a table full of “Hello, world!” strings to managing recurring imports between large-scale systems in no time.
 It has been a pleasure to work with Kathleen, Jarcec, and the countless others who made Sqoop into the tool it is today.
 I would like to thank them for all their hard work so far, and for continuing to develop and advocate for this critical piece of the total big data management puzzle.
 Whether moving a small collection of personal vacation photos between applications or moving petabytes of data between corporate warehouse systems, integrating data from multiple sources remains a struggle.
@@ -31,18 +32,19 @@ Relational database systems often store valuable data in a company.
 If made available, that data can be managed and processed by Apache Hadoop, which is fast becoming the standard for big data processing.
 Several relational database vendors championed developing integration with Hadoop within one or more of their products.
 Transferring data to and from relational databases is challenging and laborious.
+Because data transfer requires careful handling, Apache Sqoop, short for “SQL to Hadoop,” was created to perform bidirectional data transfer between Hadoop and almost any external structured datastore.
 Taking advantage of MapReduce, Hadoop’s execution engine, Sqoop performs the transfers in a parallel manner.
 From that exposure, you’ve seen how Sqoop optimizes data transfers between Hadoop and databases.
 A command-line interface providing 60 parameters is both powerful and bewildering.
 In this book, we’ll focus on applying the parameters in common use cases to help you deploy and use Sqoop in your environment.
 Chapter 1 guides you through the basic prerequisites of using Sqoop.
 You will learn how to download, install, and configure the Sqoop tool on any node of your Hadoop cluster.
-If you need to transfer generated, processed, or backed up data from Hadoop to your database, you’ll want to read Chapter 5
 In Chapter 6, we focus on integrating Sqoop with the rest of the Hadoop ecosystem.
 We will show you how to run Sqoop from within a specialized Hadoop scheduler called Apache Oozie and how to load your data into Hadoop’s data warehouse system Apache Hive and Hadoop’s database Apache HBase.
 For even greater performance, Sqoop supports database-specific connectors that use native features of the particular DBMS.
 This allows you to install Sqoop and use it from anywhere.
 In addition, having a REST API for operation and management enables Sqoop to integrate better with external systems such as Apache Oozie.
+As further discussion of Sqoop 2 is beyond the scope of this book, we encourage you to download the bits and docs from the Apache Sqoop website and then try it out!
 Conventions Used in This Book The following typographical conventions are used in this book: Italic.
 Indicates new terms, URLs, email addresses, filenames, and file extensions.
 Used for program listings, as well as within paragraphs to refer to program elements such as variable or function names, databases, data types, environment variables, statements, and keywords.
@@ -111,7 +113,6 @@ To install Sqoop on an Ubuntu, Debian, or other deb-based system:
 Sqoop’s main configuration file sqoop-site.xml is available in the configuration directory (conf/ when using the tarball or /etc/sqoop/conf when using Bigtop packages)
 While you can further customize Sqoop, the defaults will suffice in a majority of cases.
 We will explain the more commonly used properties in greater detail later in the book.
-Problem Sqoop requires the JDBC drivers for your specific database server (MySQL, Oracle, etc.) in order to transfer data.
 Solution You need to download the JDBC drivers and then install them into Sqoop.
 Some enterprise data stores might bundle the driver with the installation itself.
 After you’ve obtained the driver, you need to copy the driver’s JAR file(s) into Sqoop’s lib/ directory.
@@ -153,6 +154,7 @@ Problem You’ve successfully installed and configured Sqoop, and now you want t
 Solution Sqoop is a command-line tool that can be called from any shell implementation such as bash or zsh.
 An example Sqoop command might look like the following (all parameters will be described later in the book):
 The most important operations are import for transferring data from a database to Hadoop and export for transferring data from Hadoop to a database.
+PROPERTY_ARGS are a special set of parameters that are entered as Java properties in the format -Dname=value (examples appear later in the book)
 Property parameters are followed by SQOOP_ARGS that contain all the various Sqoop parameters.
 You can specify EXTRA_ARGS for specialized connectors, which can be used to enter additional parameters specific to each connector.
 Sqoop has a bewildering number of command-line parameters (more than 60)
@@ -170,8 +172,8 @@ Your question might have to do with your Sqoop command causing an error or givin
 In the latter case, it is necessary to include enough data to reproduce the error.
 If the list readers can’t reproduce it, they can’t diagnose it.
 Including relevant information greatly increases the probability of getting a useful answer.
-Especially with export, malformed data is often the culprit • Hadoop task logs.
-Often the task logs contain further information describing the problem • Permissions on input files.
+To that end, you’ll need to include the following information:
+Often the task logs contain further information describing the problem.
 While the project has several communication channels, the mailing lists are not only the most active but also the official channels for making decisions about the project itself.
 If you’re interested in learning more about or participating in the Apache Sqoop project, the mailing lists are the best way to do that.
 The next few chapters, starting with this one, are devoted to transferring data from your relational database or warehouse system to the Hadoop ecosystem.
@@ -354,7 +356,6 @@ Some of the connectors might not support different substitution strings for diff
 You can take advantage of this by specifying any arbitrary string using octal representation without worrying about proper encoding.
 An unfortunate side effect requires you to properly escape the string on the command line so that it can be used as a valid Java string constant.
 Your shell will try to unescape the parameters for you, so you need to enclose those parameters in single quotes (')
-Using double quotes (") will cause your shell to interpret the escape characters, changing the parameters before passing them to Sqoop.
 See Also The export tool uses different parameters for overriding NULL values; they are further described in Recipe 5.8
 Problem You would like to import all tables from your database at once using one command rather than importing the tables one by one.
 Solution Rather than using the import tool for one table, you can use the import-all-tables tool.
@@ -669,7 +670,6 @@ You need to put all -D parameters that you’re using into the configuration sec
 Problem Sqoop works correctly when executed from the command line, but in Oozie it cannot find the JDBC drivers.
 Solution You need to install the JDBC drivers into Oozie separately.
 Discussion Due to licensing, Sqoop does not ship with any JDBC drivers.
-You have to manually download the drivers from the applicable vendors’ websites and install them into Sqoop,
 See Also You can find details about where to retrieve JDBC drivers in Recipe 1.2
 Problem You would like Sqoop to import your data directly into Hive.
 Add the parameter --hive-import to your command to enable it:
@@ -859,5 +859,4 @@ As this limitation is imposed by Teradata itself, there is not much that Sqoop c
 About the Authors Kathleen Ting is a customer operations engineering manager at Cloudera, where she helps customers deploy and use the Hadoop ecosystem in production.
 She’s contributed to several projects in the open source community and is a committer and PMC member on Sqoop.
 Jarek Jarcec Cecho is a software engineer at Cloudera, where he develops software to help customers better access and integrate with the Hadoop ecosystem.
-He has led the Sqoop community in the architecture of the next generation of Sqoop, known as Sqoop 2
 He’s contributed to several projects in the open source community and is a committer and PMC member on Sqoop, Flume, and MRUnit.
