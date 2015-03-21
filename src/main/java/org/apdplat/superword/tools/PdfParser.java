@@ -517,6 +517,11 @@ public class PdfParser {
             LOGGER.debug("忽略长度小于" + SENTENCE_WORD_MIN_COUNT + "的句子：" + sentence);
             return null;
         }
+        //判断是否最后一个单词是数字
+        if(StringUtils.isNumeric(words[words.length-1])){
+            LOGGER.debug("忽略最后一个单词是数字" + words[words.length-1] + "的句子：" + sentence);
+            return null;
+        }
         //判断句子中的大写字母开头的单词数
         int capWordCount = 0;
         //最长单词
