@@ -87,7 +87,7 @@ public class SuffixRule{
                     html.append("\t")
                             .append(wordCounter.incrementAndGet())
                             .append("、")
-                            .append(WordLinker.toLink(word.getWord()))
+                            .append(WordLinker.toLink(word.getWord(), suffix.getSuffix()))
                             .append("</br>\n");
                 });
             }
@@ -98,7 +98,14 @@ public class SuffixRule{
             Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
             //List<Suffix> suffixes = SuffixExtractor.extract();
             //List<Suffix> suffixes = Arrays.asList(new Suffix("ization", ""));
-            List<Suffix> suffixes = Arrays.asList(new Suffix("ination", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("iority", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("onomy", "...学"), new Suffix("onomics", "...学"), new Suffix("ology", "...学"));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("ache", "...疼"));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("tain", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("igation", ""));
+            //List<Suffix> suffixes = Arrays.asList(new Suffix("arian", "表形容词或名词,\"……的(人)\""));
+            List<Suffix> suffixes = Arrays.asList();
+
 
             TreeMap<Suffix, List<Word>> suffixToWords = SuffixRule.findBySuffix(words, suffixes);
             String htmlFragment = SuffixRule.toHtmlFragment(suffixToWords);
