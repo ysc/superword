@@ -43,16 +43,19 @@ public class WordLinker {
     }
 
     public static String toLink(String word, String emphasize){
-        return linkToICIBA(word, emphasize);
+        return toLink(word, emphasize, EM_PRE, EM_SUF);
+    }
+    public static String toLink(String word, String emphasize, String emPre, String emSuf){
+        return linkToICIBA(word, emphasize, emPre, emSuf);
     }
 
-    private static String linkToICIBA(String word, String emphasize){
-        return linkTo(word, emphasize, ICIBA);
+    private static String linkToICIBA(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, ICIBA);
     }
-    private static String linkToYOUDAO(String word, String emphasize){
-        return linkTo(word, emphasize, YOUDAO);
+    private static String linkToYOUDAO(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, YOUDAO);
     }
-    private static String linkTo(String word, String emphasize, String webSite){
+    private static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
         StringBuilder p = new StringBuilder();
         for (char c : emphasize.toCharArray()) {
             p.append("[")
@@ -74,7 +77,7 @@ public class WordLinker {
                 targets.add(target);
             }
             for(String target : targets){
-                word = word.replaceAll(target, EM_PRE+target+EM_SUF);
+                word = word.replaceAll(target, emPre+target+emSuf);
             }
         }
         html.append(word).append("</a>");
