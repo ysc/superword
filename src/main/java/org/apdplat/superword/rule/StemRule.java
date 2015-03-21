@@ -85,8 +85,28 @@ public class StemRule {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
-        List<Word> stems = Arrays.asList(new Word("onym", "=nam,表示\"名字\""));
+        Set<Word> words = WordSources.get("/words.txt",
+                                          "/words_extra.txt",
+                                          //"/words_anc.txt",
+                                          "/words_gre.txt");
+        List<Word> stems = Arrays.asList(//new Word("onym", "=nam,表示\"名字\""),
+            //new Word("ball", "=throw/dance/ball,表示\"抛,舞,球\""),
+            //new Word("wit", "表示\"智慧,观察\""),
+            //new Word("aster", "=star,表示\"星星\""),
+            //其他情况发音：k
+            //new Word("cy", "发音：si"),new Word("ci", "发音：si"),new Word("ce", "发音：s"),
+            //new Word("petr", "=stone,表示\"石头\""),
+            //new Word("arm", "=weapon,表示\"武器,臂\""),
+            //new Word("agon", "=struggle,表示\"挣扎,斗争\""),
+            //new Word("cap", "1. =take/hold/seize, 表示\"拿,抓,握住\"; 2. =head,表示\"头\""),
+            //new Word("can", "=vessel,表示\"容器,管道\""),
+            //new Word("charact", "表示\"特性,品质\""),
+            //new Word("cond", "=hid,表示\"藏\""),
+            //new Word("ann", "=year,表示\"年,一年\""),
+            //new Word("memor", "=memory,表示\"记忆\""),
+                //new Word("peri", "=try,表示\"尝试\""),
+                //new Word("sol", "1. =alone,表示\"单独\"; 2. =sun,表示\"太阳\""),
+                new Word("solid", "表示\"巩固,团结\""));
 
         TreeMap<Word, List<Word>> stemToWords = StemRule.findByStem(words, stems);
         String htmlFragment = StemRule.toHtmlFragment(stemToWords);
