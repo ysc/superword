@@ -76,7 +76,7 @@ public class PrefixRule {
                     .append(prefixCounter.incrementAndGet())
                     .append("、")
                     .append(prefix.getPrefix())
-                    .append(" (")
+                    .append("- (")
                     .append(prefix.getDes())
                     .append(") (hit ")
                     .append(words.size())
@@ -86,7 +86,9 @@ public class PrefixRule {
                 html.append("\t")
                         .append(wordCounter.incrementAndGet())
                         .append("、")
-                        .append(WordLinker.toLink(word.getWord()))
+                        .append(WordLinker.toLink(word.getWord(), prefix.getPrefix()))
+                        .append("    ")
+                        .append(WordLinker.toLink(word.getWord().substring(prefix.getPrefix().length())))
                         .append("</br>\n");
             });
         }
@@ -94,10 +96,13 @@ public class PrefixRule {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt", "/words_anc.txt");
         //List<Prefix> prefixes = PrefixExtractor.extract();
         //List<Prefix> prefixes = Arrays.asList(new Prefix("mono,mon", "单个，一个"));
-        List<Prefix> prefixes = Arrays.asList(new Prefix("antiq", "=old,表示\"古老\""));
+        //List<Prefix> prefixes = Arrays.asList(new Prefix("antiq", "=old,表示\"古老\""));
+        //List<Prefix> prefixes = Arrays.asList(new Prefix("pseud", "=fake,表示\"假的\""));
+        //List<Prefix> prefixes = Arrays.asList(new Prefix("super", "表示\"在……上面\"或表示\"超级,超过,过度\""));
+        List<Prefix> prefixes = Arrays.asList(new Prefix("semi", "表示\"在……上面\"或表示\"超级,超过,过度\""));
 
         TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes);
         String htmlFragment = PrefixRule.toHtmlFragment(prefixToWords);
