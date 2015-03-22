@@ -38,13 +38,13 @@ import java.util.*;
 public class DynamicIp {
     private DynamicIp(){}
     private static final Logger LOGGER = LoggerFactory.getLogger(DynamicIp.class);
-    private static final String accept = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
-    private static final String encoding = "gzip, deflate";
-    private static final String language = "zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3";
-    private static final String connection = "keep-alive";
-    private static final String host = "192.168.0.1";
-    private static final String referer = "http://192.168.0.1/login.asp";
-    private static final String userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
+    private static final String ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+    private static final String ENCODING = "gzip, deflate";
+    private static final String LANGUAGE = "zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3";
+    private static final String CONNECTION = "keep-alive";
+    private static final String HOST = "192.168.0.1";
+    private static final String REFERER = "http://192.168.0.1/login.asp";
+    private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
 
     public static void main(String[] args) {
         toNewIp();
@@ -80,13 +80,13 @@ public class DynamicIp {
         map.put("CMD", "WAN_CON");
         map.put("GO", "system_status.asp");
         Connection conn = Jsoup.connect(url)
-                .header("Accept", accept)
-                .header("Accept-Encoding", encoding)
-                .header("Accept-Language", language)
-                .header("Connection", connection)
-                .header("Host", host)
-                .header("Referer", referer)
-                .header("User-Agent", userAgent)
+                .header("Accept", ACCEPT)
+                .header("Accept-Encoding", ENCODING)
+                .header("Accept-Language", LANGUAGE)
+                .header("Connection", CONNECTION)
+                .header("Host", HOST)
+                .header("Referer", REFERER)
+                .header("User-Agent", USER_AGENT)
                 .ignoreContentType(true)
                 .timeout(30000);
         for(String cookie : cookies.keySet()){
@@ -116,13 +116,13 @@ public class DynamicIp {
     public static boolean isConnected(){
         try {
             Document doc = Jsoup.connect("http://www.baidu.com/s?wd=杨尚川&t=" + System.currentTimeMillis())
-                    .header("Accept", accept)
-                    .header("Accept-Encoding", encoding)
-                    .header("Accept-Language", language)
-                    .header("Connection", connection)
+                    .header("Accept", ACCEPT)
+                    .header("Accept-Encoding", ENCODING)
+                    .header("Accept-Language", LANGUAGE)
+                    .header("Connection", CONNECTION)
                     .header("Referer", "https://www.baidu.com")
                     .header("Host", "www.baidu.com")
-                    .header("User-Agent", userAgent)
+                    .header("User-Agent", USER_AGENT)
                     .ignoreContentType(true)
                     .timeout(30000)
                     .get();
@@ -146,13 +146,13 @@ public class DynamicIp {
             map.put("Password", password);
             map.put("checkEn", "0");
             Connection conn = Jsoup.connect("http://192.168.0.1/LoginCheck")
-                    .header("Accept", accept)
-                    .header("Accept-Encoding", encoding)
-                    .header("Accept-Language", language)
-                    .header("Connection", connection)
-                    .header("Referer", referer)
-                    .header("Host", host)
-                    .header("User-Agent", userAgent)
+                    .header("Accept", ACCEPT)
+                    .header("Accept-Encoding", ENCODING)
+                    .header("Accept-Language", LANGUAGE)
+                    .header("Connection", CONNECTION)
+                    .header("Referer", REFERER)
+                    .header("Host", HOST)
+                    .header("User-Agent", USER_AGENT)
                     .ignoreContentType(true)
                     .timeout(30000);
 
