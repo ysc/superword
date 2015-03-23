@@ -39,6 +39,9 @@ import java.util.stream.Collectors;
 
 /**
  * 利用爱词霸筛选词表中属于各大考试的词
+ * 提取爱词霸页面中的自定义信息
+ * 考虑到爱词霸的防爬虫限制，特提供包含61821个单词的爱词霸HTML页面origin_html.zip文件供下载
+ * 下载地址http://pan.baidu.com/s/1bnD9gy7
  * @author 杨尚川
  */
 public class WordClassifier {
