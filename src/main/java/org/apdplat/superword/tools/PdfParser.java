@@ -52,7 +52,7 @@ public class PdfParser {
     private static final float SENTENCE_CAP_WORD_MAX_RATE = 0.4f;
     private static final Set<String> punctuation = new HashSet<>();
     private static final Set<Character> CORRUPT_CHAR = new HashSet<>();
-    private static final Set<Word> DICTIONARY = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+    private static final Set<Word> DICTIONARY = WordSources.getAll();
 
     static {
         punctuation.add(",");

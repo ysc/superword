@@ -127,9 +127,13 @@ public class Summary {
                                 String book = " <u><i>" + entry.getKey() + "</i></u>";
                                 entry.getValue()
                                      .forEach(t -> {
+                                         Set<String> targets = new HashSet<>();
                                          Matcher matcher = pattern.matcher(t);
                                          while(matcher.find()){
                                              String target = matcher.group();
+                                             targets.add(target);
+                                         }
+                                         for(String target : targets){
                                              t = t.replaceAll(target, emPre+target+emSuf);
                                          }
                                          html.append("\t<li>")
@@ -246,7 +250,7 @@ public class Summary {
     }
 
     public static void main(String[] args) throws Exception {
-        String html = summary();
+        //String html = summary();
         //String html = summaryForPreciousWords(275, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summaryForPreciousWords(275, 550, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summaryForPreciousWords(550, 800, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
@@ -255,11 +259,16 @@ public class Summary {
         //String html = summaryForPreciousWords(1400, 1700, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summaryForPreciousWords(1700, 2000, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
         //String html = summaryForPreciousWords(2000, "src/main/resources/it", "/words.txt", "/words_extra.txt", "/words_gre.txt");
-        //String html = summary(Integer.MAX_VALUE, Integer.MAX_VALUE, "mixin");
-        //List<Map.Entry<String, AtomicInteger>> words = preciousWords("src/main/resources/it", WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt"));
-        //AtomicInteger i = new AtomicInteger();
-        //words.forEach(e -> LOGGER.info(i.incrementAndGet()+"、"+e.getKey()+"\t"+e.getValue()));
-
-        Files.write(Paths.get("target/summary.txt"), html.getBytes("utf-8"));
+        //String html = summary(Integer.MAX_VALUE, Integer.MAX_VALUE, "apache");
+        List<Map.Entry<String, AtomicInteger>> words = preciousWords("src/main/resources/it", WordSources.getAll());
+        StringBuilder w = new StringBuilder();
+        AtomicInteger i = new AtomicInteger();
+        words.forEach(e -> {
+            if(i.get()<=2000){
+                w.append(i.incrementAndGet()+"\t"+e.getKey()+"\t"+e.getValue());
+            }
+        });
+        Files.write(Paths.get("src/main/resources/words_it.txt"), w.toString().getBytes("utf-8"));
+        //Files.write(Paths.get("target/summary.txt"), html.getBytes("utf-8"));
     }
 }
