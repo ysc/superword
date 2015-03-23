@@ -22,6 +22,8 @@ package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Word;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -31,6 +33,7 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +43,16 @@ import java.util.stream.Collectors;
  */
 public class WordSources {
     private WordSources(){}
+    private static final Logger LOGGER = LoggerFactory.getLogger(WordSources.class);
+    public static Set<Word> getAll(){
+        return get("/words.txt",
+                "/word_CET4.txt",
+                "/word_CET6.txt",
+                "/word_GRE.txt",
+                "/word_IELTS.txt",
+                "/word_TOEFL.txt",
+                "/word_考 研.txt");
+    }
     /**
      * 
      * 一行一个单词，单词和其他信息之间用空白字符隔开
@@ -49,6 +62,31 @@ public class WordSources {
      */
     public static Set<Word> get(String... files){
         return get(1, files);
+    }
+    public static Set<Word> minus(Set<Word> minuend, Set<Word> subtrahend){
+        LOGGER.info("被减数个数："+minuend.size());
+        LOGGER.info("减数个数："+subtrahend.size());
+        Set<Word> result = minuend
+                .stream()
+                .filter(word -> !subtrahend.contains(word)).collect(Collectors.toSet());
+        LOGGER.info("结果个数："+result.size());
+        return result;
+    }
+    public static void save(Set<Word> words, String path){
+        try {
+            path = "src/main/resources" + path;
+            LOGGER.info("开始保存词典：" + path);
+            AtomicInteger i = new AtomicInteger();
+            List<String> list = words
+                        .stream()
+                        .sorted()
+                        .map(word -> i.incrementAndGet() + "\t" + word.getWord())
+                        .collect(Collectors.toList());
+            Files.write(Paths.get(path), list);
+            LOGGER.info("保存成功");
+        }catch (Exception e){
+            LOGGER.error("保存词典失败", e);
+        }
     }
     /**
      * 一行一个单词，单词和其他信息之间用空白字符隔开
@@ -65,7 +103,7 @@ public class WordSources {
                 List<String> words = Files.readAllLines(Paths.get(url.toURI()));
                 Set<Word> wordSet = words.parallelStream()
                                          .filter(line -> !line.trim().startsWith("#") && !"".equals(line.trim()))
-                                         .map(line -> new Word(line.trim().split("\\s+")[index].replaceAll("\\s+", ""), null))
+                        .map(line -> new Word(line.trim().split("\\s+")[index].replaceAll("\\s+", ""), null))
                                          .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
                                          .collect(Collectors.toSet());
                 set.addAll(wordSet);
@@ -77,9 +115,7 @@ public class WordSources {
         return set;
     }
     public static void main(String[] args) {
-        get("/words.txt", "/words_extra.txt", "/words_gre.txt")
-                .stream()
-                .sorted()
-                .forEach(word -> System.out.println(word.getWord()));
+        AtomicInteger i = new AtomicInteger();
+        getAll().forEach(w -> System.out.println(i.incrementAndGet()+"、"+w.getWord()));
     }
 }
