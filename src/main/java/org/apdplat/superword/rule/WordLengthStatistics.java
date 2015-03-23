@@ -75,7 +75,7 @@ public class WordLengthStatistics {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+        Set<Word> words = WordSources.getAll();
         Map<Integer, List<Word>> data = WordLengthStatistics.stat(words);
         String html = WordLengthStatistics.toHtmlFragment(data, 1, 18, 19, 20, 22, 28);
         System.out.println(html);

@@ -116,7 +116,7 @@ public class DynamicPrefixRule {
         }
 
         public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+            Set<Word> words = WordSources.getAll();
             List<Prefix> prefixes = Arrays.asList(new Prefix("m", ""), new Prefix("imm", ""));
 
             List<Word> data = DynamicPrefixRule.findByPrefix(words, prefixes);

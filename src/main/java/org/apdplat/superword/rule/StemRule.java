@@ -85,10 +85,7 @@ public class StemRule {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt",
-                                          "/words_extra.txt",
-                                          //"/words_anc.txt",
-                                          "/words_gre.txt");
+        Set<Word> words = WordSources.getAll();
         List<Word> stems = Arrays.asList(//new Word("onym", "=nam,表示\"名字\""),
             //new Word("ball", "=throw/dance/ball,表示\"抛,舞,球\""),
             //new Word("wit", "表示\"智慧,观察\""),
@@ -106,7 +103,8 @@ public class StemRule {
             //new Word("memor", "=memory,表示\"记忆\""),
                 //new Word("peri", "=try,表示\"尝试\""),
                 //new Word("sol", "1. =alone,表示\"单独\"; 2. =sun,表示\"太阳\""),
-                new Word("solid", "表示\"巩固,团结\""));
+                //new Word("solid", "表示\"巩固,团结\""),
+                new Word("aque", "=water,表示\"水\""));
 
         TreeMap<Word, List<Word>> stemToWords = StemRule.findByStem(words, stems);
         String htmlFragment = StemRule.toHtmlFragment(stemToWords);

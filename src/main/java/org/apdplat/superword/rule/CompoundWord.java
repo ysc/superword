@@ -117,7 +117,7 @@ public class CompoundWord {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words_gre.txt");
+        Set<Word> words = WordSources.getAll();
 
         Set<Word> target = new HashSet<>();
         target.add(new Word("pendent", ""));

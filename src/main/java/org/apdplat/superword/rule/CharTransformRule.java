@@ -260,7 +260,7 @@ public class CharTransformRule {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+        Set<Word> words = WordSources.getAll();
 
         Map<CharMap, List<Word>> data = CharTransformRule.transforms(words);
         String html = CharTransformRule.toHtmlFragmentForRule(data);

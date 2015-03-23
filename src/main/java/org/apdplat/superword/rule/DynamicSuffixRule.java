@@ -124,7 +124,7 @@ public class DynamicSuffixRule {
         }
 
         public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt", "/words_gre.txt");
+            Set<Word> words = WordSources.getAll();
             //List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ize", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("ise", ""), new Suffix("ice", ""));
             //List<Suffix> suffixes = Arrays.asList(new Suffix("a", ""), new Suffix("um", ""));

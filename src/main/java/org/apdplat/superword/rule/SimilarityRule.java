@@ -57,7 +57,7 @@ public class SimilarityRule {
         scores.forEach(score -> System.out.println("\t"+i.incrementAndGet() + "、" + score.getWord() + " " + score.getScore() + " " + score.getExplain()));
     }
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt", "/words_extra.txt");
+        Set<Word> words = WordSources.getAll();
 
         SimilarityRule similarityRule = new SimilarityRule();
         similarityRule.similarity(words, "book");

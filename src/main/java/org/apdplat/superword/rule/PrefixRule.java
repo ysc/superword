@@ -115,11 +115,7 @@ public class PrefixRule {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.get("/words.txt",
-                                        "/words_extra.txt",
-                                        //"/words_anc.txt",
-                                        "/words_gre.txt"
-                                        );
+        Set<Word> words = WordSources.getAll();
         //List<Prefix> prefixes = PrefixExtractor.extract();
         //List<Prefix> prefixes = Arrays.asList(new Prefix("mono,mon", "单个，一个"));
         //List<Prefix> prefixes = Arrays.asList(new Prefix("antiq", "=old,表示\"古老\""));
