@@ -6,3 +6,4 @@
 ###[一个月的时间让你的词汇量翻一翻](http://my.oschina.net/apdplat/blog/379303)
 ###[英语单词前缀规则总结](http://my.oschina.net/apdplat/blog/378753)
 ###[英语单词后缀规则总结](http://my.oschina.net/apdplat/blog/379330)
+###考虑到爱词霸的防爬虫限制，特提供包含61821个单词的爱词霸HTML页面origin_html.zip文件供下载，[下载地址](http://pan.baidu.com/s/1bnD9gy7)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
