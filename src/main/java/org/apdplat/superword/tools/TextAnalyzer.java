@@ -20,7 +20,6 @@
 package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
-import org.apdplat.superword.model.Word;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +40,7 @@ public class TextAnalyzer {
     private TextAnalyzer() {
     }
     private static final Pattern PATTERN = Pattern.compile("\\d+");
+    private static final Pattern UNICODE = Pattern.compile("[uU][0-9a-fA-F]{4}");
     private static final Logger LOGGER = LoggerFactory.getLogger(TextAnalyzer.class);
 
     /**
@@ -116,7 +116,7 @@ public class TextAnalyzer {
             if (StringUtils.isBlank(word) || word.length()<2) {
                 continue;
             }
-            List<String> list = new ArrayList<String>();
+            List<String> list = new ArrayList<>();
             //转换为全部小写
             if (word.length() < 6
                     //PostgreSQL等
@@ -146,7 +146,7 @@ public class TextAnalyzer {
                             return;
                         }
                         w = irregularity(w);
-                        if(StringUtils.isNotBlank(w) && !StringUtils.isNumeric(w)) {
+                        if(StringUtils.isNotBlank(w)) {
                             data.add(w);
                             if (LOGGER.isDebugEnabled()) {
                                 log.append(w).append(" ");
@@ -154,7 +154,7 @@ public class TextAnalyzer {
                         }
                     });
         }
-        LOGGER.debug("分词："+log);
+        LOGGER.debug("分词：" + log);
         return data;
     }
 
@@ -164,6 +164,24 @@ public class TextAnalyzer {
      * @return
      */
     private static String irregularity(String word){
+        if(Character.isDigit(word.charAt(0))){
+            LOGGER.debug("词以数字开头，忽略："+word);
+            return null;
+        }
+        if(word.startsWith("0x")
+                || word.startsWith("0X")){
+            LOGGER.debug("词为16进制，忽略："+word);
+            return null;
+        }
+        if(word.endsWith("l")
+                && StringUtils.isNumeric(word.substring(0, word.length()-1))){
+            LOGGER.debug("词为long类型数字，忽略："+word);
+            return null;
+        }
+        if(UNICODE.matcher(word).find()){
+            LOGGER.debug("词为UNICODE字符编码，忽略："+word);
+            return null;
+        }
         switch (word){
             //I’ll do it. You'll see.
             case "ll": return "will";
@@ -359,26 +377,17 @@ public class TextAnalyzer {
         return fileNames;
     }
 
-    public static void main(String[] args) throws Exception {
-        //parse("src/main/resources/it/spring/Spring in Action 4th Edition.txt");
-        //parse("src/main/resources/it/spring");
-        parse("src/main/resources/it");
-        //footN("src/main/resources/it", 100);
-        //topN("src/main/resources/it", 100);
-    }
-
-    public static void footN(String path, int limit) {
-        sentence(path, limit, false);
-    }
-
-    public static void topN(String path, int limit) {
-        sentence(path, limit, true);
-    }
-    public static void sentence(String path, int limit, boolean isTopN) {
+    /**
+     *
+     * @param path 待分析的文本路径，目录或文件的绝对路径
+     * @param limit 句子限制
+     * @param isTopN 是否是分值最高，反之为分值最低
+     */
+    public static TreeMap<Float, String> sentence(String path, int limit, boolean isTopN) {
         //获取目录下的所有文件列表 或 文件本身
         Set<String> fileNames = getFileNames(path);
         //词频统计
-        Map<String, AtomicInteger> fres = frequency(fileNames);
+        Map<String, AtomicInteger> frequency = frequency(fileNames);
         //有序
         TreeMap<Float, String> sentences = new TreeMap<>();
         //句子评分
@@ -397,7 +406,7 @@ public class TextAnalyzer {
                     float score = 0;
                     List<String> words = seg(line);
                     for(String word : words){
-                        AtomicInteger fre = fres.get(word);
+                        AtomicInteger fre = frequency.get(word);
                         if(fre == null || fre.get() == 0){
                             LOGGER.error("评分句子没有词频信息：" + line);
                             score = 0;
@@ -425,14 +434,16 @@ public class TextAnalyzer {
                     }
                 }
             } catch (IOException ex) {
-                ex.printStackTrace();
+                LOGGER.error("句子评分出错", ex);
             }
         }
-        AtomicInteger i = new AtomicInteger();
-        sentences.entrySet().forEach(entry -> {
-            //LOGGER.info(i.incrementAndGet()+"、分值："+entry.getKey()+":<br/>\n\t"+entry.getValue()+"<br/>\n");
-            LOGGER.info(i.incrementAndGet()+"、"+entry.getValue()+"<br/><br/>\n");
-        });
+        return sentences;
+    }
+
+    public static void main(String[] args) throws Exception {
+        //parse("src/main/resources/it/spring/Spring in Action 4th Edition.txt");
+        //parse("src/main/resources/it/spring");
+        parse("src/main/resources/it");
     }
 
     private static class Stat {
