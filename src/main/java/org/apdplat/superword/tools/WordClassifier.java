@@ -31,8 +31,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -88,7 +88,61 @@ public class WordClassifier {
         save(data);
         LOGGER.debug("处理完毕，总词数目："+words.size());
     }
-    public static void parse(String file){
+
+    public static void parse(String path){
+        if(path.endsWith(".zip")){
+            parseZip(path);
+        }
+        if(Files.isDirectory(Paths.get(path))){
+            parseDir(path);
+        }else{
+            parseFile(path);
+        }
+    }
+
+    public static void parseDir(String dir) {
+        LOGGER.info("开始解析目录：" + dir);
+        try {
+            Files.walkFileTree(Paths.get(dir), new SimpleFileVisitor<Path>() {
+
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                    parseFile(file.toFile().getAbsolutePath());
+                    return FileVisitResult.CONTINUE;
+                }
+
+            });
+        } catch (IOException e) {
+            LOGGER.error("解析文本出错", e);
+        }
+    }
+
+    public static void parseZip(String zipFile){
+        LOGGER.info("开始解析ZIP文件："+zipFile);
+        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifier.class.getClassLoader())) {
+            for(Path path : fs.getRootDirectories()){
+                LOGGER.info("处理目录："+path);
+                Files.walkFileTree(path, new SimpleFileVisitor<Path>(){
+
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        LOGGER.info("处理文件："+file);
+                        // 拷贝到本地文件系统
+                        Path temp = Paths.get("target/origin-html-temp.txt");
+                        Files.copy(file, temp, StandardCopyOption.REPLACE_EXISTING);
+                        parseFile(temp.toFile().getAbsolutePath());
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                });
+            }
+        }catch (Exception e){
+            LOGGER.error("解析文本出错", e);
+        }
+    }
+
+    public static void parseFile(String file){
+        LOGGER.info("开始解析文件："+file);
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(
                         new BufferedInputStream(
@@ -104,6 +158,7 @@ public class WordClassifier {
         }
     }
     public static void parse(String html, Map<String, List<String>> data){
+        LOGGER.debug("html:"+html);
         String[] attr = html.split("杨尚川");
         if(attr == null || attr.length != 2){
             LOGGER.error("解析文本失败，文本应该以'杨尚川'分割，前面是词，后面是网页，网页内容是去除换行符之后的一整行文本："+html);
@@ -236,7 +291,9 @@ public class WordClassifier {
         //words.add(new Word("time", ""));
         //words.add(new Word("yangshangchuan", ""));
         //classify(words);
+        //classify(WordSources.getAll());
         //parse("src/main/resources/origin_html_1427060576977.txt");
-        classify(WordSources.getAll());
+        //origin_html.zip包含61821个单词的爱词霸解析HTML页面，下载地址http://pan.baidu.com/s/1bnD9gy7
+        parse("/Users/apple/百度云同步盘/origin_html.zip");
     }
 }
