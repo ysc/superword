@@ -147,19 +147,31 @@ public class JavaCodeAnalyzer {
         return HtmlFormatter.toHtmlTableFragment(intersection, 8);
     }
 
-    public static void main(String[] args) throws IOException {
-        String zipFile = "/Library/Java/JavaVirtualMachines/jdk1.8.0_11.jdk/Contents/Home/src.zip";
-        /*
+    /**
+     * 将源代码解析为词典
+     * @param zipFile
+     * @param dicPath
+     */
+    public static void toDic(String zipFile, String dicPath){
         Map<String, AtomicInteger> data = parseZip(zipFile);
         List<String> words = data
-                                .entrySet()
-                                .stream()
-                                .filter(w -> StringUtils.isAlpha(w.getKey())
-                                        && w.getKey().length() < 12)
-                                .sorted((a, b) -> b.getValue().get() - a.getValue().get())
-                                .map(e -> e.getValue() + "\t" + e.getKey()).collect(Collectors.toList());
-        Files.write(Paths.get("target/java_code_word_frequency.txt"), words);
-        */
-        System.out.print(importantWords(zipFile));
+                .entrySet()
+                .stream()
+                .filter(w -> StringUtils.isAlpha(w.getKey())
+                        && w.getKey().length() < 12)
+                .sorted((a, b) -> b.getValue().get() - a.getValue().get())
+                .map(e -> e.getValue() + "\t" + e.getKey())
+                .collect(Collectors.toList());
+        try {
+            Files.write(Paths.get(dicPath), words);
+        } catch (IOException e) {
+            LOGGER.error("保存词典文件出错", e);
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        String zipFile = "/Library/Java/JavaVirtualMachines/jdk1.8.0_11.jdk/Contents/Home/src.zip";
+        toDic(zipFile, "src/main/resources/word_java.txt");
+        //System.out.print(importantWords(zipFile));
     }
 }
