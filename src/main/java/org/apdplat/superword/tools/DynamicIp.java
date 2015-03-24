@@ -53,6 +53,20 @@ public class DynamicIp {
     public static void main(String[] args) {
         toNewIp();
     }
+
+    /**
+     * 假设有10个线程在跑，大家都正常的跑，跑着跑着达到限制了，
+     * 于是大家争先恐后（几乎是同时）请求拨号，
+     * 这个时候同步的作用就显示出来了，只会有一个线程能拨号，
+     * 在他结束之前其他线程都在等，等他拨号成功之后，
+     * 其他线程进入拨号代码，
+     * 但是有拨号时间一分钟的限制，所以剩下的9个线程在拨号区随机等一下就返回了。
+     * 之所以要随机等一下是因为考虑到一种情况，
+     * 就是时间没到一分钟，谁都不可以拨号，
+     * 但是到40秒钟的时候已经达到服务器封锁了，
+     * 那么如果不随机等一下的话，就会疯狂发起对服务器的无效请求了。
+     * @return
+     */
     public static synchronized boolean toNewIp() {
         long start = System.currentTimeMillis();
         LOGGER.info("请求重新拨号");
