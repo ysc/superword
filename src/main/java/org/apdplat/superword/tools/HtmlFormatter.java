@@ -34,27 +34,34 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class HtmlFormatter {
     private HtmlFormatter(){}
 
-    public static String toHtmlTableFragment(Set<Word> words, int rowLength) {
+    public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength) {
+        return toHtmlTableFragment(words.entrySet(), rowLength);
+    }
+    public static String toHtmlTableFragment(Set<Map.Entry<Word, AtomicInteger>> words, int rowLength) {
         StringBuilder html = new StringBuilder();
-        AtomicInteger prefixCounter = new AtomicInteger();
 
+        AtomicInteger rowCounter = new AtomicInteger();
         AtomicInteger wordCounter = new AtomicInteger();
         html.append("<table>\n");
         words
             .stream()
-            .sorted()
-            .forEach(word -> {
-                if(wordCounter.get()%rowLength == 0){
-                    if(wordCounter.get() == 0){
-                        html.append("\t<tr>");
-                    }else{
-                        html.append("</tr>\n\t<tr>");
+            .sorted((a, b) -> b.getValue().get() - a.getValue().get())
+            .forEach(entry -> {
+                if (wordCounter.get() % rowLength == 0) {
+                    if (wordCounter.get() == 0) {
+                        rowCounter.incrementAndGet();
+                        html.append("\t<tr><td>").append(rowCounter.get()).append("</td>");
+                    } else {
+                        rowCounter.incrementAndGet();
+                        html.append("</tr>\n\t<tr><td>").append(rowCounter.get()).append("</td>");
                     }
                 }
                 wordCounter.incrementAndGet();
                 html.append("<td>")
-                        .append(WordLinker.toLink(word.getWord()))
-                        .append("</td>");
+                    .append(WordLinker.toLink(entry.getKey().getWord()))
+                    .append("-")
+                    .append(entry.getValue().get())
+                    .append("</td>");
             });
         if(html.toString().endsWith("<tr>")){
             html.setLength(html.length()-5);
