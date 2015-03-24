@@ -61,7 +61,15 @@ public class DynamicIp {
      * 这个时候同步的作用就显示出来了，只会有一个线程能拨号，
      * 在他结束之前其他线程都在等，等他拨号成功之后，
      * 其他线程会被唤醒并返回
-     * @return
+     *
+     * 算法描述：
+     1、假设总共有N个线程抓取网页，发现被封锁之后依次排队请求锁，注意：可以想象成是同时请求。
+     2、线程1抢先获得锁，并且设置isDialing = true后开始拨号，注意：线程1设置isDialing = true后其他线程才可能获得锁。
+     3、其他线程（2-N）依次获得锁，发现isDialing = true，于是wait。注意：获得锁并判断一个布尔值，跟后面的拨号操作比起来，时间可以忽略。
+     4、线程1拨号完毕isDialing = false。注意：这个时候可以断定，其他所有线程必定是处于wait状态等待唤醒。
+     5、线程1唤醒其他线程，其他线程和线程1返回开始抓取网页。
+     6、抓了一会儿之后，又会被封锁，于是回到步骤1。
+     * @return 更改IP是否成功
      */
     public static boolean toNewIp() {
         LOGGER.info(Thread.currentThread()+"请求重新拨号");
@@ -78,6 +86,7 @@ public class DynamicIp {
             }
             isDialing = true;
         }
+        LOGGER.info(Thread.currentThread()+"开始重新拨号");
         long start = System.currentTimeMillis();
         Map<String, String> cookies = login("username***", "password***", "phonenumber***");
         if("true".equals(cookies.get("success"))) {
