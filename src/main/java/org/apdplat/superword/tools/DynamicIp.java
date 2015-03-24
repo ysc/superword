@@ -48,7 +48,7 @@ public class DynamicIp {
     private static final String HOST = "192.168.0.1";
     private static final String REFERER = "http://192.168.0.1/login.asp";
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
-    private static Long lastDial = 0l;
+    private static volatile boolean isDialing = false;
 
     public static void main(String[] args) {
         toNewIp();
@@ -59,42 +59,50 @@ public class DynamicIp {
      * 于是大家争先恐后（几乎是同时）请求拨号，
      * 这个时候同步的作用就显示出来了，只会有一个线程能拨号，
      * 在他结束之前其他线程都在等，等他拨号成功之后，
-     * 其他线程进入拨号代码，
-     * 但是有拨号时间一分钟的限制，所以剩下的9个线程在拨号区随机等一下就返回了。
-     * 之所以要随机等一下是因为考虑到一种情况，
-     * 就是时间没到一分钟，谁都不可以拨号，
-     * 但是到40秒钟的时候已经达到服务器封锁了，
-     * 那么如果不随机等一下的话，就会疯狂发起对服务器的无效请求了。
+     * 其他线程会被唤醒并返回
      * @return
      */
-    public static synchronized boolean toNewIp() {
-        long start = System.currentTimeMillis();
-        LOGGER.info("请求重新拨号");
-        if(System.currentTimeMillis() - lastDial < 60000){
-            int s = new Random().nextInt(10)+5;
-            LOGGER.info("一分钟之内已经更换过了一次IP，本次请求忽略，暂停"+s+"秒钟");
-            try{Thread.sleep(s*1000);}catch (Exception e){LOGGER.error(e.getMessage(), e);}
-            return true;
+    public static boolean toNewIp() {
+        LOGGER.info(Thread.currentThread()+"请求重新拨号");
+        synchronized (DynamicIp.class) {
+            if (isDialing) {
+                LOGGER.info(Thread.currentThread()+"已经有其他线程在进行拨号了，我睡觉等待吧，其他线程拨号完毕会叫醒我的");
+                try {
+                    DynamicIp.class.wait();
+                } catch (InterruptedException e) {
+                    LOGGER.error(e.getMessage(), e);
+                }
+                LOGGER.info(Thread.currentThread()+"其他线程已经拨完号了，我可以返回了");
+                return true;
+            }
+            isDialing = true;
         }
+        long start = System.currentTimeMillis();
         Map<String, String> cookies = login("username***", "password***", "phonenumber***");
         if("true".equals(cookies.get("success"))) {
-            LOGGER.info("登陆成功");
+            LOGGER.info(Thread.currentThread()+"登陆成功");
             cookies.remove("success");
             while (!disConnect(cookies)) {
-                LOGGER.info("断开连接失败，重试！");
+                LOGGER.info(Thread.currentThread()+"断开连接失败，重试！");
             }
-            LOGGER.info("断开连接成功");
+            LOGGER.info(Thread.currentThread()+"断开连接成功");
             while (!connect(cookies)) {
-                LOGGER.info("建立连接失败，重试！");
+                LOGGER.info(Thread.currentThread()+"建立连接失败，重试！");
             }
-            LOGGER.info("建立连接成功");
-            LOGGER.info("自动更改IP地址成功！");
-            lastDial = System.currentTimeMillis();
-            LOGGER.info("拨号耗时："+(System.currentTimeMillis()-start)+"毫秒");
+            LOGGER.info(Thread.currentThread()+"建立连接成功");
+            LOGGER.info(Thread.currentThread()+"自动更改IP地址成功！");
+            LOGGER.info(Thread.currentThread()+"拨号耗时："+(System.currentTimeMillis()-start)+"毫秒");
+            //通知其他线程拨号成功
+            synchronized (DynamicIp.class) {
+                DynamicIp.class.notifyAll();
+            }
+            isDialing = false;
             return true;
         }
+        isDialing = false;
         return false;
     }
+
     public static boolean connect(Map<String, String> cookies){
         return execute(cookies, "3");
     }
