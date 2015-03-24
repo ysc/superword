@@ -464,11 +464,35 @@ public class TextAnalyzer {
         }
     }
 
+    /**
+     *  CET4、CET6、GRE、IELTS、TOEFL、考研英语的词汇
+     *  有哪些出现在了指定文本中
+     * @param textPath
+     * @return
+     */
+    public static String importantWords(String textPath){
+        Set<Word> wordSet = WordSources.get("/word_CET4.txt",
+                "/word_CET6.txt",
+                "/word_GRE.txt",
+                "/word_IELTS.txt",
+                "/word_TOEFL.txt",
+                "/word_考 研.txt");
+        Map<Word, AtomicInteger> data = WordSources.convert(
+                                                        frequency(
+                                                                getFileNames(textPath)));
+        Set<Map.Entry<Word, AtomicInteger>> entries = data.entrySet()
+                .stream()
+                .filter(entry -> wordSet.contains(entry.getKey()))
+                .collect(Collectors.toSet());
+        return HtmlFormatter.toHtmlTableFragment(entries, 5);
+    }
+
     public static void main(String[] args) throws Exception {
         //parse("src/main/resources/it/spring/Spring in Action 4th Edition.txt");
         //parse("src/main/resources/it/spring");
         //parse("src/main/resources/it");
-        toDic("src/main/resources/it", "src/main/resources/word_it.txt");
+        //toDic("src/main/resources/it", "src/main/resources/word_it.txt");
+        System.out.print(importantWords("src/main/resources/it"));
     }
 
     private static class Stat {
