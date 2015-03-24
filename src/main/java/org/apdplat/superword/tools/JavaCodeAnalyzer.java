@@ -21,6 +21,7 @@
 package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.Word;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +31,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -119,8 +121,35 @@ public class JavaCodeAnalyzer {
         return data;
     }
 
+    /**
+     *  CET4、CET6、GRE、IELTS、TOEFL、考研英语的词汇
+     *  有哪些出现在了JDK的源代码中
+     * @param zipFile
+     * @return
+     */
+    public static String importantWords(String zipFile){
+        Map<String, AtomicInteger> data = parseZip(zipFile);
+        Set<Word> words = data
+                .entrySet()
+                .stream()
+                .filter(w -> StringUtils.isAlpha(w.getKey())
+                        && w.getKey().length() < 12)
+                .map(e -> new Word(e.getKey(), ""))
+                .collect(Collectors.toSet());
+        Set<Word> first = WordSources.get("/word_CET4.txt",
+                "/word_CET6.txt",
+                "/word_GRE.txt",
+                "/word_IELTS.txt",
+                "/word_TOEFL.txt",
+                "/word_考 研.txt");
+        Set<Word> second = words;
+        Set<Word> intersection = WordSources.intersection(first, second);
+        return HtmlFormatter.toHtmlTableFragment(intersection, 8);
+    }
+
     public static void main(String[] args) throws IOException {
         String zipFile = "/Library/Java/JavaVirtualMachines/jdk1.8.0_11.jdk/Contents/Home/src.zip";
+        /*
         Map<String, AtomicInteger> data = parseZip(zipFile);
         List<String> words = data
                                 .entrySet()
@@ -128,7 +157,9 @@ public class JavaCodeAnalyzer {
                                 .filter(w -> StringUtils.isAlpha(w.getKey())
                                         && w.getKey().length() < 12)
                                 .sorted((a, b) -> b.getValue().get() - a.getValue().get())
-                                .map(e -> e.getKey() + "\t" + e.getValue()).collect(Collectors.toList());
+                                .map(e -> e.getValue() + "\t" + e.getKey()).collect(Collectors.toList());
         Files.write(Paths.get("target/java_code_word_frequency.txt"), words);
+        */
+        System.out.print(importantWords(zipFile));
     }
 }
