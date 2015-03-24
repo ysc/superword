@@ -34,6 +34,7 @@ import java.util.*;
  * ADSL拨号上网使用动态IP地址，每一次拨号得到的IP都不一样
  *
  * 使用腾达300M无线路由器，型号：N302 v2
+ * 路由器设置中最好设置一下：上网设置 -》请根据需要选择连接模式 -》手动连接，由用户手动进行连接。
  * 其他的路由器使用方法类似，参照本类替换相应的登录地址、断开连接及建立连接地址即可
  *
  * @author 杨尚川
@@ -137,11 +138,9 @@ public class DynamicIp {
             title = doc.title();
             LOGGER.info("操作连接页面标题："+title);
         }catch (Exception e){
-            LOGGER.error(e.getMessage(), e);
+            LOGGER.error(e.getMessage());
         }
         if("LAN | LAN Settings".equals(title)){
-            //发出命令5秒之后再检查网络状态
-            try{Thread.sleep(5000);}catch (Exception e){LOGGER.error(e.getMessage(), e);}
             if(("3".equals(action) && isConnected())
                     || ("4".equals(action) && !isConnected())){
                 return true;
