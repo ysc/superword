@@ -128,23 +128,18 @@ public class JavaCodeAnalyzer {
      * @return
      */
     public static String importantWords(String zipFile){
-        Map<String, AtomicInteger> data = parseZip(zipFile);
-        Set<Word> words = data
-                .entrySet()
-                .stream()
-                .filter(w -> StringUtils.isAlpha(w.getKey())
-                        && w.getKey().length() < 12)
-                .map(e -> new Word(e.getKey(), ""))
-                .collect(Collectors.toSet());
-        Set<Word> first = WordSources.get("/word_CET4.txt",
+        Set<Word> wordSet = WordSources.get("/word_CET4.txt",
                 "/word_CET6.txt",
                 "/word_GRE.txt",
                 "/word_IELTS.txt",
                 "/word_TOEFL.txt",
                 "/word_考 研.txt");
-        Set<Word> second = words;
-        Set<Word> intersection = WordSources.intersection(first, second);
-        return HtmlFormatter.toHtmlTableFragment(intersection, 8);
+        Map<Word, AtomicInteger> data = WordSources.convert(parseZip(zipFile));
+        Set<Map.Entry<Word, AtomicInteger>> entries = data.entrySet()
+                                .stream()
+                                .filter(entry -> wordSet.contains(entry.getKey()))
+                                .collect(Collectors.toSet());
+        return HtmlFormatter.toHtmlTableFragment(entries, 5);
     }
 
     /**
@@ -171,7 +166,7 @@ public class JavaCodeAnalyzer {
 
     public static void main(String[] args) throws IOException {
         String zipFile = "/Library/Java/JavaVirtualMachines/jdk1.8.0_11.jdk/Contents/Home/src.zip";
-        toDic(zipFile, "src/main/resources/word_java.txt");
-        //System.out.print(importantWords(zipFile));
+        //toDic(zipFile, "src/main/resources/word_java.txt");
+        System.out.print(importantWords(zipFile));
     }
 }
