@@ -92,6 +92,7 @@ public class DynamicIp {
         //如果请求拨号的时间小于上次成功拨号的时间，则说明这个请求来的【太迟了】，则返回。
         if(requestDialTime <= lastDialTime){
             LOGGER.info("请求来的太迟了");
+            isDialing = false;
             return true;
         }
         LOGGER.info(Thread.currentThread()+"开始重新拨号");
