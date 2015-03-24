@@ -169,7 +169,7 @@ public class DynamicIp {
             if("Network is unreachable".equals(e.getMessage())){
                 return false;
             }else{
-                LOGGER.error("状态检查失败:"+e.getMessage(), e);
+                LOGGER.error("状态检查失败:"+e.getMessage());
             }
         }
         return false;
@@ -206,7 +206,7 @@ public class DynamicIp {
             LOGGER.info("*******************************************************cookies end:");
             return cookies;
         }catch (Exception e){
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
         }
         return Collections.emptyMap();
     }
