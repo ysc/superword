@@ -50,6 +50,8 @@ public class DynamicIp {
     private static final String REFERER = "http://192.168.0.1/login.asp";
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
     private static volatile boolean isDialing = false;
+    private static Map<Thread, Long> requestDialTime = new HashMap<>();
+    private static long lastDialTime = 0l;
 
     public static void main(String[] args) {
         toNewIp();
@@ -72,6 +74,7 @@ public class DynamicIp {
      * @return 更改IP是否成功
      */
     public static boolean toNewIp() {
+        requestDialTime.put(Thread.currentThread(), System.currentTimeMillis());
         LOGGER.info(Thread.currentThread()+"请求重新拨号");
         synchronized (DynamicIp.class) {
             if (isDialing) {
@@ -85,6 +88,12 @@ public class DynamicIp {
                 return true;
             }
             isDialing = true;
+        }
+        //保险起见，这里再判断一下
+        //如果请求拨号的时间小于上次成功拨号的时间，则说明这个请求来的【太迟了】，则返回。
+        if(requestDialTime.get(Thread.currentThread()) <= lastDialTime){
+            LOGGER.info("请求来的太迟了");
+            return true;
         }
         LOGGER.info(Thread.currentThread()+"开始重新拨号");
         long start = System.currentTimeMillis();
@@ -107,6 +116,7 @@ public class DynamicIp {
                 DynamicIp.class.notifyAll();
             }
             isDialing = false;
+            lastDialTime = System.currentTimeMillis();
             return true;
         }
         isDialing = false;
