@@ -29,7 +29,7 @@ import java.util.*;
 
 /**
  *
- * 自动更改IP地址反爬虫封锁
+ * 自动更改IP地址反爬虫封锁，支持多线程
  *
  * ADSL拨号上网使用动态IP地址，每一次拨号得到的IP都不一样
  *
@@ -48,11 +48,20 @@ public class DynamicIp {
     private static final String HOST = "192.168.0.1";
     private static final String REFERER = "http://192.168.0.1/login.asp";
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
+    private static Long lastDial = 0l;
 
     public static void main(String[] args) {
         toNewIp();
     }
-    public static boolean toNewIp() {
+    public static synchronized boolean toNewIp() {
+        long start = System.currentTimeMillis();
+        LOGGER.info("请求重新拨号");
+        if(System.currentTimeMillis() - lastDial < 60000){
+            int s = new Random().nextInt(10)+5;
+            LOGGER.info("一分钟之内已经更换过了一次IP，本次请求忽略，暂停"+s+"秒钟");
+            try{Thread.sleep(s*1000);}catch (Exception e){LOGGER.error(e.getMessage(), e);}
+            return true;
+        }
         Map<String, String> cookies = login("username***", "password***", "phonenumber***");
         if("true".equals(cookies.get("success"))) {
             LOGGER.info("登陆成功");
@@ -66,6 +75,8 @@ public class DynamicIp {
             }
             LOGGER.info("建立连接成功");
             LOGGER.info("自动更改IP地址成功！");
+            lastDial = System.currentTimeMillis();
+            LOGGER.info("拨号耗时："+(System.currentTimeMillis()-start)+"毫秒");
             return true;
         }
         return false;
