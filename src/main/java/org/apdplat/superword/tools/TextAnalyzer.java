@@ -20,6 +20,7 @@
 package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.Word;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +31,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 文本分析工具
@@ -440,10 +442,33 @@ public class TextAnalyzer {
         return sentences;
     }
 
+    /**
+     * 将文本解析为词典
+     * @param textPath
+     * @param dicPath
+     */
+    public static void toDic(String textPath, String dicPath){
+        Map<String, AtomicInteger> data = frequency(getFileNames(textPath));
+        List<String> words = data
+                .entrySet()
+                .stream()
+                .filter(w -> StringUtils.isAlpha(w.getKey())
+                        && w.getKey().length() < 12)
+                .sorted((a, b) -> b.getValue().get() - a.getValue().get())
+                .map(e -> e.getValue()+"\t"+e.getKey())
+                .collect(Collectors.toList());
+        try {
+            Files.write(Paths.get(dicPath), words);
+        } catch (IOException e) {
+            LOGGER.error("保存词典文件出错", e);
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         //parse("src/main/resources/it/spring/Spring in Action 4th Edition.txt");
         //parse("src/main/resources/it/spring");
-        parse("src/main/resources/it");
+        //parse("src/main/resources/it");
+        toDic("src/main/resources/it", "src/main/resources/word_it.txt");
     }
 
     private static class Stat {
