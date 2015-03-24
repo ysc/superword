@@ -63,12 +63,30 @@ public class WordSources {
     public static Set<Word> get(String... files){
         return get(1, files);
     }
+
+    /**
+     * 求交集
+     * @param first
+     * @param second
+     * @return
+     */
+    public static Set<Word> intersection(Set<Word> first, Set<Word> second){
+        LOGGER.info("求交集词典1："+first.size());
+        LOGGER.info("求交集词典2："+second.size());
+        Set<Word> result = first
+                .stream()
+                .filter(w -> second.contains(w))
+                .collect(Collectors.toSet());
+        LOGGER.info("交集词典："+result.size());
+        return result;
+    }
     public static Set<Word> minus(Set<Word> minuend, Set<Word> subtrahend){
         LOGGER.info("被减数个数："+minuend.size());
         LOGGER.info("减数个数："+subtrahend.size());
         Set<Word> result = minuend
                 .stream()
-                .filter(word -> !subtrahend.contains(word)).collect(Collectors.toSet());
+                .filter(word -> !subtrahend.contains(word))
+                .collect(Collectors.toSet());
         LOGGER.info("结果个数："+result.size());
         return result;
     }
