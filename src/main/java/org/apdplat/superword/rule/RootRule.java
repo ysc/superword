@@ -30,45 +30,45 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * 词干规则
+ * 词根规则
  * @author 杨尚川
  */
-public class StemRule {
-    private StemRule(){}
+public class RootRule {
+    private RootRule(){}
 
-    public static TreeMap<Word, List<Word>> findByStem(Collection<Word> words, Collection<Word> stems) {
+    public static TreeMap<Word, List<Word>> findByStem(Collection<Word> words, Collection<Word> roots) {
         TreeMap<Word, List<Word>> map = new TreeMap<>();
-        stems.forEach(stem -> map.put(stem, findByStem(words, stem)));
+        roots.forEach(root -> map.put(root, findByStem(words, root)));
         return map;
     }
 
-    public static List<Word> findByStem(Collection<Word> words, Word stem) {
+    public static List<Word> findByStem(Collection<Word> words, Word root) {
         return words
                 .parallelStream()
                 .filter(word -> {
                     //词区分大小写
                     String w = word.getWord();
-                    //词干不区分大小写
-                    String s = stem.getWord().toLowerCase();
-                    //词中包含词干即可，不考虑位置和剩余部分
+                    //词根不区分大小写
+                    String s = root.getWord().toLowerCase();
+                    //词中包含词根即可，不考虑位置和剩余部分
                     return w.contains(s);
                 })
                 .sorted()
                 .collect(Collectors.toList());
     }
 
-    public static String toHtmlFragment(Map<Word, List<Word>> stemToWords) {
+    public static String toHtmlFragment(Map<Word, List<Word>> rootToWords) {
         StringBuilder html = new StringBuilder();
-        AtomicInteger stemCounter = new AtomicInteger();
-        for (Map.Entry<Word, List<Word>> entry : stemToWords.entrySet()) {
-            Word stem = entry.getKey();
+        AtomicInteger rootCounter = new AtomicInteger();
+        for (Map.Entry<Word, List<Word>> entry : rootToWords.entrySet()) {
+            Word root = entry.getKey();
             List<Word> words = entry.getValue();
             html.append("<h2>")
-                    .append(stemCounter.incrementAndGet())
+                    .append(rootCounter.incrementAndGet())
                     .append("、")
-                    .append(stem.getWord())
+                    .append(root.getWord())
                     .append(" (")
-                    .append(stem.getMeaning())
+                    .append(root.getMeaning())
                     .append(") (hit ")
                     .append(words.size())
                     .append(")</h2></br>\n");
@@ -77,7 +77,7 @@ public class StemRule {
                 html.append("\t")
                         .append(wordCounter.incrementAndGet())
                         .append("、")
-                        .append(WordLinker.toLink(word.getWord(), stem.getWord().toLowerCase()))
+                        .append(WordLinker.toLink(word.getWord(), root.getWord().toLowerCase()))
                         .append("</br>\n");
             });
         }
@@ -86,7 +86,7 @@ public class StemRule {
 
     public static void main(String[] args) throws Exception {
         Set<Word> words = WordSources.getAll();
-        List<Word> stems = Arrays.asList(//new Word("onym", "=nam,表示\"名字\""),
+        List<Word> roots = Arrays.asList(//new Word("onym", "=nam,表示\"名字\""),
             //new Word("ball", "=throw/dance/ball,表示\"抛,舞,球\""),
             //new Word("wit", "表示\"智慧,观察\""),
             //new Word("aster", "=star,表示\"星星\""),
@@ -104,12 +104,13 @@ public class StemRule {
                 //new Word("peri", "=try,表示\"尝试\""),
                 //new Word("sol", "1. =alone,表示\"单独\"; 2. =sun,表示\"太阳\""),
                 //new Word("solid", "表示\"巩固,团结\""),
-                new Word("aque", "=water,表示\"水\""));
+                //new Word("aque", "=water,表示\"水\""),
+                new Word("ject", "=throw/st,表示\"投掷,扔\""));
 
-        TreeMap<Word, List<Word>> stemToWords = StemRule.findByStem(words, stems);
-        String htmlFragment = StemRule.toHtmlFragment(stemToWords);
+        TreeMap<Word, List<Word>> rootToWords = RootRule.findByStem(words, roots);
+        String htmlFragment = RootRule.toHtmlFragment(rootToWords);
 
-        Files.write(Paths.get("target/stem_rule.txt"),htmlFragment.getBytes("utf-8"));
+        Files.write(Paths.get("target/root_rule.txt"),htmlFragment.getBytes("utf-8"));
 
         System.out.println(htmlFragment);
     }
