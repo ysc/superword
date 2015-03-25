@@ -30,9 +30,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -44,6 +42,19 @@ import java.util.stream.Collectors;
 public class WordSources {
     private WordSources(){}
     private static final Logger LOGGER = LoggerFactory.getLogger(WordSources.class);
+
+    /**
+     * 考纲词汇
+     * @return
+     */
+    public static Set<Word> getSyllabusVocabulary(){
+        return get("/word_CET4.txt",
+                "/word_CET6.txt",
+                "/word_GRE.txt",
+                "/word_IELTS.txt",
+                "/word_TOEFL.txt",
+                "/word_考 研.txt");
+    }
     public static Set<Word> getAll(){
         return get("/words.txt",
                 "/word_CET4.txt",
@@ -62,6 +73,12 @@ public class WordSources {
      */
     public static Set<Word> get(String... files){
         return get(1, files);
+    }
+
+    public static Map<Word, AtomicInteger> convert(Map<String, AtomicInteger> words){
+        Map<Word, AtomicInteger> result = new HashMap<>();
+        words.keySet().forEach(w -> result.put(new Word(w, ""), words.get(w)));
+        return result;
     }
 
     /**
@@ -134,6 +151,6 @@ public class WordSources {
     }
     public static void main(String[] args) {
         AtomicInteger i = new AtomicInteger();
-        getAll().forEach(w -> System.out.println(i.incrementAndGet()+"、"+w.getWord()));
+        getAll().forEach(w -> System.out.println(i.incrementAndGet() + "、" + w.getWord()));
     }
 }
