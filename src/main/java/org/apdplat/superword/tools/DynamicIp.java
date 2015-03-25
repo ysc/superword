@@ -159,6 +159,7 @@ public class DynamicIp {
             Document doc = Jsoup.parse(html);
             title = doc.title();
             LOGGER.info("操作连接页面标题："+title);
+            Thread.sleep(10000);
         }catch (Exception e){
             LOGGER.error(e.getMessage());
         }
