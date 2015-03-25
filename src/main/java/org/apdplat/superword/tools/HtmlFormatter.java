@@ -21,9 +21,7 @@ package org.apdplat.superword.tools;
 
 import org.apdplat.superword.model.Word;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -33,6 +31,58 @@ import java.util.stream.Collectors;
  */
 public class HtmlFormatter {
     private HtmlFormatter(){}
+    private static final String EM_PRE = "<span style=\"color:red\">";
+    private static final String EM_SUF = "</span>";
+
+    public static String toHtmlTableFragmentForRootRule(Map<Word, List<Word>> rootToWords, int rowLength) {
+        StringBuilder html = new StringBuilder();
+        AtomicInteger rootCounter = new AtomicInteger();
+        Set<Word> unique = new HashSet<>();
+        for (Map.Entry<Word, List<Word>> entry : rootToWords.entrySet()) {
+            Word root = entry.getKey();
+            List<Word> words = entry.getValue();
+            html.append("<h2>")
+                    .append(rootCounter.incrementAndGet())
+                    .append("、")
+                    .append(root.getWord())
+                    .append(" (")
+                    .append(root.getMeaning())
+                    .append(") (hit ")
+                    .append(words.size())
+                    .append(")</h2></br>\n");
+            List<String> data =
+                    words
+                        .stream()
+                        .map(word -> {
+                            unique.add(word);
+                            String w = word.getWord();
+                            String r = root.getWord().toLowerCase();
+                            //词就是词根
+                            if (w.length() == r.length()) {
+                                return WordLinker.toLink(w, r);
+                            }
+                            //词根在中间
+                            if (w.length() > r.length()
+                                    && !w.startsWith(r)
+                                    && !w.endsWith(r)) {
+                                return WordLinker.toLink(w, r, "-"+EM_PRE, EM_SUF+"-");
+                            }
+                            //词根在前面
+                            if (w.length() > r.length() && w.startsWith(r)) {
+                                return WordLinker.toLink(w, r, ""+EM_PRE, EM_SUF+"-");
+                            }
+                            //词根在后面面
+                            if (w.length() > r.length() && w.endsWith(r)){
+                                return WordLinker.toLink(w, r, "-"+EM_PRE, EM_SUF+"");
+                            }
+                            return WordLinker.toLink(w, r);
+                        })
+                        .collect(Collectors.toList());
+            html.append(toHtmlTableFragment(data, rowLength));
+        }
+        String head = "词根总数为："+rootToWords.keySet().size()+"，单词总数为："+unique.size()+"\n<br/>";
+        return head+html.toString();
+    }
 
     public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength) {
         return toHtmlTableFragment(words.entrySet(), rowLength);
