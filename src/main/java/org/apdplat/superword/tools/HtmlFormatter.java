@@ -42,7 +42,7 @@ public class HtmlFormatter {
 
         AtomicInteger rowCounter = new AtomicInteger();
         AtomicInteger wordCounter = new AtomicInteger();
-        html.append("<table>\n");
+        html.append("<table  border=\"1\">\n");
         words
             .stream()
             .sorted((a, b) -> b.getValue().get() - a.getValue().get())
