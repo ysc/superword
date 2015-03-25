@@ -127,6 +127,29 @@ public class PdfParser {
             e.printStackTrace();
         }
     }
+    public static void parseZip(String zipFile){
+        LOGGER.info("开始解析ZIP文件："+zipFile);
+        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifier.class.getClassLoader())) {
+            for(Path path : fs.getRootDirectories()){
+                LOGGER.info("处理目录："+path);
+                Files.walkFileTree(path, new SimpleFileVisitor<Path>(){
+
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                        LOGGER.info("处理文件："+file);
+                        // 拷贝到本地文件系统
+                        Path temp = Paths.get("target/it-software-domain-temp.pdf");
+                        Files.copy(file, temp, StandardCopyOption.REPLACE_EXISTING);
+                        parseFile(temp.toFile().getAbsolutePath());
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                });
+            }
+        }catch (Exception e){
+            LOGGER.error("解析文本出错", e);
+        }
+    }
     public static String parseFile(String file) {
         return parseFile(Paths.get(file));
     }
@@ -717,9 +740,13 @@ public class PdfParser {
         //提取子类别
         //String path = "/Users/apple/百度云同步盘/【大数据】相关技术英文原版电子书/cassandra";
         //提取所有类别
-        String path = "/Users/apple/百度云同步盘/【大数据】相关技术英文原版电子书";
+        //String path = "/Users/apple/百度云同步盘/【大数据】相关技术英文原版电子书";
         //提取目录
-        parseDirectory(path);
+        //parseDirectory(path);
+        //it-software-domain.zip文件249本IT领域中和软件开发相关的249本电子书
+        //大多数书都跟大数据和搜索引擎有关系，因为这是我的研究方向
+        //it-software-domain.zip的下载地址：http://pan.baidu.com/s/1kT1NA3l
+        parseZip("/Users/apple/百度云同步盘/【大数据】相关技术英文原版电子书/it-software-domain.zip");
         showSentenceWordLengthInfo();
     }
 }
