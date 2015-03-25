@@ -19,14 +19,16 @@
  */
 package org.apdplat.superword.rule;
 
+import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Word;
-import org.apdplat.superword.tools.WordLinker;
+import org.apdplat.superword.tools.HtmlFormatter;
 import org.apdplat.superword.tools.WordSources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,33 @@ import java.util.stream.Collectors;
  */
 public class RootRule {
     private RootRule(){}
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RootRule.class);
+
+    public static List<Word> getAllRoots(){
+        List<Word> roots = new ArrayList<>();
+        try{
+            List<String> lines = Files.readAllLines(Paths.get("src/main/resources/root_affix.txt"));
+            for(String line : lines){
+                if(StringUtils.isNotBlank(line)
+                        && !line.startsWith("#")
+                        && line.startsWith("词根：")){
+                    String[] attr = line.substring(3).split("杨尚川");
+                    if(attr != null && attr.length == 2){
+                        String root = attr[0];
+                        String meaning = attr[1];
+                        roots.add(new Word(root, meaning));
+                        LOGGER.debug("词根："+root+meaning);
+                    }else{
+                        LOGGER.error("解析词根出错："+line);
+                    }
+                }
+            }
+        } catch (Exception e){
+            LOGGER.error(e.getMessage(), e);
+        }
+        return roots;
+    }
 
     public static TreeMap<Word, List<Word>> findByStem(Collection<Word> words, Collection<Word> roots) {
         TreeMap<Word, List<Word>> map = new TreeMap<>();
@@ -57,61 +86,13 @@ public class RootRule {
                 .collect(Collectors.toList());
     }
 
-    public static String toHtmlFragment(Map<Word, List<Word>> rootToWords) {
-        StringBuilder html = new StringBuilder();
-        AtomicInteger rootCounter = new AtomicInteger();
-        for (Map.Entry<Word, List<Word>> entry : rootToWords.entrySet()) {
-            Word root = entry.getKey();
-            List<Word> words = entry.getValue();
-            html.append("<h2>")
-                    .append(rootCounter.incrementAndGet())
-                    .append("、")
-                    .append(root.getWord())
-                    .append(" (")
-                    .append(root.getMeaning())
-                    .append(") (hit ")
-                    .append(words.size())
-                    .append(")</h2></br>\n");
-            AtomicInteger wordCounter = new AtomicInteger();
-            words.forEach(word -> {
-                html.append("\t")
-                        .append(wordCounter.incrementAndGet())
-                        .append("、")
-                        .append(WordLinker.toLink(word.getWord(), root.getWord().toLowerCase()))
-                        .append("</br>\n");
-            });
-        }
-        return html.toString();
-    }
-
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.getAll();
-        List<Word> roots = Arrays.asList(//new Word("onym", "=nam,表示\"名字\""),
-            //new Word("ball", "=throw/dance/ball,表示\"抛,舞,球\""),
-            //new Word("wit", "表示\"智慧,观察\""),
-            //new Word("aster", "=star,表示\"星星\""),
-            //其他情况发音：k
-            //new Word("cy", "发音：si"),new Word("ci", "发音：si"),new Word("ce", "发音：s"),
-            //new Word("petr", "=stone,表示\"石头\""),
-            //new Word("arm", "=weapon,表示\"武器,臂\""),
-            //new Word("agon", "=struggle,表示\"挣扎,斗争\""),
-            //new Word("cap", "1. =take/hold/seize, 表示\"拿,抓,握住\"; 2. =head,表示\"头\""),
-            //new Word("can", "=vessel,表示\"容器,管道\""),
-            //new Word("charact", "表示\"特性,品质\""),
-            //new Word("cond", "=hid,表示\"藏\""),
-            //new Word("ann", "=year,表示\"年,一年\""),
-            //new Word("memor", "=memory,表示\"记忆\""),
-                //new Word("peri", "=try,表示\"尝试\""),
-                //new Word("sol", "1. =alone,表示\"单独\"; 2. =sun,表示\"太阳\""),
-                //new Word("solid", "表示\"巩固,团结\""),
-                //new Word("aque", "=water,表示\"水\""),
-                new Word("ject", "=throw/st,表示\"投掷,扔\""));
+        Set<Word> words = WordSources.getSyllabusVocabulary();
+        List<Word> roots = getAllRoots();
 
         TreeMap<Word, List<Word>> rootToWords = RootRule.findByStem(words, roots);
-        String htmlFragment = RootRule.toHtmlFragment(rootToWords);
+        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootRule(rootToWords, 6);
 
         Files.write(Paths.get("target/root_rule.txt"),htmlFragment.getBytes("utf-8"));
-
-        System.out.println(htmlFragment);
     }
 }
