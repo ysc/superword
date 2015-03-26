@@ -38,9 +38,12 @@ public class HtmlFormatter {
         StringBuilder html = new StringBuilder();
         AtomicInteger rootCounter = new AtomicInteger();
         Set<Word> unique = new HashSet<>();
-        for (Map.Entry<Word, List<Word>> entry : rootAffixToWords.entrySet()) {
-            Word rootAffix = entry.getKey();
-            List<Word> words = entry.getValue();
+        rootAffixToWords
+        .keySet()
+        .stream()
+        .sorted()
+        .forEach(rootAffix -> {
+            List<Word> words = rootAffixToWords.get(rootAffix);
             html.append("<h4>")
                     .append(rootCounter.incrementAndGet())
                     .append("、")
@@ -80,7 +83,7 @@ public class HtmlFormatter {
                         })
                         .collect(Collectors.toList());
             html.append(toHtmlTableFragment(data, rowLength));
-        }
+        });
         String head = "词根词缀数："+rootAffixToWords.keySet().size()+"，单词数："+unique.size()+"<br/>\n";
         return head+html.toString();
     }
