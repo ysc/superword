@@ -44,7 +44,7 @@ public class RootRule {
         List<Word> roots = new ArrayList<>();
         try{
             List<String> lines = Files.readAllLines(Paths.get("src/main/resources/root_affix.txt"));
-            for(String line : lines){
+            lines.forEach(line -> {
                 if(StringUtils.isNotBlank(line)
                         && !line.startsWith("#")
                         && line.startsWith("词根：")){
@@ -58,7 +58,7 @@ public class RootRule {
                         LOGGER.error("解析词根出错："+line);
                     }
                 }
-            }
+            });
         } catch (Exception e){
             LOGGER.error(e.getMessage(), e);
         }
