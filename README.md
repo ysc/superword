@@ -1,6 +1,6 @@
 ###superword是一个Java实现的英文单词分析软件，主要研究英语单词音近形似转化规律、前缀后缀规律、词之间的相似性规律等等。Clean code、Fluent style、Java8 feature: Lambdas, Streams and Functional-style Programming。
 
-###[192本软件著作用词分析](http://user.qzone.qq.com/281032878/blog/1426602017)
+###[192本软件著作用词分析](http://my.oschina.net/apdplat/blog/392496)
 ###[2000个软件开发领域的高频特殊词及精选例句](http://my.oschina.net/apdplat/blog/389200)
 ###[英语单词音近形似转化规律研究](http://my.oschina.net/apdplat/blog/378569)
 ###[分析996个词根在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/391865)
