@@ -65,22 +65,27 @@ public class RootRule {
         return roots;
     }
 
-    public static TreeMap<Word, List<Word>> findByStem(Collection<Word> words, Collection<Word> roots) {
+    public static TreeMap<Word, List<Word>> findByRoot(Collection<Word> words, Collection<Word> roots) {
         TreeMap<Word, List<Word>> map = new TreeMap<>();
-        roots.forEach(root -> map.put(root, findByStem(words, root)));
+        roots.forEach(root -> map.put(root, findByRoot(words, root)));
         return map;
     }
 
-    public static List<Word> findByStem(Collection<Word> words, Word root) {
+    public static List<Word> findByRoot(Collection<Word> words, Word root) {
         return words
                 .parallelStream()
                 .filter(word -> {
                     //词区分大小写
                     String w = word.getWord();
                     //词根不区分大小写
-                    String s = root.getWord().toLowerCase();
+                    String[] rs = root.getWord().toLowerCase().split(",");
                     //词中包含词根即可，不考虑位置和剩余部分
-                    return w.contains(s);
+                    for(String s : rs) {
+                        if(w.contains(s)){
+                            return true;
+                        }
+                    }
+                    return false;
                 })
                 .sorted()
                 .collect(Collectors.toList());
@@ -90,7 +95,7 @@ public class RootRule {
         Set<Word> words = WordSources.getSyllabusVocabulary();
         List<Word> roots = getAllRoots();
 
-        TreeMap<Word, List<Word>> rootToWords = RootRule.findByStem(words, roots);
+        TreeMap<Word, List<Word>> rootToWords = RootRule.findByRoot(words, roots);
         String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(rootToWords, 6);
 
         Files.write(Paths.get("target/root_rule.txt"),htmlFragment.getBytes("utf-8"));
