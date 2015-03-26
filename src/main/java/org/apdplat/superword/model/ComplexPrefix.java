@@ -33,7 +33,6 @@ public class ComplexPrefix{
     private String prefix;
     private String des;
 
-    public ComplexPrefix(){}
     public ComplexPrefix(String prefix, String des) {
         this.prefix = prefix;
         this.des = des;
