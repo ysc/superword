@@ -6,6 +6,8 @@
 ###[分析996个词根在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/391865)
 ###[分析113个前缀在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/392456)
 ###[分析151个后缀在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/392466)
+###[分析在各大考纲词汇中既没有词根也没有前缀和后缀的独立单词](http://my.oschina.net/apdplat/blog/392483)
+###[分析在各大考纲词汇中同时拥有前缀后缀和词根的词](http://my.oschina.net/apdplat/blog/392490)
 ###[一个月的时间让你的词汇量翻一翻](http://my.oschina.net/apdplat/blog/379303)
 ###[英语单词前缀规则总结](http://my.oschina.net/apdplat/blog/378753)
 ###[英语单词后缀规则总结](http://my.oschina.net/apdplat/blog/379330)
