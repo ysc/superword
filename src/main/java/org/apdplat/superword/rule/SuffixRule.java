@@ -22,96 +22,96 @@ package org.apdplat.superword.rule;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-import org.apdplat.superword.model.Prefix;
-import org.apdplat.superword.model.Suffix;
-import org.apdplat.superword.model.Word;
-import org.apdplat.superword.tools.SuffixExtractor;
-import org.apdplat.superword.tools.WordLinker;
+import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.*;
+import org.apdplat.superword.tools.HtmlFormatter;
 import org.apdplat.superword.tools.WordSources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 从指定的英文单词的集合中找出符合后缀规则的单词
  * @author 杨尚川
  */
 public class SuffixRule{
-        private SuffixRule(){}
+    private SuffixRule(){}
 
-        public static TreeMap<Suffix, List<Word>> findBySuffix(Collection<Word> words, Collection<Suffix> suffixes) {
-            TreeMap<Suffix, List<Word>> map = new TreeMap<>();
-            for(Suffix suffix : suffixes){
-                map.put(suffix, findBySuffix(words, suffix));
+    private static final Logger LOGGER = LoggerFactory.getLogger(SuffixRule.class);
+
+    public static List<Suffix> getAllSuffixes(){
+    List<Suffix> suffixes = new ArrayList<>();
+    try{
+        List<String> lines = Files.readAllLines(Paths.get("src/main/resources/root_affix.txt"));
+        lines.forEach(line ->{
+            if(StringUtils.isNotBlank(line)
+                    && !line.startsWith("#")
+                    && line.startsWith("后缀：")){
+                String[] attr = line.substring(3).split("杨尚川");
+                if(attr != null && attr.length == 2){
+                    String suffix = attr[0];
+                    String meaning = attr[1];
+                    if(suffix.contains(",")){
+                        suffixes.addAll(new ComplexSuffix(suffix, meaning).simplify());
+                        LOGGER.debug("复杂后缀："+suffix+meaning);
+                    }else{
+                        suffixes.add(new Suffix(suffix, meaning));
+                        LOGGER.debug("后缀："+suffix+meaning);
+                    }
+                }else{
+                    LOGGER.error("解析后缀出错："+line);
+                }
             }
-            return map;
-        }
+        });
+    } catch (Exception e){
+        LOGGER.error(e.getMessage(), e);
+    }
+    return suffixes;
+}
 
-        public static List<Word> findBySuffix(Collection<Word> words, Suffix suffix) {
-            return words
-                    .parallelStream()
-                    .filter(word -> {
-                        String w = word.getWord();
-                        boolean hit = false;
-                        String[] ps = suffix.getSuffix().toLowerCase().split(",");
-                        for (String p : ps) {
-                            p = p.replaceAll("-", "").replaceAll("\\s+", "");
-                            if (w.toLowerCase().endsWith(p)) {
-                                hit = true;
-                                break;
-                            }
+    public static TreeMap<Suffix, List<Word>> findBySuffix(Collection<Word> words, Collection<Suffix> suffixes) {
+        TreeMap<Suffix, List<Word>> map = new TreeMap<>();
+        for(Suffix suffix : suffixes){
+            map.put(suffix, findBySuffix(words, suffix));
+        }
+        return map;
+    }
+
+    public static List<Word> findBySuffix(Collection<Word> words, Suffix suffix) {
+        return words
+                .parallelStream()
+                .filter(word -> {
+                    String w = word.getWord();
+                    boolean hit = false;
+                    String[] ps = suffix.getSuffix().toLowerCase().split(",");
+                    for (String p : ps) {
+                        p = p.replaceAll("-", "").replaceAll("\\s+", "");
+                        if (w.toLowerCase().endsWith(p)) {
+                            hit = true;
+                            break;
                         }
-                        return hit;
-                    })
-                    .sorted()
-                    .collect(Collectors.toList());
-        }
+                    }
+                    return hit;
+                })
+                .sorted()
+                .collect(Collectors.toList());
+    }
 
-        public static String toHtmlFragment(Map<Suffix, List<Word>> suffixToWords) {
-            StringBuilder html = new StringBuilder();
-            AtomicInteger suffixCounter = new AtomicInteger();
-            for (Map.Entry<Suffix, List<Word>> entry : suffixToWords.entrySet()) {
-                Suffix suffix = entry.getKey();
-                List<Word> words = entry.getValue();
-                html.append("<h2>")
-                        .append(suffixCounter.incrementAndGet())
-                        .append("、")
-                        .append(suffix.getSuffix())
-                        .append(" (")
-                        .append(suffix.getDes())
-                        .append(") (hit ")
-                        .append(words.size())
-                        .append(")</h2></br>\n");
-                AtomicInteger wordCounter = new AtomicInteger();
-                words.forEach(word -> {
-                    html.append("\t")
-                            .append(wordCounter.incrementAndGet())
-                            .append("、")
-                            .append(WordLinker.toLink(word.getWord(), suffix.getSuffix()))
-                            .append("</br>\n");
-                });
-            }
-            return html.toString();
-        }
+    private static Map<Word, List<Word>> convert(Map<Suffix, List<Word>> data){
+        Map<Word, List<Word>> r = new HashMap<>();
+        data.keySet().forEach(k -> r.put(new Word(k.getSuffix(), k.getDes()), data.get(k)));
+        return r;
+    }
 
-        public static void main(String[] args) throws Exception {
-            Set<Word> words = WordSources.getAll();
-            //List<Suffix> suffixes = SuffixExtractor.extract();
-            //List<Suffix> suffixes = Arrays.asList(new Suffix("ization", ""));
-            //List<Suffix> suffixes = Arrays.asList(new Suffix("iority", ""));
-            //List<Suffix> suffixes = Arrays.asList(new Suffix("onomy", "...学"), new Suffix("onomics", "...学"), new Suffix("ology", "...学"));
-            //List<Suffix> suffixes = Arrays.asList(new Suffix("ache", "...疼"));
-            //List<Suffix> suffixes = Arrays.asList(new Suffix("tain", ""));
-            //List<Suffix> suffixes = Arrays.asList(new Suffix("igation", ""));
-            //List<Suffix> suffixes = Arrays.asList(new Suffix("arian", "表形容词或名词,\"……的(人)\""));
-            List<Suffix> suffixes = Arrays.asList();
+    public static void main(String[] args) throws Exception {
+        Set<Word> words = WordSources.getSyllabusVocabulary();
+        //List<Suffix> suffixes = SuffixExtractor.extract();
+        List<Suffix> suffixes = getAllSuffixes();
 
+        TreeMap<Suffix, List<Word>> suffixToWords = SuffixRule.findBySuffix(words, suffixes);
+        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(convert(suffixToWords), 6);
 
-            TreeMap<Suffix, List<Word>> suffixToWords = SuffixRule.findBySuffix(words, suffixes);
-            String htmlFragment = SuffixRule.toHtmlFragment(suffixToWords);
-
-            Files.write(Paths.get("target/suffix_rule.txt"), htmlFragment.getBytes("utf-8"));
-
-            System.out.println(htmlFragment);
-        }
+        Files.write(Paths.get("target/suffix_rule.txt"), htmlFragment.getBytes("utf-8"));
+    }
 }
