@@ -22,14 +22,16 @@ package org.apdplat.superword.rule;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.ComplexPrefix;
 import org.apdplat.superword.model.Prefix;
 import org.apdplat.superword.model.Word;
-import org.apdplat.superword.tools.WordLinker;
+import org.apdplat.superword.tools.HtmlFormatter;
 import org.apdplat.superword.tools.WordSources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 从指定的英文单词的集合中找出符合前缀规则的单词
@@ -37,6 +39,38 @@ import org.apdplat.superword.tools.WordSources;
  */
 public class PrefixRule {
     private PrefixRule(){}
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PrefixRule.class);
+
+    public static List<Prefix> getAllPrefixes(){
+        List<Prefix> prefixes = new ArrayList<>();
+        try{
+            List<String> lines = Files.readAllLines(Paths.get("src/main/resources/root_affix.txt"));
+            lines.forEach(line ->{
+                if(StringUtils.isNotBlank(line)
+                        && !line.startsWith("#")
+                        && line.startsWith("前缀：")){
+                    String[] attr = line.substring(3).split("杨尚川");
+                    if(attr != null && attr.length == 2){
+                        String prefix = attr[0];
+                        String meaning = attr[1];
+                        if(prefix.contains(",")){
+                            prefixes.addAll(new ComplexPrefix(prefix, meaning).simplify());
+                            LOGGER.debug("复杂前缀："+prefix+meaning);
+                        }else{
+                            prefixes.add(new Prefix(prefix, meaning));
+                            LOGGER.debug("前缀："+prefix+meaning);
+                        }
+                    }else{
+                        LOGGER.error("解析前缀出错："+line);
+                    }
+                }
+            });
+        } catch (Exception e){
+            LOGGER.error(e.getMessage(), e);
+        }
+        return prefixes;
+    }
 
     public static TreeMap<Prefix, List<Word>> findByPrefix(Collection<Word> words, Collection<Prefix> prefixes, boolean strict) {
         TreeMap<Prefix, List<Word>> map = new TreeMap<>();
@@ -54,7 +88,7 @@ public class PrefixRule {
                     if(Character.isUpperCase(w.charAt(0))){
                         return false;
                     }
-                    String p = prefix.getPrefix().toLowerCase();
+                    String p = prefix.getPrefix().replace("-", "").toLowerCase();
 
                     if(strict){
                         if(w.startsWith(p)
@@ -72,63 +106,22 @@ public class PrefixRule {
                 .collect(Collectors.toList());
     }
 
-    public static String toHtmlFragment(Map<Prefix, List<Word>> prefixToWords) {
-        StringBuilder html = new StringBuilder();
-        AtomicInteger prefixCounter = new AtomicInteger();
-        for (Map.Entry<Prefix, List<Word>> entry : prefixToWords.entrySet()) {
-            Prefix prefix = entry.getKey();
-            List<Word> words = entry.getValue();
-            html.append("<h2>")
-                    .append(prefixCounter.incrementAndGet())
-                    .append("、")
-                    .append(prefix.getPrefix())
-                    .append("- (")
-                    .append(prefix.getDes())
-                    .append(") (hit ")
-                    .append(words.size())
-                    .append(")</h2></br>\n");
-            AtomicInteger wordCounter = new AtomicInteger();
-            html.append("<table>\n");
-            words.forEach(word -> {
-                if(wordCounter.get()%3 == 0){
-                    if(wordCounter.get() == 0){
-                        html.append("\t<tr>");
-                    }else{
-                        html.append("</tr>\n\t<tr>");
-                    }
-                }
-                wordCounter.incrementAndGet();
-                html.append("<td>")
-                        .append(WordLinker.toLink(word.getWord(), prefix.getPrefix(), "<b>", "</b>-"))
-                        .append("    ")
-                        .append(WordLinker.toLink(word.getWord().substring(prefix.getPrefix().length())))
-                        .append("</td>");
-            });
-            if(html.toString().endsWith("<tr>")){
-                html.setLength(html.length()-5);
-            }else{
-                html.append("</tr>\n");
-            }
-            html.append("</table>\n");
-        }
-        return html.toString();
+    private static Map<Word, List<Word>> convert(Map<Prefix, List<Word>> data){
+        Map<Word, List<Word>> r = new HashMap<>();
+        data.keySet().forEach(k -> r.put(new Word(k.getPrefix(), k.getDes()), data.get(k)));
+        return r;
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.getAll();
+        Set<Word> words = WordSources.getSyllabusVocabulary();
         //List<Prefix> prefixes = PrefixExtractor.extract();
         //List<Prefix> prefixes = Arrays.asList(new Prefix("mono,mon", "单个，一个"));
-        //List<Prefix> prefixes = Arrays.asList(new Prefix("antiq", "=old,表示\"古老\""));
-        //List<Prefix> prefixes = Arrays.asList(new Prefix("pseud", "=fake,表示\"假的\""));
-        //List<Prefix> prefixes = Arrays.asList(new Prefix("super", "表示\"在……上面\"或表示\"超级,超过,过度\""));
-        //List<Prefix> prefixes = Arrays.asList(new Prefix("semi", "表示\"在……上面\"或表示\"超级,超过,过度\""));
-        List<Prefix> prefixes = new ComplexPrefix("dis-,in-,im-,il-,ir-,un-,mis-,non-,dis-,de-,anti-,counter-", "否定前缀").simplify();
+        //List<Prefix> prefixes = new ComplexPrefix("dis-,in-,im-,il-,ir-,un-,mis-,non-,dis-,de-,anti-,counter-", "否定前缀").simplify();
+        List<Prefix> prefixes = getAllPrefixes();
 
-        TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes, true);
-        String htmlFragment = PrefixRule.toHtmlFragment(prefixToWords);
+        TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes, false);
+        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(convert(prefixToWords), 6);
 
-        Files.write(Paths.get("target/prefix_rule.txt"),htmlFragment.getBytes("utf-8"));
-
-        System.out.println(htmlFragment);
+        Files.write(Paths.get("target/prefix_rule.txt"), htmlFragment.getBytes("utf-8"));
     }
 }
