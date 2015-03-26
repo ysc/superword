@@ -70,29 +70,35 @@ public class SuffixRule{
     return suffixes;
 }
 
-    public static TreeMap<Suffix, List<Word>> findBySuffix(Collection<Word> words, Collection<Suffix> suffixes) {
+    public static TreeMap<Suffix, List<Word>> findBySuffix(Collection<Word> words, Collection<Suffix> suffixes, boolean strict) {
         TreeMap<Suffix, List<Word>> map = new TreeMap<>();
         for(Suffix suffix : suffixes){
-            map.put(suffix, findBySuffix(words, suffix));
+            map.put(suffix, findBySuffix(words, suffix, strict));
         }
         return map;
     }
 
-    public static List<Word> findBySuffix(Collection<Word> words, Suffix suffix) {
+    public static List<Word> findBySuffix(Collection<Word> words, Suffix suffix, boolean strict) {
         return words
                 .parallelStream()
                 .filter(word -> {
                     String w = word.getWord();
-                    boolean hit = false;
-                    String[] ps = suffix.getSuffix().toLowerCase().split(",");
-                    for (String p : ps) {
-                        p = p.replaceAll("-", "").replaceAll("\\s+", "");
-                        if (w.toLowerCase().endsWith(p)) {
-                            hit = true;
-                            break;
-                        }
+                    if(Character.isUpperCase(w.charAt(0))){
+                        return false;
                     }
-                    return hit;
+                    String s = suffix.getSuffix().replace("-", "").toLowerCase();
+
+                    if(strict){
+                        if(w.endsWith(s)
+                                && w.length()-s.length()>2
+                                && words.contains(new Word(w.substring(0, w.length()-s.length()), ""))){
+                            return true;
+                        }
+                    } else if (w.endsWith(s)) {
+                        return true;
+                    }
+
+                    return false;
                 })
                 .sorted()
                 .collect(Collectors.toList());
@@ -109,7 +115,7 @@ public class SuffixRule{
         //List<Suffix> suffixes = SuffixExtractor.extract();
         List<Suffix> suffixes = getAllSuffixes();
 
-        TreeMap<Suffix, List<Word>> suffixToWords = SuffixRule.findBySuffix(words, suffixes);
+        TreeMap<Suffix, List<Word>> suffixToWords = SuffixRule.findBySuffix(words, suffixes, false);
         String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(convert(suffixToWords), 6);
 
         Files.write(Paths.get("target/suffix_rule.txt"), htmlFragment.getBytes("utf-8"));
