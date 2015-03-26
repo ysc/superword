@@ -91,7 +91,7 @@ public class RootRule {
         List<Word> roots = getAllRoots();
 
         TreeMap<Word, List<Word>> rootToWords = RootRule.findByStem(words, roots);
-        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootRule(rootToWords, 6);
+        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(rootToWords, 6);
 
         Files.write(Paths.get("target/root_rule.txt"),htmlFragment.getBytes("utf-8"));
     }
