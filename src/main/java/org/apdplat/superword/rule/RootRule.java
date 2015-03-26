@@ -77,6 +77,9 @@ public class RootRule {
                 .filter(word -> {
                     //词区分大小写
                     String w = word.getWord();
+                    if(Character.isUpperCase(w.charAt(0))){
+                        return false;
+                    }
                     //词根不区分大小写
                     String[] rs = root.getWord().toLowerCase().split(",");
                     //词中包含词根即可，不考虑位置和剩余部分
