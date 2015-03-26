@@ -19,6 +19,7 @@
  */
 package org.apdplat.superword.tools;
 
+import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Word;
 
 import java.util.*;
@@ -45,14 +46,17 @@ public class HtmlFormatter {
         .forEach(rootAffix -> {
             List<Word> words = rootAffixToWords.get(rootAffix);
             html.append("<h4>")
-                    .append(rootCounter.incrementAndGet())
-                    .append("、")
-                    .append(rootAffix.getWord())
-                    .append(" (")
+                .append(rootCounter.incrementAndGet())
+                .append("、")
+                .append(rootAffix.getWord());
+            if(StringUtils.isNotBlank(rootAffix.getMeaning())) {
+                html.append(" (")
                     .append(rootAffix.getMeaning())
-                    .append(") (hit ")
-                    .append(words.size())
-                    .append(")</h4></br>\n");
+                    .append(") ");
+            }
+            html.append(" (hit ")
+                .append(words.size())
+                .append(")</h4></br>\n");
             List<String> data =
                     words
                         .stream()
@@ -69,15 +73,15 @@ public class HtmlFormatter {
                             if (w.length() > r.length()
                                     && !w.startsWith(r)
                                     && !w.endsWith(r)) {
-                                return WordLinker.toLink(w, r, "-"+EM_PRE, EM_SUF+"-");
+                                return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "-");
                             }
                             //词根在前面
                             if (w.length() > r.length() && w.startsWith(r)) {
-                                return WordLinker.toLink(w, r, ""+EM_PRE, EM_SUF+"-");
+                                return WordLinker.toLink(w, r, "" + EM_PRE, EM_SUF + "-");
                             }
                             //词根在后面面
-                            if (w.length() > r.length() && w.endsWith(r)){
-                                return WordLinker.toLink(w, r, "-"+EM_PRE, EM_SUF+"");
+                            if (w.length() > r.length() && w.endsWith(r)) {
+                                return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "");
                             }
                             return WordLinker.toLink(w, r);
                         })
