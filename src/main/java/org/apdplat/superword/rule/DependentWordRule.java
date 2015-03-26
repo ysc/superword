@@ -93,7 +93,9 @@ public class DependentWordRule {
 
     public static void main(String[] args) throws Exception {
         Map<Word, List<Word>> result = DependentWordRule.getDependentWord();
-        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(result, 5);
-        Files.write(Paths.get("target/dependent_word_rule.txt"), htmlFragment.getBytes("utf-8"));
+        List<String> htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(result, 5, 640);
+        for(int i=0; i<htmlFragment.size(); i++) {
+            Files.write(Paths.get("target/dependent_word_rule_"+(i+1)+".txt"), htmlFragment.get(i).getBytes("utf-8"));
+        }
     }
 }
