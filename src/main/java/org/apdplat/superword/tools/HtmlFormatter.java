@@ -34,7 +34,7 @@ public class HtmlFormatter {
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
 
-    public static String toHtmlTableFragmentForRootRule(Map<Word, List<Word>> rootToWords, int rowLength) {
+    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootToWords, int rowLength) {
         StringBuilder html = new StringBuilder();
         AtomicInteger rootCounter = new AtomicInteger();
         Set<Word> unique = new HashSet<>();
@@ -81,7 +81,7 @@ public class HtmlFormatter {
                         .collect(Collectors.toList());
             html.append(toHtmlTableFragment(data, rowLength));
         }
-        String head = "词根总数为："+rootToWords.keySet().size()+"，单词总数为："+unique.size()+"\n<br/>";
+        String head = "词根词缀数："+rootToWords.keySet().size()+"，单词数："+unique.size()+"\n<br/>";
         return head+html.toString();
     }
 
