@@ -53,6 +53,7 @@ public class HtmlFormatter {
             List<String> data =
                     words
                         .stream()
+                        .sorted()
                         .map(word -> {
                             unique.add(word);
                             String w = word.getWord();
