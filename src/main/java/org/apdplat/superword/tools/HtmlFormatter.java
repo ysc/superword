@@ -63,33 +63,37 @@ public class HtmlFormatter {
                         .sorted()
                         .map(word -> {
                             unique.add(word);
-                            String w = word.getWord();
-                            String r = rootAffix.getWord().replace("-", "").toLowerCase();
-                            //词就是词根
-                            if (w.length() == r.length()) {
-                                return WordLinker.toLink(w, r);
-                            }
-                            //词根在中间
-                            if (w.length() > r.length()
-                                    && !w.startsWith(r)
-                                    && !w.endsWith(r)) {
-                                return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "-");
-                            }
-                            //词根在前面
-                            if (w.length() > r.length() && w.startsWith(r)) {
-                                return WordLinker.toLink(w, r, "" + EM_PRE, EM_SUF + "-");
-                            }
-                            //词根在后面面
-                            if (w.length() > r.length() && w.endsWith(r)) {
-                                return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "");
-                            }
-                            return WordLinker.toLink(w, r);
+                            return emphasize(word, rootAffix);
                         })
                         .collect(Collectors.toList());
             html.append(toHtmlTableFragment(data, rowLength));
         });
         String head = "词根词缀数："+rootAffixToWords.keySet().size()+"，单词数："+unique.size()+"<br/>\n";
         return head+html.toString();
+    }
+
+    public static String emphasize(Word word, Word rootAffix){
+        String w = word.getWord();
+        String r = rootAffix.getWord().replace("-", "").toLowerCase();
+        //词就是词根
+        if (w.length() == r.length()) {
+            return WordLinker.toLink(w, r);
+        }
+        //词根在中间
+        if (w.length() > r.length()
+                && !w.startsWith(r)
+                && !w.endsWith(r)) {
+            return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "-");
+        }
+        //词根在前面
+        if (w.length() > r.length() && w.startsWith(r)) {
+            return WordLinker.toLink(w, r, "" + EM_PRE, EM_SUF + "-");
+        }
+        //词根在后面面
+        if (w.length() > r.length() && w.endsWith(r)) {
+            return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "");
+        }
+        return WordLinker.toLink(w, r);
     }
 
     public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength) {
@@ -111,6 +115,39 @@ public class HtmlFormatter {
             .collect(Collectors.toList());
 
         return toHtmlTableFragment(data, rowLength);
+    }
+
+    public static String toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength) {
+        StringBuilder html = new StringBuilder();
+        AtomicInteger wordCounter = new AtomicInteger();
+        data
+            .keySet()
+            .stream()
+            .sorted()
+            .forEach(word -> {
+                html.append("<h4>")
+                        .append(wordCounter.incrementAndGet())
+                        .append("、")
+                        .append(word.getWord())
+                        .append(" (form ")
+                        .append(data.get(word).size())
+                        .append(")</h4></br>\n");
+                List<String> result = data
+                        .get(word)
+                        .stream()
+                        .map(rootAffix -> emphasize(word, rootAffix))
+                        .collect(Collectors.toList());
+                html.append(toHtmlTableFragment(result, rowLength));
+                result.clear();
+                result = data
+                        .get(word)
+                        .stream()
+                        .flatMap(rootAffix -> Arrays.asList(rootAffix.getWord(),rootAffix.getMeaning()).stream())
+                        .collect(Collectors.toList());
+                html.append(toHtmlTableFragment(result, 2));
+                result.clear();
+            });
+        return html.toString();
     }
 
     public static String toHtmlTableFragment(List<String> data, int rowLength) {
