@@ -34,22 +34,22 @@ public class HtmlFormatter {
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
 
-    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootToWords, int rowLength) {
+    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootAffixToWords, int rowLength) {
         StringBuilder html = new StringBuilder();
         AtomicInteger rootCounter = new AtomicInteger();
         Set<Word> unique = new HashSet<>();
-        for (Map.Entry<Word, List<Word>> entry : rootToWords.entrySet()) {
-            Word root = entry.getKey();
+        for (Map.Entry<Word, List<Word>> entry : rootAffixToWords.entrySet()) {
+            Word rootAffix = entry.getKey();
             List<Word> words = entry.getValue();
-            html.append("<h2>")
+            html.append("<h4>")
                     .append(rootCounter.incrementAndGet())
                     .append("、")
-                    .append(root.getWord())
+                    .append(rootAffix.getWord())
                     .append(" (")
-                    .append(root.getMeaning())
+                    .append(rootAffix.getMeaning())
                     .append(") (hit ")
                     .append(words.size())
-                    .append(")</h2></br>\n");
+                    .append(")</h4></br>\n");
             List<String> data =
                     words
                         .stream()
@@ -57,7 +57,7 @@ public class HtmlFormatter {
                         .map(word -> {
                             unique.add(word);
                             String w = word.getWord();
-                            String r = root.getWord().toLowerCase();
+                            String r = rootAffix.getWord().replace("-", "").toLowerCase();
                             //词就是词根
                             if (w.length() == r.length()) {
                                 return WordLinker.toLink(w, r);
@@ -81,7 +81,7 @@ public class HtmlFormatter {
                         .collect(Collectors.toList());
             html.append(toHtmlTableFragment(data, rowLength));
         }
-        String head = "词根词缀数："+rootToWords.keySet().size()+"，单词数："+unique.size()+"\n<br/>";
+        String head = "词根词缀数："+rootAffixToWords.keySet().size()+"，单词数："+unique.size()+"<br/>\n";
         return head+html.toString();
     }
 
