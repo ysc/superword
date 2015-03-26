@@ -117,7 +117,8 @@ public class HtmlFormatter {
         return toHtmlTableFragment(data, rowLength);
     }
 
-    public static String toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength) {
+    public static List<String> toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength, int wordsLength) {
+        List<String> htmls = new ArrayList<>();
         StringBuilder html = new StringBuilder();
         AtomicInteger wordCounter = new AtomicInteger();
         data
@@ -146,8 +147,15 @@ public class HtmlFormatter {
                         .collect(Collectors.toList());
                 html.append(toHtmlTableFragment(result, 2));
                 result.clear();
+                if(wordCounter.get()%wordsLength == 0){
+                    htmls.add(html.toString());
+                    html.setLength(0);
+                }
             });
-        return html.toString();
+        if(html.length() > 0){
+            htmls.add(html.toString());
+        }
+        return htmls;
     }
 
     public static String toHtmlTableFragment(List<String> data, int rowLength) {
