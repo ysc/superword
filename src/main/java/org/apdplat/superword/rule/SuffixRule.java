@@ -113,7 +113,7 @@ public class SuffixRule{
     public static void main(String[] args) throws Exception {
         Set<Word> words = WordSources.getSyllabusVocabulary();
         //List<Suffix> suffixes = SuffixExtractor.extract();
-        List<Suffix> suffixes = getAllSuffixes();
+        List<Suffix> suffixes = SuffixRule.getAllSuffixes();
 
         TreeMap<Suffix, List<Word>> suffixToWords = SuffixRule.findBySuffix(words, suffixes, false);
         String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(convert(suffixToWords), 6);

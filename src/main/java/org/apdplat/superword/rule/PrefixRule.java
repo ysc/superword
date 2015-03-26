@@ -117,7 +117,7 @@ public class PrefixRule {
         //List<Prefix> prefixes = PrefixExtractor.extract();
         //List<Prefix> prefixes = Arrays.asList(new Prefix("mono,mon", "单个，一个"));
         //List<Prefix> prefixes = new ComplexPrefix("dis-,in-,im-,il-,ir-,un-,mis-,non-,dis-,de-,anti-,counter-", "否定前缀").simplify();
-        List<Prefix> prefixes = getAllPrefixes();
+        List<Prefix> prefixes = PrefixRule.getAllPrefixes();
 
         TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes, false);
         String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(convert(prefixToWords), 6);

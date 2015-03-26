@@ -96,7 +96,7 @@ public class RootRule {
 
     public static void main(String[] args) throws Exception {
         Set<Word> words = WordSources.getSyllabusVocabulary();
-        List<Word> roots = getAllRoots();
+        List<Word> roots = RootRule.getAllRoots();
 
         TreeMap<Word, List<Word>> rootToWords = RootRule.findByRoot(words, roots);
         String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(rootToWords, 6);
