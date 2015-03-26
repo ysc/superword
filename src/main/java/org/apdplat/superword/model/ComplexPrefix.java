@@ -46,7 +46,7 @@ public class ComplexPrefix{
         }
         String[] ps = prefix.toLowerCase().split(",");
         for (String p : ps) {
-            p = p.replaceAll("-", "").replaceAll("\\s+", "");
+            p = p.replaceAll("\\s+", "");
             prefixes.add(new Prefix(p, des));
         }
         return prefixes;
