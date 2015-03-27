@@ -74,17 +74,17 @@ public class Prefix implements Comparable{
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Prefix)) return false;
 
-        Prefix that = (Prefix) o;
+        Prefix prefix1 = (Prefix) o;
 
-        if (!prefix.equals(that.prefix)) return false;
+        if (prefix != null ? !prefix.equals(prefix1.prefix) : prefix1.prefix != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return prefix.hashCode();
+        return prefix != null ? prefix.hashCode() : 0;
     }
 }
