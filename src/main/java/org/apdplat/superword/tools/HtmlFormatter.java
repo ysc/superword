@@ -61,7 +61,7 @@ public class HtmlFormatter {
                         List<String> sm = sa.getAntonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord())).collect(Collectors.toList());
                         html.append(toHtmlTableFragment(sm, rowLength));
                     }
-                    html.append("<br/>");
+                    html.append("<br/>\n");
                 });
         return html.toString();
     }
