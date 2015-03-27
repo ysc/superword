@@ -53,20 +53,20 @@ public class CharMap implements Comparable{
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof CharMap)) return false;
 
         CharMap charMap = (CharMap) o;
 
-        if (!from.equals(charMap.from)) return false;
-        if (!to.equals(charMap.to)) return false;
+        if (from != null ? !from.equals(charMap.from) : charMap.from != null) return false;
+        if (to != null ? !to.equals(charMap.to) : charMap.to != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        int result = from.hashCode();
-        result = 31 * result + to.hashCode();
+        int result = from != null ? from.hashCode() : 0;
+        result = 31 * result + (to != null ? to.hashCode() : 0);
         return result;
     }
 
