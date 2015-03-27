@@ -30,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
@@ -143,9 +144,11 @@ public class SynonymAntonymExtractor {
         try {
             for(Element element : Jsoup.parse(html).select(SYNONYM_ANTONYM_CSS_PATH)){
                 String type = element.select(TYPE).text().trim();
+                LOGGER.debug("type:"+type);
                 Elements elements = element.select(WORDS);
                 for(Element ele : elements){
                     String w = ele.text().trim();
+                    LOGGER.debug("word:"+w);
                     if(StringUtils.isNotBlank(w)){
                         switch (type){
                             case "同义词":synonymAntonym.addSynonym(new Word(w, ""));break;
@@ -156,8 +159,8 @@ public class SynonymAntonymExtractor {
                         LOGGER.error("解析同义词反义词出错："+word);
                     }
                 }
-                LOGGER.info("解析出同义词反义词：" + synonymAntonym);
             }
+            LOGGER.info("解析出同义词反义词：" + synonymAntonym);
         }catch (Exception e){
             LOGGER.error("解析同义词反义词出错", e);
         }
@@ -183,7 +186,17 @@ public class SynonymAntonymExtractor {
         }
     }
 
-    public static void main(String[] args) {
-        parseSynonymAntonym();
+    public static SynonymAntonym parseSynonymAntonym(String word){
+        try {
+            return parseSynonymAntonym(Jsoup.parse(new URL("http://www.iciba.com/" + word), 15000).html(), word);
+        }catch (Exception e){
+            LOGGER.error("解析同义词反义词出错", e);
+        }
+        return null;
+    }
+
+    public static void main(String[] args){
+        parseSynonymAntonym("back");
+        //parseSynonymAntonym();
     }
 }
