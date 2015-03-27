@@ -97,13 +97,13 @@ public class SynonymDiscrimination implements Comparable {
 
         SynonymDiscrimination that = (SynonymDiscrimination) o;
 
-        if (!title.equals(that.title)) return false;
+        if (title != null ? !title.equals(that.title) : that.title != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return title.hashCode();
+        return title != null ? title.hashCode() : 0;
     }
 }
