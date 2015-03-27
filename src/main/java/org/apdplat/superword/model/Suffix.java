@@ -74,17 +74,17 @@ public class Suffix implements Comparable{
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Suffix)) return false;
 
-        Suffix that = (Suffix) o;
+        Suffix suffix1 = (Suffix) o;
 
-        if (!suffix.equals(that.suffix)) return false;
+        if (suffix != null ? !suffix.equals(suffix1.suffix) : suffix1.suffix != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return suffix.hashCode();
+        return suffix != null ? suffix.hashCode() : 0;
     }
 }
