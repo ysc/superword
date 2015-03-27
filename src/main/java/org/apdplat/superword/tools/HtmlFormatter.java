@@ -20,6 +20,7 @@
 package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.SynonymDiscrimination;
 import org.apdplat.superword.model.Word;
 
 import java.util.*;
@@ -32,8 +33,42 @@ import java.util.stream.Collectors;
  */
 public class HtmlFormatter {
     private HtmlFormatter(){}
-    private static final String EM_PRE = "<span style=\"color:red\">";
-    private static final String EM_SUF = "</span>";
+    private static final String RED_EM_PRE = "<span style=\"color:red\">";
+    private static final String RED_EM_SUF = "</span>";
+    private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
+    private static final String BLUE_EM_SUF = "</span>";
+
+    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscriminations){
+        StringBuilder html = new StringBuilder();
+        AtomicInteger i = new AtomicInteger();
+        synonymDiscriminations
+        .stream()
+        .sorted()
+        .forEach(sd -> {
+                html.append("<h4>")
+                    .append(i.incrementAndGet())
+                    .append("、")
+                    .append(sd.getTitle())
+                    .append("</h4>\n<b>")
+                    .append(sd.getDes().replace("“", "“" + BLUE_EM_PRE).replace("”", BLUE_EM_SUF +"”"))
+                    .append("</b><br/>\n");
+                if (!sd.getWords().isEmpty()) {
+                    html.append("<ol>\n");
+                }
+                sd.getWords()
+                    .forEach(w -> {
+                        html.append("\t<li>")
+                                .append(WordLinker.toLink(w.getWord()))
+                                .append("：")
+                                .append(w.getMeaning())
+                                .append("</li>\n");
+                    });
+                if (!sd.getWords().isEmpty()) {
+                    html.append("</ol>\n");
+                }
+        });
+        return html.toString();
+    }
 
     public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootAffixToWords, int rowLength) {
         StringBuilder html = new StringBuilder();
@@ -83,15 +118,15 @@ public class HtmlFormatter {
         if (w.length() > r.length()
                 && !w.startsWith(r)
                 && !w.endsWith(r)) {
-            return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "-");
+            return WordLinker.toLink(w, r, "-" + RED_EM_PRE, RED_EM_SUF + "-");
         }
         //词根在前面
         if (w.length() > r.length() && w.startsWith(r)) {
-            return WordLinker.toLink(w, r, "" + EM_PRE, EM_SUF + "-");
+            return WordLinker.toLink(w, r, "" + RED_EM_PRE, RED_EM_SUF + "-");
         }
         //词根在后面面
         if (w.length() > r.length() && w.endsWith(r)) {
-            return WordLinker.toLink(w, r, "-" + EM_PRE, EM_SUF + "");
+            return WordLinker.toLink(w, r, "-" + RED_EM_PRE, RED_EM_SUF + "");
         }
         return WordLinker.toLink(w, r);
     }
