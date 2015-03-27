@@ -20,6 +20,7 @@
 package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.SynonymAntonym;
 import org.apdplat.superword.model.SynonymDiscrimination;
 import org.apdplat.superword.model.Word;
 
@@ -38,10 +39,36 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
-    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscriminations){
+    public static String toHtmlForSynonymAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
-        synonymDiscriminations
+        synonymAntonyms
+                .stream()
+                .sorted((a, b) -> b.size() - a.size())
+                .forEach(sa -> {
+                    html.append("<h4>")
+                            .append(i.incrementAndGet())
+                            .append("、")
+                            .append(sa.getWord().getWord())
+                            .append("</h4>\n");
+                    if (!sa.getSynonym().isEmpty()) {
+                        html.append("<b>同义词(").append(sa.getSynonym().size()).append(")：</b><br/>\n");
+                        List<String> sm = sa.getSynonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord())).collect(Collectors.toList());
+                        html.append(toHtmlTableFragment(sm, rowLength));
+                    }
+                    if (!sa.getAntonym().isEmpty()) {
+                        html.append("<b>反义词(").append(sa.getAntonym().size()).append(")：</b><br/>\n");
+                        List<String> sm = sa.getAntonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord())).collect(Collectors.toList());
+                        html.append(toHtmlTableFragment(sm, rowLength));
+                    }
+                    html.append("<br/>");
+                });
+        return html.toString();
+    }
+    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscrimination){
+        StringBuilder html = new StringBuilder();
+        AtomicInteger i = new AtomicInteger();
+        synonymDiscrimination
         .stream()
         .sorted()
         .forEach(sd -> {
