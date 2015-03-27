@@ -176,11 +176,22 @@ public class SynonymAntonymExtractor {
     }
     private static void parseSynonymAntonym(){
         Set<SynonymAntonym> synonymAntonyms = parse("/Users/apple/百度云同步盘/origin_html.zip");
-        String inSyllabusVocabularyHtml = HtmlFormatter.toHtmlForSynonymAntonym(inSyllabusVocabulary(synonymAntonyms), 5);
-        String notInSyllabusVocabularyHtml = HtmlFormatter.toHtmlForSynonymAntonym(notInSyllabusVocabulary(synonymAntonyms), 5);
+        String inSyllabusVocabularyHtml = HtmlFormatter.toHtmlForSynonymAntonym(inSyllabusVocabulary(synonymAntonyms), 6);
+        String notInSyllabusVocabularyHtml = HtmlFormatter.toHtmlForSynonymAntonym(notInSyllabusVocabulary(synonymAntonyms), 6);
         try{
             Files.write(Paths.get("src/main/resources/synonym_antonym_in_syllabus_vocabulary.txt"), inSyllabusVocabularyHtml.getBytes("utf-8"));
             Files.write(Paths.get("src/main/resources/synonym_antonym_not_in_syllabus_vocabulary.txt"), notInSyllabusVocabularyHtml.getBytes("utf-8"));
+        }catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+        }
+    }
+    private static void parseAntonym(){
+        Set<SynonymAntonym> antonyms = parse("/Users/apple/百度云同步盘/origin_html.zip");
+        String inSyllabusVocabularyHtml = HtmlFormatter.toHtmlForAntonym(inSyllabusVocabulary(antonyms), 6);
+        String notInSyllabusVocabularyHtml = HtmlFormatter.toHtmlForAntonym(notInSyllabusVocabulary(antonyms), 6);
+        try{
+            Files.write(Paths.get("src/main/resources/antonym_in_syllabus_vocabulary.txt"), inSyllabusVocabularyHtml.getBytes("utf-8"));
+            Files.write(Paths.get("src/main/resources/antonym_not_in_syllabus_vocabulary.txt"), notInSyllabusVocabularyHtml.getBytes("utf-8"));
         }catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
         }
@@ -196,7 +207,8 @@ public class SynonymAntonymExtractor {
     }
 
     public static void main(String[] args){
-        parseSynonymAntonym("back");
+        //parseSynonymAntonym("back");
         //parseSynonymAntonym();
+        parseAntonym();
     }
 }
