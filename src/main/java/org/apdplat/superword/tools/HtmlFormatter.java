@@ -39,6 +39,30 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
+    public static String toHtmlForAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
+        StringBuilder html = new StringBuilder();
+        AtomicInteger i = new AtomicInteger();
+        synonymAntonyms
+                .stream()
+                .sorted((a, b) -> b.getAntonym().size() - a.getAntonym().size())
+                .forEach(sa -> {
+                    if (!sa.getAntonym().isEmpty()) {
+                        html.append("<h4>")
+                                .append(i.incrementAndGet())
+                                .append("、")
+                                .append(WordLinker.toLink(sa.getWord().getWord()))
+                                .append("</h4>\n")
+                                .append("<b>反义词(")
+                                .append(sa.getAntonym().size())
+                                .append(")：</b><br/>\n");
+                        List<String> sm = sa.getAntonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord())).collect(Collectors.toList());
+                        html.append(toHtmlTableFragment(sm, rowLength))
+                            .append("<br/>\n");
+                    }
+                });
+        return html.toString();
+    }
+
     public static String toHtmlForSynonymAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
@@ -49,7 +73,7 @@ public class HtmlFormatter {
                     html.append("<h4>")
                             .append(i.incrementAndGet())
                             .append("、")
-                            .append(sa.getWord().getWord())
+                            .append(WordLinker.toLink(sa.getWord().getWord()))
                             .append("</h4>\n");
                     if (!sa.getSynonym().isEmpty()) {
                         html.append("<b>同义词(").append(sa.getSynonym().size()).append(")：</b><br/>\n");
