@@ -74,17 +74,17 @@ public class Word implements Comparable{
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Word)) return false;
 
-        Word that = (Word) o;
+        Word word1 = (Word) o;
 
-        if (!word.equals(that.word)) return false;
+        if (word != null ? !word.equals(word1.word) : word1.word != null) return false;
 
         return true;
     }
 
     @Override
     public int hashCode() {
-        return word.hashCode();
+        return word != null ? word.hashCode() : 0;
     }
 }
