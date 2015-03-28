@@ -75,9 +75,9 @@ public class WordLengthStatistics {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.getAll();
+        Set<Word> words = WordSources.getSyllabusVocabulary();
         Map<Integer, List<Word>> data = WordLengthStatistics.stat(words);
-        String html = WordLengthStatistics.toHtmlFragment(data, 1, 18, 19, 20, 22, 28);
+        String html = WordLengthStatistics.toHtmlFragment(data);
         System.out.println(html);
     }
 }
