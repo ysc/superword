@@ -7,6 +7,7 @@
 ###[192本软件著作用词分析](http://my.oschina.net/apdplat/blog/392496)
 ###[2000个软件开发领域的高频特殊词及精选例句](http://my.oschina.net/apdplat/blog/389200)
 ###[英语单词音近形似转化规律研究](http://my.oschina.net/apdplat/blog/378569)
+###[986组同义词辨析](http://my.oschina.net/apdplat/blog/392944)
 ###[分析996个词根在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/391865)
 ###[分析113个前缀在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/392456)
 ###[分析151个后缀在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/392466)
