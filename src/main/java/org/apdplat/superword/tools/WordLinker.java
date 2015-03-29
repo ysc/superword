@@ -67,7 +67,7 @@ public class WordLinker {
         StringBuilder html = new StringBuilder();
         html.append("<a target=\"_blank\" href=\"")
                 .append(webSite)
-                .append(word)
+                .append(word.replaceAll("\\s+", "_"))
                 .append("\">");
         if(StringUtils.isNotBlank(emphasize)) {
             Set<String> targets = new HashSet<>();
