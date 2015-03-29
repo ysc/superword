@@ -45,7 +45,7 @@ public class DefinitionExtractor {
     private DefinitionExtractor(){}
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionExtractor.class);
-    private static final String COLLINS_DEFINITION__CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.collins div#dict_tab_101.tab_content.tab_authorities div.part_main div.collins_content div.collins_en_cn div.caption";
+    private static final String COLLINS_DEFINITION_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.collins div#dict_tab_101.tab_content.tab_authorities div.part_main div.collins_content div.collins_en_cn div.caption";
 
     public static Set<Word> parse(String path){
         if(path.endsWith(".zip")){
@@ -140,7 +140,7 @@ public class DefinitionExtractor {
         LOGGER.info("解析单词："+word);
         Word w = new Word(word, "");
         try {
-            for(Element element : Jsoup.parse(html).select(COLLINS_DEFINITION__CSS_PATH)){
+            for(Element element : Jsoup.parse(html).select(COLLINS_DEFINITION_CSS_PATH)){
                 String definition = element.text().trim();
                 if(StringUtils.isNotBlank(definition)){
                     w.addDefinition(definition);
