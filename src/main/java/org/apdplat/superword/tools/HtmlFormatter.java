@@ -39,6 +39,30 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
+    public static String toHtmlForWordDefinition(Set<Word> words, int rowLength) {
+        Map<Integer, AtomicInteger> map = new HashMap<>();
+        words.stream().forEach(w -> {
+            int count = w.getDefinitions().size();
+            map.putIfAbsent(count, new AtomicInteger());
+            map.get(count).incrementAndGet();
+        });
+        List<String> data =
+                words
+                        .stream()
+                        .sorted((a, b) -> b.getDefinitions().size() - a.getDefinitions().size())
+                        .map(word -> WordLinker.toLink(word.getWord())+"-"+word.getDefinitions().size())
+                        .collect(Collectors.toList());
+        StringBuilder html = new StringBuilder();
+        html.append(toHtmlTableFragment(data, rowLength))
+            .append("<table border=\"1\">\n")
+            .append("\t<tr><td>定义条数</td><td>单词个数</td></tr>\n");
+        map.keySet().stream().sorted((a,b)->b-a).forEach(key -> {
+            html.append("\t<tr><td>").append(key).append("</td><td>").append(map.get(key)).append("</td></tr>\n");
+        });
+        html.append("</table>\n");
+        return html.toString();
+    }
+
     public static String toHtmlForAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
@@ -229,11 +253,11 @@ public class HtmlFormatter {
                 result = data
                         .get(word)
                         .stream()
-                        .flatMap(rootAffix -> Arrays.asList(rootAffix.getWord(),rootAffix.getMeaning()).stream())
+                        .flatMap(rootAffix -> Arrays.asList(rootAffix.getWord(), rootAffix.getMeaning()).stream())
                         .collect(Collectors.toList());
                 html.append(toHtmlTableFragment(result, 2));
                 result.clear();
-                if(wordCounter.get()%wordsLength == 0){
+                if (wordCounter.get() % wordsLength == 0) {
                     htmls.add(html.toString());
                     html.setLength(0);
                 }
