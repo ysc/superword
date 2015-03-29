@@ -39,6 +39,20 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
+    public static String toHtmlForPluralFormat(Map<String, String> data){
+        StringBuilder html = new StringBuilder();
+        html.append("<table border=\"1\">\n")
+            .append("\t<tr><td>单词原型</td><td>单词复数</td></tr>\n");
+        data.keySet().forEach(key -> {
+            String origin = key.substring(0, key.length() - data.get(key).length());
+            html.append("\t<tr><td>").append(WordLinker.toLink(origin)).append("</td><td>")
+                .append(WordLinker.toLink(key, origin, BLUE_EM_PRE, BLUE_EM_SUF + "-")).append("</td></tr>\n");
+
+        });
+        html.append("</table>\n");
+        return html.toString();
+    }
+
     public static String toHtmlForWordDefinition(Set<Word> words, int rowLength) {
         Map<Integer, AtomicInteger> map = new HashMap<>();
         words.stream().forEach(w -> {
@@ -47,7 +61,7 @@ public class HtmlFormatter {
             map.get(count).incrementAndGet();
         });
         List<String> data =
-                words
+                    words
                         .stream()
                         .sorted((a, b) -> b.getDefinitions().size() - a.getDefinitions().size())
                         .map(word -> WordLinker.toLink(word.getWord())+"-"+word.getDefinitions().size())
