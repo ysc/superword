@@ -149,8 +149,86 @@ public class WordSources {
         System.out.println("unique words count: "+set.size());
         return set;
     }
+    public static Set<Word> stem(Set<Word> words){
+        return words
+                .stream()
+                .filter(word -> word.getWord().length() > 3)
+                .filter(word -> !isPlural(words, word))
+                .collect(Collectors.toSet());
+    }
+    public static Map<String, String> plural(Set<Word> words){
+        Map<String, String> data = new HashMap<>();
+        words
+                .stream()
+                .filter(word -> word.getWord().length() > 3)
+                .forEach(word -> {
+                    isPlural(words, word, data);
+                });
+        return data;
+    }
+    public static boolean isPlural(Set<Word> words, Word word){
+        return isPlural(words, word, new HashMap<>());
+    }
+    public static boolean isPlural(Set<Word> words, Word word, Map<String, String> data){
+        String w = word.getWord();
+        //1、以辅音字母+y结尾,变y为i再加es
+        if (w.endsWith("ies")){
+            char c = w.charAt(w.length()-4);
+            if(!(isVowel(c))
+                    && words.contains(new Word(w.substring(0, w.length()-4)+"y", ""))){
+                log(w, "ies");
+                data.put(w, "ies");
+                return true;
+            }
+        }
+        //2、以ce, se, ze结尾, 加s
+        if(w.endsWith("ces")
+                || w.endsWith("ses")
+                || w.endsWith("zes")){
+            if(words.contains(new Word(w.substring(0, w.length()-1), ""))){
+                log(w, "s");
+                data.put(w, "s");
+                return true;
+            }
+        }
+        //3、以s, sh, ch, x结尾, 加es
+        if(w.endsWith("ses")
+                || w.endsWith("shes")
+                || w.endsWith("ches")
+                || w.endsWith("xes")){
+            if(words.contains(new Word(w.substring(0, w.length()-2), ""))){
+                log(w, "es");
+                data.put(w, "es");
+                return true;
+            }
+        }
+        //4、一般情况，加s
+        if(w.endsWith("s")){
+            if(words.contains(new Word(w.substring(0, w.length()-1), ""))){
+                log(w, "s");
+                data.put(w, "s");
+                return true;
+            }
+        }
+        return false;
+    }
+    private static void log(String word, String suffix){
+        LOGGER.debug("发现复数："+word+"\t"+suffix);
+    }
+    public static boolean isVowel(char _char){
+        switch (_char){
+            case 'a':return true;
+            case 'e':return true;
+            case 'i':return true;
+            case 'o':return true;
+            case 'u':return true;
+        }
+        return false;
+    }
     public static void main(String[] args) {
-        AtomicInteger i = new AtomicInteger();
-        getAll().forEach(w -> System.out.println(i.incrementAndGet() + "、" + w.getWord()));
+        //AtomicInteger i = new AtomicInteger();
+        //stem(getSyllabusVocabulary()).forEach(w -> System.out.println(i.incrementAndGet() + "、" + w.getWord()));
+        String html = HtmlFormatter.toHtmlForPluralFormat(plural(getSyllabusVocabulary()));
+        System.out.println(html);
     }
 }
