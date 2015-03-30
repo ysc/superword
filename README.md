@@ -11,6 +11,8 @@
 ###[3211个词及其反义词](http://my.oschina.net/apdplat/blog/392954)
 ###[13054个词及其词义数](http://my.oschina.net/apdplat/blog/393278)
 ###[词组习语3054组](http://my.oschina.net/apdplat/blog/393374)
+###[1208个合成词](http://my.oschina.net/apdplat/blog/393724)
+###[根据76大细分词性对单词进行归组](http://my.oschina.net/apdplat/blog/393771)
 ###[分析996个词根在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/391865)
 ###[分析113个前缀在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/392456)
 ###[分析151个后缀在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/392466)
