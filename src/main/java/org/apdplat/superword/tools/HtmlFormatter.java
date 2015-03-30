@@ -39,6 +39,55 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
+    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data){
+        Set<Word> elements = new HashSet<>();
+        StringBuilder html = new StringBuilder();
+        html.append("<table  border=\"1\">\n");
+        AtomicInteger i = new AtomicInteger();
+        data
+                .entrySet()
+                .stream()
+                .filter(entry -> !entry.getValue().isEmpty())
+                .sorted((a, b) -> b.getValue().size() - a.getValue().size())
+                .forEach(entry -> {
+                    html.append("\t<tr><td>")
+                            .append(i.incrementAndGet())
+                            .append("</td><td>")
+                            .append(WordLinker.toLink(entry.getKey().getWord()))
+                            .append("</td>");
+                    entry
+                            .getValue()
+                            .values()
+                            .forEach(words -> {
+                                words.forEach(word -> {
+                                    html.append("<td>")
+                                            .append(WordLinker.toLink(word.getWord()))
+                                            .append("</td>");
+                                    elements.add(word);
+                                });
+                            });
+                    html.append("</tr>\n");
+                });
+        html.append("</table>\n");
+
+        if(elements.isEmpty()){
+            return html.toString();
+        }
+
+        html.append("\n不重复的被组合词有：")
+                .append(elements.size())
+                .append("个，分别是：<br/>\n");
+
+        List<String> words = elements
+                .stream()
+                .sorted()
+                .map(word -> WordLinker.toLink(word.getWord()))
+                .collect(Collectors.toList());
+        html.append(toHtmlTableFragment(words, 5));
+
+        return html.toString();
+    }
+
     public static String toHtmlForPluralFormat(Map<String, String> data){
         StringBuilder html = new StringBuilder();
         html.append("<table border=\"1\">\n")
