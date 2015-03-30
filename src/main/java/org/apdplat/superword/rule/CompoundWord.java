@@ -19,16 +19,13 @@
  */
 package org.apdplat.superword.rule;
 
-import org.apdplat.superword.model.Prefix;
 import org.apdplat.superword.model.Word;
-import org.apdplat.superword.tools.WordLinker;
+import org.apdplat.superword.tools.HtmlFormatter;
 import org.apdplat.superword.tools.WordSources;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
 
 /**
  * 合成词：由多个现有词简单拼装在一起形成的词
@@ -75,58 +72,18 @@ public class CompoundWord {
 
     }
 
-    public static String toHtmlFragment(Map<Word, Map<Integer, List<Word>>> data){
-        Set<Word> element = new HashSet<>();
-        StringBuilder html = new StringBuilder();
-        AtomicInteger i = new AtomicInteger();
-        data.forEach((k, v) -> {
-            if (v.isEmpty()) {
-                return;
-            }
-            html.append(i.incrementAndGet())
-                .append("、")
-                .append(WordLinker.toLink(k.getWord()))
-                .append(" 的组合：</br>\n");
-            v.values().forEach(words -> {
-                words.forEach(word -> {
-                    html.append("\t")
-                        .append(WordLinker.toLink(word.getWord()));
-                    element.add(word);
-                });
-                html.append("</br>\n");
-            });
-        });
-
-        if(element.isEmpty()){
-            return html.toString();
-        }
-
-        html.append("\n</br>不重复的被组合词有：")
-            .append(element.size())
-            .append("个，分别是：</br>\n");
-        AtomicInteger j = new AtomicInteger();
-        element
-                .stream()
-                .sorted()
-                .forEach(word -> html.append(j.incrementAndGet())
-                                     .append("、")
-                                     .append(WordLinker.toLink(word.getWord()))
-                                     .append("</br>\n"));
-
-        return html.toString();
-    }
-
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.getAll();
+        Set<Word> words = WordSources.getSyllabusVocabulary();
 
-        Set<Word> target = new HashSet<>();
-        target.add(new Word("pendent", ""));
-        target.add(new Word("abhorrent", ""));
+        //Set<Word> target = new HashSet<>();
+        //target.add(new Word("pendent", ""));
+        //target.add(new Word("abhorrent", ""));
+        Set<Word> target = WordSources.getSyllabusVocabulary();
 
         Map<Word, Map<Integer, List<Word>>> data = CompoundWord.find(words, target);
-        String htmlFragment = CompoundWord.toHtmlFragment(data);
+        String htmlFragment = HtmlFormatter.toHtmlForCompoundWord(data);
 
-        Files.write(Paths.get("target/compound_word.txt"), htmlFragment.getBytes("utf-8"));
+        Files.write(Paths.get("src/main/resources/compound_word.txt"), htmlFragment.getBytes("utf-8"));
 
         System.out.println(htmlFragment);
     }
