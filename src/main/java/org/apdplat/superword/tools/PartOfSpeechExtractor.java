@@ -271,7 +271,7 @@ public class PartOfSpeechExtractor {
         try {
             return parseWord(Jsoup.parse(new URL("http://www.iciba.com/" + word), 15000).html(), word);
         }catch (Exception e){
-            LOGGER.error("解析定义出错", e);
+            LOGGER.error("解析词性出错", e);
         }
         return null;
     }
