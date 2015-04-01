@@ -328,9 +328,15 @@ public class WordsFetcher {
         String url = "http://word.iciba.com/?action=words&class="+type+"&course=";
         for (int i=1; i<=pageNumber; i++){
             String html = getContent(url+i);
+            int times = 1;
+            while (StringUtils.isBlank(html) && times<4){
+                times++;
+                //使用新的IP地址
+                DynamicIp.toNewIp();
+                html = getContent(url+i);
+            }
             //LOGGER.debug("获取到的HTML：" +html);
-            while(StringUtils.isBlank(html)
-                    ||html.contains("非常抱歉，来自您ip的请求异常频繁")){
+            while(html.contains("非常抱歉，来自您ip的请求异常频繁")){
                 //使用新的IP地址
                 DynamicIp.toNewIp();
                 html = getContent(url+i);
