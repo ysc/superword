@@ -23,6 +23,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.SynonymAntonym;
 import org.apdplat.superword.model.SynonymDiscrimination;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.rule.PartOfSpeech;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -85,6 +86,50 @@ public class HtmlFormatter {
                 .collect(Collectors.toList());
         html.append(toHtmlTableFragment(words, 5));
 
+        return html.toString();
+    }
+
+    public static String toHtmlForPartOfSpeech(Map<String, Set<String>> data){
+        StringBuilder html = new StringBuilder();
+        html.append("<h4>各大词性广泛度排名：</h4><br/>\n");
+        AtomicInteger i = new AtomicInteger();
+        data.entrySet().stream().sorted((a,b)->b.getValue().size()-a.getValue().size()).forEach(e -> {
+            String k = e.getKey();
+            html.append(i.incrementAndGet())
+                    .append("、")
+                    .append(RED_EM_PRE)
+                    .append(k)
+                    .append(RED_EM_SUF)
+                    .append("(")
+                    .append(BLUE_EM_PRE)
+                    .append(PartOfSpeech.getMeaning(k))
+                    .append(BLUE_EM_SUF)
+                    .append(") (词数:")
+                    .append(data.get(k).size())
+                    .append(")")
+                    .append("<br/>\n");
+
+        });
+        html.append("<h4>各大词性及其包括的词：</h4><br/>\n");
+        AtomicInteger j = new AtomicInteger();
+        data.keySet().stream().sorted().forEach(k -> {
+            html.append("<h4>")
+                    .append(j.incrementAndGet())
+                    .append("、")
+                    .append(RED_EM_PRE)
+                    .append(k)
+                    .append(RED_EM_SUF)
+                    .append("(")
+                    .append(BLUE_EM_PRE)
+                    .append(PartOfSpeech.getMeaning(k))
+                    .append(BLUE_EM_SUF)
+                    .append(") (词数:")
+                    .append(data.get(k).size())
+                    .append(")")
+                    .append("</h4>\n")
+                    .append(
+                            toHtmlTableFragment(data.get(k).stream().sorted().map(w -> WordLinker.toLink(w)).collect(Collectors.toList()), 5));
+        });
         return html.toString();
     }
 
