@@ -136,8 +136,8 @@ public class HyphenExtractor {
                         if(parts.length==2
                                 && parts[0].length()>1
                                 && parts[1].length()>1
-                                && isEnglish(parts[0])
-                                && isEnglish(parts[1])){
+                                && WordSources.isEnglish(parts[0])
+                                && WordSources.isEnglish(parts[1])){
                             LOGGER.debug("发现连字符："+attr);
                             attr = attr.toLowerCase();
                             data.putIfAbsent(attr, new AtomicInteger());
@@ -150,15 +150,6 @@ public class HyphenExtractor {
             LOGGER.error("解析文本出错", e);
         }
         return data;
-    }
-
-    public static boolean isEnglish(String string){
-        for(char c : string.toLowerCase().toCharArray()){
-            if(c<'a' || c>'z'){
-                return false;
-            }
-        }
-        return true;
     }
 
     /**
