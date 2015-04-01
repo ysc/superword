@@ -48,21 +48,31 @@ public class WordSources {
      * @return
      */
     public static Set<Word> getSyllabusVocabulary(){
-        return get("/word_CET4.txt",
+        return get("/word_primary_school.txt",
+                "/word_junior_school.txt",
+                "/word_senior_school.txt",
+                "/word_university.txt",
+                "/word_new_conception.txt",
+                "/word_ADULT.txt",
+                "/word_CET4.txt",
                 "/word_CET6.txt",
+                "/word_TEM4.txt",
+                "/word_TEM8.txt",
+                "/word_CATTI.txt",
+                "/word_GMAT.txt",
                 "/word_GRE.txt",
+                "/word_SAT.txt",
+                "/word_BEC.txt",
+                "/word_MBA.txt",
                 "/word_IELTS.txt",
                 "/word_TOEFL.txt",
+                "/word_TOEIC.txt",
                 "/word_考 研.txt");
     }
     public static Set<Word> getAll(){
-        return get("/words.txt",
-                "/word_CET4.txt",
-                "/word_CET6.txt",
-                "/word_GRE.txt",
-                "/word_IELTS.txt",
-                "/word_TOEFL.txt",
-                "/word_考 研.txt");
+        Set<Word> data = get("/words.txt", "/word_computer.txt");
+        data.addAll(getSyllabusVocabulary());
+        return data;
     }
     /**
      * 
@@ -79,6 +89,15 @@ public class WordSources {
         Map<Word, AtomicInteger> result = new HashMap<>();
         words.keySet().forEach(w -> result.put(new Word(w, ""), words.get(w)));
         return result;
+    }
+
+    public static boolean isEnglish(String string){
+        for(char c : string.toLowerCase().toCharArray()){
+            if(c<'a' || c>'z'){
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -132,23 +151,39 @@ public class WordSources {
     public static Set<Word> get(int index, String... files){
         Set<Word> set = new HashSet<>();
         for(String file : files){
-            URL url = WordSources.class.getResource(file);
+            URL url = null;
+            if(file.startsWith("/")){
+                url = WordSources.class.getResource(file);
+            }else{
+                try {
+                    url = Paths.get(file).toUri().toURL();
+                }catch (Exception e){
+                    LOGGER.error("构造URL出错", e);
+                }
+            }
+            if(url == null){
+                LOGGER.error("解析词典失败："+file);
+                continue;
+            }
             System.out.println("parse word file: "+url);
-            try {
-                List<String> words = Files.readAllLines(Paths.get(url.toURI()));
-                Set<Word> wordSet = words.parallelStream()
+            List<String> words = getExistWords(url);
+            Set<Word> wordSet = words.parallelStream()
                     .filter(line -> !line.trim().startsWith("#") && !"".equals(line.trim()))
                     .filter(line -> line.trim().split("\\s+").length >= index+1)
                     .map(line -> new Word(line.trim().split("\\s+")[index], ""))
                     .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
                     .collect(Collectors.toSet());
-                set.addAll(wordSet);
-            } catch (URISyntaxException | IOException ex) {
-                throw new RuntimeException(ex);
-            }
+            set.addAll(wordSet);
         }
         System.out.println("unique words count: "+set.size());
         return set;
+    }
+    private static List<String> getExistWords(URL url){
+        try {
+            return Files.readAllLines(Paths.get(url.toURI()));
+        }catch (Exception e){
+            return Collections.emptyList();
+        }
     }
     public static Set<Word> stem(Set<Word> words){
         return words
