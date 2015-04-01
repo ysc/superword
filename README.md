@@ -18,7 +18,7 @@
 ###[分析151个后缀在各大考纲词汇中的作用](http://my.oschina.net/apdplat/blog/392466)
 ###[分析在各大考纲词汇中既没有词根也没有前缀和后缀的独立单词](http://my.oschina.net/apdplat/blog/392483)
 ###[分析在各大考纲词汇中同时拥有前缀后缀和词根的词](http://my.oschina.net/apdplat/blog/392490)
-###[JDK源代码以及200多部软件著作中出现的以连字符构造的1180个合成词](http://my.oschina.net/apdplat/blog/394495)
+###[JDK源代码以及200多部软件著作中出现的以连字符构造的1011个合成词](http://my.oschina.net/apdplat/blog/394495)
 ###[一个月的时间让你的词汇量翻一翻](http://my.oschina.net/apdplat/blog/379303)
 ###[英语单词前缀规则总结](http://my.oschina.net/apdplat/blog/378753)
 ###[英语单词后缀规则总结](http://my.oschina.net/apdplat/blog/379330)
