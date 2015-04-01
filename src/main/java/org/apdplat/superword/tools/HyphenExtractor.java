@@ -139,6 +139,7 @@ public class HyphenExtractor {
                                 && isEnglish(parts[0])
                                 && isEnglish(parts[1])){
                             LOGGER.debug("发现连字符："+attr);
+                            attr = attr.toLowerCase();
                             data.putIfAbsent(attr, new AtomicInteger());
                             data.get(attr).incrementAndGet();
                         }
