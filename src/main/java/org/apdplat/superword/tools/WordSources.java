@@ -137,10 +137,11 @@ public class WordSources {
             try {
                 List<String> words = Files.readAllLines(Paths.get(url.toURI()));
                 Set<Word> wordSet = words.parallelStream()
-                                         .filter(line -> !line.trim().startsWith("#") && !"".equals(line.trim()))
-                        .map(line -> new Word(line.trim().split("\\s+")[index].replaceAll("\\s+", ""), null))
-                                         .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
-                                         .collect(Collectors.toSet());
+                    .filter(line -> !line.trim().startsWith("#") && !"".equals(line.trim()))
+                    .filter(line -> line.trim().split("\\s+").length >= index+1)
+                    .map(line -> new Word(line.trim().split("\\s+")[index], ""))
+                    .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
+                    .collect(Collectors.toSet());
                 set.addAll(wordSet);
             } catch (URISyntaxException | IOException ex) {
                 throw new RuntimeException(ex);
