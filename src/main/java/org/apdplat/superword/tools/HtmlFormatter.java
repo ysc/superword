@@ -25,6 +25,8 @@ import org.apdplat.superword.model.SynonymDiscrimination;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.rule.PartOfSpeech;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -39,6 +41,66 @@ public class HtmlFormatter {
     private static final String RED_EM_SUF = "</span>";
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
+
+    public static String toHtmlForSentence(Map<String, String> data, Map<Word, AtomicInteger> wordFrequence){
+        StringBuilder text = new StringBuilder();
+        text.append("共有 ")
+                .append(data.size())
+                .append(" 句子，")
+                .append(wordFrequence.size())
+                .append(" 个单词。<br/>\n")
+                .append("<h4>一、句子("+data.size()+")：</h4>\n");
+        AtomicInteger i = new AtomicInteger();
+        data
+            .keySet()
+            .stream()
+            .sorted((a, b) -> a.length() - b.length())
+            .forEach(s -> text
+                    .append(i.incrementAndGet())
+                    .append("、")
+                    .append(processSentence(s, wordFrequence))
+                    .append("  ")
+                    .append(data.get(s))
+                    .append("<br/>\n"));
+        text
+            .append("<br/>\n<h4>二、单词("+wordFrequence.size()+")：</h4>\n")
+            .append(HtmlFormatter.toHtmlTableFragment(wordFrequence, 6));
+        return text.toString();
+    }
+
+    private static String processSentence(String sentence, Map<Word, AtomicInteger> wordFrequence){
+        sentence = sentence.replace(";", "; ")
+                .replace(",", ", ")
+                .replace(".", ". ")
+                .replace("?", "? ")
+                .replace("!", "! ");
+        StringBuilder s = new StringBuilder();
+        for(String w : sentence.split("\\s+")){
+            if(w.endsWith(";")
+                    || w.endsWith(",")
+                    || w.endsWith(".")
+                    || w.endsWith("?")
+                    || w.endsWith("!")){
+                Word word = new Word(w.substring(0, w.length()-1).toLowerCase(), "");
+                if(wordFrequence.containsKey(word)
+                        && wordFrequence.get(word).get()<10){
+                    s.append(WordLinker.toLink(word.getWord())).append(w.substring(w.length()-1)).append(" ");
+                }else{
+                    s.append(w).append(" ");
+                }
+
+            }else {
+                Word word = new Word(w.toLowerCase(), "");
+                if (wordFrequence.containsKey(word)
+                        && wordFrequence.get(word).get() < 10) {
+                    s.append(WordLinker.toLink(w)).append(" ");
+                } else {
+                    s.append(w).append(" ");
+                }
+            }
+        }
+        return s.toString();
+    }
 
     public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data){
         Set<Word> elements = new HashSet<>();
