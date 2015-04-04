@@ -51,7 +51,7 @@ public class TextAnalyzer {
      */
     public static Map<String, AtomicInteger> frequency(Collection<String> files) {
         Map<String, AtomicInteger> map = new ConcurrentHashMap<>();
-        for (String file : files) {
+        files.forEach(file -> {
             LOGGER.info("parse text file: " + file);
             //统计词频
             Map<String, AtomicInteger> data = frequency(file);
@@ -61,7 +61,7 @@ public class TextAnalyzer {
                 map.get(entry.getKey()).addAndGet(entry.getValue().get());
             });
             data.clear();
-        }
+        });
         LOGGER.info("total unique words count: " + map.size());
         return map;
     }
