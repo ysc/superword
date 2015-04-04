@@ -42,6 +42,111 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
+    public static String toHtmlFragmentForText(Map<String, AtomicInteger> data, Set<String> fileNames) {
+        StringBuilder html = new StringBuilder();
+        html.append("统计书籍：<br/>\n");
+        AtomicInteger i = new AtomicInteger();
+        fileNames.stream()
+                .sorted()
+                .forEach(fileName -> html.append(i.incrementAndGet())
+                        .append("、")
+                        .append(Paths.get(fileName).toFile().getName().replace(".txt", ""))
+                        .append("<br/>\n"));
+        Map<Integer, TextAnalyzer.Stat> stat = TextAnalyzer.distribute(data);
+        html.append("共有")
+                .append(data.size())
+                .append("个单词，出现次数统计：<br/>\n")
+                .append("<table  border=\"1\"  bordercolor=\"#00CCCC\"  width=\"850\">\n\t<tr><td>序号</td><td>出现次数</td><td>单词个数</td><td>单词</td></tr>\n");
+        AtomicInteger k = new AtomicInteger();
+        stat.keySet()
+                .stream()
+                .sorted((a, b) -> b - a)
+                .forEach(s -> {
+                    html.append("\t<tr><td>")
+                            .append(k.incrementAndGet())
+                            .append("</td><td>")
+                            .append(s)
+                            .append("</td><td>")
+                            .append(stat.get(s).count())
+                            .append("</td><td>");
+                    AtomicInteger z = new AtomicInteger();
+                    List<String> list = stat.get(s).getWords();
+                    list.stream()
+                            .sorted()
+                            .forEach(w -> {
+                                if (list.size() > 1) {
+                                    html.append(z.incrementAndGet())
+                                            .append(".")
+                                            .append(WordLinker.toLink(w))
+                                            .append(" ");
+                                } else if (list.size() == 1) {
+                                    html.append(WordLinker.toLink(w));
+                                }
+                            });
+                    html.append("</td></tr>\n");
+                });
+        html.append("</table>")
+                .append("\n共有(")
+                .append(data.size())
+                .append(")个单词：<br/>\n")
+                .append("<table>\n\t<tr><td>序号</td><td>单词</td><td>词频</td></tr>\n");
+        AtomicInteger wordCounter = new AtomicInteger();
+        data.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().length() <= 14)
+                .sorted((a, b) -> b.getValue().get() - a.getValue().get())
+                .forEach(entry -> {
+                    html.append("\t")
+                            .append("<tr><td>")
+                            .append(wordCounter.incrementAndGet())
+                            .append("</td><td>")
+                            .append(WordLinker.toLink(entry.getKey()))
+                            .append("</td><td>")
+                            .append(entry.getValue().get())
+                            .append("</td></tr>\n");
+
+                });
+        html.append("</table>\n")
+                .append("长度大于14的词：")
+                .append("\n<table>\n\t<tr><td>序号</td><td>单词</td><td>词频</td></tr>\n");
+        AtomicInteger j = new AtomicInteger();
+        data.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().length() > 14)
+                .sorted((a, b) ->
+                        b.getValue().get() - a.getValue().get())
+                .forEach(entry ->
+                        html.append("\t")
+                                .append("<tr><td>")
+                                .append(j.incrementAndGet())
+                                .append("</td><td>")
+                                .append(WordLinker.toLink(entry.getKey()))
+                                .append("</td><td>")
+                                .append(entry.getValue().get())
+                                .append("</td></tr>\n"));
+
+        html.append("</table>\n")
+                .append("长度为2的词：")
+                .append("\n<table>\n\t<tr><td>序号</td><td>单词</td><td>词频</td></tr>\n");
+        AtomicInteger z = new AtomicInteger();
+        data.entrySet()
+                .stream()
+                .filter(entry -> entry.getKey().length() == 2)
+                .sorted((a, b) ->
+                        b.getValue().get() - a.getValue().get())
+                .forEach(entry ->
+                        html.append("\t")
+                                .append("<tr><td>")
+                                .append(z.incrementAndGet())
+                                .append("</td><td>")
+                                .append(WordLinker.toLink(entry.getKey()))
+                                .append("</td><td>")
+                                .append(entry.getValue().get())
+                                .append("</td></tr>\n"));
+        html.append("</table>");
+        return html.toString();
+    }
+
     public static String toHtmlForSentence(Map<String, String> data, Map<Word, AtomicInteger> wordFrequence){
         StringBuilder text = new StringBuilder();
         text.append("共有 ")
