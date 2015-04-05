@@ -18,10 +18,13 @@
  *
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.superword.extract;
 
 import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.DynamicIp;
+import org.apdplat.superword.tools.HtmlFormatter;
+import org.apdplat.superword.tools.TextAnalyzer;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;

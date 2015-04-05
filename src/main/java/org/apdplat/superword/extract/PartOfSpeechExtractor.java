@@ -18,10 +18,14 @@
  *
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.superword.extract;
 
 import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.rule.PartOfSpeech;
+import org.apdplat.superword.tools.HtmlFormatter;
+import org.apdplat.superword.tools.WordClassifier;
+import org.apdplat.superword.tools.WordSources;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
@@ -32,20 +36,23 @@ import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
- * 单词定义提取工具
+ * 词性提取工具
  * @author 杨尚川
  */
-public class DefinitionExtractor {
+public class PartOfSpeechExtractor {
 
-    private DefinitionExtractor(){}
+    private PartOfSpeechExtractor(){}
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionExtractor.class);
-    private static final String COLLINS_DEFINITION_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.collins div#dict_tab_101.tab_content.tab_authorities div.part_main div.collins_content div.collins_en_cn div.caption";
+    private static final Logger LOGGER = LoggerFactory.getLogger(PartOfSpeechExtractor.class);
+    private static final String PART_OF_SPEECH_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.collins div#dict_tab_101.tab_content.tab_authorities div.part_main div.collins_content div.collins_en_cn div.caption span.st";
 
     public static Set<Word> parse(String path){
         if(path.endsWith(".zip")){
@@ -121,7 +128,7 @@ public class DefinitionExtractor {
                 String word = attr[0];
                 String html = attr[1];
                 Word w = parseWord(html, word);
-                if(!w.getDefinitions().isEmpty()) {
+                if(w!=null && !w.getPartOfSpeeches().isEmpty()) {
                     data.add(w);
                 }
             }
@@ -132,7 +139,7 @@ public class DefinitionExtractor {
     }
 
     /**
-     * 解析单词定义
+     * 解析词性
      * @param html
      * @return
      */
@@ -140,15 +147,50 @@ public class DefinitionExtractor {
         LOGGER.info("解析单词："+word);
         Word w = new Word(word, "");
         try {
-            for(Element element : Jsoup.parse(html).select(COLLINS_DEFINITION_CSS_PATH)){
-                String definition = element.text().trim();
-                if(StringUtils.isNotBlank(definition)){
-                    w.addDefinition(definition);
-                    LOGGER.debug("解析出定义:" + definition);
+            for(Element element : Jsoup.parse(html).select(PART_OF_SPEECH_CSS_PATH)){
+                String partOfSpeech = element.text();
+                LOGGER.debug("解析原始词性:" + partOfSpeech);
+                if(StringUtils.isNotBlank(partOfSpeech) && !partOfSpeech.contains("See also")){
+                    partOfSpeech = partOfSpeech.replace(";", "")
+                            //处理组合词
+                            .replace("COMB in ADJ and N-COUNT", "COMB-in-ADJ-and-N-COUNT")
+                            .replace("COMB in ADJ and N", "COMB-in-ADJ-and-N")
+                            .replace("COMB in ADJ", "COMB-in-ADJ")
+                            .replace("COMB in ADJ-GRADED", "COMB-in-ADJ-GRADED")
+                            .replace("COMB in N-COUNT", "COMB-in-N-COUNT")
+                            .replace("COMB in COLOUR", "COMB-in-COLOUR")
+                            .replace("COMB in N", "COMB-in-N")
+                            .replace("COMB in N-UNCOUNT", "COMB-in-N-UNCOUNT")
+                            .replace("COMB in QUANT", "COMB-in-QUANT")
+                            .replace("COMB in VERB", "COMB-in-VERB");
+                    String[] attrs = partOfSpeech.split("\\s+");
+                    for(String attr : attrs){
+                        if(attr.length()<1){
+                            LOGGER.debug("忽略空词性:" + attr);
+                            continue;
+                        }
+                        //短语不归入词性
+                        if(attr.contains("PHR")){
+                            LOGGER.debug("忽略短语:" + attr);
+                            continue;
+                        }
+                        attr = attr.replace(",", "");
+                        char c = attr.charAt(0);
+                        if(c>='A' && c<='Z'){
+                            if("VERB".equals(attr)){
+                                attr = "V";
+                            }
+                            if("VERB-ERG".equals(attr)){
+                                attr = "V-ERG";
+                            }
+                            w.addPartOfSpeech(attr);
+                            LOGGER.debug("解析出词性:" + attr);
+                        }
+                    }
                 }
             }
         }catch (Exception e){
-            LOGGER.error("解析定义出错", e);
+            LOGGER.error("解析词性出错", e);
         }
         return w;
     }
@@ -165,14 +207,55 @@ public class DefinitionExtractor {
         Set<Word> inSyllabusVocabulary = inSyllabusVocabulary(words);
         compensate(inSyllabusVocabulary);
 
-        String inSyllabusVocabularyHtml = HtmlFormatter.toHtmlForWordDefinition(inSyllabusVocabulary, 5);
-        String notInSyllabusVocabularyHtml = HtmlFormatter.toHtmlForWordDefinition(notInSyllabusVocabulary(words), 5);
+        String inSyllabusVocabularyText = formatPartOfSpeech(inSyllabusVocabulary);
+        Set<Word> notInSyllabusVocabulary = notInSyllabusVocabulary(words);
+        String notInSyllabusVocabularyText = formatPartOfSpeech(notInSyllabusVocabulary);
+        LOGGER.info(formatPartOfSpeechType(words));
         try{
-            Files.write(Paths.get("src/main/resources/definition_in_syllabus_vocabulary.txt"), inSyllabusVocabularyHtml.getBytes("utf-8"));
-            Files.write(Paths.get("src/main/resources/definition_not_in_syllabus_vocabulary.txt"), notInSyllabusVocabularyHtml.getBytes("utf-8"));
+            Files.write(Paths.get("src/main/resources/part_of_speech_in_syllabus_vocabulary.txt"), inSyllabusVocabularyText.getBytes("utf-8"));
+            Files.write(Paths.get("src/main/resources/part_of_speech_not_in_syllabus_vocabulary.txt"), notInSyllabusVocabularyText.getBytes("utf-8"));
+            Files.write(Paths.get("src/main/resources/group_part_of_speech_in_syllabus_vocabulary.txt"), HtmlFormatter.toHtmlForPartOfSpeech(group(inSyllabusVocabulary)).getBytes("utf-8"));
+            Files.write(Paths.get("src/main/resources/group_part_of_speech_not_in_syllabus_vocabulary.txt"), HtmlFormatter.toHtmlForPartOfSpeech(group(notInSyllabusVocabulary)).getBytes("utf-8"));
         }catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
         }
+    }
+
+    private static Map<String, Set<String>> group(Set<Word> words){
+        Map<String, Set<String>> data = new HashMap<>();
+        words.forEach(w -> {
+            w.getPartOfSpeeches().forEach(pos -> {
+                data.putIfAbsent(pos, new HashSet<>());
+                data.get(pos).add(w.getWord());
+            });
+        });
+        return data;
+    }
+
+    private static String formatPartOfSpeech(Set<Word> words){
+        StringBuilder text = new StringBuilder();
+        AtomicInteger i = new AtomicInteger();
+        words.forEach(w ->
+            text.append(i.incrementAndGet())
+                    .append("\t")
+                    .append(w.getWord())
+                    .append("\t")
+                    .append(w.getFormatPartOfSpeeches())
+                    .append("\n")
+        );
+        text.append(formatPartOfSpeechType(words));
+        return text.toString();
+    }
+
+    private static String formatPartOfSpeechType(Set<Word> words){
+        StringBuilder text = new StringBuilder();
+        Set<String> ps = new HashSet<>();
+        words.forEach(w -> {
+            ps.addAll(w.getPartOfSpeeches());
+        });
+        text.append("#词性种类(").append(ps.size()).append(")：").append("\n");
+        ps.forEach(p -> text.append("#").append(p).append("=").append(PartOfSpeech.getMeaning(p)).append("\n"));
+        return text.toString();
     }
 
     public static void compensate(Set<Word> words){
@@ -181,7 +264,7 @@ public class DefinitionExtractor {
         minus.forEach(w -> {
             LOGGER.debug(w.getWord());
             Word word = parseWord(w.getWord());
-            if(word!=null && !word.getDefinitions().isEmpty()){
+            if(word!=null && !word.getPartOfSpeeches().isEmpty()){
                 words.add(word);
             }
         });
@@ -191,7 +274,7 @@ public class DefinitionExtractor {
         try {
             return parseWord(Jsoup.parse(new URL("http://www.iciba.com/" + word), 15000).html(), word);
         }catch (Exception e){
-            LOGGER.error("解析定义出错", e);
+            LOGGER.error("解析词性出错", e);
         }
         return null;
     }

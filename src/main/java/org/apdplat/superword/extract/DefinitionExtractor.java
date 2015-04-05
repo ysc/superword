@@ -18,35 +18,39 @@
  *
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.superword.extract;
 
-import org.apdplat.superword.model.SynonymDiscrimination;
+import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.HtmlFormatter;
+import org.apdplat.superword.tools.WordClassifier;
+import org.apdplat.superword.tools.WordSources;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.net.URL;
+import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * 同义词辨析提取工具
+ * 单词定义提取工具
  * @author 杨尚川
  */
-public class SynonymDiscriminationExtractor {
+public class DefinitionExtractor {
 
-    private SynonymDiscriminationExtractor(){}
+    private DefinitionExtractor(){}
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SynonymDiscriminationExtractor.class);
-    private static final String SYNONYM_DISCRIMINATION_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.simple div#dict_content_5.dict_content.more_data dl.def_list dd";
-    private static final String TITLE = "h4";
-    private static final String DES = "div";
-    private static final String WORDS = "div ul li";
-    public static Set<SynonymDiscrimination> parse(String path){
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionExtractor.class);
+    private static final String COLLINS_DEFINITION_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.collins div#dict_tab_101.tab_content.tab_authorities div.part_main div.collins_content div.collins_en_cn div.caption";
+
+    public static Set<Word> parse(String path){
         if(path.endsWith(".zip")){
             return parseZip(path);
         }
@@ -57,8 +61,8 @@ public class SynonymDiscriminationExtractor {
         }
     }
 
-    public static Set<SynonymDiscrimination> parseDir(String dir) {
-        Set<SynonymDiscrimination> data = new HashSet<>();
+    public static Set<Word> parseDir(String dir) {
+        Set<Word> data = new HashSet<>();
         LOGGER.info("开始解析目录：" + dir);
         try {
             Files.walkFileTree(Paths.get(dir), new SimpleFileVisitor<Path>() {
@@ -76,8 +80,8 @@ public class SynonymDiscriminationExtractor {
         return data;
     }
 
-    public static Set<SynonymDiscrimination> parseZip(String zipFile){
-        Set<SynonymDiscrimination> data = new HashSet<>();
+    public static Set<Word> parseZip(String zipFile){
+        Set<Word> data = new HashSet<>();
         LOGGER.info("开始解析ZIP文件："+zipFile);
         try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifier.class.getClassLoader())) {
             for(Path path : fs.getRootDirectories()){
@@ -102,8 +106,8 @@ public class SynonymDiscriminationExtractor {
         return data;
     }
 
-    public static Set<SynonymDiscrimination> parseFile(String file){
-        Set<SynonymDiscrimination> data = new HashSet<>();
+    public static Set<Word> parseFile(String file){
+        Set<Word> data = new HashSet<>();
         LOGGER.info("开始解析文件："+file);
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(
@@ -118,9 +122,11 @@ public class SynonymDiscriminationExtractor {
                     continue;
                 }
                 String word = attr[0];
-                LOGGER.info("解析单词："+word);
                 String html = attr[1];
-                data.addAll(parseSynonymDiscrimination(html));
+                Word w = parseWord(html, word);
+                if(!w.getDefinitions().isEmpty()) {
+                    data.add(w);
+                }
             }
         } catch (IOException e) {
             LOGGER.error("解析文本出错", e);
@@ -129,53 +135,74 @@ public class SynonymDiscriminationExtractor {
     }
 
     /**
-     * 解析同义词辨析
+     * 解析单词定义
      * @param html
      * @return
      */
-    public static Set<SynonymDiscrimination> parseSynonymDiscrimination(String html){
-        Set<SynonymDiscrimination> data = new HashSet<>();
+    public static Word parseWord(String html, String word){
+        LOGGER.info("解析单词："+word);
+        Word w = new Word(word, "");
         try {
-            for(Element element : Jsoup.parse(html).select(SYNONYM_DISCRIMINATION_CSS_PATH)){
-                String title = element.select(TITLE).text().trim();
-                Elements elements = element.select(DES);
-                if(elements.size() != 2){
-                    LOGGER.error("解析描述信息出错，elements.size="+elements.size());
-                    continue;
+            for(Element element : Jsoup.parse(html).select(COLLINS_DEFINITION_CSS_PATH)){
+                String definition = element.text().trim();
+                if(StringUtils.isNotBlank(definition)){
+                    w.addDefinition(definition);
+                    LOGGER.debug("解析出定义:" + definition);
                 }
-                String des = elements.get(0).text().replace("“ ”", "").replace("“ ", "“").trim();
-                SynonymDiscrimination synonymDiscrimination = new SynonymDiscrimination();
-                synonymDiscrimination.setTitle(title);
-                synonymDiscrimination.setDes(des);
-                elements = element.select(WORDS);
-                for(Element ele : elements){
-                    String word = ele.text();
-                    String[] attr = word.split("：");
-                    if(attr != null && attr.length == 2){
-                        synonymDiscrimination.addWord(new Word(attr[0].trim(), attr[1].trim()));
-                    }else {
-                        LOGGER.error("解析词义信息出错："+word);
-                    }
-                }
-                data.add(synonymDiscrimination);
-                LOGGER.info("解析出同义词辨析：" + synonymDiscrimination);
             }
         }catch (Exception e){
-            LOGGER.error("解析同义词辨析出错", e);
+            LOGGER.error("解析定义出错", e);
         }
-        return data;
+        return w;
     }
-    private static void parseSynonymDiscrimination(){
-        Set<SynonymDiscrimination> synonymDiscrimination = parse("/Users/apple/百度云同步盘/origin_html.zip");
-        String html = HtmlFormatter.toHtmlForSynonymDiscrimination(synonymDiscrimination);
+    private static Set<Word> inSyllabusVocabulary(Set<Word> words){
+        Set<Word> voc = WordSources.getSyllabusVocabulary();
+        return words.stream().filter(w -> voc.contains(w)).collect(Collectors.toSet());
+    }
+    private static Set<Word> notInSyllabusVocabulary(Set<Word> words){
+        Set<Word> voc = WordSources.getSyllabusVocabulary();
+        return words.stream().filter(w -> !voc.contains(w)).collect(Collectors.toSet());
+    }
+    private static void parseWord(){
+        Set<Word> words = parse("/Users/apple/百度云同步盘/origin_html.zip");
+        Set<Word> inSyllabusVocabulary = inSyllabusVocabulary(words);
+        compensate(inSyllabusVocabulary);
+
+        String inSyllabusVocabularyHtml = HtmlFormatter.toHtmlForWordDefinition(inSyllabusVocabulary, 5);
+        String notInSyllabusVocabularyHtml = HtmlFormatter.toHtmlForWordDefinition(notInSyllabusVocabulary(words), 5);
         try{
-            Files.write(Paths.get("src/main/resources/synonym_discrimination.txt"), html.getBytes("utf-8"));
+            Files.write(Paths.get("src/main/resources/definition_in_syllabus_vocabulary.txt"), inSyllabusVocabularyHtml.getBytes("utf-8"));
+            Files.write(Paths.get("src/main/resources/definition_not_in_syllabus_vocabulary.txt"), notInSyllabusVocabularyHtml.getBytes("utf-8"));
         }catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
         }
     }
 
-    public static void main(String[] args) {
-        parseSynonymDiscrimination();
+    public static void compensate(Set<Word> words){
+        Set<Word> minus = WordSources.minus(WordSources.getSyllabusVocabulary(), words);
+        LOGGER.debug("本地文件中没有的考纲词数："+minus.size());
+        minus.forEach(w -> {
+            LOGGER.debug(w.getWord());
+            Word word = parseWord(w.getWord());
+            if(word!=null && !word.getDefinitions().isEmpty()){
+                words.add(word);
+            }
+        });
+    }
+
+    public static Word parseWord(String word){
+        try {
+            return parseWord(Jsoup.parse(new URL("http://www.iciba.com/" + word), 15000).html(), word);
+        }catch (Exception e){
+            LOGGER.error("解析定义出错", e);
+        }
+        return null;
+    }
+
+    public static void main(String[] args){
+        //parseWord("up");
+        //parseWord("like");
+        //parseWord("nothing");
+        parseWord();
     }
 }

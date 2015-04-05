@@ -18,9 +18,11 @@
  *
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.superword.extract;
 
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.HtmlFormatter;
+import org.apdplat.superword.tools.WordClassifier;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;

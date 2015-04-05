@@ -18,7 +18,7 @@
  *
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.superword.extract;
 
 import java.io.InputStream;
 import java.util.List;

@@ -18,9 +18,11 @@
  *
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.superword.extract;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.tools.HtmlFormatter;
+import org.apdplat.superword.tools.WordLinker;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
@@ -31,7 +33,6 @@ import java.net.URL;
 import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;

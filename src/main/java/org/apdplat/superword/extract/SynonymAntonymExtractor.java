@@ -18,11 +18,14 @@
  *
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.superword.extract;
 
 import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.SynonymAntonym;
 import org.apdplat.superword.model.Word;
+import org.apdplat.superword.tools.HtmlFormatter;
+import org.apdplat.superword.tools.WordClassifier;
+import org.apdplat.superword.tools.WordSources;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
