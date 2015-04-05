@@ -4,6 +4,7 @@
 
 ###superword利用计算机强大的计算能力，使用机器学习和数据挖掘算法找到读音相近、外形相似、含义相关、同义反义、词根词缀的英语单词，从而非常有利于我们深入地记忆理解这些单词。
 
+###[使用Java8实现自己的个性化搜索引擎](http://my.oschina.net/apdplat/blog/396193)
 ###[192本软件著作用词分析](http://my.oschina.net/apdplat/blog/392496)
 ###[2000个软件开发领域的高频特殊词及精选例句](http://my.oschina.net/apdplat/blog/389200)
 ###[英语单词音近形似转化规律研究](http://my.oschina.net/apdplat/blog/378569)
