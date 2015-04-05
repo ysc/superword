@@ -20,6 +20,10 @@
 
 package org.apdplat.superword.model;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * 英语单词
  * @author 杨尚川
@@ -27,6 +31,8 @@ package org.apdplat.superword.model;
 public class Word implements Comparable{
     private String word;
     private String meaning;
+    private Set<String> definitions = new HashSet<>();
+    private Set<String> partOfSpeeches = new HashSet<>();
 
     public Word(){}
     public Word(String word, String meaning) {
@@ -48,6 +54,40 @@ public class Word implements Comparable{
 
     public void setWord(String word) {
         this.word = word;
+    }
+
+    public Set<String> getDefinitions() {
+        return Collections.unmodifiableSet(definitions);
+    }
+
+    public void addDefinition(String definition) {
+        this.definitions.add(definition);
+    }
+
+    public void removeDefinition(String definition) {
+        this.definitions.remove(definition);
+    }
+
+    public Set<String> getPartOfSpeeches() {
+        return Collections.unmodifiableSet(partOfSpeeches);
+    }
+
+    public String getFormatPartOfSpeeches() {
+        if(partOfSpeeches.isEmpty()){
+            return "";
+        }
+        StringBuilder text = new StringBuilder();
+        partOfSpeeches.forEach(w -> text.append(w).append(":"));
+        text.setLength(text.length()-1);
+        return text.toString();
+    }
+
+    public void addPartOfSpeech(String partOfSpeech) {
+        this.partOfSpeeches.add(partOfSpeech);
+    }
+
+    public void removePartOfSpeech(String partOfSpeech) {
+        this.partOfSpeeches.remove(partOfSpeech);
     }
 
     @Override
