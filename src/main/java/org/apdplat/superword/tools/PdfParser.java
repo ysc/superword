@@ -47,6 +47,7 @@ public class PdfParser {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PdfParser.class);
 
+    private static final AutoDetectParser PARSER = new AutoDetectParser();
     private static final int SENTENCE_WORD_MIN_COUNT = 10;
     private static final int MAX_WORD_CHAR_COUNT = 18;
     private static final float SENTENCE_CAP_WORD_MAX_RATE = 0.4f;
@@ -93,9 +94,8 @@ public class PdfParser {
     public static String parsePdfFileToPlainText(String file) {
         try(InputStream stream = new FileInputStream(file)) {
             BodyContentHandler handler = new BodyContentHandler(Integer.MAX_VALUE);
-            AutoDetectParser parser = new AutoDetectParser();
             Metadata metadata = new Metadata();
-            parser.parse(stream, handler, metadata);
+            PARSER.parse(stream, handler, metadata);
             return handler.toString();
         } catch (Exception e){
             e.printStackTrace();
@@ -107,7 +107,8 @@ public class PdfParser {
     }
     public static void parseDirectory(Path dir){
         try {
-            LOGGER.info("处理目录：" + dir);
+            long start = System.currentTimeMillis();
+            LOGGER.info("开始处理目录：" + dir);
             List<String> fileNames = new ArrayList<>();
             Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
 
@@ -122,12 +123,14 @@ public class PdfParser {
 
             });
             Files.write(Paths.get("src/main/resources/it/manifest"), fileNames);
-            LOGGER.info("处理完毕");
+            long cost=System.currentTimeMillis()-start;
+            LOGGER.info("处理完毕，耗时："+cost+"毫秒");
         }catch (IOException e){
             e.printStackTrace();
         }
     }
     public static void parseZip(String zipFile){
+        long start = System.currentTimeMillis();
         LOGGER.info("开始解析ZIP文件："+zipFile);
         try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifier.class.getClassLoader())) {
             for(Path path : fs.getRootDirectories()){
@@ -149,6 +152,8 @@ public class PdfParser {
         }catch (Exception e){
             LOGGER.error("解析文本出错", e);
         }
+        long cost=System.currentTimeMillis()-start;
+        LOGGER.info("解析完毕，耗时："+cost+"毫秒");
     }
     public static String parseFile(String file) {
         return parseFile(Paths.get(file));
