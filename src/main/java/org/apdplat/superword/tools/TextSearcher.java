@@ -58,14 +58,17 @@ public class TextSearcher {
     }
 
     public static Map<Integer, String> search(String keyword){
+        return search(keyword, SearchMode.INTERSECTION);
+    }
+    public static Map<Integer, String> search(String keyword, SearchMode searchMode){
         long start = System.currentTimeMillis();
-        Map<Integer, String> data = docs(hit(keyword));
+        Map<Integer, String> data = docs(hit(keyword, searchMode));
         long cost = System.currentTimeMillis()-start;
         LOGGER.info("搜索耗时："+cost+"毫秒");
         return data;
     }
 
-    public static List<Integer> hit(String keyword){
+    public static List<Integer> hit(String keyword, SearchMode searchMode){
         long start = System.currentTimeMillis();
         LOGGER.info("搜索关键词："+keyword);
         List<String> words = TextAnalyzer.seg(keyword);
@@ -76,7 +79,11 @@ public class TextSearcher {
         }else{
             result = term(words.get(0));
             for(int i=1; i<words.size(); i++){
-                result = intersection(result, term(words.get(i)));
+                if(searchMode==SearchMode.INTERSECTION) {
+                    result = SearchMode.intersection(result, term(words.get(i)));
+                }else {
+                    result = SearchMode.union(result, term(words.get(i)));
+                }
             }
         }
         long cost = System.currentTimeMillis()-start;
@@ -121,12 +128,31 @@ public class TextSearcher {
         return list;
     }
 
-    private static List<Integer> intersection(List<Integer> one, List<Integer> two){
-        return one.stream().filter(i->two.contains(i)).collect(Collectors.toList());
-    }
+    public static enum SearchMode{
+        INTERSECTION, UNION;
 
+        private static List<Integer> intersection(List<Integer> one, List<Integer> two){
+            return one.stream().filter(i->two.contains(i)).collect(Collectors.toList());
+        }
+
+        private static List<Integer> union(List<Integer> one, List<Integer> two){
+            two.forEach(item->{
+                if(!one.contains(item)){
+                    one.add(item);
+                }
+            });
+            return one;
+        }
+    }
     public static void main(String[] args) {
         Map<Integer, String> data = search("In addition, if ent is not specified, the named resource is not initialized in the naming.");
-        data.entrySet().forEach(e->LOGGER.info("行号："+e.getKey()+"，句子："+e.getValue()));
+        LOGGER.info("搜索结果数："+data.size());
+        AtomicInteger i = new AtomicInteger();
+        data.entrySet().forEach(e->LOGGER.info("结果"+i.incrementAndGet()+"、行号："+e.getKey()+"，句子："+e.getValue()));
+        //查找同义词例句
+        data = search("agree accept approve", SearchMode.UNION);
+        LOGGER.info("搜索结果数："+data.size());
+        AtomicInteger j = new AtomicInteger();
+        data.entrySet().forEach(e->LOGGER.info("结果"+j.incrementAndGet()+"、行号："+e.getKey()+"，句子："+e.getValue()));
     }
 }
