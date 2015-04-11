@@ -366,25 +366,24 @@ public class ProxyIp {
         Elements all = element.children();
         LOGGER.info("");
         LOGGER.info("开始解析IP地址，机器读到的文本："+element.text());
-        int i=1;
-        o:for(Element ele : all){
+        AtomicInteger count = new AtomicInteger();
+        all.forEach(ele -> {
             String html = ele.outerHtml();
-            LOGGER.info("\t"+ (i++) + "、" + "原始HTML："+html);
+            LOGGER.info("\t"+ count.incrementAndGet() + "、" + "原始HTML："+html.replaceAll("[\n\r]", ""));
             String text = ele.text();
             if(ele.hasAttr("style")
                     && (ele.attr("style").equals("display: none;")
                         || ele.attr("style").equals("display:none;"))) {
                 LOGGER.info("\t" + "忽略不显示的文本："+text);
             }else{
-                LOGGER.info("\t" + text);
                 if(StringUtils.isNotBlank(text)){
-                    LOGGER.info("需要的文本："+text);
+                    LOGGER.info("\t需要的文本："+text);
                     ip.append(text);
                 }else{
-                    LOGGER.info("忽略空文本");
+                    LOGGER.info("\t忽略空文本");
                 }
             }
-        }
+        });
         LOGGER.info("----------------------------------------------------------------");
         LOGGER.info("解析到的ip: "+ip);
         LOGGER.info("----------------------------------------------------------------");
