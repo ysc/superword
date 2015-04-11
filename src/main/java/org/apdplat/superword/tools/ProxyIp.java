@@ -137,6 +137,12 @@ public class ProxyIp {
             }
         }).start();
     }
+    public static void stopDetect(){
+        detect = false;
+    }
+    public static void startDetect(){
+        detect = true;
+    }
     private static void save(){
         try {
             //将本地的和新发现的代理IP进行合并保存到本地
@@ -161,7 +167,7 @@ public class ProxyIp {
             LOGGER.error("保存失败", e);
         }
     }
-    public static String getNextProxyIp(){
+    private static String getNextProxyIp(){
         int index = currentIpIndex%IPS.size();
         currentIpIndex++;
         return IPS.get(index);
@@ -229,7 +235,7 @@ public class ProxyIp {
         isSwitching = false;
         return false;
     }
-    public static String useNewProxyIp(){
+    private static String useNewProxyIp(){
         String newProxy = getNextProxyIp();
         String[] attr = newProxy.split(":");
         System.setProperty("proxySet", "true");
@@ -238,7 +244,6 @@ public class ProxyIp {
         LOGGER.info("尝试使用新的代理："+newProxy);
         return newProxy;
     }
-
     /**
      * 验证代理IP是否能工作，能工作不代表能向目标网站隐藏自己的IP
      * @param host
@@ -270,7 +275,6 @@ public class ProxyIp {
         LOGGER.info("检查自身IP地址失败");
         return false;
     }
-
     /**
      * 看看在ip138的眼中，自己的IP是多少
      * @return
@@ -303,20 +307,20 @@ public class ProxyIp {
         LOGGER.info("检查自身IP地址失败，返回之前的IP地址："+ previousIp);
         return previousIp;
     }
-    public static Set<String> getProxyIps(){
+    private static Set<String> getProxyIps(){
         Set<String> ips = new HashSet<>();
         ips.addAll(getProxyIpOne());
         ips.addAll(getProxyIpTwo());
         return ips;
     }
-    private static List<String> getProxyIpTwo(){
-        String url = "http://ip.qiaodm.com/?timestamp="+System.nanoTime();
-        String cssPath = "html body div#main_container div.inner table.iplist tbody tr";
-        return getProxyIp(url, cssPath);
-    }
     private static List<String> getProxyIpOne(){
         String url = "http://proxy.goubanjia.com/?timestamp="+System.nanoTime();
         String cssPath = "html body div.wrap.fullwidth div#content div#post-2.post-2.page.type-page.status-publish.hentry div.entry.entry-content div#list table.table tbody tr";
+        return getProxyIp(url, cssPath);
+    }
+    private static List<String> getProxyIpTwo(){
+        String url = "http://ip.qiaodm.com/?timestamp="+System.nanoTime();
+        String cssPath = "html body div#main_container div.inner table.iplist tbody tr";
         return getProxyIp(url, cssPath);
     }
     private static List<String> getProxyIp(String url, String cssPath){
