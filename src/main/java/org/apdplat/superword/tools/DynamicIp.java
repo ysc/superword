@@ -114,13 +114,18 @@ public class DynamicIp {
             LOGGER.info(Thread.currentThread()+"建立连接成功");
             LOGGER.info(Thread.currentThread()+"自动更改IP地址成功！");
             LOGGER.info(Thread.currentThread()+"拨号耗时："+(System.currentTimeMillis()-start)+"毫秒");
-            //通知其他线程拨号成功
+            //通知其他线程结束等待
             synchronized (DynamicIp.class) {
                 DynamicIp.class.notifyAll();
             }
             isDialing = false;
             lastDialTime = System.currentTimeMillis();
             return true;
+        }
+        LOGGER.info(Thread.currentThread()+"登陆无线路由器失败，检查用户名和密码！");
+        //通知其他线程结束等待
+        synchronized (DynamicIp.class) {
+            DynamicIp.class.notifyAll();
         }
         isDialing = false;
         return false;
