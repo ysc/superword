@@ -369,18 +369,18 @@ public class ProxyIp {
         AtomicInteger count = new AtomicInteger();
         all.forEach(ele -> {
             String html = ele.outerHtml();
-            LOGGER.info("\t"+ count.incrementAndGet() + "、" + "原始HTML："+html.replaceAll("[\n\r]", ""));
+            LOGGER.info(count.incrementAndGet() + "、" + "原始HTML："+html.replaceAll("[\n\r]", ""));
             String text = ele.text();
             if(ele.hasAttr("style")
                     && (ele.attr("style").equals("display: none;")
                         || ele.attr("style").equals("display:none;"))) {
-                LOGGER.info("\t" + "忽略不显示的文本："+text);
+                LOGGER.info("忽略不显示的文本："+text);
             }else{
                 if(StringUtils.isNotBlank(text)){
-                    LOGGER.info("\t需要的文本："+text);
+                    LOGGER.info("需要的文本："+text);
                     ip.append(text);
                 }else{
-                    LOGGER.info("\t忽略空文本");
+                    LOGGER.info("忽略空文本");
                 }
             }
         });
