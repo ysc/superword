@@ -311,6 +311,7 @@ public class ProxyIp {
         Set<String> ips = new HashSet<>();
         ips.addAll(getProxyIpOne());
         ips.addAll(getProxyIpTwo());
+        ips.addAll(getProxyIpThree());
         return ips;
     }
     private static List<String> getProxyIpOne(){
@@ -342,6 +343,65 @@ public class ProxyIp {
                                 String text = tds.get(1).text();
                                 LOGGER.info("端口："+text+" -> "+tds.get(1).outerHtml());
                                 port = Integer.parseInt(text);
+                            }
+                            if(ip != null && port > 0){
+                                LOGGER.info("解析出IP："+ip+"，端口："+port);
+                                if(verify(ip, port)){
+                                    LOGGER.info("IP："+ip+"，端口："+port+"可以使用");
+                                    ips.add(ip + ":" + port);
+                                }else {
+                                    LOGGER.info("IP："+ip+"，端口："+port+"不能使用");
+                                }
+                            }
+                        }catch (Exception e){
+                            LOGGER.error("解析IP出错", e);
+                        }
+                    });
+        }catch (Exception e){
+            LOGGER.error("解析IP出错", e);
+        }
+        return ips;
+    }
+    private static List<String> getProxyIpThree(){
+        List<String> ips = new ArrayList<>();
+        for(int i=1; i<=10; i++){
+            ips.addAll(getProxyIpThree(i));
+        }
+        return ips;
+    }
+    private static List<String> getProxyIpThree(int page){
+        List<String> ips = new ArrayList<>();
+        try {
+            String url = "http://www.kuaidaili.com/proxylist/"+page;
+            String html = ((HtmlPage)WEB_CLIENT.getPage(url)).getBody().asXml();
+            //LOGGER.info("html："+html);
+            Document doc = Jsoup.parse(html);
+            Elements elements = doc.select("html body div#container div#list table.table.table-bordered.table-striped tbody tr");
+            elements
+                    .forEach(element -> {
+                        try {
+                            Elements tds = element.children();
+                            String ip = null;
+                            int port = 0;
+                            if (tds.size() > 1) {
+                                ip = tds.get(0).text();
+                                String text = tds.get(1).text();
+                                LOGGER.info("IP："+ip);
+                                LOGGER.info("端口："+text);
+                                Matcher matcher = IP_PATTERN.matcher(ip.toString());
+                                if(matcher.find()){
+                                    ip = matcher.group();
+                                    LOGGER.info("ip地址验证通过："+ip);
+                                }else{
+                                    LOGGER.info("ip地址验证失败："+ip);
+                                    ip = null;
+                                }
+                                try{
+                                    port = Integer.parseInt(text);
+                                    LOGGER.info("端口验证通过："+port);
+                                }catch (Exception e){
+                                    LOGGER.info("端口验证失败："+port);
+                                }
                             }
                             if(ip != null && port > 0){
                                 LOGGER.info("解析出IP："+ip+"，端口："+port);
@@ -398,8 +458,8 @@ public class ProxyIp {
         return null;
     }
     public static void main(String[] args) {
-        //如果只是想收集IP，则一直运行此程序即可，更新时间改为1秒钟。
-        detectInterval=5000;
+        //如果只是想收集IP，则一直运行此程序即可，更新时间改为10秒钟。
+        detectInterval=10000;
         while(true){
             toNewIp();
         }
