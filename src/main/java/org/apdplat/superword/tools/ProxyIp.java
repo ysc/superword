@@ -77,9 +77,11 @@ public class ProxyIp {
     private static String previousIp = getCurrentIp();
     //能隐藏自己IP的代理
     private static final Set<String> EXCELLENT_IPS = new HashSet<>();
+    private static final Set<String> EXCELLENT_USA_IPS = new HashSet<>();
     //不能隐藏自己IP的代理
     private static final Set<String> NORMAL_IPS = new HashSet<>();
-    private static final Path EXCELLENT_PROXY_IPS_FILE = Paths.get("src/main/resources/proxy_ips_excellent.txt");
+    private static final Path EXCELLENT_PROXY_IPS_FILE = Paths.get("src/main/resources/proxy_ips_excellent.txt");;
+    private static final Path EXCELLENT_USA_PROXY_IPS_FILE = Paths.get("src/main/resources/proxy_ips_excellent_usa.txt");
     private static final Path NORMAL_PROXY_IPS_FILE = Paths.get("src/main/resources/proxy_ips_normal.txt");
     static {
         Set<String> ipSet = new HashSet<>();
@@ -94,6 +96,9 @@ public class ProxyIp {
             if(Files.notExists(EXCELLENT_PROXY_IPS_FILE)){
                 EXCELLENT_PROXY_IPS_FILE.toFile().createNewFile();
             }
+            if(Files.notExists(EXCELLENT_USA_PROXY_IPS_FILE)){
+                EXCELLENT_USA_PROXY_IPS_FILE.toFile().createNewFile();
+            }
             if(Files.notExists(NORMAL_PROXY_IPS_FILE)){
                 NORMAL_PROXY_IPS_FILE.toFile().createNewFile();
             }
@@ -104,7 +109,7 @@ public class ProxyIp {
             LOGGER.error("读取本地代理IP失败", e);
         }
         if(ipSet.isEmpty()){
-            //从已知的两个网站获取代理IP和端口
+            //从已知的网站获取代理IP和端口
             ipSet.addAll(getProxyIps());
         }
         IPS.addAll(ipSet);
@@ -152,12 +157,17 @@ public class ProxyIp {
             //移除不能隐藏自己的IP
             ips.removeAll(NORMAL_IPS);
             Files.write(PROXY_IPS_FILE, ips);
-            LOGGER.info("将"+ips.size()+"条代理IP地址写入本地");
+            LOGGER.info("将" + ips.size() + "条代理IP地址写入本地");
             Set<String> excellentIps = new HashSet<>();
             excellentIps.addAll(Files.readAllLines(EXCELLENT_PROXY_IPS_FILE));
             excellentIps.addAll(EXCELLENT_IPS);
             Files.write(EXCELLENT_PROXY_IPS_FILE, excellentIps);
             LOGGER.info("将" + excellentIps.size() + "条能隐藏自己的代理IP地址写入本地");
+            Set<String> excellentUsaIps = new HashSet<>();
+            excellentUsaIps.addAll(Files.readAllLines(EXCELLENT_USA_PROXY_IPS_FILE));
+            excellentUsaIps.addAll(EXCELLENT_USA_IPS);
+            Files.write(EXCELLENT_USA_PROXY_IPS_FILE, excellentUsaIps);
+            LOGGER.info("将" + excellentUsaIps.size() + "条能隐藏自己的美国代理IP地址写入本地");
             Set<String> normalIps = new HashSet<>();
             normalIps.addAll(Files.readAllLines(NORMAL_PROXY_IPS_FILE));
             normalIps.addAll(NORMAL_IPS);
@@ -299,6 +309,9 @@ public class ProxyIp {
             if(matcher.find()){
                 String ip = matcher.group();
                 LOGGER.info("自身IP地址："+ip);
+                if(text.contains("美国")){
+                    EXCELLENT_USA_IPS.add(System.getProperty("http.proxyHost") + ":" + System.getProperty("http.proxyPort"));
+                }
                 return ip;
             }
         }catch (Exception e){
@@ -459,7 +472,7 @@ public class ProxyIp {
     }
     public static void main(String[] args) {
         //如果只是想收集IP，则一直运行此程序即可，更新时间改为10秒钟。
-        detectInterval=10000;
+        detectInterval=1000;
         while(true){
             toNewIp();
         }
