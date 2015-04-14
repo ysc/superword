@@ -471,7 +471,7 @@ public class ProxyIp {
         return null;
     }
     public static void main(String[] args) {
-        //如果只是想收集IP，则一直运行此程序即可，更新时间改为10秒钟。
+        //如果只是想收集IP，则一直运行此程序即可，更新时间改为1秒钟。
         detectInterval=1000;
         while(true){
             toNewIp();
