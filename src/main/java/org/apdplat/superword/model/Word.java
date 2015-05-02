@@ -91,6 +91,11 @@ public class Word implements Comparable{
     }
 
     @Override
+    public String toString() {
+        return word;
+    }
+
+    @Override
     public int compareTo(Object o) {
         if(this == o){
             return 0;
