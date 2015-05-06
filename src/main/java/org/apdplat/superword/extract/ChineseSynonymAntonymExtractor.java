@@ -77,6 +77,8 @@ public class ChineseSynonymAntonymExtractor {
     //用来合并不同条目
     private static final Map<Word, Set<Word>> SYNONYM_MAP = new ConcurrentHashMap<>();
     private static final Path CHECKED_WORDS_PATH = Paths.get("src/main/resources/checked_words.txt");
+    private static final Path CHINESE_SYNONYM = Paths.get("src/main/resources/chinese_synonym.txt");
+    private static final Path CHINESE_ANTONYM = Paths.get("src/main/resources/chinese_antonym.txt");
 
     public static SynonymAntonym parseSynonymAntonym(String html, String word){
         SynonymAntonym synonymAntonym = new SynonymAntonym();
@@ -205,17 +207,17 @@ public class ChineseSynonymAntonymExtractor {
             }
         });
         save();
+        filterSameRecord(CHINESE_SYNONYM);
+        filterSameRecord(CHINESE_ANTONYM);
     }
     private static synchronized void save(){
         System.out.println("开始保存文件");
         List<String> SYNONYM_LIST = null;
         List<String> ANTONYM_LIST = null;
         try {
-            Path CHINESE_SYNONYM = Paths.get("src/main/resources/chinese_synonym.txt");
             if(Files.notExists(CHINESE_SYNONYM)){
                 CHINESE_SYNONYM.toFile().createNewFile();
             }
-            Path CHINESE_ANTONYM = Paths.get("src/main/resources/chinese_antonym.txt");
             if(Files.notExists(CHINESE_ANTONYM)){
                 CHINESE_ANTONYM.toFile().createNewFile();
             }
@@ -319,6 +321,35 @@ public class ChineseSynonymAntonymExtractor {
         int third = new Random().nextInt(254)+1;
         int forth = new Random().nextInt(254)+1;
         return first+"."+second+"."+second+"."+forth;
+    }
+
+    /**
+     * 去掉重复的记录，如：
+     * 一丘之貉 比众不同
+     * 比众不同 一丘之貉
+     * 只保留一条记录
+     * @param path
+     */
+    private static void filterSameRecord(Path path){
+        try {
+            AtomicInteger i = new AtomicInteger();
+            Set<String> set = new HashSet<>();
+            List<String> list = Files.readAllLines(path).stream().filter(line -> {
+                String[] attr = line.split("\\s+");
+                String words = Arrays.asList(attr).stream().sorted().collect(Collectors.toList()).toString();
+                if (set.contains(words)) {
+                    i.incrementAndGet();
+                    LOGGER.info("去掉重复的记录：" + line);
+                    return false;
+                }
+                set.add(words);
+                return true;
+            }).sorted().collect(Collectors.toList());
+            Files.write(path, list);
+            LOGGER.info("去掉重复的记录数：" + i.get());
+        }catch (Exception e){
+            LOGGER.error("去掉重复的记录出错", e);
+        }
     }
 
     public static void main(String[] args) throws Exception{
