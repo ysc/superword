@@ -52,9 +52,10 @@ public class TextIndexer {
             TextAnalyzer.getFileNames(path).forEach(file -> {
                 try {
                     List<String> lines = Files.readAllLines(Paths.get(file));
+                    AtomicInteger i = new AtomicInteger();
                     lines.forEach(line -> {
                         try {
-                            writer.append(line).append("\n");
+                            writer.append(line).append("《").append(Paths.get(file).getFileName().toString().split("\\.")[0]).append("》【").append(lines.size()+"/"+i.incrementAndGet()).append("】\n");
                             lineCount.incrementAndGet();
                             TextAnalyzer.seg(line).forEach(word -> {
                                 index.putIfAbsent(word, new HashSet<>());
