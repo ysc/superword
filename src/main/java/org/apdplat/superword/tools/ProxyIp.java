@@ -43,9 +43,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -67,7 +69,7 @@ public class ProxyIp {
     private static final WebClient WEB_CLIENT = new WebClient(BrowserVersion.INTERNET_EXPLORER_11);
     private static final Pattern IP_PATTERN = Pattern.compile("((?:(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d)))\\.){3}(?:25[0-5]|2[0-4]\\d|((1\\d{2})|([1-9]?\\d))))");
     //可用代理IP列表
-    private static final List<String> IPS = new ArrayList<>();
+    private static final List<String> IPS = new Vector<>();
     private static volatile int currentIpIndex = 0;
     private static volatile boolean detect = true;
     //五分钟
@@ -76,10 +78,10 @@ public class ProxyIp {
     //自身IP地址
     private static String previousIp = getCurrentIp();
     //能隐藏自己IP的代理
-    private static final Set<String> EXCELLENT_IPS = new HashSet<>();
-    private static final Set<String> EXCELLENT_USA_IPS = new HashSet<>();
+    private static final Set<String> EXCELLENT_IPS = new ConcurrentSkipListSet<>();
+    private static final Set<String> EXCELLENT_USA_IPS = new ConcurrentSkipListSet<>();
     //不能隐藏自己IP的代理
-    private static final Set<String> NORMAL_IPS = new HashSet<>();
+    private static final Set<String> NORMAL_IPS = new ConcurrentSkipListSet<>();
     private static final Path EXCELLENT_PROXY_IPS_FILE = Paths.get("src/main/resources/proxy_ips_excellent.txt");;
     private static final Path EXCELLENT_USA_PROXY_IPS_FILE = Paths.get("src/main/resources/proxy_ips_excellent_usa.txt");
     private static final Path NORMAL_PROXY_IPS_FILE = Paths.get("src/main/resources/proxy_ips_normal.txt");
@@ -151,32 +153,51 @@ public class ProxyIp {
     private static void save(){
         try {
             //将本地的和新发现的代理IP进行合并保存到本地
-            Set<String> ips = new HashSet<>();
+            Set<String> ips = new ConcurrentSkipListSet<>();
             ips.addAll(Files.readAllLines(PROXY_IPS_FILE));
             ips.addAll(IPS);
             //移除不能隐藏自己的IP
             ips.removeAll(NORMAL_IPS);
-            Files.write(PROXY_IPS_FILE, ips);
+            Files.write(PROXY_IPS_FILE, toVerify(ips));
             LOGGER.info("将" + ips.size() + "条代理IP地址写入本地");
             Set<String> excellentIps = new HashSet<>();
             excellentIps.addAll(Files.readAllLines(EXCELLENT_PROXY_IPS_FILE));
             excellentIps.addAll(EXCELLENT_IPS);
-            Files.write(EXCELLENT_PROXY_IPS_FILE, excellentIps);
+            Files.write(EXCELLENT_PROXY_IPS_FILE, toVerify(excellentIps));
             LOGGER.info("将" + excellentIps.size() + "条能隐藏自己的代理IP地址写入本地");
             Set<String> excellentUsaIps = new HashSet<>();
             excellentUsaIps.addAll(Files.readAllLines(EXCELLENT_USA_PROXY_IPS_FILE));
             excellentUsaIps.addAll(EXCELLENT_USA_IPS);
-            Files.write(EXCELLENT_USA_PROXY_IPS_FILE, excellentUsaIps);
+            Files.write(EXCELLENT_USA_PROXY_IPS_FILE, toVerify(excellentUsaIps));
             LOGGER.info("将" + excellentUsaIps.size() + "条能隐藏自己的美国代理IP地址写入本地");
             Set<String> normalIps = new HashSet<>();
             normalIps.addAll(Files.readAllLines(NORMAL_PROXY_IPS_FILE));
             normalIps.addAll(NORMAL_IPS);
-            Files.write(NORMAL_PROXY_IPS_FILE, normalIps);
+            Files.write(NORMAL_PROXY_IPS_FILE, toVerify(normalIps));
             LOGGER.info("将" + normalIps.size() + "条不能隐藏自己的代理IP地址写入本地");
         }catch (Exception e){
             LOGGER.error("保存失败", e);
         }
     }
+
+    private static List<String> toVerify(Set<String> ips){
+        AtomicInteger i = new AtomicInteger();
+        AtomicInteger f = new AtomicInteger();
+        List<String> list = ips.parallelStream().filter(ip->{
+            LOGGER.info("验证进度："+ips.size()+"/"+i.incrementAndGet());
+            String[] attr = ip.split(":");
+            if(verify(attr[0], Integer.parseInt(attr[1]))){
+                return true;
+            }
+            IPS.remove(ip);
+            f.incrementAndGet();
+            return false;
+        }).sorted().collect(Collectors.toList());
+        LOGGER.info("验证成功的IP数："+(ips.size()-f.get()));
+        LOGGER.info("验证失败的IP数："+f.get());
+        return list;
+    }
+
     private static String getNextProxyIp(){
         int index = currentIpIndex%IPS.size();
         currentIpIndex++;
@@ -230,8 +251,6 @@ public class ProxyIp {
             }
             isSwitching = false;
             lastSwitchTime = System.currentTimeMillis();
-            //保存IP数据
-            save();
             return true;
         }
         NORMAL_IPS.add(proxyIp);
@@ -276,13 +295,13 @@ public class ProxyIp {
             }
             LOGGER.info("HTML："+html);
             if(html.toString().contains("APDPlat应用级产品开发平台")){
-                LOGGER.info("检查自身IP地址成功");
+                LOGGER.info("代理IP验证成功："+host+":"+port);
                 return true;
             }
         }catch (Exception e){
             LOGGER.error(e.getMessage());
         }
-        LOGGER.info("检查自身IP地址失败");
+        LOGGER.info("代理IP验证失败："+host+":"+port);
         return false;
     }
     /**
@@ -325,6 +344,7 @@ public class ProxyIp {
         ips.addAll(getProxyIpOne());
         ips.addAll(getProxyIpTwo());
         ips.addAll(getProxyIpThree());
+        ips.addAll(getProxyIpFour());
         return ips;
     }
     private static List<String> getProxyIpOne(){
@@ -390,6 +410,65 @@ public class ProxyIp {
             //LOGGER.info("html："+html);
             Document doc = Jsoup.parse(html);
             Elements elements = doc.select("html body div#container div#list table.table.table-bordered.table-striped tbody tr");
+            elements
+                    .forEach(element -> {
+                        try {
+                            Elements tds = element.children();
+                            String ip = null;
+                            int port = 0;
+                            if (tds.size() > 1) {
+                                ip = tds.get(0).text();
+                                String text = tds.get(1).text();
+                                LOGGER.info("IP："+ip);
+                                LOGGER.info("端口："+text);
+                                Matcher matcher = IP_PATTERN.matcher(ip.toString());
+                                if(matcher.find()){
+                                    ip = matcher.group();
+                                    LOGGER.info("ip地址验证通过："+ip);
+                                }else{
+                                    LOGGER.info("ip地址验证失败："+ip);
+                                    ip = null;
+                                }
+                                try{
+                                    port = Integer.parseInt(text);
+                                    LOGGER.info("端口验证通过："+port);
+                                }catch (Exception e){
+                                    LOGGER.info("端口验证失败："+port);
+                                }
+                            }
+                            if(ip != null && port > 0){
+                                LOGGER.info("解析出IP："+ip+"，端口："+port);
+                                if(verify(ip, port)){
+                                    LOGGER.info("IP："+ip+"，端口："+port+"可以使用");
+                                    ips.add(ip + ":" + port);
+                                }else {
+                                    LOGGER.info("IP："+ip+"，端口："+port+"不能使用");
+                                }
+                            }
+                        }catch (Exception e){
+                            LOGGER.error("解析IP出错", e);
+                        }
+                    });
+        }catch (Exception e){
+            LOGGER.error("解析IP出错", e);
+        }
+        return ips;
+    }
+    private static List<String> getProxyIpFour(){
+        List<String> ips = new ArrayList<>();
+        for(int i=1; i<=10; i++){
+            ips.addAll(getProxyIpFour(i));
+        }
+        return ips;
+    }
+    private static List<String> getProxyIpFour(int page){
+        List<String> ips = new ArrayList<>();
+        try {
+            String url = "http://www.kxdaili.com/ipList/"+page+".html";
+            String html = ((HtmlPage)WEB_CLIENT.getPage(url)).getBody().asXml();
+            //LOGGER.info("html："+html);
+            Document doc = Jsoup.parse(html);
+            Elements elements = doc.select("html body#nav_btn01 div.tab_c_box.buy_tab_box table.ui.table.segment tbody tr");
             elements
                     .forEach(element -> {
                         try {
