@@ -27,6 +27,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -57,48 +58,74 @@ public class TextSearcher {
         }
     }
 
-    public static Map<Integer, String> search(String keyword){
+    public static List<Doc> search(String keyword){
         return search(keyword, SearchMode.INTERSECTION);
     }
-    public static Map<Integer, String> search(String keyword, SearchMode searchMode){
+    public static List<Doc> search(String keyword, SearchMode searchMode){
         long start = System.currentTimeMillis();
-        Map<Integer, String> data = docs(hit(keyword, searchMode));
+        //搜索关键词
+        List<Doc> docs = hit(keyword, searchMode);
+        int limit = docs.size() > 10 ? 10 : docs.size();
+        docs = docs.subList(0, limit);
+        //获取文档
+        docs(docs);
         long cost = System.currentTimeMillis()-start;
         LOGGER.info("搜索耗时："+cost+"毫秒");
-        return data;
+        return docs;
     }
 
-    public static List<Integer> hit(String keyword, SearchMode searchMode){
+    public static List<Doc> hit(String keyword, SearchMode searchMode){
         long start = System.currentTimeMillis();
         LOGGER.info("搜索关键词："+keyword);
         List<String> words = TextAnalyzer.seg(keyword);
         LOGGER.info("分词结果："+words);
-        List<Integer> result = Collections.EMPTY_LIST;
+        final Set<Integer> result = new ConcurrentSkipListSet<>();
+        //文档打分使用
+        Map<Integer, AtomicInteger> termCountPerDoc = new HashMap<>();
         if(words.size()==1){
-            result = term(words.get(0));
+            //单 词 查询
+            result.addAll(term(words.get(0), termCountPerDoc));
         }else{
-            result = term(words.get(0));
+            //多 词 查询
+            result.addAll(term(words.get(0), termCountPerDoc));
             for(int i=1; i<words.size(); i++){
                 if(searchMode==SearchMode.INTERSECTION) {
-                    result = SearchMode.intersection(result, term(words.get(i)));
+                    SearchMode.intersection(result, term(words.get(i), termCountPerDoc));
                 }else {
-                    result = SearchMode.union(result, term(words.get(i)));
+                    SearchMode.union(result, term(words.get(i), termCountPerDoc));
                 }
             }
         }
+        List<Doc> finalResult = termCountPerDoc
+                .entrySet()
+                .stream()
+                .filter(entry->result.contains(entry.getKey()))
+                .sorted((a, b) -> new Integer(b.getValue().get()).compareTo(a.getValue().get()))
+                .map(entry->{
+                    Doc doc = new Doc();
+                    doc.setId(entry.getKey());
+                    doc.setHitTermCount(entry.getValue().get());
+                    return doc;
+                })
+                .collect(Collectors.toList());
         long cost = System.currentTimeMillis()-start;
         LOGGER.info("命中数：："+result.size());
         LOGGER.info("查询索引耗时："+cost+"毫秒");
-        return result;
+        return finalResult;
     }
 
-    public static Map<Integer, String> docs(List<Integer> ids){
-        long start = System.currentTimeMillis();
-        int lineCount=0;
-        Map<Integer, String> data = new HashMap<>();
+    public static void docs(List<Doc> docs, int start, int length){
+        docs(docs.subList(start, start+length));
+    }
+
+    public static void docs(List<Doc> docs){
+        long startTime = System.currentTimeMillis();
+        int lineCount = 0;
+        Set<Integer> ids = docs.parallelStream().map(doc -> doc.getId()).collect(Collectors.toSet());
+        final Map<Integer, String> data = new HashMap<>();
         try(BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(INDEX_TEXT)))){
             String line = null;
-            while (data.size()<ids.size() && (line=reader.readLine())!=null){
+            while (data.size()<docs.size() && (line=reader.readLine())!=null){
                 lineCount++;
                 if(ids.contains(lineCount)){
                     data.put(lineCount, line);
@@ -107,52 +134,102 @@ public class TextSearcher {
         }catch (Exception e){
             LOGGER.error("读取文件失败", e);
         }
-        long cost = System.currentTimeMillis()-start;
+        docs.parallelStream().forEach(doc->doc.setText(data.get(doc.getId())));
+        data.clear();
+        ids.clear();
+        ids = null;
+        long cost = System.currentTimeMillis()-startTime;
         LOGGER.info("准备文本耗时："+cost+"毫秒");
-        return data;
     }
 
-    private static List<Integer> term(String word){
+    private static Set<Integer> term(String word, Map<Integer, AtomicInteger> statisticsContainer){
         String docs = INDEX_MAP.get(word);
         if(docs==null){
-            return Collections.emptyList();
+            return Collections.emptySet();
         }
         String[] ids = docs.split("\\|");
-        List<Integer> list = new ArrayList<>();
+        Set<Integer> set = new HashSet<>();
         int last=0;
         for(String id : ids){
             int delta = Integer.parseInt(id);
             last+=delta;
-            list.add(last);
+            addOne(statisticsContainer, last);
+            set.add(last);
         }
-        return list;
+        return set;
     }
 
+    private static void addOne(Map<Integer, AtomicInteger> statisticsContainer, Integer docId){
+        statisticsContainer.putIfAbsent(docId, new AtomicInteger());
+        statisticsContainer.get(docId).incrementAndGet();
+    }
+    public static class Doc{
+        private int id;
+        private int hitTermCount;
+        private String text;
+
+        public int getId() {
+            return id;
+        }
+
+        public void setId(int id) {
+            this.id = id;
+        }
+
+        public int getHitTermCount() {
+            return hitTermCount;
+        }
+
+        public void setHitTermCount(int hitTermCount) {
+            this.hitTermCount = hitTermCount;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+    }
     public static enum SearchMode{
         INTERSECTION, UNION;
 
-        private static List<Integer> intersection(List<Integer> one, List<Integer> two){
-            return one.stream().filter(i->two.contains(i)).collect(Collectors.toList());
+        /**
+         * 求one和two的交集，合并结果存储于one中
+         * @param one
+         * @param two
+         */
+        private static void intersection(Set<Integer> one, Set<Integer> two){
+            one.forEach(item->{
+                if(!two.contains(item)){
+                    one.remove(item);
+                }
+            });
         }
 
-        private static List<Integer> union(List<Integer> one, List<Integer> two){
+        /**
+         * 求one和two的并集，合并结果存储于one中
+         * @param one
+         * @param two
+         */
+        private static void union(Set<Integer> one, Set<Integer> two){
             two.forEach(item->{
                 if(!one.contains(item)){
                     one.add(item);
                 }
             });
-            return one;
         }
     }
     public static void main(String[] args) {
-        Map<Integer, String> data = search("In addition, if ent is not specified, the named resource is not initialized in the naming.");
-        LOGGER.info("搜索结果数："+data.size());
+        List<Doc> docs = search("In addition, if ent is not specified, the named resource is not initialized in the naming.");
+        LOGGER.info("搜索结果数："+docs.size());
         AtomicInteger i = new AtomicInteger();
-        data.entrySet().forEach(e->LOGGER.info("结果"+i.incrementAndGet()+"、行号："+e.getKey()+"，句子："+e.getValue()));
+        docs.forEach(doc -> LOGGER.info("结果" + i.incrementAndGet() + "、ID：" + doc.getId() + "，包含的关键词个数：" + doc.getHitTermCount() + "，句子：" + doc.getText()));
         //查找同义词例句
-        data = search("agree accept approve", SearchMode.UNION);
-        LOGGER.info("搜索结果数："+data.size());
+        docs = search("nutch hadoop hbase pig hive elasticsearch solr", SearchMode.UNION);
+        LOGGER.info("搜索结果数："+docs.size());
         AtomicInteger j = new AtomicInteger();
-        data.entrySet().forEach(e->LOGGER.info("结果"+j.incrementAndGet()+"、行号："+e.getKey()+"，句子："+e.getValue()));
+        docs.forEach(doc -> LOGGER.info("结果" + j.incrementAndGet() + "、ID：" + doc.getId() + "，包含的关键词个数：" + doc.getHitTermCount() + "，句子：" + doc.getText()));
     }
 }
