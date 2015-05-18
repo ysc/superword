@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.jsearch;
 
 import java.util.Collection;
 import java.util.HashMap;

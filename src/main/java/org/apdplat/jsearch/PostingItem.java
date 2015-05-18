@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.apdplat.superword.tools;
+package org.apdplat.jsearch;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -72,9 +72,9 @@ public class PostingItem implements Comparable{
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof org.apdplat.superword.tools.PostingItem)) return false;
+        if (!(o instanceof PostingItem)) return false;
 
-        org.apdplat.superword.tools.PostingItem postingItem = (org.apdplat.superword.tools.PostingItem) o;
+        PostingItem postingItem = (PostingItem) o;
 
         return docId == postingItem.docId;
 
@@ -87,6 +87,6 @@ public class PostingItem implements Comparable{
 
     @Override
     public int compareTo(Object o) {
-        return new Integer(docId).compareTo(((org.apdplat.superword.tools.PostingItem) o).getDocId());
+        return new Integer(docId).compareTo(((PostingItem) o).getDocId());
     }
 }
