@@ -19,6 +19,7 @@
  */
 package org.apdplat.jsearch.search;
 
+import org.apdplat.jsearch.score.ProximityScore;
 import org.apdplat.jsearch.score.Score;
 import org.apdplat.jsearch.score.WordFrequencyScore;
 import org.apdplat.superword.tools.TextAnalyzer;
@@ -249,13 +250,14 @@ public class TextSearcher {
     }
     public static void main(String[] args) {
         TextSearcher textSearcher = new TextSearcher();
+        textSearcher.setScore(new ProximityScore());
         //SearchMode.INTERSECTION
         List<Doc> docs = textSearcher.search("In addition, if ent is not specified, the named resource is not initialized in the naming.");
         LOGGER.info("搜索结果数："+docs.size());
         AtomicInteger i = new AtomicInteger();
         docs.forEach(doc -> LOGGER.info("Result" + i.incrementAndGet() + "、ID：" + doc.getId() + "，Score：" + doc.getScore() + "，Text：" + doc.getText()));
-        //SearchMode.UNION
-        docs = textSearcher.search("Programming Hive introduces Hive", SearchMode.UNION);
+        //SearchMode.INTERSECTION
+        docs = textSearcher.search("programming language", SearchMode.INTERSECTION);
         LOGGER.info("搜索结果数："+docs.size());
         AtomicInteger j = new AtomicInteger();
         docs.forEach(doc -> LOGGER.info("Result" + j.incrementAndGet() + "、ID：" + doc.getId() + "，Score：" + doc.getScore() + "，Text：" + doc.getText()));
