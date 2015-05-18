@@ -45,7 +45,8 @@ public class TextIndexer {
 
     public static void index(String path){
         try {
-            Map<String, Set<Integer>> index = new HashMap<>();
+            //词 ->  [{文档ID,位置}, {文档ID,位置}]
+            Map<String, Posting> index = new HashMap<>();
             AtomicInteger lineCount = new AtomicInteger();
             BufferedWriter writer = Files.newBufferedWriter(Paths.get(INDEX_TEXT), Charset.forName("utf-8"));
             //将所有文本合成一个文件，每一行分配一个行号
@@ -57,12 +58,18 @@ public class TextIndexer {
                         try {
                             writer.append(line).append("《").append(Paths.get(file).getFileName().toString().split("\\.")[0]).append("》【").append(lines.size()+"/"+i.incrementAndGet()).append("】\n");
                             lineCount.incrementAndGet();
-                            TextAnalyzer.seg(line).forEach(word -> {
-                                index.putIfAbsent(word, new HashSet<>());
+                            List<String> words = TextAnalyzer.seg(line);
+                            for(int j=0; j< words.size(); j++){
+                                String word = words.get(j);
+                                //准备倒排表
+                                index.putIfAbsent(word, new Posting());
+                                //倒排表长度限制
                                 if(index.get(word).size()<INDEX_LENGTH_LIMIT) {
-                                    index.get(word).add(lineCount.get());
+                                    //一篇文档对应倒排表中的一项
+                                    index.get(word).putIfAbsent(lineCount.get());
+                                    index.get(word).get(lineCount.get()).addPosition(j+1);
                                 }
-                            });
+                            }
                         } catch (IOException e) {
                             LOGGER.error("文件写入错误", e);
                         }
@@ -80,15 +87,11 @@ public class TextIndexer {
                 .sorted((a,b)->(b.getValue().size()-a.getValue().size()))
                 .map(entry -> {
                     StringBuilder docs = new StringBuilder();
-                    AtomicInteger last = new AtomicInteger();
-                    entry.getValue().stream().sorted().forEach(d -> {
-                        if (last.get() == 0) {
-                            docs.append(d).append("|");
-                        } else {
-                            //保存增量
-                            docs.append(d-last.get()).append("|");
-                        }
-                        last.set(d);
+                    AtomicInteger lastDocId = new AtomicInteger();
+                    entry.getValue().getPostingItems().stream().sorted().forEach(postingItem -> {
+                        //保存增量
+                        docs.append(postingItem.getDocId()-lastDocId.get()).append("_").append(postingItem.getFrequency()).append("_").append(postingItem.positionsToStr()).append("|");
+                        lastDocId.set(postingItem.getDocId());
                     });
                     if (docs.length() > 1) {
                         docs.setLength(docs.length() - 1);
@@ -104,6 +107,7 @@ public class TextIndexer {
     }
 
     public static void main(String[] args) {
+        //index("src/test/resources/text");
         index("src/main/resources/it");
     }
 }

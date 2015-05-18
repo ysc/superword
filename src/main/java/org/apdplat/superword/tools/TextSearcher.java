@@ -23,7 +23,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -79,7 +78,7 @@ public class TextSearcher {
         LOGGER.info("搜索关键词："+keyword);
         List<String> words = TextAnalyzer.seg(keyword);
         LOGGER.info("分词结果："+words);
-        final Set<Integer> result = new ConcurrentSkipListSet<>();
+        final Set<PostingItem> result = new ConcurrentSkipListSet<>();
         //文档打分使用
         Map<Integer, AtomicInteger> termCountPerDoc = new HashMap<>();
         if(words.size()==1){
@@ -99,7 +98,7 @@ public class TextSearcher {
         List<Doc> finalResult = termCountPerDoc
                 .entrySet()
                 .stream()
-                .filter(entry->result.contains(entry.getKey()))
+                .filter(entry->result.contains(new PostingItem(entry.getKey())))
                 .sorted((a, b) -> new Integer(b.getValue().get()).compareTo(a.getValue().get()))
                 .map(entry->{
                     Doc doc = new Doc();
@@ -142,56 +141,36 @@ public class TextSearcher {
         LOGGER.info("准备文本耗时："+cost+"毫秒");
     }
 
-    private static Set<Integer> term(String word, Map<Integer, AtomicInteger> statisticsContainer){
-        String docs = INDEX_MAP.get(word);
-        if(docs==null){
+    private static Set<PostingItem> term(String word, Map<Integer, AtomicInteger> frequencyContainer){
+        String posting = INDEX_MAP.get(word);
+        if(posting==null){
             return Collections.emptySet();
         }
-        String[] ids = docs.split("\\|");
-        Set<Integer> set = new HashSet<>();
-        int last=0;
-        for(String id : ids){
-            int delta = Integer.parseInt(id);
-            last+=delta;
-            addOne(statisticsContainer, last);
-            set.add(last);
+        String[] postingItems = posting.split("\\|");
+        Set<PostingItem> set = new HashSet<>();
+        int lastDocId=0;
+        for(String postingItem : postingItems){
+            String[] postingItemAttr = postingItem.split("_");
+            int delta = Integer.parseInt(postingItemAttr[0]);
+            lastDocId+=delta;
+            int frequency = Integer.parseInt(postingItemAttr[1]);
+            String positions = postingItemAttr[2];
+            PostingItem item = new PostingItem(lastDocId);
+            item.setFrequency(frequency);
+            for(String position : positions.split(":")){
+                item.addPosition(Integer.parseInt(position));
+            }
+            set.add(item);
+            frequencyDoc(frequencyContainer, lastDocId, frequency);
         }
         return set;
     }
 
-    private static void addOne(Map<Integer, AtomicInteger> statisticsContainer, Integer docId){
-        statisticsContainer.putIfAbsent(docId, new AtomicInteger());
-        statisticsContainer.get(docId).incrementAndGet();
+    private static void frequencyDoc(Map<Integer, AtomicInteger> frequencyContainer, Integer docId, int frequency){
+        frequencyContainer.putIfAbsent(docId, new AtomicInteger());
+        frequencyContainer.get(docId).addAndGet(frequency);
     }
-    public static class Doc{
-        private int id;
-        private int hitTermCount;
-        private String text;
 
-        public int getId() {
-            return id;
-        }
-
-        public void setId(int id) {
-            this.id = id;
-        }
-
-        public int getHitTermCount() {
-            return hitTermCount;
-        }
-
-        public void setHitTermCount(int hitTermCount) {
-            this.hitTermCount = hitTermCount;
-        }
-
-        public String getText() {
-            return text;
-        }
-
-        public void setText(String text) {
-            this.text = text;
-        }
-    }
     public static enum SearchMode{
         INTERSECTION, UNION;
 
@@ -200,7 +179,7 @@ public class TextSearcher {
          * @param one
          * @param two
          */
-        private static void intersection(Set<Integer> one, Set<Integer> two){
+        private static void intersection(Set<PostingItem> one, Set<PostingItem> two){
             one.forEach(item->{
                 if(!two.contains(item)){
                     one.remove(item);
@@ -213,7 +192,7 @@ public class TextSearcher {
          * @param one
          * @param two
          */
-        private static void union(Set<Integer> one, Set<Integer> two){
+        private static void union(Set<PostingItem> one, Set<PostingItem> two){
             two.forEach(item->{
                 if(!one.contains(item)){
                     one.add(item);
@@ -222,12 +201,13 @@ public class TextSearcher {
         }
     }
     public static void main(String[] args) {
+        //SearchMode.INTERSECTION
         List<Doc> docs = search("In addition, if ent is not specified, the named resource is not initialized in the naming.");
         LOGGER.info("搜索结果数："+docs.size());
         AtomicInteger i = new AtomicInteger();
         docs.forEach(doc -> LOGGER.info("结果" + i.incrementAndGet() + "、ID：" + doc.getId() + "，包含的关键词个数：" + doc.getHitTermCount() + "，句子：" + doc.getText()));
-        //查找同义词例句
-        docs = search("nutch hadoop hbase pig hive elasticsearch solr", SearchMode.UNION);
+        //SearchMode.UNION
+        docs = search("Distributed Algorithms", SearchMode.UNION);
         LOGGER.info("搜索结果数："+docs.size());
         AtomicInteger j = new AtomicInteger();
         docs.forEach(doc -> LOGGER.info("结果" + j.incrementAndGet() + "、ID：" + doc.getId() + "，包含的关键词个数：" + doc.getHitTermCount() + "，句子：" + doc.getText()));
