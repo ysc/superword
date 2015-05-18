@@ -33,6 +33,33 @@ import java.util.stream.Collectors;
 
 /**
  * 文本索引
+ *
+ * 索引文件结构：
+ * 1、一个词的索引由=分割的三部分组成，第一部分是词，第二部分是这个词在多少个文档中出现过（上限1000），第三部分是倒排表
+ * 2、倒排表由多个倒排表项目组成，倒排表项目之间使用|分割
+ * 3、倒排表项目的组成又分为三部分，用_分割，第一部分是文档ID，第二部分是词频，第三部分是词的位置
+ * 4、词的位置用:分割
+ *
+ * 例如:
+ * the=1000=1_2_3:13|1_3_15:31:35
+ * 表示词the的索引：
+ * 词：the
+ * 有1000个文档包含the这个词
+ * 包含这个词的第一篇文档的ID是1，the的词频是2，出现the的位置分别是3和13
+ * 包含这个词的第二篇文档的ID是1+1=2，the的词频是3，出现the的位置分别是是15、31和35
+ *
+ * ID为1的文档的内容为：
+ * License perpetual the right patent rig Implement interfaces Space, or
+ * Licensor implemen the applic foregoing hereunder extent of interest in
+ * Lead's lic registered.《Java EE 7 Specification》【1213/1】
+ *
+ * ID为2的文档的内容为：
+ * Specification Lead hereby grants you a fully-paid, non-exclusive,
+ * ferable, worldwide, limited license (without the right to sublicense),
+ * under Specification Lead's intellectual property rights to view, download,
+ * use and reproduce the Specification only for the internal evaluation.
+ * 《Java EE 7 Specification》【1213/2】
+ *
  * @author 杨尚川
  */
 public class TextIndexer {
