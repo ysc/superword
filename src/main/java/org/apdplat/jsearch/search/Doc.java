@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.apdplat.jsearch;
+package org.apdplat.jsearch.search;
 
 import java.util.*;
 

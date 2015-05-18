@@ -17,8 +17,10 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
-package org.apdplat.jsearch;
+package org.apdplat.jsearch.search;
 
+import org.apdplat.jsearch.score.Score;
+import org.apdplat.jsearch.score.WordFrequencyScore;
 import org.apdplat.superword.tools.TextAnalyzer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

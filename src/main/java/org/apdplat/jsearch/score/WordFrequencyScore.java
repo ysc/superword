@@ -16,7 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.apdplat.jsearch;
+package org.apdplat.jsearch.score;
+
+import org.apdplat.jsearch.search.Doc;
 
 /**
  * 词频评分组件

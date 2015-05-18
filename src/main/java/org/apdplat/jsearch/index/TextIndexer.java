@@ -17,7 +17,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
-package org.apdplat.jsearch;
+package org.apdplat.jsearch.index;
 
 import org.apdplat.superword.tools.TextAnalyzer;
 import org.slf4j.Logger;

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.apdplat.jsearch;
+package org.apdplat.jsearch.index;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -88,6 +88,6 @@ public class PostingItem implements Comparable{
 
     @Override
     public int compareTo(Object o) {
-        return new Integer(docId).compareTo(((PostingItem) o).getDocId());
+        return Integer.valueOf(docId).compareTo(((PostingItem) o).getDocId());
     }
 }
