@@ -20,6 +20,8 @@ package org.apdplat.jsearch.score;
 
 import org.apdplat.jsearch.search.Doc;
 
+import java.util.List;
+
 /**
  * 词频评分组件
  * @author 杨尚川
@@ -27,7 +29,7 @@ import org.apdplat.jsearch.search.Doc;
 public class WordFrequencyScore implements Score {
 
     @Override
-    public Float score(Doc doc) {
+    public Float score(Doc doc, List<String> words) {
         return Float.valueOf(doc.getFrequency());
     }
 }

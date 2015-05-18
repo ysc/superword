@@ -20,10 +20,18 @@ package org.apdplat.jsearch.score;
 
 import org.apdplat.jsearch.search.Doc;
 
+import java.util.List;
+
 /**
  * 评分组件
  * @author 杨尚川
  */
 public interface Score {
-    public Float score(Doc doc);
+    /**
+     * 文档评分
+     * @param doc 文档
+     * @param words 分好词的查询关键词
+     * @return 分值
+     */
+    public Float score(Doc doc, List<String> words);
 }

@@ -138,7 +138,7 @@ public class TextSearcher {
         List<Doc> finalResult = result.parallelStream()
                 //评分
                 .map(doc -> {
-                    doc.setScore(score.score(doc));
+                    doc.setScore(score.score(doc, words));
                     return doc;
                 })
                 //排序
