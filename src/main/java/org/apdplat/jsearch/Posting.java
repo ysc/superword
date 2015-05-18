@@ -19,6 +19,7 @@
 package org.apdplat.jsearch;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -30,11 +31,11 @@ public class Posting {
     private Map<Integer, PostingItem> postingItems = new HashMap<>();
 
     public int size(){
-        return postingItems.size();
+        return this.postingItems.size();
     }
 
     public Collection<PostingItem> getPostingItems() {
-        return postingItems.values();
+        return Collections.unmodifiableCollection(this.postingItems.values());
     }
 
     public void putIfAbsent(int docId){
@@ -42,7 +43,7 @@ public class Posting {
     }
 
     public PostingItem get(int docId){
-        return postingItems.get(docId);
+        return this.postingItems.get(docId);
     }
 
     public void remove(PostingItem postingItem){

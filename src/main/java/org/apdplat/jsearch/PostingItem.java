@@ -18,6 +18,7 @@
 
 package org.apdplat.jsearch;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -58,7 +59,7 @@ public class PostingItem implements Comparable{
     }
 
     public Set<Integer> getPositions() {
-        return this.positions;
+        return Collections.unmodifiableSet(this.positions);
     }
 
     public void addPosition(int position) {
