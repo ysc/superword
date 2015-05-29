@@ -38,18 +38,12 @@ import java.util.stream.Collectors;
 public class SimilarWord {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimilarWord.class);
     //所有的文本相似度算法
-    private static final List<TextSimilarity> ALL_TEXT_SIMILARITIES = Arrays.asList(new SimpleTextSimilarity(),
-            new CosineTextSimilarity(),
+    private static final List<TextSimilarity> ALL_TEXT_SIMILARITIES = Arrays.asList(
             new EditDistanceTextSimilarity(),
-            new EuclideanDistanceTextSimilarity(),
-            new ManhattanDistanceTextSimilarity(),
-            new JaccardTextSimilarity(),
             new JaroDistanceTextSimilarity(),
-            new JaroWinklerDistanceTextSimilarity(),
-            new SørensenDiceCoefficientTextSimilarity(),
-            new SimHashPlusHammingDistanceTextSimilarity());
+            new JaroWinklerDistanceTextSimilarity());
     private boolean all = false;
-    private int limit = 15;
+    private int limit = 45;
     private TextSimilarity textSimilarity = new EditDistanceTextSimilarity();
 
     public int getLimit() {
@@ -85,19 +79,12 @@ public class SimilarWord {
 
     private void tip(){
         LOGGER.info("----------------------------------------------------------");
-        LOGGER.info("可通过输入命令sa=cos来指定相似度算法，可用的算法有：");
-        LOGGER.info("   1、sa=cos，余弦相似度");
-        LOGGER.info("   2、sa=edi，编辑距离");
-        LOGGER.info("   3、sa=euc，欧几里得距离");
-        LOGGER.info("   4、sa=sim，简单共有词");
-        LOGGER.info("   5、sa=jac，Jaccard相似性系数");
-        LOGGER.info("   6、sa=man，曼哈顿距离");
-        LOGGER.info("   7、sa=shh，SimHash + 汉明距离");
-        LOGGER.info("   8、sa=ja，Jaro距离");
-        LOGGER.info("   9、sa=jaw，Jaro–Winkler距离");
-        LOGGER.info("   10、sa=sd，Sørensen–Dice系数");
+        LOGGER.info("可通过输入命令sa=edi来指定相似度算法，可用的算法有：");
+        LOGGER.info("   1、sa=edi，编辑距离");
+        LOGGER.info("   2、sa=ja，Jaro距离");
+        LOGGER.info("   3、sa=jaw，Jaro–Winkler距离");
         LOGGER.info("可通过输入命令sa=all来启用所有的相似度算法");
-        LOGGER.info("可通过输入命令limit=15来指定显示结果条数");
+        LOGGER.info("可通过输入命令limit=45来指定显示结果条数");
         LOGGER.info("可通过输入命令exit退出程序");
         LOGGER.info("输入要查询的词或命令：");
     }
@@ -120,22 +107,16 @@ public class SimilarWord {
                 }
                 if(line.startsWith("sa=")){
                     switch (line.substring(3)){
-                        case "cos": setTextSimilarity(new CosineTextSimilarity());all=false;continue;
                         case "edi": setTextSimilarity(new EditDistanceTextSimilarity());all=false;continue;
-                        case "euc": setTextSimilarity(new EuclideanDistanceTextSimilarity());all=false;continue;
-                        case "sim": setTextSimilarity(new SimpleTextSimilarity());all=false;continue;
-                        case "jac": setTextSimilarity(new JaccardTextSimilarity());all=false;continue;
-                        case "man": setTextSimilarity(new ManhattanDistanceTextSimilarity());all=false;continue;
-                        case "shh": setTextSimilarity(new SimHashPlusHammingDistanceTextSimilarity());all=false;continue;
                         case "ja": setTextSimilarity(new JaroDistanceTextSimilarity());all=false;continue;
                         case "jaw": setTextSimilarity(new JaroWinklerDistanceTextSimilarity());all=false;continue;
-                        case "sd": setTextSimilarity(new SørensenDiceCoefficientTextSimilarity());all=false;continue;
                         case "all": LOGGER.info("启用所有的相似度算法");all=true;continue;
                     }
                     continue;
                 }
                 LOGGER.info("计算相似词：" + line);
                 LOGGER.info("显示结果数目：" + limit);
+                LOGGER.info("----------------------------------------------------------");
                 if(all){
                     process(line, words, ALL_TEXT_SIMILARITIES);
                 }else{
@@ -152,7 +133,7 @@ public class SimilarWord {
         LOGGER.info("----------------------------------------------------------");
         LOGGER.info(word+" 的相似词（"+textSimilarity.getClass().getSimpleName()+"）：");
         long start = System.currentTimeMillis();
-        Hits hits = compute(word, getTextSimilarity(), words, limit);
+        Hits hits = compute(word, textSimilarity, words, limit);
         long cost = System.currentTimeMillis() - start;
         AtomicInteger i = new AtomicInteger();
         for(Hit hit : hits.getHits()){
