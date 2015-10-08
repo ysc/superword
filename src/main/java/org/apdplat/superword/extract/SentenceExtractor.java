@@ -240,7 +240,7 @@ public class SentenceExtractor {
     }
 
     public static void main(String[] args) throws Exception{
-        Map<String, String> data = extract(1312);
+        Map<String, String> data = extract(1549);
         LOGGER.info("data 1 size:"+data.size());
         String html = HtmlFormatter.toHtmlForSentence(data, WORD_FREQUENCE);
         Files.write(Paths.get("src/main/resources/sentences_1.txt"), html.toString().getBytes("utf-8"));
