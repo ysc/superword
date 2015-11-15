@@ -75,6 +75,9 @@ public class KungFuPanda {
             if(w.endsWith("s") && cet4.contains(new Word(w.substring(0, w.length()-1), ""))){
                 return;
             }
+            if(w.endsWith("ed") && cet4.contains(new Word(w.substring(0, w.length() - 1), ""))){
+                return;
+            }
             if(w.endsWith("ed") && cet4.contains(new Word(w.substring(0, w.length() - 2), ""))){
                 return;
             }
