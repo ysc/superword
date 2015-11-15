@@ -6,6 +6,7 @@
 
 ###[捐赠致谢](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
 
+###[如何正确地快速地看电影学英语](http://my.oschina.net/apdplat/blog/530605)
 ###[使用Java8实现自己的个性化搜索引擎](http://my.oschina.net/apdplat/blog/396193)
 ###[192本软件著作用词分析](http://my.oschina.net/apdplat/blog/392496)
 ###[2000个软件开发领域的高频特殊词及精选例句](http://my.oschina.net/apdplat/blog/389200)
