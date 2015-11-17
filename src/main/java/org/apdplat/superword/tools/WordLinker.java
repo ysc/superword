@@ -34,7 +34,7 @@ public class WordLinker {
     private WordLinker(){}
 
     //链接到爱词霸还是有道, 设置为true表示链接到爱词霸, 设置为false表示链接到有道
-    public static boolean useICIBA = true;
+    public volatile static boolean useICIBA = true;
 
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
