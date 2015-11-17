@@ -29,11 +29,7 @@
 <%
     String dict = request.getParameter("dict");
     if(dict != null){
-        if ("爱词霸".equals(dict)) {
-            WordLinker.useICIBA = true;
-        } else if ("有道".equals(dict)) {
-            WordLinker.useICIBA = false;
-        }
+        WordLinker.dictionary = dict;
     }
     String suffixes = request.getParameter("suffixes");
     String htmlFragment = "";
@@ -75,23 +71,10 @@
     <p>
         <font color="red">输入动态后缀：</font><input id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50">
     </p>
+
     <p>
         <font color="red">选择词典：</font>
-        <select name="dict" id="dict">
-            <%
-                if(WordLinker.useICIBA){
-            %>
-            <option value="爱词霸" selected = "selected">爱词霸</option>
-            <option value="有道">有道</option>
-            <%
-                }else{
-            %>
-            <option value="爱词霸">爱词霸</option>
-            <option value="有道" selected = "selected">有道</option>
-            <%
-                }
-            %>
-        </select>
+        <jsp:include page="dictionary-select.jsp"/>
     </p>
     <p></p>
     <h2><a href="#" onclick="submit();">提交</a></h2>
