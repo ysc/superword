@@ -28,18 +28,22 @@ import java.util.regex.Pattern;
 
 /**
  * 单词链接工具
+ * ICIBA:爱词霸
+ * YOUDAO:有道
+ * COLLINS:柯林斯
  * @author 杨尚川
  */
 public class WordLinker {
     private WordLinker(){}
 
-    //链接到爱词霸还是有道, 设置为true表示链接到爱词霸, 设置为false表示链接到有道
-    public volatile static boolean useICIBA = true;
+    //链接到哪个词典
+    public volatile static String dictionary = "ICIBA";
 
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
     private static final String ICIBA = "http://www.iciba.com/";
     private static final String YOUDAO = "http://dict.youdao.com/search?q=";
+    private static final String COLLINS = "http://www.collinsdictionary.com/dictionary/english/";
 
     public static String toLink(String word){
         return toLink(word, "");
@@ -49,11 +53,13 @@ public class WordLinker {
         return toLink(word, emphasize, EM_PRE, EM_SUF);
     }
     public static String toLink(String word, String emphasize, String emPre, String emSuf){
-        if(useICIBA) {
-            return linkToICIBA(word, emphasize, emPre, emSuf);
-        }else{
-            return linkToYOUDAO(word, emphasize, emPre, emSuf);
+        switch (dictionary){
+            case ICIBA: return linkToICIBA(word, emphasize, emPre, emSuf);
+            case YOUDAO: return linkToYOUDAO(word, emphasize, emPre, emSuf);
+            case COLLINS: return linkToCOLLINS(word, emphasize, emPre, emSuf);
         }
+        //default
+        return linkToICIBA(word, emphasize, emPre, emSuf);
     }
 
     private static String linkToICIBA(String word, String emphasize, String emPre, String emSuf){
@@ -61,6 +67,9 @@ public class WordLinker {
     }
     private static String linkToYOUDAO(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, YOUDAO);
+    }
+    private static String linkToCOLLINS(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, COLLINS);
     }
     private static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
         StringBuilder p = new StringBuilder();
@@ -74,7 +83,6 @@ public class WordLinker {
         StringBuilder html = new StringBuilder();
         html.append("<a target=\"_blank\" href=\"")
                 .append(webSite)
-                .append(word.replaceAll("\\s+", "_"))
                 .append("\">");
         if(StringUtils.isNotBlank(emphasize)) {
             Set<String> targets = new HashSet<>();
