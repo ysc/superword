@@ -56,3 +56,4 @@
 ###项目中最重要的素材之一是IT领域中和软件开发相关的249本电子书，大多数书都跟大数据和搜索引擎有关系，因为这是我的研究方向。这些书我打包到了一起并提供下载：[it-software-domain.zip](http://pan.baidu.com/s/1kT1NA3l)
 
 ###[在线英语词典](http://my.oschina.net/apdplat/blog/425004)
+###[英语学习资源推荐](http://my.oschina.net/apdplat/blog/473088)
