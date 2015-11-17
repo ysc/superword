@@ -23,9 +23,18 @@
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.rule.DynamicSuffixRule" %>
 <%@ page import="java.util.ArrayList" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
+    String dict = request.getParameter("dict");
+    if(dict != null){
+        if ("爱词霸".equals(dict)) {
+            WordLinker.useICIBA = true;
+        } else if ("有道".equals(dict)) {
+            WordLinker.useICIBA = false;
+        }
+    }
     String suffixes = request.getParameter("suffixes");
     String htmlFragment = "";
     if(suffixes != null && !"".equals(suffixes.trim()) && suffixes.contains("-")){
@@ -47,23 +56,45 @@
     <script type="text/javascript">
         function submit(){
             var suffixes = document.getElementById("suffixes").value;
+            var dict = document.getElementById("dict").value;
             if(suffixes == ""){
                 return;
             }
-            location.href = "dynamic-suffix-rule.jsp?suffixes="+suffixes;
+            location.href = "dynamic-suffix-rule.jsp?suffixes="+suffixes+"&dict="+dict;
         }
     </script>
 </head>
 <body>
-    <p>
+    <h2>
         ***用法说明:
         动态后缀规则，比如规则为：ise-ize，表示单词集合中
         有两个词分别以ise和ize结尾
         且除了后缀外，其他部分都相同
+    </h2>
+    <p>
+        <font color="red">输入动态后缀：</font><input id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50">
     </p>
-    <font color="red">输入动态后缀：</font><input id="suffixes" name="suffixes" size="50" maxlength="50">
+    <p>
+        <font color="red">选择词典：</font>
+        <select name="dict" id="dict">
+            <%
+                if(WordLinker.useICIBA){
+            %>
+            <option value="爱词霸" selected = "selected">爱词霸</option>
+            <option value="有道">有道</option>
+            <%
+                }else{
+            %>
+            <option value="爱词霸">爱词霸</option>
+            <option value="有道" selected = "selected">有道</option>
+            <%
+                }
+            %>
+        </select>
+    </p>
     <p></p>
     <h2><a href="#" onclick="submit();">提交</a></h2>
+    <h2><a href="index.jsp">主页</a></h2>
     <%=htmlFragment%>
 </body>
 </html>
