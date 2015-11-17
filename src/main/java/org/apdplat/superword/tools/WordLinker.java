@@ -31,6 +31,7 @@ import java.util.regex.Pattern;
  * ICIBA:爱词霸
  * YOUDAO:有道
  * COLLINS:柯林斯
+ * WEBSTER:韦氏
  * @author 杨尚川
  */
 public class WordLinker {
@@ -44,6 +45,8 @@ public class WordLinker {
     private static final String ICIBA = "http://www.iciba.com/";
     private static final String YOUDAO = "http://dict.youdao.com/search?q=";
     private static final String COLLINS = "http://www.collinsdictionary.com/dictionary/english/";
+    private static final String WEBSTER = "http://www.wordcentral.com/cgi-bin/student?";
+
 
     public static String toLink(String word){
         return toLink(word, "");
@@ -57,6 +60,7 @@ public class WordLinker {
             case ICIBA: return linkToICIBA(word, emphasize, emPre, emSuf);
             case YOUDAO: return linkToYOUDAO(word, emphasize, emPre, emSuf);
             case COLLINS: return linkToCOLLINS(word, emphasize, emPre, emSuf);
+            case WEBSTER: return linkToWEBSTER(word, emphasize, emPre, emSuf);
         }
         //default
         return linkToICIBA(word, emphasize, emPre, emSuf);
@@ -69,6 +73,9 @@ public class WordLinker {
         return linkTo(word, emphasize, emPre, emSuf, YOUDAO);
     }
     private static String linkToCOLLINS(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, COLLINS);
+    }
+    private static String linkToWEBSTER(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, COLLINS);
     }
     private static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
