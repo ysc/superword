@@ -114,6 +114,7 @@ public class WordLinker {
         StringBuilder html = new StringBuilder();
         html.append("<a target=\"_blank\" href=\"")
                 .append(webSite)
+                .append(word)
                 .append("\">");
         if(StringUtils.isNotBlank(emphasize)) {
             Set<String> targets = new HashSet<>();
@@ -128,5 +129,26 @@ public class WordLinker {
         }
         html.append(word).append("</a>");
         return html.toString();
+    }
+
+    public static void main(String[] args) {
+        String word = "fabulous";
+        dictionary = "ICIBA";
+        System.out.println(toLink(word));
+        dictionary = "YOUDAO";
+        System.out.println(toLink(word));
+        dictionary = "COLLINS";
+        System.out.println(toLink(word));
+        dictionary = "WEBSTER";
+        System.out.println(toLink(word));
+        dictionary = "OXFORD";
+        System.out.println(toLink(word));
+        dictionary = "CAMBRIDGE";
+        System.out.println(toLink(word));
+        dictionary = "MACMILLAN";
+        System.out.println(toLink(word));
+        dictionary = "HERITAGE";
+        System.out.println(toLink(word));
+
     }
 }
