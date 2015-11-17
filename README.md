@@ -6,6 +6,31 @@
 
 ###[捐赠致谢](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
 
+###使用方法：
+
+    1、安装JDK8和Maven3.3.3
+        将JDK的bin目录和Maven的bin目录加入PATH环境变量，确保在命令行能调用java和mvn命令：
+        java -version
+            java version "1.8.0_60"
+        mvn -v
+            Apache Maven 3.3.3
+            
+    2、获取superword源码
+        git clone https://github.com/ysc/superword.git
+        cd superword
+        建议自己注册一个GitHub账号，将项目Fork到自己的账号下，然后再从自己的账号下签出项目源码，
+        这样便于使用GitHub的Pull requests功能进行协作开发。
+    
+    3、运行项目
+        unix类操作系统执行：
+            chmod +x startup.sh & ./startup.sh
+        windows类操作系统执行：
+            mvn clean install
+            将target/superword-1.0.war文件手动拷贝到你自己的apache-tomcat-8.0.28/webapps目录后启动tomcat
+
+    4、使用系统
+        打开浏览器访问：http://localhost:8080/superword-1.0/index.jsp
+
 ###[如何正确地快速地看电影学英语](http://my.oschina.net/apdplat/blog/530605)
 ###[使用Java8实现自己的个性化搜索引擎](http://my.oschina.net/apdplat/blog/396193)
 ###[192本软件著作用词分析](http://my.oschina.net/apdplat/blog/392496)
