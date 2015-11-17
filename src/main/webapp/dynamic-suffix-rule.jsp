@@ -65,6 +65,7 @@
     </script>
 </head>
 <body>
+    <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
     <h2>
         ***用法说明:
         动态后缀规则，比如规则为：ise-ize，表示单词集合中
