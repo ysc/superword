@@ -32,6 +32,7 @@ import java.util.regex.Pattern;
  * YOUDAO:有道
  * COLLINS:柯林斯
  * WEBSTER:韦氏
+ * OXFORD:牛津
  * @author 杨尚川
  */
 public class WordLinker {
@@ -46,7 +47,7 @@ public class WordLinker {
     private static final String YOUDAO = "http://dict.youdao.com/search?q=";
     private static final String COLLINS = "http://www.collinsdictionary.com/dictionary/english/";
     private static final String WEBSTER = "http://www.wordcentral.com/cgi-bin/student?";
-
+    private static final String OXFORD = "http://www.oxforddictionaries.com/definition/english/";
 
     public static String toLink(String word){
         return toLink(word, "");
@@ -57,10 +58,11 @@ public class WordLinker {
     }
     public static String toLink(String word, String emphasize, String emPre, String emSuf){
         switch (dictionary){
-            case ICIBA: return linkToICIBA(word, emphasize, emPre, emSuf);
-            case YOUDAO: return linkToYOUDAO(word, emphasize, emPre, emSuf);
-            case COLLINS: return linkToCOLLINS(word, emphasize, emPre, emSuf);
-            case WEBSTER: return linkToWEBSTER(word, emphasize, emPre, emSuf);
+            case "ICIBA": return linkToICIBA(word, emphasize, emPre, emSuf);
+            case "YOUDAO": return linkToYOUDAO(word, emphasize, emPre, emSuf);
+            case "COLLINS": return linkToCOLLINS(word, emphasize, emPre, emSuf);
+            case "WEBSTER": return linkToWEBSTER(word, emphasize, emPre, emSuf);
+            case "OXFORD": return linkToOXFORD(word, emphasize, emPre, emSuf);
         }
         //default
         return linkToICIBA(word, emphasize, emPre, emSuf);
@@ -76,6 +78,9 @@ public class WordLinker {
         return linkTo(word, emphasize, emPre, emSuf, COLLINS);
     }
     private static String linkToWEBSTER(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, COLLINS);
+    }
+    private static String linkToOXFORD(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, COLLINS);
     }
     private static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
