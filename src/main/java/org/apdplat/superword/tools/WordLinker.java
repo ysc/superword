@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
  * OXFORD:牛津
  * CAMBRIDGE:剑桥
  * MACMILLAN:麦克米伦
+ * HERITAGE:美国传统
  * @author 杨尚川
  */
 public class WordLinker {
@@ -52,6 +53,8 @@ public class WordLinker {
     private static final String OXFORD = "http://www.oxforddictionaries.com/definition/english/";
     private static final String CAMBRIDGE = "http://dictionary.cambridge.org/dictionary/english/";
     private static final String MACMILLAN = "http://www.macmillandictionary.com/dictionary/british/";
+    private static final String HERITAGE = "https://www.ahdictionary.com/word/search.html?q=";
+
 
     public static String toLink(String word){
         return toLink(word, "");
@@ -69,33 +72,37 @@ public class WordLinker {
             case "OXFORD": return linkToOXFORD(word, emphasize, emPre, emSuf);
             case "CAMBRIDGE": return linkToCAMBRIDGE(word, emphasize, emPre, emSuf);
             case "MACMILLAN": return linkToMACMILLAN(word, emphasize, emPre, emSuf);
+            case "HERITAGE": return linkToHERITAGE(word, emphasize, emPre, emSuf);
         }
         //default
         return linkToICIBA(word, emphasize, emPre, emSuf);
     }
 
-    private static String linkToICIBA(String word, String emphasize, String emPre, String emSuf){
+    public static String linkToICIBA(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, ICIBA);
     }
-    private static String linkToYOUDAO(String word, String emphasize, String emPre, String emSuf){
+    public static String linkToYOUDAO(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, YOUDAO);
     }
-    private static String linkToCOLLINS(String word, String emphasize, String emPre, String emSuf){
+    public static String linkToCOLLINS(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, COLLINS);
     }
-    private static String linkToWEBSTER(String word, String emphasize, String emPre, String emSuf){
+    public static String linkToWEBSTER(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, WEBSTER);
     }
-    private static String linkToOXFORD(String word, String emphasize, String emPre, String emSuf){
+    public static String linkToOXFORD(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, OXFORD);
     }
-    private static String linkToCAMBRIDGE(String word, String emphasize, String emPre, String emSuf){
+    public static String linkToCAMBRIDGE(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, CAMBRIDGE);
     }
-    private static String linkToMACMILLAN(String word, String emphasize, String emPre, String emSuf){
+    public static String linkToMACMILLAN(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, MACMILLAN);
     }
-    private static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
+    public static String linkToHERITAGE(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, HERITAGE);
+    }
+    public static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
         StringBuilder p = new StringBuilder();
         for (char c : emphasize.toCharArray()) {
             p.append("[")
