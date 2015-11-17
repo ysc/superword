@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
  * WEBSTER:韦氏
  * OXFORD:牛津
  * CAMBRIDGE:剑桥
+ * MACMILLAN:麦克米伦
  * @author 杨尚川
  */
 public class WordLinker {
@@ -50,6 +51,7 @@ public class WordLinker {
     private static final String WEBSTER = "http://www.wordcentral.com/cgi-bin/student?";
     private static final String OXFORD = "http://www.oxforddictionaries.com/definition/english/";
     private static final String CAMBRIDGE = "http://dictionary.cambridge.org/dictionary/english/";
+    private static final String MACMILLAN = "http://www.macmillandictionary.com/dictionary/british/";
 
     public static String toLink(String word){
         return toLink(word, "");
@@ -66,6 +68,7 @@ public class WordLinker {
             case "WEBSTER": return linkToWEBSTER(word, emphasize, emPre, emSuf);
             case "OXFORD": return linkToOXFORD(word, emphasize, emPre, emSuf);
             case "CAMBRIDGE": return linkToCAMBRIDGE(word, emphasize, emPre, emSuf);
+            case "MACMILLAN": return linkToMACMILLAN(word, emphasize, emPre, emSuf);
         }
         //default
         return linkToICIBA(word, emphasize, emPre, emSuf);
@@ -88,6 +91,9 @@ public class WordLinker {
     }
     private static String linkToCAMBRIDGE(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, CAMBRIDGE);
+    }
+    private static String linkToMACMILLAN(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, MACMILLAN);
     }
     private static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
         StringBuilder p = new StringBuilder();
