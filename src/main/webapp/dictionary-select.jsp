@@ -31,6 +31,7 @@
             <option value="CAMBRIDGE">剑桥</option>
             <option value="MACMILLAN">麦克米伦</option>
             <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
     } else if ("YOUDAO".equals(WordLinker.dictionary)) {
     %>
@@ -42,6 +43,7 @@
             <option value="CAMBRIDGE">剑桥</option>
             <option value="MACMILLAN">麦克米伦</option>
             <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
     } else if ("COLLINS".equals(WordLinker.dictionary)) {
     %>
@@ -53,6 +55,7 @@
             <option value="CAMBRIDGE">剑桥</option>
             <option value="MACMILLAN">麦克米伦</option>
             <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
     } else if ("WEBSTER".equals(WordLinker.dictionary)) {
     %>
@@ -64,6 +67,7 @@
             <option value="CAMBRIDGE">剑桥</option>
             <option value="MACMILLAN">麦克米伦</option>
             <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
     } else if ("OXFORD".equals(WordLinker.dictionary)) {
     %>
@@ -75,6 +79,7 @@
             <option value="CAMBRIDGE">剑桥</option>
             <option value="MACMILLAN">麦克米伦</option>
             <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
     } else if ("CAMBRIDGE".equals(WordLinker.dictionary)) {
     %>
@@ -86,6 +91,7 @@
             <option value="CAMBRIDGE" selected="selected">剑桥</option>
             <option value="MACMILLAN">麦克米伦</option>
             <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
     } else if ("MACMILLAN".equals(WordLinker.dictionary)) {
     %>
@@ -97,6 +103,7 @@
             <option value="CAMBRIDGE">剑桥</option>
             <option value="MACMILLAN" selected="selected">麦克米伦</option>
             <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
     } else if ("HERITAGE".equals(WordLinker.dictionary)) {
     %>
@@ -108,7 +115,20 @@
             <option value="CAMBRIDGE">剑桥</option>
             <option value="MACMILLAN">麦克米伦</option>
             <option value="HERITAGE" selected="selected">美国传统</option>
+            <option value="WIKTIONARY">维基词典</option>
     <%
+    } else if ("WIKTIONARY".equals(WordLinker.dictionary)) {
+    %>
+            <option value="ICIBA">爱词霸</option>
+            <option value="YOUDAO">有道</option>
+            <option value="COLLINS">柯林斯</option>
+            <option value="WEBSTER">韦氏</option>
+            <option value="OXFORD">牛津</option>
+            <option value="CAMBRIDGE">剑桥</option>
+            <option value="MACMILLAN">麦克米伦</option>
+            <option value="HERITAGE">美国传统</option>
+            <option value="WIKTIONARY" selected="selected">维基词典</option>
+            <%
     }
     %>
         </select>
