@@ -36,6 +36,7 @@ import java.util.regex.Pattern;
  * CAMBRIDGE:剑桥
  * MACMILLAN:麦克米伦
  * HERITAGE:美国传统
+ * WIKTIONARY:维基词典
  * @author 杨尚川
  */
 public class WordLinker {
@@ -54,7 +55,7 @@ public class WordLinker {
     private static final String CAMBRIDGE = "http://dictionary.cambridge.org/dictionary/english/";
     private static final String MACMILLAN = "http://www.macmillandictionary.com/dictionary/british/";
     private static final String HERITAGE = "https://www.ahdictionary.com/word/search.html?q=";
-
+    private static final String WIKTIONARY = "https://en.wiktionary.org/wiki/";
 
     public static String toLink(String word){
         return toLink(word, "");
@@ -73,6 +74,7 @@ public class WordLinker {
             case "CAMBRIDGE": return linkToCAMBRIDGE(word, emphasize, emPre, emSuf);
             case "MACMILLAN": return linkToMACMILLAN(word, emphasize, emPre, emSuf);
             case "HERITAGE": return linkToHERITAGE(word, emphasize, emPre, emSuf);
+            case "WIKTIONARY": return linkToWIKTIONARY(word, emphasize, emPre, emSuf);
         }
         //default
         return linkToICIBA(word, emphasize, emPre, emSuf);
@@ -101,6 +103,9 @@ public class WordLinker {
     }
     public static String linkToHERITAGE(String word, String emphasize, String emPre, String emSuf){
         return linkTo(word, emphasize, emPre, emSuf, HERITAGE);
+    }
+    public static String linkToWIKTIONARY(String word, String emphasize, String emPre, String emSuf){
+        return linkTo(word, emphasize, emPre, emSuf, WIKTIONARY);
     }
     public static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
         StringBuilder p = new StringBuilder();
