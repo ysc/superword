@@ -33,6 +33,9 @@ import java.util.regex.Pattern;
 public class WordLinker {
     private WordLinker(){}
 
+    //链接到爱词霸还是有道, 设置为true表示链接到爱词霸, 设置为false表示链接到有道
+    public static boolean useICIBA = true;
+
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
     private static final String ICIBA = "http://www.iciba.com/";
@@ -46,7 +49,11 @@ public class WordLinker {
         return toLink(word, emphasize, EM_PRE, EM_SUF);
     }
     public static String toLink(String word, String emphasize, String emPre, String emSuf){
-        return linkToICIBA(word, emphasize, emPre, emSuf);
+        if(useICIBA) {
+            return linkToICIBA(word, emphasize, emPre, emSuf);
+        }else{
+            return linkToYOUDAO(word, emphasize, emPre, emSuf);
+        }
     }
 
     private static String linkToICIBA(String word, String emphasize, String emPre, String emSuf){
