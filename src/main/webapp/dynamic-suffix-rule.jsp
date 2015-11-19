@@ -36,7 +36,8 @@
     if(suffixes != null && !"".equals(suffixes.trim()) && suffixes.contains("-")){
         Set<Word> words = (Set<Word>)application.getAttribute("words");
         if(words == null){
-            words = WordSources.getAll();
+            words = WordSources.getSyllabusVocabulary();
+            application.setAttribute("words", words);
         }
         List<Suffix> suffixList = new ArrayList<Suffix>();
         for(String suffix : suffixes.trim() .split("-")){
@@ -64,9 +65,7 @@
     <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
     <h2>
         ***用法说明:
-        动态后缀规则，比如规则为：ise-ize，表示单词集合中
-        有两个词分别以ise和ize结尾
-        且除了后缀外，其他部分都相同
+        动态后缀规则，比如规则为：ise-ize，表示单词集合中，有两个词分别以ise和ize结尾，且除了后缀外，其他部分都相同
     </h2>
     <p>
         <font color="red">输入动态后缀：</font><input id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50">
