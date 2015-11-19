@@ -38,7 +38,7 @@ import java.util.regex.Pattern;
  * HERITAGE:美国传统
  * WIKTIONARY:维基词典
  * WORDNET:WordNet
- * RANDOMHOUSE:Random House
+ * RANDOMHOUSE:RandomHouse
  * @author 杨尚川
  */
 public class WordLinker {
@@ -165,6 +165,12 @@ public class WordLinker {
         dictionary = "MACMILLAN";
         System.out.println(toLink(word));
         dictionary = "HERITAGE";
+        System.out.println(toLink(word));
+        dictionary = "WIKTIONARY";
+        System.out.println(toLink(word));
+        dictionary = "WORDNET";
+        System.out.println(toLink(word));
+        dictionary = "RANDOMHOUSE";
         System.out.println(toLink(word));
 
     }
