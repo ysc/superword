@@ -44,6 +44,9 @@
             suffixList.add(new Suffix(suffix, ""));
         }
         List<Word> data = DynamicSuffixRule.findBySuffix(words, suffixList);
+        if(data.size() > 500){
+            data = data.subList(0, 500);
+        }
         htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixList);
     }
 %>
@@ -63,21 +66,20 @@
 </head>
 <body>
     <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
-    <h2>
+    <p>
         ***用法说明:
-        动态后缀规则，比如规则为：ise-ize，表示单词集合中，有两个词分别以ise和ize结尾，且除了后缀外，其他部分都相同
-    </h2>
-    <p>
-        <font color="red">输入动态后缀：</font><input id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50">
+        动态后缀规则，比如规则为：ise-ize，
+        表示单词集合中，有两个词分别以ise和ize结尾，
+        且除了后缀外，其他部分都相同
     </p>
-
     <p>
+        <font color="red">输入动态后缀：</font><input id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/>
     </p>
     <p></p>
-    <h2><a href="#" onclick="submit();">提交</a></h2>
-    <h2><a href="index.jsp">主页</a></h2>
+    <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
+    <p><a href="index.jsp">主页</a></p>
 </body>
 </html>
