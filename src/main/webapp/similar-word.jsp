@@ -58,9 +58,20 @@
 
         StringBuilder temp = new StringBuilder();
         int i=1;
+        temp.append("<table>\n");
         for(Hit hit : result.getHits()){
-            temp.append(i++).append(". ").append(WordLinker.toLink(hit.getText())).append(" [").append(hit.getScore()).append("]").append("<br/>\n");
+            temp.append("<tr>");
+            temp.append("<td> ").append(i++)
+                    .append(". </td><td> ")
+                    .append(WordLinker.toLink(hit.getText()))
+                    .append(" </td><td> ")
+                    .append(hit.getScore())
+                    .append("</td><td> ")
+                    .append("<a target=\"_blank\" href=\"similar-word.jsp?word=" + hit.getText() + "&count=" + count + "&dict=" + dict + "\">相似</a>")
+                    .append(" </td>\n");
+            temp.append("</tr>\n");
         }
+        temp.append("</table>\n");
         htmlFragment = temp.toString();
     }
 %>
