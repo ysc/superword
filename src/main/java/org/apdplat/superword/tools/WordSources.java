@@ -25,8 +25,6 @@ import org.apdplat.superword.model.Word;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -67,7 +65,7 @@ public class WordSources {
                 "/word_IELTS.txt",
                 "/word_TOEFL.txt",
                 "/word_TOEIC.txt",
-                "/word_考 研.txt");
+                "/word_KY.txt");
     }
     public static Set<Word> getAll(){
         Set<Word> data = get("/words.txt", "/word_computer.txt");

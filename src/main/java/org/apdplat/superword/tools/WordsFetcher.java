@@ -180,8 +180,8 @@ public class WordsFetcher {
         update(123, 25, "/word_CET6.txt");
     }
     public static void updateKY(){
-        update(13, 274, "/word_考 研.txt");
-        update(143, 3, "/word_考 研.txt");
+        update(13, 274, "/word_KY.txt");
+        update(143, 3, "/word_KY.txt");
     }
     public static void updateTOEFL(){
         update(14, 245, "/word_TOEFL.txt");
