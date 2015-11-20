@@ -34,11 +34,25 @@
     String suffixes = request.getParameter("suffixes");
     String htmlFragment = "";
     if(suffixes != null && !"".equals(suffixes.trim()) && suffixes.contains("-")){
-        Set<Word> words = (Set<Word>)application.getAttribute("words");
-        if(words == null){
-            words = WordSources.getSyllabusVocabulary();
-            application.setAttribute("words", words);
+        String words_type = request.getParameter("words_type");
+        if(words_type == null){
+            words_type = "all";
         }
+        request.setAttribute("words_type", words_type.trim());
+        String key = "words_"+words_type;
+        Set<Word> words = (Set<Word>)session.getAttribute(key);
+        if(words == null){
+            if("ALL".equals(words_type.trim())){
+                words = WordSources.getAll();
+            }else if("SYLLABUS".equals(words_type.trim())){
+                words = WordSources.getSyllabusVocabulary();
+            }else{
+                String resource = "/word_"+words_type+".txt";
+                words = WordSources.get(resource);
+            }
+            session.setAttribute(key, words);
+        }
+
         List<Suffix> suffixList = new ArrayList<Suffix>();
         for(String suffix : suffixes.trim() .split("-")){
             suffixList.add(new Suffix(suffix, ""));
@@ -57,10 +71,11 @@
         function submit(){
             var suffixes = document.getElementById("suffixes").value;
             var dict = document.getElementById("dict").value;
+            var words_type = document.getElementById("words_type").value;
             if(suffixes == ""){
                 return;
             }
-            location.href = "dynamic-suffix-rule.jsp?suffixes="+suffixes+"&dict="+dict;
+            location.href = "dynamic-suffix-rule.jsp?suffixes="+suffixes+"&dict="+dict+"&words_type="+words_type;
         }
     </script>
 </head>
@@ -75,7 +90,9 @@
     <p>
         <font color="red">输入动态后缀：</font><input id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/>
+        <jsp:include page="dictionary-select.jsp"/><br/>
+        <font color="red">选择词汇：</font>
+        <jsp:include page="words-select.jsp"/>
     </p>
     <p></p>
     <p><a href="#" onclick="submit();">提交</a></p>
