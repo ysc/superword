@@ -24,7 +24,6 @@
 <%@ page import="org.apdplat.word.analysis.Hits" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
-<%@ page import="java.util.Map" %>
 <%@ page import="org.apdplat.word.analysis.EditDistanceTextSimilarity" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
@@ -45,13 +44,30 @@
     }
     String htmlFragment = "";
     if(word != null && !"".equals(word.trim())){
-        List<String> words = (List<String>)application.getAttribute("words_string");
+        String words_type = request.getParameter("words_type");
+        if(words_type == null){
+            words_type = "all";
+        }
+        request.setAttribute("words_type", words_type.trim());
+        String key = "words_string_"+words_type;
+        List<String> words = (List<String>)session.getAttribute(key);
         if(words == null){
             words = new ArrayList<String>();
-            for(Word item : WordSources.getSyllabusVocabulary()){
-                words.add(item.getWord());
+            if("ALL".equals(words_type.trim())){
+                for(Word item : WordSources.getAll()){
+                    words.add(item.getWord());
+                }
+            }else if("SYLLABUS".equals(words_type.trim())){
+                for(Word item : WordSources.getSyllabusVocabulary()){
+                    words.add(item.getWord());
+                }
+            }else{
+                String resource = "/word_"+words_type+".txt";
+                for(Word item : WordSources.get(resource)){
+                    words.add(item.getWord());
+                }
             }
-            application.setAttribute("words_string", words);
+            session.setAttribute(key, words);
         }
         SimilarWord similarWord = new SimilarWord();
         Hits result = similarWord.compute(word, new EditDistanceTextSimilarity(), words, count);
@@ -83,10 +99,11 @@
             var word = document.getElementById("word").value;
             var count = document.getElementById("count").value;
             var dict = document.getElementById("dict").value;
+            var words_type = document.getElementById("words_type").value;
             if(word == ""){
                 return;
             }
-            location.href = "similar-word.jsp?word="+word+"&count="+count+"&dict="+dict;
+            location.href = "similar-word.jsp?word="+word+"&count="+count+"&dict="+dict+"&words_type="+words_type;
         }
     </script>
 </head>
@@ -104,7 +121,9 @@
         <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/>
+        <jsp:include page="dictionary-select.jsp"/><br/>
+        <font color="red">选择词汇：</font>
+        <jsp:include page="words-select.jsp"/>
     </p>
     <p></p>
     <p><a href="#" onclick="submit();">提交</a></p>
