@@ -106,7 +106,7 @@ public class PrefixRule {
                 .collect(Collectors.toList());
     }
 
-    private static Map<Word, List<Word>> convert(Map<Prefix, List<Word>> data){
+    public static Map<Word, List<Word>> convert(Map<Prefix, List<Word>> data){
         Map<Word, List<Word>> r = new HashMap<>();
         data.keySet().forEach(k -> r.put(new Word(k.getPrefix(), k.getDes()), data.get(k)));
         return r;
