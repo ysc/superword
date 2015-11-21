@@ -28,6 +28,6 @@
   <p>superword利用计算机强大的计算能力，使用机器学习和数据挖掘算法找到读音相近、外形相似、含义相关、同义反义、词根词缀的英语单词，从而非常有利于我们深入地记忆理解这些单词。</p>
 
   <a href="dynamic-suffix-rule.jsp">动态后缀规则</a><br/>
-  <a href="similar-word.jsp">拼写相似规则</a>
+  <a href="similar-word-rule.jsp">拼写相似规则</a>
 </body>
 </html>

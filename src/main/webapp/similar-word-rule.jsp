@@ -83,7 +83,7 @@
                     .append(" </td><td> ")
                     .append(hit.getScore())
                     .append("</td><td> ")
-                    .append("<a target=\"_blank\" href=\"similar-word.jsp?word=" + hit.getText() + "&count=" + count + "&dict=" + dict + "&words_type=" + words_type + "\">相似</a>")
+                    .append("<a target=\"_blank\" href=\"similar-word-rule.jsp?word=" + hit.getText() + "&count=" + count + "&dict=" + dict + "&words_type=" + words_type + "\">相似</a>")
                     .append(" </td>\n");
             temp.append("</tr>\n");
         }
@@ -103,7 +103,7 @@
             if(word == ""){
                 return;
             }
-            location.href = "similar-word.jsp?word="+word+"&count="+count+"&dict="+dict+"&words_type="+words_type;
+            location.href = "similar-word-rule.jsp?word="+word+"&count="+count+"&dict="+dict+"&words_type="+words_type;
         }
     </script>
 </head>
