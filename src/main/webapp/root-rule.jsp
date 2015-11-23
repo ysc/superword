@@ -23,6 +23,7 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.*" %>
+<%@ page import="java.util.concurrent.ConcurrentHashMap" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -52,10 +53,17 @@
             }
             session.setAttribute(key, words);
         }
-
+        Map<String, Word> map = (Map<String, Word>)application.getAttribute("all_root");
+        if(map == null){
+            map = new ConcurrentHashMap<String, Word>();
+            for(Word root : RootRule.getAllRoots()){
+                map.put(root.getWord().replace("-", ""), root);
+            }
+            application.setAttribute("all_root", map);
+        }
         List<Word> rootList = new ArrayList<Word>();
         for(String root : roots.trim().split(",")){
-            rootList.add(new Word(root, ""));
+            rootList.add(new Word(root, map.get(root.replace("-", ""))==null?"":map.get(root.replace("-", "")).getMeaning()));
         }
         TreeMap<Word, List<Word>> data = RootRule.findByRoot(words, rootList);
         for(Map.Entry<Word, List<Word>> entry : data.entrySet()){
@@ -104,6 +112,6 @@
     <p></p>
     <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
-    <p><a href="index.jsp">主页</a></p>
+    <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
 </html>
