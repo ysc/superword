@@ -93,6 +93,12 @@
             }
             location.href = "prefix-rule.jsp?prefixes="+prefixes+"&dict="+dict+"&words_type="+words_type+"&strict="+strict+"&column="+column;
         }
+        document.onkeypress=function(e){
+            var e = window.event || e ;
+            if(e.charCode == 13){
+                submit();
+            }
+        }
     </script>
 </head>
 <body>
