@@ -92,6 +92,12 @@
             }
             location.href = "root-rule.jsp?roots="+roots+"&dict="+dict+"&words_type="+words_type+"&column="+column;
         }
+        document.onkeypress=function(e){
+            var e = window.event || e ;
+            if(e.charCode == 13){
+                submit();
+            }
+        }
     </script>
 </head>
 <body>
