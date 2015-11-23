@@ -77,6 +77,12 @@
             }
             location.href = "dynamic-suffix-rule.jsp?suffixes="+suffixes+"&dict="+dict+"&words_type="+words_type;
         }
+        document.onkeypress=function(e){
+            var e = window.event || e ;
+            if(e.charCode == 13){
+                submit();
+            }
+        }
     </script>
 </head>
 <body>
@@ -97,6 +103,6 @@
     <p></p>
     <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
-    <p><a href="index.jsp">主页</a></p>
+    <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
 </html>
