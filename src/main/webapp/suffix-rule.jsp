@@ -93,6 +93,12 @@
             }
             location.href = "suffix-rule.jsp?suffixes="+suffixes+"&dict="+dict+"&words_type="+words_type+"&strict="+strict+"&column="+column;
         }
+        document.onkeypress=function(e){
+            var e = window.event || e ;
+            if(e.charCode == 13){
+                submit();
+            }
+        }
     </script>
 </head>
 <body>
