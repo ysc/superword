@@ -38,7 +38,7 @@
             .append(suffix.getSuffix())
             .append("</a>")
             .append("</td><td>")
-            .append(suffix.getDes())
+            .append(suffix.getDes().replace(";", ";<br/>"))
             .append("</td></tr>\n");
   }
   stringBuilder.append("</table>\n");
@@ -49,7 +49,8 @@
     <title>常见后缀</title>
 </head>
 <body>
+  <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
   <%=stringBuilder.toString()%>
-  <p><a href="index.jsp">主页</a></p>
+  <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
 </html>
