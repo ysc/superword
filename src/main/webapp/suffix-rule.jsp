@@ -23,6 +23,7 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.*" %>
+<%@ page import="java.util.concurrent.ConcurrentHashMap" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -52,10 +53,17 @@
             }
             session.setAttribute(key, words);
         }
-
+        Map<String, Suffix> map = (Map<String, Suffix>)application.getAttribute("all_suffix");
+        if(map == null){
+            map = new ConcurrentHashMap<String, Suffix>();
+            for(Suffix prefix : SuffixRule.getAllSuffixes()){
+                map.put(prefix.getSuffix().replace("-", ""), prefix);
+            }
+            application.setAttribute("all_suffix", map);
+        }
         List<Suffix> suffixList = new ArrayList<Suffix>();
         for(String suffix : suffixes.trim().split(",")){
-            suffixList.add(new Suffix(suffix, ""));
+            suffixList.add(new Suffix(suffix, map.get(suffix.replace("-", ""))==null?"":map.get(suffix.replace("-", "")).getDes()));
         }
         TreeMap<Suffix, List<Word>> data = SuffixRule.findBySuffix(words, suffixList, "N".equalsIgnoreCase(request.getParameter("strict")) ? false : true);
         for(Map.Entry<Suffix, List<Word>> entry : data.entrySet()){
@@ -107,6 +115,6 @@
     <p></p>
     <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
-    <p><a href="index.jsp">主页</a></p>
+    <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
 </html>
