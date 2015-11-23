@@ -27,13 +27,14 @@
   <p>升学考试、工作求职、充电提高，都少不了英语的身影，英语对我们来说实在太重要了。你还在为记不住英语单词而苦恼吗？还在为看不懂英文资料和原版书籍而伤神吗？superword可以在你英语学习的路上助你一臂之力。</p>
   <p>superword利用计算机强大的计算能力，使用机器学习和数据挖掘算法找到读音相近、外形相似、含义相关、同义反义、词根词缀的英语单词，从而非常有利于我们深入地记忆理解这些单词。</p>
 
-  <a href="roots.jsp">常见词根</a><br/>
-  <a href="root-rule.jsp">词根规则</a><br/>
-  <a href="prefixes.jsp">常见前缀</a><br/>
-  <a href="prefix-rule.jsp">前缀规则</a><br/>
-  <a href="suffixes.jsp">常见后缀</a><br/>
-  <a href="suffix-rule.jsp">后缀规则</a><br/>
-  <a href="dynamic-suffix-rule.jsp">动态后缀规则</a><br/>
-  <a href="similar-word-rule.jsp">拼写相似规则</a>
+  <a target="_blank" href="roots.jsp">常见词根</a><br/>
+  <a target="_blank" href="root-rule.jsp?roots=spect,spic&dict=ICIBA&words_type=SYLLABUS&column=6">词根规则</a><br/>
+  <a target="_blank" href="prefixes.jsp">常见前缀</a><br/>
+  <a target="_blank" href="prefix-rule.jsp?prefixes=anti,counter,de,dis,il,im,in,ir,mis,non,un&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">前缀规则</a><br/>
+  <a target="_blank" href="dynamic-prefix-rule.jsp?prefixes=m-imm&dict=ICIBA&words_type=SYLLABUS">动态前缀规则</a><br/>
+  <a target="_blank" href="suffixes.jsp">常见后缀</a><br/>
+  <a target="_blank" href="suffix-rule.jsp?suffixes=ence,ance,age&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">后缀规则</a><br/>
+  <a target="_blank" href="dynamic-suffix-rule.jsp?suffixes=ise-ize&dict=ICIBA&words_type=SYLLABUS">动态后缀规则</a><br/>
+  <a target="_blank" href="similar-word-rule.jsp?word=north&count=10&dict=ICIBA&words_type=SYLLABUS">拼写相似规则</a>
 </body>
 </html>
