@@ -441,7 +441,7 @@ public class HtmlFormatter {
             }
             html.append(" (hit ")
                 .append(words.size())
-                .append(")</h4></br>\n");
+                .append(")</h4>\n");
             List<String> data =
                     words
                         .stream()
@@ -517,7 +517,7 @@ public class HtmlFormatter {
                         .append(word.getWord())
                         .append(" (form ")
                         .append(data.get(word).size())
-                        .append(")</h4></br>\n");
+                        .append(")</h4>\n");
                 List<String> result = data
                         .get(word)
                         .stream()
