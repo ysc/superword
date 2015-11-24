@@ -31,16 +31,14 @@ import java.nio.file.Paths;
 import java.util.*;
 
 /**
- * 找出同时拥有前缀、后缀和词根的词
+ * 依赖词规则：找出同时拥有前缀、后缀和词根的词
  * @author 杨尚川
  */
 public class DependentWordRule {
     private DependentWordRule(){}
 
-    public static Map<Word, List<Word>> getDependentWord(){
+    public static Map<Word, List<Word>> getDependentWord(Set<Word> words){
         Map<Word, List<Word>> data = new HashMap<>();
-
-        Set<Word> words = WordSources.getSyllabusVocabulary();
 
         List<Prefix> prefixes = PrefixRule.getAllPrefixes();
         TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes, false);
@@ -92,7 +90,8 @@ public class DependentWordRule {
     }
 
     public static void main(String[] args) throws Exception {
-        Map<Word, List<Word>> result = DependentWordRule.getDependentWord();
+        Set<Word> words = WordSources.getSyllabusVocabulary();
+        Map<Word, List<Word>> result = DependentWordRule.getDependentWord(words);
         List<String> htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(result, 5, 640);
         for(int i=0; i<htmlFragment.size(); i++) {
             Files.write(Paths.get("target/dependent_word_rule_"+(i+1)+".txt"), htmlFragment.get(i).getBytes("utf-8"));
