@@ -36,7 +36,7 @@
     try{
         column = Integer.parseInt(request.getParameter("column"));
     }catch (Exception e){}
-    boolean strict = "N".equalsIgnoreCase(request.getParameter("strict"));
+    boolean strict = "Y".equalsIgnoreCase(request.getParameter("strict"));
     Map<Word, List<Word>> rootAffix = (Map<Word, List<Word>>)application.getAttribute("rootAffix_"+strict);
     if(rootAffix == null){
         rootAffix = RootAffixRule.getWord(WordSources.getAll(), strict);
