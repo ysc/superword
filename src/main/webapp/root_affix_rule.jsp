@@ -17,7 +17,7 @@
   --%>
 
 <%@ page import="org.apdplat.superword.model.Word" %>
-<%@ page import="org.apdplat.superword.rule.DependenceWordRule" %>
+<%@ page import="org.apdplat.superword.rule.RootAffixRule" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
@@ -36,14 +36,15 @@
     try{
         column = Integer.parseInt(request.getParameter("column"));
     }catch (Exception e){}
-    Map<Word, List<Word>> dependence = (Map<Word, List<Word>>)application.getAttribute("dependence");
-    if(dependence == null){
-        dependence = DependenceWordRule.getDependentWord(WordSources.getAll());
-        application.setAttribute("dependence", dependence);
+    boolean strict = "N".equalsIgnoreCase(request.getParameter("strict"));
+    Map<Word, List<Word>> rootAffix = (Map<Word, List<Word>>)application.getAttribute("rootAffix_"+strict);
+    if(rootAffix == null){
+        rootAffix = RootAffixRule.getWord(WordSources.getAll(), strict);
+        application.setAttribute("rootAffix_"+strict, rootAffix);
     }
-    List<Word> data = dependence.get(word);
+    List<Word> data = rootAffix.get(word);
     String htmlFragment = "";
-    if(data != null){
+    if(data != null && data.size() > 0){
         Map<Word, List<Word>> temp = new HashMap<Word, List<Word>>();
         temp.put(word, data);
         htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(temp, column, Integer.MAX_VALUE).get(0);
@@ -59,11 +60,12 @@
             var word = document.getElementById("word").value;
             var dict = document.getElementById("dict").value;
             var column = document.getElementById("column").value;
+            var strict = document.getElementById("strict").value;
 
             if(word == ""){
                 return;
             }
-            location.href = "dependence-word-rule.jsp?word="+word+"&dict="+dict+"&column="+column;
+            location.href = "root_affix_rule.jsp?word="+word+"&dict="+dict+"&column="+column+"&strict="+strict;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -81,6 +83,8 @@
     </p>
     <p>
         <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">严格匹配：</font>
+        <jsp:include page="strict-select.jsp"/><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">每行词数：</font><input id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
