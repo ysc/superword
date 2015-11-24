@@ -20,7 +20,7 @@
 
 <select name="words_type" id="words_type">
     <%
-        if ("primary_school".equals(request.getAttribute("words_type"))) {
+        if ("primary_school".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="primary_school" selected="selected">小学(1354)</option>
     <%
@@ -29,7 +29,7 @@
     <option value="primary_school">小学(1354)</option>
     <%
         }
-        if ("junior_school".equals(request.getAttribute("words_type"))) {
+        if ("junior_school".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="junior_school" selected="selected">初中(3359)</option>
     <%
@@ -38,7 +38,7 @@
     <option value="junior_school">初中(3359)</option>
     <%
         }
-        if ("senior_school".equals(request.getAttribute("words_type"))) {
+        if ("senior_school".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="senior_school" selected="selected">高中(5060)</option>
     <%
@@ -47,7 +47,7 @@
     <option value="senior_school">高中(5060)</option>
     <%
         }
-        if ("university".equals(request.getAttribute("words_type"))) {
+        if ("university".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="university" selected="selected">大学(3670)</option>
     <%
@@ -56,7 +56,7 @@
     <option value="university">大学(3670)</option>
     <%
         }
-        if ("new_conception".equals(request.getAttribute("words_type"))) {
+        if ("new_conception".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="new_conception" selected="selected">新概念英语(4198)</option>
     <%
@@ -65,7 +65,7 @@
     <option value="new_conception">新概念英语(4198)</option>
     <%
         }
-        if ("CET4".equals(request.getAttribute("words_type"))) {
+        if ("CET4".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="CET4" selected="selected">4级(5042)</option>
     <%
@@ -74,7 +74,7 @@
     <option value="CET4">4级(5042)</option>
     <%
         }
-        if ("CET6".equals(request.getAttribute("words_type"))) {
+        if ("CET6".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="CET6" selected="selected">6级(6652)</option>
     <%
@@ -83,7 +83,7 @@
     <option value="CET6">6级(6652)</option>
     <%
         }
-        if ("KY".equals(request.getAttribute("words_type"))) {
+        if ("KY".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="KY" selected="selected">考研(5534)</option>
     <%
@@ -92,7 +92,7 @@
     <option value="KY">考研(5534)</option>
     <%
         }
-        if ("MBA".equals(request.getAttribute("words_type"))) {
+        if ("MBA".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="MBA" selected="selected">MBA(4168)</option>
     <%
@@ -101,7 +101,7 @@
     <option value="MBA">MBA(4168)</option>
     <%
         }
-        if ("BEC".equals(request.getAttribute("words_type"))) {
+        if ("BEC".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="BEC" selected="selected">BEC(672)</option>
     <%
@@ -110,7 +110,7 @@
     <option value="BEC">BEC(672)</option>
     <%
         }
-        if ("TEM4".equals(request.getAttribute("words_type"))) {
+        if ("TEM4".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="TEM4" selected="selected">专4(2085)</option>
     <%
@@ -119,7 +119,7 @@
     <option value="TEM4">专4(2085)</option>
     <%
         }
-        if ("TEM8".equals(request.getAttribute("words_type"))) {
+        if ("TEM8".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="TEM8" selected="selected">专8(932)</option>
     <%
@@ -128,7 +128,7 @@
     <option value="TEM8">专8(932)</option>
     <%
         }
-        if ("TOEFL".equals(request.getAttribute("words_type"))) {
+        if ("TOEFL".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="TOEFL" selected="selected">托福(4864)</option>
     <%
@@ -137,7 +137,7 @@
     <option value="TOEFL">托福(4864)</option>
     <%
         }
-        if ("TOEIC".equals(request.getAttribute("words_type"))) {
+        if ("TOEIC".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="TOEIC" selected="selected">托业(755)</option>
     <%
@@ -146,7 +146,7 @@
     <option value="TOEIC">托业(755)</option>
     <%
         }
-        if ("IELTS".equals(request.getAttribute("words_type"))) {
+        if ("IELTS".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="IELTS" selected="selected">雅思(4540)</option>
     <%
@@ -155,7 +155,7 @@
     <option value="IELTS">雅思(4540)</option>
     <%
         }
-        if ("SAT".equals(request.getAttribute("words_type"))) {
+        if ("SAT".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="SAT" selected="selected">SAT(108)</option>
     <%
@@ -164,7 +164,7 @@
     <option value="SAT">SAT(108)</option>
     <%
         }
-        if ("GMAT".equals(request.getAttribute("words_type"))) {
+        if ("GMAT".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="GMAT" selected="selected">GMAT(3328)</option>
     <%
@@ -173,7 +173,7 @@
     <option value="GMAT">GMAT(3328)</option>
     <%
         }
-        if ("GRE".equals(request.getAttribute("words_type"))) {
+        if ("GRE".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="GRE" selected="selected">GRE(7496)</option>
     <%
@@ -182,7 +182,7 @@
     <option value="GRE">GRE(7496)</option>
     <%
         }
-        if ("ADULT".equals(request.getAttribute("words_type"))) {
+        if ("ADULT".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="ADULT" selected="selected">成人英语(7216)</option>
     <%
@@ -191,7 +191,7 @@
     <option value="ADULT">成人英语(7216)</option>
     <%
         }
-        if ("CATTI".equals(request.getAttribute("words_type"))) {
+        if ("CATTI".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="CATTI" selected="selected">翻译考试(3574)</option>
     <%
@@ -200,7 +200,7 @@
     <option value="CATTI">翻译考试(3574)</option>
     <%
         }
-        if ("SYLLABUS".equals(request.getAttribute("words_type"))) {
+        if ("SYLLABUS".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="SYLLABUS" selected="selected">所有以上考纲词汇(18123)</option>
     <%
@@ -209,7 +209,7 @@
     <option value="SYLLABUS">所有以上考纲词汇(18123)</option>
     <%
         }
-        if ("computer".equals(request.getAttribute("words_type"))) {
+        if ("computer".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="computer" selected="selected">计算机(3210)</option>
     <%
@@ -218,7 +218,7 @@
     <option value="computer">计算机(3210)</option>
     <%
         }
-        if ("ALL".equals(request.getAttribute("words_type"))) {
+        if ("ALL".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
     <option value="ALL" selected="selected">所有词汇(63789)</option>
     <%
