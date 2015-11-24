@@ -27,10 +27,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
-    String dict = request.getParameter("dict");
-    if(dict != null){
-        WordLinker.dictionary = dict;
-    }
     String prefixes = request.getParameter("prefixes");
     String htmlFragment = "";
     if(prefixes != null && !"".equals(prefixes.trim()) && prefixes.contains("-")){
@@ -61,7 +57,7 @@
         if(data.size() > 500){
             data = data.subList(0, 500);
         }
-        htmlFragment = DynamicPrefixRule.toHtmlFragment(data, prefixList);
+        htmlFragment = DynamicPrefixRule.toHtmlFragment(data, prefixList, WordLinker.getValidDictionary(request.getParameter("dict")));
     }
 %>
 <html>
