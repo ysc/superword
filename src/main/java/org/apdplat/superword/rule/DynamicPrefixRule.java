@@ -22,6 +22,7 @@ package org.apdplat.superword.rule;
 import org.apdplat.superword.model.Prefix;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.WordLinker;
+import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
 
 import java.nio.file.Files;
@@ -40,6 +41,8 @@ import java.util.stream.Collectors;
  * @author 杨尚川
  */
 public class DynamicPrefixRule {
+        private static final Set<Word> WORDS = WordSources.getAll();
+
         private DynamicPrefixRule(){}
 
         public static List<Word> findByPrefix(Collection<Word> words, List<Prefix> prefixes) {
@@ -74,7 +77,7 @@ public class DynamicPrefixRule {
                     .collect(Collectors.toList());
         }
 
-        public static String toHtmlFragment(List<Word> words, List<Prefix> prefixes) {
+        public static String toHtmlFragment(List<Word> words, List<Prefix> prefixes, Dictionary dictionary) {
             StringBuilder html = new StringBuilder();
             html.append("<h4>common suffix different prefix: ");
             prefixes.forEach(prefix -> html.append(prefix.getPrefix()).append("\t"));
@@ -105,12 +108,14 @@ public class DynamicPrefixRule {
                         String s = prefix.getPrefix().toLowerCase();
                         s = s.replaceAll("-", "").replaceAll("\\s+", "");
                         html.append("<td>")
-                                .append(WordLinker.toLink(s + c, s))
+                                .append(WordLinker.toLink(s + c, s, dictionary))
                                 .append("</td>");
                     });
-                    html.append("<td>")
-                            .append(WordLinker.toLink(c, c))
-                            .append("</td>");
+                    if(WORDS.contains(new Word(c, ""))) {
+                        html.append("<td>")
+                                .append(WordLinker.toLink(c, c, dictionary))
+                                .append("</td>");
+                    }
                 }
                 html.append("</tr>\n");
             });
@@ -123,7 +128,7 @@ public class DynamicPrefixRule {
             List<Prefix> prefixes = Arrays.asList(new Prefix("m", ""), new Prefix("imm", ""));
 
             List<Word> data = DynamicPrefixRule.findByPrefix(words, prefixes);
-            String htmlFragment = DynamicPrefixRule.toHtmlFragment(data, prefixes);
+            String htmlFragment = DynamicPrefixRule.toHtmlFragment(data, prefixes, Dictionary.ICIBA);
 
             Files.write(Paths.get("target/dynamic_prefix_rule.txt"), htmlFragment.getBytes("utf-8"));
 
