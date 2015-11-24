@@ -27,10 +27,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
-    String dict = request.getParameter("dict");
-    if(dict != null){
-        WordLinker.dictionary = dict;
-    }
     String suffixes = request.getParameter("suffixes");
     String htmlFragment = "";
     int column = 10;
@@ -74,7 +70,7 @@
         try{
             column = Integer.parseInt(request.getParameter("column"));
         }catch (Exception e){}
-        htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(SuffixRule.convert(data), column);
+        htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(SuffixRule.convert(data), column, WordLinker.getValidDictionary(request.getParameter("dict")));
     }
 %>
 <html>
