@@ -197,39 +197,39 @@ public class WordLinker {
     }
 
     public static String linkToICIBA(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, ICIBA);
+        return linkTo(word, emphasize, emPre, emSuf, ICIBA, Dictionary.ICIBA);
     }
     public static String linkToYOUDAO(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, YOUDAO);
+        return linkTo(word, emphasize, emPre, emSuf, YOUDAO, Dictionary.YOUDAO);
     }
     public static String linkToCOLLINS(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, COLLINS);
+        return linkTo(word, emphasize, emPre, emSuf, COLLINS, Dictionary.COLLINS);
     }
     public static String linkToWEBSTER(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, WEBSTER);
+        return linkTo(word, emphasize, emPre, emSuf, WEBSTER, Dictionary.WEBSTER);
     }
     public static String linkToOXFORD(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, OXFORD);
+        return linkTo(word, emphasize, emPre, emSuf, OXFORD, Dictionary.OXFORD);
     }
     public static String linkToCAMBRIDGE(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, CAMBRIDGE);
+        return linkTo(word, emphasize, emPre, emSuf, CAMBRIDGE, Dictionary.CAMBRIDGE);
     }
     public static String linkToMACMILLAN(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, MACMILLAN);
+        return linkTo(word, emphasize, emPre, emSuf, MACMILLAN, Dictionary.MACMILLAN);
     }
     public static String linkToHERITAGE(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, HERITAGE);
+        return linkTo(word, emphasize, emPre, emSuf, HERITAGE, Dictionary.HERITAGE);
     }
     public static String linkToWIKTIONARY(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, WIKTIONARY);
+        return linkTo(word, emphasize, emPre, emSuf, WIKTIONARY, Dictionary.WIKTIONARY);
     }
     public static String linkToWORDNET(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, WORDNET);
+        return linkTo(word, emphasize, emPre, emSuf, WORDNET, Dictionary.WORDNET);
     }
     public static String linkToRANDOMHOUSE(String word, String emphasize, String emPre, String emSuf){
-        return linkTo(word, emphasize, emPre, emSuf, RANDOMHOUSE);
+        return linkTo(word, emphasize, emPre, emSuf, RANDOMHOUSE, Dictionary.RANDOMHOUSE);
     }
-    public static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite){
+    public static String linkTo(String word, String emphasize, String emPre, String emSuf, String webSite, Dictionary dictionary){
         StringBuilder p = new StringBuilder();
         for (char c : emphasize.toCharArray()) {
             p.append("[")
@@ -241,7 +241,7 @@ public class WordLinker {
         StringBuilder html = new StringBuilder();
         String url = webSite+word;
         if(serverRedirect != null){
-            url = serverRedirect+"?url="+url+"&word="+word;
+            url = serverRedirect+"?url="+url+"&word="+word+"&dict="+dictionary.name();
         }
         html.append("<a target=\"_blank\" href=\"")
                 .append(url)
