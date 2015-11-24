@@ -371,7 +371,7 @@ public class TextAnalyzer {
                 "/word_GRE.txt",
                 "/word_IELTS.txt",
                 "/word_TOEFL.txt",
-                "/word_考 研.txt");
+                "/word_KY.txt");
         Map<Word, AtomicInteger> data = WordSources.convert(
                                                         frequency(
                                                                 getFileNames(textPath)));
