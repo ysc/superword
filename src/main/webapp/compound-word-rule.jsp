@@ -16,15 +16,14 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
-<%@ page import="org.apdplat.superword.model.Suffix" %>
 <%@ page import="org.apdplat.superword.model.Word" %>
-<%@ page import="org.apdplat.superword.rule.SuffixRule" %>
+<%@ page import="org.apdplat.superword.rule.CompoundWord" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
-<%@ page import="java.util.*" %>
-<%@ page import="java.util.concurrent.ConcurrentHashMap" %>
-<%@ page import="org.apdplat.superword.rule.CompoundWord" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.Set" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
