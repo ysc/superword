@@ -80,7 +80,7 @@ public class DynamicPrefixRule {
             prefixes.forEach(prefix -> html.append(prefix.getPrefix()).append("\t"));
             html.append(" (hit ")
                 .append(words.size())
-                .append(")</h4></br>\n")
+                .append(")</h4>\n")
                 .append("<table>\n");
             AtomicInteger wordCounter = new AtomicInteger();
             words.forEach(word -> {
@@ -105,9 +105,12 @@ public class DynamicPrefixRule {
                         String s = prefix.getPrefix().toLowerCase();
                         s = s.replaceAll("-", "").replaceAll("\\s+", "");
                         html.append("<td>")
-                                .append(WordLinker.toLink(s + c))
+                                .append(WordLinker.toLink(s + c, s))
                                 .append("</td>");
                     });
+                    html.append("<td>")
+                            .append(WordLinker.toLink(c, c))
+                            .append("</td>");
                 }
                 html.append("</tr>\n");
             });
