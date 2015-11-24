@@ -32,7 +32,7 @@
     if(suffixes != null && !"".equals(suffixes.trim()) && suffixes.contains("-")){
         String words_type = request.getParameter("words_type");
         if(words_type == null){
-            words_type = "all";
+            words_type = "ALL";
         }
         request.setAttribute("words_type", words_type.trim());
         String key = "words_"+words_type;
