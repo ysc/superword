@@ -27,10 +27,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
-    String dict = request.getParameter("dict");
-    if(dict != null){
-        WordLinker.dictionary = dict;
-    }
     Word word = new Word(request.getParameter("word"), "");
     int column = 10;
     try{
@@ -47,9 +43,9 @@
     if(data != null && data.size() > 0){
         Map<Word, List<Word>> temp = new HashMap<Word, List<Word>>();
         temp.put(word, data);
-        htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(temp, column, Integer.MAX_VALUE).get(0);
+        htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(temp, column, Integer.MAX_VALUE, WordLinker.getValidDictionary(request.getParameter("dict"))).get(0);
     }else{
-        htmlFragment = WordLinker.toLink(word.getWord());
+        htmlFragment = WordLinker.toLink(word.getWord(), WordLinker.getValidDictionary(request.getParameter("dict")));
     }
 %>
 <html>
