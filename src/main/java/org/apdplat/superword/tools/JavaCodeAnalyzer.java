@@ -133,7 +133,7 @@ public class JavaCodeAnalyzer {
                 "/word_GRE.txt",
                 "/word_IELTS.txt",
                 "/word_TOEFL.txt",
-                "/word_考 研.txt");
+                "/word_KY.txt");
         Map<Word, AtomicInteger> data = WordSources.convert(parseZip(zipFile));
         Set<Map.Entry<Word, AtomicInteger>> entries = data.entrySet()
                                 .stream()
