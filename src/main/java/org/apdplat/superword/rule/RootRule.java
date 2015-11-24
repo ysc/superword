@@ -96,11 +96,16 @@ public class RootRule {
 
     public static void main(String[] args) throws Exception {
         Set<Word> words = WordSources.getSyllabusVocabulary();
-        List<Word> roots = RootRule.getAllRoots();
+        //List<Word> roots = RootRule.getAllRoots();
+        //List<Word> roots = Arrays.asList(new Word("position", ""));
+        //List<Word> roots = Arrays.asList(new Word("well", ""));
+        List<Word> roots = Arrays.asList(new Word("equ", ""));
+
 
         TreeMap<Word, List<Word>> rootToWords = RootRule.findByRoot(words, roots);
-        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(rootToWords, 6);
+        String htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(rootToWords, 1);
 
+        System.out.println(htmlFragment);
         Files.write(Paths.get("target/root_rule.txt"),htmlFragment.getBytes("utf-8"));
     }
 }
