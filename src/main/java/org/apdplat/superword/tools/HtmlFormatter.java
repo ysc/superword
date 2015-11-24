@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import org.apdplat.superword.tools.WordLinker.Dictionary;
 
 /**
  * HTML格式化工具，将生成的HTML片段发布到网络上的博客、日志中
@@ -41,7 +42,10 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
-    public static String toHtmlFragmentForText(Map<String, AtomicInteger> data, Set<String> fileNames, String dictionary) {
+    public static String toHtmlFragmentForText(Map<String, AtomicInteger> data, Set<String> fileNames) {
+        return toHtmlFragmentForText(data, fileNames, Dictionary.ICIBA);
+    }
+    public static String toHtmlFragmentForText(Map<String, AtomicInteger> data, Set<String> fileNames, Dictionary dictionary) {
         StringBuilder html = new StringBuilder();
         html.append("统计书籍：<br/>\n");
         AtomicInteger i = new AtomicInteger();
@@ -146,7 +150,10 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForSentence(Map<String, String> data, Map<Word, AtomicInteger> wordFrequence, String dictionary){
+    public static String toHtmlForSentence(Map<String, String> data, Map<Word, AtomicInteger> wordFrequence){
+        return toHtmlForSentence(data, wordFrequence, Dictionary.ICIBA);
+    }
+    public static String toHtmlForSentence(Map<String, String> data, Map<Word, AtomicInteger> wordFrequence, Dictionary dictionary){
         StringBuilder text = new StringBuilder();
         text.append("共有 ")
                 .append(data.size())
@@ -172,7 +179,10 @@ public class HtmlFormatter {
         return text.toString();
     }
 
-    private static String processSentence(String sentence, Map<Word, AtomicInteger> wordFrequence, String dictionary){
+    private static String processSentence(String sentence, Map<Word, AtomicInteger> wordFrequence){
+        return processSentence(sentence, wordFrequence, Dictionary.ICIBA);
+    }
+    private static String processSentence(String sentence, Map<Word, AtomicInteger> wordFrequence, Dictionary dictionary){
         sentence = sentence.replace(";", "; ")
                 .replace(",", ", ")
                 .replace(".", ". ")
@@ -206,7 +216,10 @@ public class HtmlFormatter {
         return s.toString();
     }
 
-    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data, String dictionary){
+    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data){
+        return toHtmlForCompoundWord(data, Dictionary.ICIBA);
+    }
+    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data, Dictionary dictionary){
         Set<Word> elements = new HashSet<>();
         StringBuilder html = new StringBuilder();
         html.append("<table  border=\"1\">\n");
@@ -255,7 +268,10 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForPartOfSpeech(Map<String, Set<String>> data, String dictionary){
+    public static String toHtmlForPartOfSpeech(Map<String, Set<String>> data){
+        return toHtmlForPartOfSpeech(data, Dictionary.ICIBA);
+    }
+    public static String toHtmlForPartOfSpeech(Map<String, Set<String>> data, Dictionary dictionary){
         StringBuilder html = new StringBuilder();
         html.append("<h4>各大词性广泛度排名：</h4><br/>\n");
         AtomicInteger i = new AtomicInteger();
@@ -299,7 +315,10 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForPluralFormat(Map<String, String> data, String dictionary){
+    public static String toHtmlForPluralFormat(Map<String, String> data){
+        return toHtmlForPluralFormat(data, Dictionary.ICIBA);
+    }
+    public static String toHtmlForPluralFormat(Map<String, String> data, Dictionary dictionary){
         StringBuilder html = new StringBuilder();
         html.append("<table border=\"1\">\n")
             .append("\t<tr><td>单词原型</td><td>单词复数</td></tr>\n");
@@ -313,7 +332,10 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForWordDefinition(Set<Word> words, int rowLength, String dictionary) {
+    public static String toHtmlForWordDefinition(Set<Word> words, int rowLength){
+        return toHtmlForWordDefinition(words, rowLength, Dictionary.ICIBA);
+    }
+    public static String toHtmlForWordDefinition(Set<Word> words, int rowLength, Dictionary dictionary) {
         Map<Integer, AtomicInteger> map = new HashMap<>();
         words.stream().forEach(w -> {
             int count = w.getDefinitions().size();
@@ -337,7 +359,10 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength, String dictionary){
+    public static String toHtmlForAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
+        return toHtmlForAntonym(synonymAntonyms, rowLength, Dictionary.ICIBA);
+    }
+    public static String toHtmlForAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength, Dictionary dictionary){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         synonymAntonyms
@@ -361,7 +386,10 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForSynonymAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength, String dictionary){
+    public static String toHtmlForSynonymAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
+        return toHtmlForSynonymAntonym(synonymAntonyms, rowLength, Dictionary.ICIBA);
+    }
+    public static String toHtmlForSynonymAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength, Dictionary dictionary){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         synonymAntonyms
@@ -387,7 +415,11 @@ public class HtmlFormatter {
                 });
         return html.toString();
     }
-    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscrimination, String dictionary){
+
+    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscrimination){
+        return toHtmlForSynonymDiscrimination(synonymDiscrimination, Dictionary.ICIBA);
+    }
+    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscrimination, Dictionary dictionary){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         synonymDiscrimination
@@ -419,7 +451,10 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootAffixToWords, int rowLength, String dictionary) {
+    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootAffixToWords, int rowLength){
+        return toHtmlTableFragmentForRootAffix(rootAffixToWords, rowLength, Dictionary.ICIBA);
+    }
+    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootAffixToWords, int rowLength, Dictionary dictionary) {
         StringBuilder html = new StringBuilder();
         AtomicInteger rootCounter = new AtomicInteger();
         Set<Word> unique = new HashSet<>();
@@ -456,7 +491,10 @@ public class HtmlFormatter {
         return head+html.toString();
     }
 
-    public static String emphasize(Word word, Word rootAffix, String dictionary){
+    public static String emphasize(Word word, Word rootAffix){
+        return emphasize(word, rootAffix, Dictionary.ICIBA);
+    }
+    public static String emphasize(Word word, Word rootAffix, Dictionary dictionary){
         String w = word.getWord();
         String r = rootAffix.getWord().replace("-", "").toLowerCase();
         //词就是词根
@@ -480,10 +518,17 @@ public class HtmlFormatter {
         return WordLinker.toLink(w, r, dictionary);
     }
 
-    public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength, String dictionary) {
+    public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength){
+        return toHtmlTableFragment(words, rowLength, Dictionary.ICIBA);
+    }
+    public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength, Dictionary dictionary) {
         return toHtmlTableFragment(words.entrySet(), rowLength, dictionary);
     }
-    public static String toHtmlTableFragment(Set<Map.Entry<Word, AtomicInteger>> words, int rowLength, String dictionary) {
+
+    public static String toHtmlTableFragment(Set<Map.Entry<Word, AtomicInteger>> words, int rowLength){
+        return toHtmlTableFragment(words, rowLength, Dictionary.ICIBA);
+    }
+    public static String toHtmlTableFragment(Set<Map.Entry<Word, AtomicInteger>> words, int rowLength, Dictionary dictionary) {
 
         List<String> data =
         words
@@ -501,7 +546,10 @@ public class HtmlFormatter {
         return toHtmlTableFragment(data, rowLength);
     }
 
-    public static List<String> toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength, int wordsLength, String dictionary) {
+    public static List<String> toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength, int wordsLength){
+        return toHtmlTableFragmentForIndependentWord(data, rowLength, wordsLength, Dictionary.ICIBA);
+    }
+    public static List<String> toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength, int wordsLength, Dictionary dictionary) {
         List<String> htmls = new ArrayList<>();
         StringBuilder html = new StringBuilder();
         AtomicInteger wordCounter = new AtomicInteger();
