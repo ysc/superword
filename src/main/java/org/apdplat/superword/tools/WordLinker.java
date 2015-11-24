@@ -49,6 +49,13 @@ import java.util.regex.Pattern;
 public class WordLinker {
     private WordLinker(){}
 
+    //是否使用服务器端做链接跳转
+    //服务器端跳转可以记录用户的查词记录
+    //如果是需要生成HTML代码片段贴到博客中
+    //则不能使用服务器端调整
+    //将此值设置为null
+    public static String serverRedirect = "server-redirect.jsp";
+
     //链接到哪个词典
     public volatile static String dictionary = "ICIBA";
 
@@ -216,9 +223,12 @@ public class WordLinker {
         }
         Pattern pattern = Pattern.compile(p.toString());
         StringBuilder html = new StringBuilder();
+        String url = webSite+word;
+        if(serverRedirect != null){
+            url = serverRedirect+"?url="+url+"&word="+word;
+        }
         html.append("<a target=\"_blank\" href=\"")
-                .append(webSite)
-                .append(word)
+                .append(url)
                 .append("\">");
         if(StringUtils.isNotBlank(emphasize)) {
             Set<String> targets = new HashSet<>();
