@@ -23,10 +23,15 @@ import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.Suffix;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.WordLinker;
+import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
+
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -38,6 +43,8 @@ import java.util.stream.Collectors;
  */
 public class DynamicSuffixRule {
         private DynamicSuffixRule(){}
+
+        private static final Set<Word> WORDS = WordSources.getAll();
 
         public static List<Word> findBySuffix(Collection<Word> words, List<Suffix> suffixes) {
             if(suffixes == null || suffixes.size() < 2){
@@ -71,7 +78,7 @@ public class DynamicSuffixRule {
                     .collect(Collectors.toList());
         }
 
-        public static String toHtmlFragment(List<Word> words, List<Suffix> suffixes) {
+        public static String toHtmlFragment(List<Word> words, List<Suffix> suffixes, Dictionary dictionary) {
             StringBuilder html = new StringBuilder();
             html.append("<h4>common prefix different suffix: ");
             suffixes.forEach(suffix -> {
@@ -85,7 +92,7 @@ public class DynamicSuffixRule {
                             });
             html.append(" (hit ")
                 .append(words.size())
-                .append(")</h4></br>\n")
+                .append(")</h4>\n")
                 .append("<table>\n");
             AtomicInteger wordCounter = new AtomicInteger();
             words.forEach(word -> {
@@ -110,12 +117,14 @@ public class DynamicSuffixRule {
                         String s = suffix.getSuffix().toLowerCase();
                         s = s.replaceAll("-", "").replaceAll("\\s+", "");
                         html.append("<td>")
-                                .append(WordLinker.toLink(c + s, s))
+                                .append(WordLinker.toLink(c + s, s, dictionary))
                                 .append("</td>");
                     });
-                    html.append("<td>")
-                            .append(WordLinker.toLink(c, c))
-                            .append("</td>");
+                    if(WORDS.contains(new Word(c, ""))) {
+                        html.append("<td>")
+                                .append(WordLinker.toLink(c, c, dictionary))
+                                .append("</td>");
+                    }
                 }
                 html.append("</tr>\n");
             });
@@ -141,7 +150,7 @@ public class DynamicSuffixRule {
             List<Suffix> suffixes = Arrays.asList(new Suffix("or", ""), new Suffix("our", ""));
 
             List<Word> data = DynamicSuffixRule.findBySuffix(words, suffixes);
-            String htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixes);
+            String htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixes, Dictionary.ICIBA);
 
             Files.write(Paths.get("target/dynamic_suffix_rule.txt"), htmlFragment.getBytes("utf-8"));
 
