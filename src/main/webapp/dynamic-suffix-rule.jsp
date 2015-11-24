@@ -27,10 +27,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
-    String dict = request.getParameter("dict");
-    if(dict != null){
-        WordLinker.dictionary = dict;
-    }
     String suffixes = request.getParameter("suffixes");
     String htmlFragment = "";
     if(suffixes != null && !"".equals(suffixes.trim()) && suffixes.contains("-")){
@@ -61,7 +57,7 @@
         if(data.size() > 500){
             data = data.subList(0, 500);
         }
-        htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixList);
+        htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixList, WordLinker.getValidDictionary(request.getParameter("dict")));
     }
 %>
 <html>
