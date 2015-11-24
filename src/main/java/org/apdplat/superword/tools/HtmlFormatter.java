@@ -238,7 +238,7 @@ public class HtmlFormatter {
                 });
         html.append("</table>\n");
 
-        if(elements.isEmpty()){
+        if(elements.isEmpty() || data.size() <= 1){
             return html.toString();
         }
 
@@ -260,7 +260,7 @@ public class HtmlFormatter {
         StringBuilder html = new StringBuilder();
         html.append("<h4>各大词性广泛度排名：</h4><br/>\n");
         AtomicInteger i = new AtomicInteger();
-        data.entrySet().stream().sorted((a,b)->b.getValue().size()-a.getValue().size()).forEach(e -> {
+        data.entrySet().stream().sorted((a, b) -> b.getValue().size() - a.getValue().size()).forEach(e -> {
             String k = e.getKey();
             html.append(i.incrementAndGet())
                     .append("、")
