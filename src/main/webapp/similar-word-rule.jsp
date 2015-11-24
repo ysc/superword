@@ -28,10 +28,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
-    String dict = request.getParameter("dict");
-    if(dict != null){
-        WordLinker.dictionary = dict;
-    }
     String word = request.getParameter("word");
     int count = 10;
     try{
@@ -79,7 +75,7 @@
             temp.append("<tr>");
             temp.append("<td> ").append(i++)
                     .append(". </td><td> ")
-                    .append(WordLinker.toLink(hit.getText()))
+                    .append(WordLinker.toLink(hit.getText(), WordLinker.getValidDictionary(request.getParameter("dict"))))
                     .append(" </td><td> ")
                     .append(hit.getScore())
                     .append("</td><td> ")
