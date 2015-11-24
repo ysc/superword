@@ -18,10 +18,11 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 
         <select name="dict" id="dict">
     <%
-        if ("ICIBA".equals(WordLinker.dictionary)) {
+        if (Dictionary.ICIBA==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA" selected="selected">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -35,7 +36,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("YOUDAO".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.YOUDAO==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO" selected="selected">有道</option>
@@ -49,7 +50,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("COLLINS".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.COLLINS==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -63,7 +64,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("WEBSTER".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.WEBSTER==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -77,7 +78,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("OXFORD".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.OXFORD==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -91,7 +92,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("CAMBRIDGE".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.CAMBRIDGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -105,7 +106,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("MACMILLAN".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.MACMILLAN==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -119,7 +120,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("HERITAGE".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.HERITAGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -133,7 +134,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("WIKTIONARY".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.WIKTIONARY==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -147,7 +148,7 @@
             <option value="WORDNET">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
             <%
-    } else if ("WORDNET".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.WORDNET==WordLinker.getValidDictionary(request.getParameter("dict"))) {
             %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
@@ -161,7 +162,7 @@
             <option value="WORDNET" selected="selected">WordNet</option>
             <option value="RANDOMHOUSE">RandomHouse</option>
     <%
-    } else if ("RANDOMHOUSE".equals(WordLinker.dictionary)) {
+    } else if (Dictionary.RANDOMHOUSE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
             <option value="ICIBA">爱词霸</option>
             <option value="YOUDAO">有道</option>
