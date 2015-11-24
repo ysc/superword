@@ -84,22 +84,19 @@ public class WordLinker {
     private static final String WORDNET_CSS_PATH = "html body div.form";
     private static final String RANDOMHOUSE_CSS_PATH = "html body div.content-container.main-area div.row div.center-well-container section#source-luna.source-wrapper.source-luna.is-pm-btn-show.pm-btn-spot div.source-box.oneClick-area section.luna-box div.source-data div.def-list section.def-pbk.ce-spot div.def-set div.def-content";
 
-    public static List<String> getDefinition(String dictionary, String word){
-        if(dictionary == null){
-            dictionary = "ICIBA";
-        }
+    public static List<String> getDefinition(Dictionary dictionary, String word){
         switch (dictionary){
-            case "ICIBA": return getDefinitionForICIBA(word);
-            case "YOUDAO": return getDefinitionForYOUDAO(word);
-            case "COLLINS": return getDefinitionForCOLLINS(word);
-            case "WEBSTER": return getDefinitionForWEBSTER(word);
-            case "OXFORD": return getDefinitionForOXFORD(word);
-            case "CAMBRIDGE": return getDefinitionForCAMBRIDGE(word);
-            case "MACMILLAN": return getDefinitionForMACMILLAN(word);
-            case "HERITAGE": return getDefinitionForHERITAGE(word);
-            case "WIKTIONARY": return getDefinitionForWIKTIONARY(word);
-            case "WORDNET": return getDefinitionForWORDNET(word);
-            case "RANDOMHOUSE": return getDefinitionForRANDOMHOUSE(word);
+            case ICIBA: return getDefinitionForICIBA(word);
+            case YOUDAO: return getDefinitionForYOUDAO(word);
+            case COLLINS: return getDefinitionForCOLLINS(word);
+            case WEBSTER: return getDefinitionForWEBSTER(word);
+            case OXFORD: return getDefinitionForOXFORD(word);
+            case CAMBRIDGE: return getDefinitionForCAMBRIDGE(word);
+            case MACMILLAN: return getDefinitionForMACMILLAN(word);
+            case HERITAGE: return getDefinitionForHERITAGE(word);
+            case WIKTIONARY: return getDefinitionForWIKTIONARY(word);
+            case WORDNET: return getDefinitionForWORDNET(word);
+            case RANDOMHOUSE: return getDefinitionForRANDOMHOUSE(word);
         }
         return getDefinitionForICIBA(word);
     }
@@ -153,26 +150,47 @@ public class WordLinker {
         return list;
     }
 
-    public static String toLink(String word, String dictionary){
+    public static Dictionary getValidDictionary(String dictionary){
+        try{
+            return Dictionary.valueOf(dictionary);
+        }catch (Exception e){}
+        return Dictionary.ICIBA;
+    }
+    public static enum Dictionary{
+        ICIBA, YOUDAO, COLLINS, WEBSTER, OXFORD, CAMBRIDGE, MACMILLAN, HERITAGE, WIKTIONARY, WORDNET, RANDOMHOUSE
+    }
+
+    public static String toLink(String word){
+        return toLink(word, Dictionary.ICIBA);
+    }
+
+    public static String toLink(String word, Dictionary dictionary){
         return toLink(word, "", dictionary);
     }
 
-    public static String toLink(String word, String emphasize, String dictionary){
+    public static String toLink(String word, String emphasize){
+        return toLink(word, emphasize, Dictionary.ICIBA);
+    }
+
+    public static String toLink(String word, String emphasize, Dictionary dictionary){
         return toLink(word, emphasize, EM_PRE, EM_SUF, dictionary);
     }
-    public static String toLink(String word, String emphasize, String emPre, String emSuf, String dictionary){
+    public static String toLink(String word, String emphasize, String emPre, String emSuf){
+        return toLink(word, emphasize, emPre, emSuf, Dictionary.ICIBA);
+    }
+    public static String toLink(String word, String emphasize, String emPre, String emSuf, Dictionary dictionary){
         switch (dictionary){
-            case "ICIBA": return linkToICIBA(word, emphasize, emPre, emSuf);
-            case "YOUDAO": return linkToYOUDAO(word, emphasize, emPre, emSuf);
-            case "COLLINS": return linkToCOLLINS(word, emphasize, emPre, emSuf);
-            case "WEBSTER": return linkToWEBSTER(word, emphasize, emPre, emSuf);
-            case "OXFORD": return linkToOXFORD(word, emphasize, emPre, emSuf);
-            case "CAMBRIDGE": return linkToCAMBRIDGE(word, emphasize, emPre, emSuf);
-            case "MACMILLAN": return linkToMACMILLAN(word, emphasize, emPre, emSuf);
-            case "HERITAGE": return linkToHERITAGE(word, emphasize, emPre, emSuf);
-            case "WIKTIONARY": return linkToWIKTIONARY(word, emphasize, emPre, emSuf);
-            case "WORDNET": return linkToWORDNET(word, emphasize, emPre, emSuf);
-            case "RANDOMHOUSE": return linkToRANDOMHOUSE(word, emphasize, emPre, emSuf);
+            case ICIBA: return linkToICIBA(word, emphasize, emPre, emSuf);
+            case YOUDAO: return linkToYOUDAO(word, emphasize, emPre, emSuf);
+            case COLLINS: return linkToCOLLINS(word, emphasize, emPre, emSuf);
+            case WEBSTER: return linkToWEBSTER(word, emphasize, emPre, emSuf);
+            case OXFORD: return linkToOXFORD(word, emphasize, emPre, emSuf);
+            case CAMBRIDGE: return linkToCAMBRIDGE(word, emphasize, emPre, emSuf);
+            case MACMILLAN: return linkToMACMILLAN(word, emphasize, emPre, emSuf);
+            case HERITAGE: return linkToHERITAGE(word, emphasize, emPre, emSuf);
+            case WIKTIONARY: return linkToWIKTIONARY(word, emphasize, emPre, emSuf);
+            case WORDNET: return linkToWORDNET(word, emphasize, emPre, emSuf);
+            case RANDOMHOUSE: return linkToRANDOMHOUSE(word, emphasize, emPre, emSuf);
         }
         //default
         return linkToICIBA(word, emphasize, emPre, emSuf);
@@ -245,27 +263,27 @@ public class WordLinker {
 
     public static void main(String[] args) {
         String word = "fabulous";
-        String dictionary = "ICIBA";
+        Dictionary dictionary = Dictionary.ICIBA;
         System.out.println(toLink(word, dictionary));
-        dictionary = "YOUDAO";
+        dictionary = Dictionary.YOUDAO;
         System.out.println(toLink(word, dictionary));
-        dictionary = "COLLINS";
+        dictionary = Dictionary.COLLINS;
         System.out.println(toLink(word, dictionary));
-        dictionary = "WEBSTER";
+        dictionary = Dictionary.WEBSTER;
         System.out.println(toLink(word, dictionary));
-        dictionary = "OXFORD";
+        dictionary = Dictionary.OXFORD;
         System.out.println(toLink(word, dictionary));
-        dictionary = "CAMBRIDGE";
+        dictionary = Dictionary.CAMBRIDGE;
         System.out.println(toLink(word, dictionary));
-        dictionary = "MACMILLAN";
+        dictionary = Dictionary.MACMILLAN;
         System.out.println(toLink(word, dictionary));
-        dictionary = "HERITAGE";
+        dictionary = Dictionary.HERITAGE;
         System.out.println(toLink(word, dictionary));
-        dictionary = "WIKTIONARY";
+        dictionary = Dictionary.WIKTIONARY;
         System.out.println(toLink(word, dictionary));
-        dictionary = "WORDNET";
+        dictionary = Dictionary.WORDNET;
         System.out.println(toLink(word, dictionary));
-        dictionary = "RANDOMHOUSE";
+        dictionary = Dictionary.RANDOMHOUSE;
         System.out.println(toLink(word, dictionary));
     }
 }
