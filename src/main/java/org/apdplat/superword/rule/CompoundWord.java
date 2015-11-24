@@ -28,7 +28,7 @@ import java.nio.file.Paths;
 import java.util.*;
 
 /**
- * 合成词：由多个现有词简单拼装在一起形成的词
+ * 复合词：由2个或2个以上现有词简单拼装在一起形成的词
  * @author 杨尚川
  */
 public class CompoundWord {
