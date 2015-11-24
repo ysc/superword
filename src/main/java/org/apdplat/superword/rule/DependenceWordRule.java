@@ -34,8 +34,8 @@ import java.util.*;
  * 依赖词规则：找出同时拥有前缀、后缀和词根的词
  * @author 杨尚川
  */
-public class DependentWordRule {
-    private DependentWordRule(){}
+public class DependenceWordRule {
+    private DependenceWordRule(){}
 
     public static Map<Word, List<Word>> getDependentWord(Set<Word> words){
         Map<Word, List<Word>> data = new HashMap<>();
@@ -91,7 +91,7 @@ public class DependentWordRule {
 
     public static void main(String[] args) throws Exception {
         Set<Word> words = WordSources.getSyllabusVocabulary();
-        Map<Word, List<Word>> result = DependentWordRule.getDependentWord(words);
+        Map<Word, List<Word>> result = DependenceWordRule.getDependentWord(words);
         List<String> htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(result, 5, 640);
         for(int i=0; i<htmlFragment.size(); i++) {
             Files.write(Paths.get("target/dependent_word_rule_"+(i+1)+".txt"), htmlFragment.get(i).getBytes("utf-8"));
