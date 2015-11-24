@@ -25,7 +25,6 @@ import org.apdplat.superword.model.SynonymDiscrimination;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.rule.PartOfSpeech;
 
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,7 +41,7 @@ public class HtmlFormatter {
     private static final String BLUE_EM_PRE = "<span style=\"color:blue\">";
     private static final String BLUE_EM_SUF = "</span>";
 
-    public static String toHtmlFragmentForText(Map<String, AtomicInteger> data, Set<String> fileNames) {
+    public static String toHtmlFragmentForText(Map<String, AtomicInteger> data, Set<String> fileNames, String dictionary) {
         StringBuilder html = new StringBuilder();
         html.append("统计书籍：<br/>\n");
         AtomicInteger i = new AtomicInteger();
@@ -77,10 +76,10 @@ public class HtmlFormatter {
                                 if (list.size() > 1) {
                                     html.append(z.incrementAndGet())
                                             .append(".")
-                                            .append(WordLinker.toLink(w))
+                                            .append(WordLinker.toLink(w, dictionary))
                                             .append(" ");
                                 } else if (list.size() == 1) {
-                                    html.append(WordLinker.toLink(w));
+                                    html.append(WordLinker.toLink(w, dictionary));
                                 }
                             });
                     html.append("</td></tr>\n");
@@ -100,7 +99,7 @@ public class HtmlFormatter {
                             .append("<tr><td>")
                             .append(wordCounter.incrementAndGet())
                             .append("</td><td>")
-                            .append(WordLinker.toLink(entry.getKey()))
+                            .append(WordLinker.toLink(entry.getKey(), dictionary))
                             .append("</td><td>")
                             .append(entry.getValue().get())
                             .append("</td></tr>\n");
@@ -120,7 +119,7 @@ public class HtmlFormatter {
                                 .append("<tr><td>")
                                 .append(j.incrementAndGet())
                                 .append("</td><td>")
-                                .append(WordLinker.toLink(entry.getKey()))
+                                .append(WordLinker.toLink(entry.getKey(), dictionary))
                                 .append("</td><td>")
                                 .append(entry.getValue().get())
                                 .append("</td></tr>\n"));
@@ -139,7 +138,7 @@ public class HtmlFormatter {
                                 .append("<tr><td>")
                                 .append(z.incrementAndGet())
                                 .append("</td><td>")
-                                .append(WordLinker.toLink(entry.getKey()))
+                                .append(WordLinker.toLink(entry.getKey(), dictionary))
                                 .append("</td><td>")
                                 .append(entry.getValue().get())
                                 .append("</td></tr>\n"));
@@ -147,7 +146,7 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForSentence(Map<String, String> data, Map<Word, AtomicInteger> wordFrequence){
+    public static String toHtmlForSentence(Map<String, String> data, Map<Word, AtomicInteger> wordFrequence, String dictionary){
         StringBuilder text = new StringBuilder();
         text.append("共有 ")
                 .append(data.size())
@@ -163,17 +162,17 @@ public class HtmlFormatter {
             .forEach(s -> text
                     .append(i.incrementAndGet())
                     .append("、")
-                    .append(processSentence(s, wordFrequence))
+                    .append(processSentence(s, wordFrequence, dictionary))
                     .append("  ")
                     .append(data.get(s))
                     .append("<br/>\n"));
         text
             .append("<br/>\n<h4>二、单词("+wordFrequence.size()+")：</h4>\n")
-            .append(HtmlFormatter.toHtmlTableFragment(wordFrequence, 6));
+            .append(HtmlFormatter.toHtmlTableFragment(wordFrequence, 6, dictionary));
         return text.toString();
     }
 
-    private static String processSentence(String sentence, Map<Word, AtomicInteger> wordFrequence){
+    private static String processSentence(String sentence, Map<Word, AtomicInteger> wordFrequence, String dictionary){
         sentence = sentence.replace(";", "; ")
                 .replace(",", ", ")
                 .replace(".", ". ")
@@ -189,7 +188,7 @@ public class HtmlFormatter {
                 Word word = new Word(w.substring(0, w.length()-1).toLowerCase(), "");
                 if(wordFrequence.containsKey(word)
                         && wordFrequence.get(word).get()<10){
-                    s.append(WordLinker.toLink(word.getWord())).append(w.substring(w.length()-1)).append(" ");
+                    s.append(WordLinker.toLink(word.getWord(), dictionary)).append(w.substring(w.length()-1)).append(" ");
                 }else{
                     s.append(w).append(" ");
                 }
@@ -198,7 +197,7 @@ public class HtmlFormatter {
                 Word word = new Word(w.toLowerCase(), "");
                 if (wordFrequence.containsKey(word)
                         && wordFrequence.get(word).get() < 10) {
-                    s.append(WordLinker.toLink(w)).append(" ");
+                    s.append(WordLinker.toLink(w, dictionary)).append(" ");
                 } else {
                     s.append(w).append(" ");
                 }
@@ -207,7 +206,7 @@ public class HtmlFormatter {
         return s.toString();
     }
 
-    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data){
+    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data, String dictionary){
         Set<Word> elements = new HashSet<>();
         StringBuilder html = new StringBuilder();
         html.append("<table  border=\"1\">\n");
@@ -221,7 +220,7 @@ public class HtmlFormatter {
                     html.append("\t<tr><td>")
                             .append(i.incrementAndGet())
                             .append("</td><td>")
-                            .append(WordLinker.toLink(entry.getKey().getWord()))
+                            .append(WordLinker.toLink(entry.getKey().getWord(), dictionary))
                             .append("</td>");
                     entry
                             .getValue()
@@ -229,7 +228,7 @@ public class HtmlFormatter {
                             .forEach(words -> {
                                 words.forEach(word -> {
                                     html.append("<td>")
-                                            .append(WordLinker.toLink(word.getWord()))
+                                            .append(WordLinker.toLink(word.getWord(), dictionary))
                                             .append("</td>");
                                     elements.add(word);
                                 });
@@ -249,14 +248,14 @@ public class HtmlFormatter {
         List<String> words = elements
                 .stream()
                 .sorted()
-                .map(word -> WordLinker.toLink(word.getWord()))
+                .map(word -> WordLinker.toLink(word.getWord(), dictionary))
                 .collect(Collectors.toList());
         html.append(toHtmlTableFragment(words, 5));
 
         return html.toString();
     }
 
-    public static String toHtmlForPartOfSpeech(Map<String, Set<String>> data){
+    public static String toHtmlForPartOfSpeech(Map<String, Set<String>> data, String dictionary){
         StringBuilder html = new StringBuilder();
         html.append("<h4>各大词性广泛度排名：</h4><br/>\n");
         AtomicInteger i = new AtomicInteger();
@@ -295,26 +294,26 @@ public class HtmlFormatter {
                     .append(")")
                     .append("</h4>\n")
                     .append(
-                            toHtmlTableFragment(data.get(k).stream().sorted().map(w -> WordLinker.toLink(w)).collect(Collectors.toList()), 5));
+                            toHtmlTableFragment(data.get(k).stream().sorted().map(w -> WordLinker.toLink(w, dictionary)).collect(Collectors.toList()), 5));
         });
         return html.toString();
     }
 
-    public static String toHtmlForPluralFormat(Map<String, String> data){
+    public static String toHtmlForPluralFormat(Map<String, String> data, String dictionary){
         StringBuilder html = new StringBuilder();
         html.append("<table border=\"1\">\n")
             .append("\t<tr><td>单词原型</td><td>单词复数</td></tr>\n");
         data.keySet().forEach(key -> {
             String origin = key.substring(0, key.length() - data.get(key).length());
-            html.append("\t<tr><td>").append(WordLinker.toLink(origin)).append("</td><td>")
-                .append(WordLinker.toLink(key, origin, BLUE_EM_PRE, BLUE_EM_SUF + "-")).append("</td></tr>\n");
+            html.append("\t<tr><td>").append(WordLinker.toLink(origin, dictionary)).append("</td><td>")
+                .append(WordLinker.toLink(key, origin, BLUE_EM_PRE, BLUE_EM_SUF + "-", dictionary)).append("</td></tr>\n");
 
         });
         html.append("</table>\n");
         return html.toString();
     }
 
-    public static String toHtmlForWordDefinition(Set<Word> words, int rowLength) {
+    public static String toHtmlForWordDefinition(Set<Word> words, int rowLength, String dictionary) {
         Map<Integer, AtomicInteger> map = new HashMap<>();
         words.stream().forEach(w -> {
             int count = w.getDefinitions().size();
@@ -325,7 +324,7 @@ public class HtmlFormatter {
                     words
                         .stream()
                         .sorted((a, b) -> b.getDefinitions().size() - a.getDefinitions().size())
-                        .map(word -> WordLinker.toLink(word.getWord())+"-"+word.getDefinitions().size())
+                        .map(word -> WordLinker.toLink(word.getWord(), dictionary)+"-"+word.getDefinitions().size())
                         .collect(Collectors.toList());
         StringBuilder html = new StringBuilder();
         html.append(toHtmlTableFragment(data, rowLength))
@@ -338,7 +337,7 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
+    public static String toHtmlForAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength, String dictionary){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         synonymAntonyms
@@ -349,12 +348,12 @@ public class HtmlFormatter {
                         html.append("<h4>")
                                 .append(i.incrementAndGet())
                                 .append("、")
-                                .append(WordLinker.toLink(sa.getWord().getWord()))
+                                .append(WordLinker.toLink(sa.getWord().getWord(), dictionary))
                                 .append("</h4>\n")
                                 .append("<b>反义词(")
                                 .append(sa.getAntonym().size())
                                 .append(")：</b><br/>\n");
-                        List<String> sm = sa.getAntonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord())).collect(Collectors.toList());
+                        List<String> sm = sa.getAntonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord(), dictionary)).collect(Collectors.toList());
                         html.append(toHtmlTableFragment(sm, rowLength))
                             .append("<br/>\n");
                     }
@@ -362,7 +361,7 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlForSynonymAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength){
+    public static String toHtmlForSynonymAntonym(Set<SynonymAntonym> synonymAntonyms, int rowLength, String dictionary){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         synonymAntonyms
@@ -372,23 +371,23 @@ public class HtmlFormatter {
                     html.append("<h4>")
                             .append(i.incrementAndGet())
                             .append("、")
-                            .append(WordLinker.toLink(sa.getWord().getWord()))
+                            .append(WordLinker.toLink(sa.getWord().getWord(), dictionary))
                             .append("</h4>\n");
                     if (!sa.getSynonym().isEmpty()) {
                         html.append("<b>同义词(").append(sa.getSynonym().size()).append(")：</b><br/>\n");
-                        List<String> sm = sa.getSynonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord())).collect(Collectors.toList());
+                        List<String> sm = sa.getSynonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord(), dictionary)).collect(Collectors.toList());
                         html.append(toHtmlTableFragment(sm, rowLength));
                     }
                     if (!sa.getAntonym().isEmpty()) {
                         html.append("<b>反义词(").append(sa.getAntonym().size()).append(")：</b><br/>\n");
-                        List<String> sm = sa.getAntonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord())).collect(Collectors.toList());
+                        List<String> sm = sa.getAntonym().stream().sorted().map(w -> WordLinker.toLink(w.getWord(), dictionary)).collect(Collectors.toList());
                         html.append(toHtmlTableFragment(sm, rowLength));
                     }
                     html.append("<br/>\n");
                 });
         return html.toString();
     }
-    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscrimination){
+    public static String toHtmlForSynonymDiscrimination(Set<SynonymDiscrimination> synonymDiscrimination, String dictionary){
         StringBuilder html = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         synonymDiscrimination
@@ -408,7 +407,7 @@ public class HtmlFormatter {
                 sd.getWords()
                     .forEach(w -> {
                         html.append("\t<li>")
-                                .append(WordLinker.toLink(w.getWord()))
+                                .append(WordLinker.toLink(w.getWord(), dictionary))
                                 .append("：")
                                 .append(w.getMeaning())
                                 .append("</li>\n");
@@ -420,7 +419,7 @@ public class HtmlFormatter {
         return html.toString();
     }
 
-    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootAffixToWords, int rowLength) {
+    public static String toHtmlTableFragmentForRootAffix(Map<Word, List<Word>> rootAffixToWords, int rowLength, String dictionary) {
         StringBuilder html = new StringBuilder();
         AtomicInteger rootCounter = new AtomicInteger();
         Set<Word> unique = new HashSet<>();
@@ -448,7 +447,7 @@ public class HtmlFormatter {
                         .sorted()
                         .map(word -> {
                             unique.add(word);
-                            return emphasize(word, rootAffix);
+                            return emphasize(word, rootAffix, dictionary);
                         })
                         .collect(Collectors.toList());
             html.append(toHtmlTableFragment(data, rowLength));
@@ -457,41 +456,41 @@ public class HtmlFormatter {
         return head+html.toString();
     }
 
-    public static String emphasize(Word word, Word rootAffix){
+    public static String emphasize(Word word, Word rootAffix, String dictionary){
         String w = word.getWord();
         String r = rootAffix.getWord().replace("-", "").toLowerCase();
         //词就是词根
         if (w.length() == r.length()) {
-            return WordLinker.toLink(w, r);
+            return WordLinker.toLink(w, r, dictionary);
         }
         //词根在中间
         if (w.length() > r.length()
                 && !w.startsWith(r)
                 && !w.endsWith(r)) {
-            return WordLinker.toLink(w, r, "-" + RED_EM_PRE, RED_EM_SUF + "-");
+            return WordLinker.toLink(w, r, "-" + RED_EM_PRE, RED_EM_SUF + "-", dictionary);
         }
         //词根在前面
         if (w.length() > r.length() && w.startsWith(r)) {
-            return WordLinker.toLink(w, r, "" + RED_EM_PRE, RED_EM_SUF + "-");
+            return WordLinker.toLink(w, r, "" + RED_EM_PRE, RED_EM_SUF + "-", dictionary);
         }
         //词根在后面面
         if (w.length() > r.length() && w.endsWith(r)) {
-            return WordLinker.toLink(w, r, "-" + RED_EM_PRE, RED_EM_SUF + "");
+            return WordLinker.toLink(w, r, "-" + RED_EM_PRE, RED_EM_SUF + "", dictionary);
         }
-        return WordLinker.toLink(w, r);
+        return WordLinker.toLink(w, r, dictionary);
     }
 
-    public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength) {
-        return toHtmlTableFragment(words.entrySet(), rowLength);
+    public static String toHtmlTableFragment(Map<Word, AtomicInteger> words, int rowLength, String dictionary) {
+        return toHtmlTableFragment(words.entrySet(), rowLength, dictionary);
     }
-    public static String toHtmlTableFragment(Set<Map.Entry<Word, AtomicInteger>> words, int rowLength) {
+    public static String toHtmlTableFragment(Set<Map.Entry<Word, AtomicInteger>> words, int rowLength, String dictionary) {
 
         List<String> data =
         words
             .stream()
             .sorted((a, b) -> b.getValue().get() - a.getValue().get())
             .map(entry -> {
-                String link = WordLinker.toLink(entry.getKey().getWord());
+                String link = WordLinker.toLink(entry.getKey().getWord(), dictionary);
                 if (entry.getValue().get() > 0) {
                     link = link+"-"+entry.getValue().get();
                 }
@@ -502,7 +501,7 @@ public class HtmlFormatter {
         return toHtmlTableFragment(data, rowLength);
     }
 
-    public static List<String> toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength, int wordsLength) {
+    public static List<String> toHtmlTableFragmentForIndependentWord(Map<Word, List<Word>> data, int rowLength, int wordsLength, String dictionary) {
         List<String> htmls = new ArrayList<>();
         StringBuilder html = new StringBuilder();
         AtomicInteger wordCounter = new AtomicInteger();
@@ -521,7 +520,7 @@ public class HtmlFormatter {
                 List<String> result = data
                         .get(word)
                         .stream()
-                        .map(rootAffix -> emphasize(word, rootAffix))
+                        .map(rootAffix -> emphasize(word, rootAffix, dictionary))
                         .collect(Collectors.toList());
                 html.append(toHtmlTableFragment(result, rowLength));
                 result.clear();
