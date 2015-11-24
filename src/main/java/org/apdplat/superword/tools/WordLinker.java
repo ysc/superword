@@ -17,6 +17,7 @@
  * this program. If not, see <http://www.gnu.org/licenses/>.
  *
  */
+
 package org.apdplat.superword.tools;
 
 import org.apache.commons.lang.StringUtils;
@@ -55,9 +56,6 @@ public class WordLinker {
     //则不能使用服务器端调整
     //将此值设置为null
     public static String serverRedirect = "server-redirect.jsp";
-
-    //链接到哪个词典
-    public volatile static String dictionary = "ICIBA";
 
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
@@ -155,14 +153,14 @@ public class WordLinker {
         return list;
     }
 
-    public static String toLink(String word){
-        return toLink(word, "");
+    public static String toLink(String word, String dictionary){
+        return toLink(word, "", dictionary);
     }
 
-    public static String toLink(String word, String emphasize){
-        return toLink(word, emphasize, EM_PRE, EM_SUF);
+    public static String toLink(String word, String emphasize, String dictionary){
+        return toLink(word, emphasize, EM_PRE, EM_SUF, dictionary);
     }
-    public static String toLink(String word, String emphasize, String emPre, String emSuf){
+    public static String toLink(String word, String emphasize, String emPre, String emSuf, String dictionary){
         switch (dictionary){
             case "ICIBA": return linkToICIBA(word, emphasize, emPre, emSuf);
             case "YOUDAO": return linkToYOUDAO(word, emphasize, emPre, emSuf);
@@ -247,27 +245,27 @@ public class WordLinker {
 
     public static void main(String[] args) {
         String word = "fabulous";
-        dictionary = "ICIBA";
-        System.out.println(toLink(word));
+        String dictionary = "ICIBA";
+        System.out.println(toLink(word, dictionary));
         dictionary = "YOUDAO";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "COLLINS";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "WEBSTER";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "OXFORD";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "CAMBRIDGE";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "MACMILLAN";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "HERITAGE";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "WIKTIONARY";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "WORDNET";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
         dictionary = "RANDOMHOUSE";
-        System.out.println(toLink(word));
+        System.out.println(toLink(word, dictionary));
     }
 }
