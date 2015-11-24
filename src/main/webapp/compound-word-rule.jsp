@@ -27,10 +27,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
-    String dict = request.getParameter("dict");
-    if(dict != null){
-        WordLinker.dictionary = dict;
-    }
     Word word = new Word(request.getParameter("word"), "");
     int column = 10;
     try{
@@ -48,7 +44,7 @@
         temp.put(word, data);
         htmlFragment = HtmlFormatter.toHtmlForCompoundWord(temp);
     }else{
-        htmlFragment = WordLinker.toLink(word.getWord());
+        htmlFragment = WordLinker.toLink(word.getWord(), WordLinker.getValidDictionary(request.getParameter("dict")));
     }
 %>
 <html>
