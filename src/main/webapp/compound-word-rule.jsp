@@ -23,7 +23,7 @@
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
-<%@ page import="java.util.Set" %>
+<%@ page import="java.util.HashMap" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -31,37 +31,39 @@
     if(dict != null){
         WordLinker.dictionary = dict;
     }
-
-    String words_type = request.getParameter("words_type");
-    if(words_type == null){
-        words_type = "all";
+    Word word = new Word(request.getParameter("word"), "");
+    int column = 10;
+    try{
+        column = Integer.parseInt(request.getParameter("column"));
+    }catch (Exception e){}
+    Map<Word, Map<Integer, List<Word>>> compound = (Map<Word, Map<Integer, List<Word>>>)application.getAttribute("compound");
+    if(compound == null){
+        compound = CompoundWord.find(WordSources.getAll(), WordSources.getAll());
+        application.setAttribute("compound", compound);
     }
-    request.setAttribute("words_type", words_type.trim());
-    String key = "words_"+words_type;
-    Set<Word> words = (Set<Word>)session.getAttribute(key);
-    if(words == null){
-        if("ALL".equals(words_type.trim())){
-            words = WordSources.getAll();
-        }else if("SYLLABUS".equals(words_type.trim())){
-            words = WordSources.getSyllabusVocabulary();
-        }else{
-            String resource = "/word_"+words_type+".txt";
-            words = WordSources.get(resource);
-        }
-        session.setAttribute(key, words);
+    Map<Integer, List<Word>> data = compound.get(word);
+    String htmlFragment = "";
+    if(data != null && data.size() > 0) {
+        Map<Word, Map<Integer, List<Word>>> temp = new HashMap<Word, Map<Integer, List<Word>>>();
+        temp.put(word, data);
+        htmlFragment = HtmlFormatter.toHtmlForCompoundWord(temp);
+    }else{
+        htmlFragment = WordLinker.toLink(word.getWord());
     }
-    Map<Word, Map<Integer, List<Word>>> data = CompoundWord.find(words, words);
-    String htmlFragment = HtmlFormatter.toHtmlForCompoundWord(data);
 %>
 <html>
 <head>
-    <title>复合词规则</title>
+    <title>复合词分析规则</title>
     <script type="text/javascript">
         function submit(){
+            var word = document.getElementById("word").value;
             var dict = document.getElementById("dict").value;
-            var words_type = document.getElementById("words_type").value;
+            var column = document.getElementById("column").value;
 
-            location.href = "suffix-rule.jsp?dict="+dict+"&words_type="+words_type;
+            if(word == ""){
+                return;
+            }
+            location.href = "compound-word-rule.jsp?word="+word+"&dict="+dict+"&column="+column;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -75,11 +77,13 @@
     <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
     <p>
         ***用法说明:
-        复合词规则，由2个或2个以上现有词简单拼装在一起形成的词
+        复合词分析规则，判断一个词是不是复合词就看它是不是由2个或2个以上现有词简单拼装在一起形成的词
     </p>
     <p>
-        <font color="red">选择词汇：</font>
-        <jsp:include page="words-select.jsp"/>
+        <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">选择词典：</font>
+        <jsp:include page="dictionary-select.jsp"/><br/>
+        <font color="red">每行词数：</font><input id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
     </p>
     <p></p>
     <p><a href="#" onclick="submit();">提交</a></p>
