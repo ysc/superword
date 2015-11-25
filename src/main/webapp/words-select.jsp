@@ -18,7 +18,7 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
-<select name="words_type" id="words_type">
+<select name="words_type" id="words_type" onchange="submit();">
     <%
         if ("primary_school".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
