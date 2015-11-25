@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 辅助阅读:
  * 以电影功夫熊猫使用的单词分析为例
  * 你英语四级过了吗? 功夫熊猫看了吗?
- * 去除停用词后,功夫熊猫使用了800个英语单词,你会说很简单吧,别急,这些单词中仍然有150个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
+ * 去除停用词后,功夫熊猫使用了799个英语单词,你会说很简单吧,别急,这些单词中仍然有150个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
  * Created by ysc on 11/15/15.
  */
 public class AidReading {
@@ -40,8 +40,18 @@ public class AidReading {
 
     public static void main(String[] args) throws IOException {
         WordLinker.serverRedirect = null;
+
         String result = analyse(WordSources.get("/word_CET4.txt"), Dictionary.ICIBA, 6, "/it/movie/kungfupanda.txt");
+
         //String result = analyse(WordSources.get("/word_CET4.txt"), Dictionary.ICIBA, 6, "/it/movie/kungfupanda.txt", "/it/movie/kungfupanda2.txt");
+
+        /*
+        String url = "http://spark.apache.org/docs/latest/streaming-programming-guide.html";
+        String text = Jsoup.parse(new URL(url), 60000).text();
+        System.out.println(text);
+        String result = analyse(WordSources.get("/word_CET4.txt"), Dictionary.ICIBA, 6, false, null, Arrays.asList(text));
+        */
+
         System.out.println(result);
     }
     public static String analyse(Set<Word> words, Dictionary dictionary, int column, String... resources) {
@@ -55,6 +65,8 @@ public class AidReading {
         return analyse(words, dictionary, column, searchOriginalText, book, text);
     }
     public static String analyse(Set<Word> words, Dictionary dictionary, int column, boolean searchOriginalText, String book, List<String> text) {
+        Set<String> wordSet = new HashSet<>();
+        words.forEach(word -> wordSet.add(word.getWord().toLowerCase()));
         StringBuilder result = new StringBuilder();
         Map<String, AtomicInteger> map = new ConcurrentHashMap<>();
 
@@ -82,7 +94,7 @@ public class AidReading {
                 if (buffer.length() < 2 || buffer.length() > 14) {
                     continue;
                 }
-                if (STOP_WORDS.contains(new Word(buffer.toString(), ""))) {
+                if (STOP_WORDS.contains(new Word(buffer.toString().toLowerCase(), ""))) {
                     continue;
                 }
                 map.putIfAbsent(buffer.toString(), new AtomicInteger());
@@ -93,71 +105,71 @@ public class AidReading {
         List<String> list = new ArrayList<>();
 
         map.entrySet().stream().sorted((a, b) -> b.getValue().get() - a.getValue().get()).forEach(entry -> {
-            String w = entry.getKey();
+            String w = entry.getKey().toLowerCase();
             if(w.length() < 3){
                 return;
             }
-            if (words.contains(new Word(w, ""))) {
+            if (wordSet.contains(w)) {
                 return;
             }
-            if (w.endsWith("ly") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
+            if (w.endsWith("ly") && wordSet.contains(w.substring(0, w.length() - 2))) {
                 return;
             }
-            if (w.endsWith("s") && words.contains(new Word(w.substring(0, w.length() - 1), ""))) {
+            if (w.endsWith("s") && wordSet.contains(w.substring(0, w.length() - 1))) {
                 return;
             }
-            if (w.endsWith("es") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
+            if (w.endsWith("es") && wordSet.contains(w.substring(0, w.length() - 2))) {
                 return;
             }
-            if (w.endsWith("ies") && words.contains(new Word(w.substring(0, w.length() - 3)+"y", ""))) {
+            if (w.endsWith("ies") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
                 return;
             }
-            if (w.endsWith("ed") && words.contains(new Word(w.substring(0, w.length() - 1), ""))) {
+            if (w.endsWith("ed") && wordSet.contains(w.substring(0, w.length() - 1))) {
                 return;
             }
-            if (w.endsWith("ed") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
+            if (w.endsWith("ed") && wordSet.contains(w.substring(0, w.length() - 2))) {
                 return;
             }
-            if (w.endsWith("ed") && w.length()>5 && words.contains(new Word(w.substring(0, w.length() - 3), "")) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
+            if (w.endsWith("ed") && w.length()>5 && wordSet.contains(w.substring(0, w.length() - 3)) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
                 return;
             }
-            if (w.endsWith("ied") && words.contains(new Word(w.substring(0, w.length() - 3)+"y", ""))) {
+            if (w.endsWith("ied") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
                 return;
             }
-            if (w.endsWith("ing") && words.contains(new Word(w.substring(0, w.length() - 3), ""))) {
+            if (w.endsWith("ing") && wordSet.contains(w.substring(0, w.length() - 3))) {
                 return;
             }
-            if (w.endsWith("ing") && words.contains(new Word(w.substring(0, w.length() - 3)+"e", ""))) {
+            if (w.endsWith("ing") && wordSet.contains(w.substring(0, w.length() - 3)+"e")) {
                 return;
             }
-            if (w.endsWith("ing") && w.length()>6 && words.contains(new Word(w.substring(0, w.length() - 4), "")) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
+            if (w.endsWith("ing") && w.length()>6 && wordSet.contains(w.substring(0, w.length() - 4)) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
                 return;
             }
-            if (w.endsWith("er") && words.contains(new Word(w.substring(0, w.length() - 1), ""))) {
+            if (w.endsWith("er") && wordSet.contains(w.substring(0, w.length() - 1))) {
                 return;
             }
-            if (w.endsWith("er") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
+            if (w.endsWith("er") && wordSet.contains(w.substring(0, w.length() - 2))) {
                 return;
             }
-            if (w.endsWith("er") && w.length()>5 && words.contains(new Word(w.substring(0, w.length() - 3), "")) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
+            if (w.endsWith("er") && w.length()>5 && wordSet.contains(w.substring(0, w.length() - 3)) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
                 return;
             }
-            if (w.endsWith("est") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
+            if (w.endsWith("est") && wordSet.contains(w.substring(0, w.length() - 2))) {
                 return;
             }
-            if (w.endsWith("est") && words.contains(new Word(w.substring(0, w.length() - 3), ""))) {
+            if (w.endsWith("est") && wordSet.contains(w.substring(0, w.length() - 3))) {
                 return;
             }
-            if (w.endsWith("est") && w.length()>6 && words.contains(new Word(w.substring(0, w.length() - 4), "")) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
+            if (w.endsWith("est") && w.length()>6 && wordSet.contains(w.substring(0, w.length() - 4)) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
                 return;
             }
-            if (w.endsWith("ier") && words.contains(new Word(w.substring(0, w.length() - 3)+"y", ""))) {
+            if (w.endsWith("ier") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
                 return;
             }
-            if (w.endsWith("iest") && words.contains(new Word(w.substring(0, w.length() - 4)+"y", ""))) {
+            if (w.endsWith("iest") && wordSet.contains(w.substring(0, w.length() - 4)+"y")) {
                 return;
             }
-            if (w.endsWith("ves") && words.contains(new Word(w.substring(0, w.length() - 3)+"f", ""))) {
+            if (w.endsWith("ves") && wordSet.contains(w.substring(0, w.length() - 3)+"f")) {
                 return;
             }
             String originalText = "";
