@@ -104,15 +104,13 @@
         如：son或者spir，多个后缀可用逗号分隔，如：spect,spic
     </p>
     <p>
-        <font color="red">输入词根：</font><input id="roots" name="roots" value="<%=roots==null?"":roots%>" size="50" maxlength="50"><br/>
-        <font color="red">每行词数：</font><input id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">输入词根：</font><input onchange="submit();" id="roots" name="roots" value="<%=roots==null?"":roots%>" size="50" maxlength="50"><br/>
+        <font color="red">每行词数：</font><input onchange="submit();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="words-select.jsp"/>
     </p>
-    <p></p>
-    <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
