@@ -29,6 +29,7 @@
 
   <a target="_blank" href="aid-reading.jsp?words_type=SYLLABUS&dict=ICIBA&book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&column=6">书籍辅助阅读</a><br/>
   <a target="_blank" href="aid-reading-detail.jsp?book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&word=functional&dict=ICIBA&pageSize=192">搜索单词对应书籍原文</a><br/>
+  <a target="_blank" href="independence-word-rule.jsp?dict=ICIBA&column=8&words_type=SYLLABUS">独立词规则</a><br/>
   <a target="_blank" href="root_affix_rule.jsp?dict=ICIBA&word=abbreviation&column=6&strict=N">词根词缀分析规则</a><br/>
   <a target="_blank" href="compound-word-rule.jsp?dict=ICIBA&word=fearless&column=6">复合词分析规则</a><br/>
   <a target="_blank" href="roots.jsp">常见词根</a><br/>
