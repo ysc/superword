@@ -16,10 +16,9 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
-<%@ page import="org.apdplat.superword.tools.AidReading" %>
-<%@ page import="java.util.Arrays" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.model.Word" %>
+<%@ page import="org.apdplat.superword.tools.AidReading" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.Set" %>
 
@@ -49,7 +48,7 @@
     try{
         column = Integer.parseInt(request.getParameter("column"));
     }catch (Exception e){}
-    String htmlFragment = AidReading.analyse(Arrays.asList(book), words, WordLinker.getValidDictionary(request.getParameter("dict")), column, true, book);
+    String htmlFragment = AidReading.analyse(words, WordLinker.getValidDictionary(request.getParameter("dict")), column, true, book, book);
 %>
 
 <html>
