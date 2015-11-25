@@ -20,7 +20,7 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 
-        <select name="dict" id="dict">
+        <select name="dict" id="dict" onchange="submit();">
     <%
         if (Dictionary.ICIBA==WordLinker.getValidDictionary(request.getParameter("dict"))) {
     %>
