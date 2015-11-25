@@ -18,7 +18,7 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
-<select name="strict" id="strict">
+<select name="strict" id="strict" onchange="submit();">
   <%
     if("N".equalsIgnoreCase(request.getParameter("strict"))){
   %>
