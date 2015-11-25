@@ -105,8 +105,8 @@
         如：pro或者pre，多个前缀可用逗号分隔，如：anti,counter,de,dis,il,im,in,ir,mis,non,un
     </p>
     <p>
-        <font color="red">输入前缀：</font><input id="prefixes" name="prefixes" value="<%=prefixes==null?"":prefixes%>" size="50" maxlength="50"><br/>
-        <font color="red">每行词数：</font><input id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">输入前缀：</font><input onchange="submit();" id="prefixes" name="prefixes" value="<%=prefixes==null?"":prefixes%>" size="50" maxlength="50"><br/>
+        <font color="red">每行词数：</font><input onchange="submit();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">严格匹配：</font>
         <jsp:include page="strict-select.jsp"/><br/>
         <font color="red">选择词典：</font>
@@ -114,8 +114,6 @@
         <font color="red">选择词汇：</font>
         <jsp:include page="words-select.jsp"/>
     </p>
-    <p></p>
-    <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
