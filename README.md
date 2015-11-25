@@ -20,15 +20,24 @@
         cd superword
         建议自己注册一个GitHub账号，将项目Fork到自己的账号下，然后再从自己的账号下签出项目源码，
         这样便于使用GitHub的Pull requests功能进行协作开发。
+        
+    3、配置MySQL数据库
+        在MySQL命令行中执行superword/src/main/resources/mysql/superword.sql文件中的脚本   
+        MySQL编码：UTF-8，
+        主机：127.0.0.1
+        端口：3306
+        数据库：superword
+        用户名：root
+        密码：root
     
-    3、运行项目
+    4、运行项目
         unix类操作系统执行：
             chmod +x startup.sh & ./startup.sh
         windows类操作系统执行：
             mvn clean install
             将target/superword-1.0.war文件手动拷贝到你自己的apache-tomcat-8.0.28/webapps目录后启动tomcat
 
-    4、使用系统
+    5、使用系统
         打开浏览器访问：http://localhost:8080/superword-1.0/index.jsp
 
 ###[如何正确地快速地看电影学英语](http://my.oschina.net/apdplat/blog/530605)
