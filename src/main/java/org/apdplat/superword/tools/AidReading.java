@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 辅助阅读:
  * 以电影功夫熊猫使用的单词分析为例
  * 你英语四级过了吗? 功夫熊猫看了吗?
- * 去除停用词后,功夫熊猫使用了804个英语单词,你会说很简单吧,别急,这些单词中仍然有186个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
+ * 去除停用词后,功夫熊猫使用了800个英语单词,你会说很简单吧,别急,这些单词中仍然有151个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
  * Created by ysc on 11/15/15.
  */
 public class AidReading {
@@ -56,6 +56,7 @@ public class AidReading {
             try {
                 FileUtils.readResource(resource).forEach(line -> {
                     StringBuilder buffer = new StringBuilder();
+                    line = line.replaceAll("n't", " not");
                     for(org.apdplat.word.segmentation.Word term : WordSegmenter.segWithStopWords(line, SegmentationAlgorithm.PureEnglish)){
                         String word = term.getText();
 
@@ -71,6 +72,9 @@ public class AidReading {
                         String baseForm = IrregularVerbs.getBaseForm(buffer.toString());
                         buffer.setLength(0);
                         buffer.append(baseForm);
+                        String singular = IrregularPlurals.getSingular(buffer.toString());
+                        buffer.setLength(0);
+                        buffer.append(singular);
                         if(buffer.length()<2 || buffer.length() > 14){
                             continue;
                         }
@@ -90,7 +94,13 @@ public class AidReading {
 
         map.entrySet().stream().sorted((a, b) -> b.getValue().get() - a.getValue().get()).forEach(entry -> {
             String w = entry.getKey();
+            if(w.length() < 3){
+                return;
+            }
             if (words.contains(new Word(w, ""))) {
+                return;
+            }
+            if (w.endsWith("ly") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
                 return;
             }
             if (w.endsWith("s") && words.contains(new Word(w.substring(0, w.length() - 1), ""))) {
@@ -108,16 +118,46 @@ public class AidReading {
             if (w.endsWith("ed") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
                 return;
             }
+            if (w.endsWith("ed") && w.length()>5 && words.contains(new Word(w.substring(0, w.length() - 3), "")) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
+                return;
+            }
             if (w.endsWith("ied") && words.contains(new Word(w.substring(0, w.length() - 3)+"y", ""))) {
                 return;
             }
             if (w.endsWith("ing") && words.contains(new Word(w.substring(0, w.length() - 3), ""))) {
                 return;
             }
+            if (w.endsWith("ing") && words.contains(new Word(w.substring(0, w.length() - 3)+"e", ""))) {
+                return;
+            }
+            if (w.endsWith("ing") && w.length()>6 && words.contains(new Word(w.substring(0, w.length() - 4), "")) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
+                return;
+            }
+            if (w.endsWith("er") && words.contains(new Word(w.substring(0, w.length() - 1), ""))) {
+                return;
+            }
             if (w.endsWith("er") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
                 return;
             }
+            if (w.endsWith("er") && w.length()>5 && words.contains(new Word(w.substring(0, w.length() - 3), "")) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
+                return;
+            }
+            if (w.endsWith("est") && words.contains(new Word(w.substring(0, w.length() - 2), ""))) {
+                return;
+            }
             if (w.endsWith("est") && words.contains(new Word(w.substring(0, w.length() - 3), ""))) {
+                return;
+            }
+            if (w.endsWith("est") && w.length()>6 && words.contains(new Word(w.substring(0, w.length() - 4), "")) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
+                return;
+            }
+            if (w.endsWith("ier") && words.contains(new Word(w.substring(0, w.length() - 3)+"y", ""))) {
+                return;
+            }
+            if (w.endsWith("iest") && words.contains(new Word(w.substring(0, w.length() - 4)+"y", ""))) {
+                return;
+            }
+            if (w.endsWith("ves") && words.contains(new Word(w.substring(0, w.length() - 3)+"f", ""))) {
                 return;
             }
             String originalText = "";
