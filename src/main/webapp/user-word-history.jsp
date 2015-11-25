@@ -73,8 +73,6 @@
     <font color="red">选择词典：</font>
     <jsp:include page="dictionary-select.jsp"/><br/>
 </p>
-<p></p>
-<p><a href="#" onclick="submit();">提交</a></p>
 <%=htmlFragment%>
 <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
