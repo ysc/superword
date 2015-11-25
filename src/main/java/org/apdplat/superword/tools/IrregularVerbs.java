@@ -30,7 +30,7 @@ public class IrregularVerbs {
     private static final Map<String, String> pastParticipleToBaseForm = new HashMap<>();
     static {
         FileUtils.readResource("/irregular_verbs.txt").forEach(line->{
-            String[] attrs = line.split("\t");
+            String[] attrs = line.split("\\s+");
             String baseForm = attrs[0];
             String pastTense = attrs[1];
             String pastParticiple = attrs[2];
