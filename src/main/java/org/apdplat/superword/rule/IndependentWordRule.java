@@ -25,6 +25,7 @@ import org.apdplat.superword.model.Suffix;
 import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.HtmlFormatter;
 import org.apdplat.superword.tools.WordLinker;
+import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
 
 import java.nio.file.Files;
@@ -40,8 +41,12 @@ public class IndependentWordRule {
     private IndependentWordRule(){}
 
     public static List<String> getIndependentWord(){
-        Set<Word> words = WordSources.getSyllabusVocabulary();
-
+        return getIndependentWord(WordSources.getSyllabusVocabulary(), Dictionary.ICIBA);
+    }
+    public static List<String> getIndependentWord(Set<Word> words){
+        return getIndependentWord(words, Dictionary.ICIBA);
+    }
+    public static List<String> getIndependentWord(Set<Word> words, Dictionary dictionary){
         List<Prefix> prefixes = PrefixRule.getAllPrefixes();
         TreeMap<Prefix, List<Word>> prefixToWords = PrefixRule.findByPrefix(words, prefixes, false);
 
@@ -58,7 +63,7 @@ public class IndependentWordRule {
 
         return WordSources.minus(words, rs)
                 .stream()
-                .map(word -> WordLinker.toLink(word.getWord()))
+                .map(word -> WordLinker.toLink(word.getWord(), dictionary))
                 .sorted()
                 .collect(Collectors.toList());
     }
