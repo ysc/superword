@@ -83,7 +83,7 @@
     </p>
 
     <p>
-        <font color="red">每行词数：</font><input id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">每行词数：</font><input onchange="submit();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
@@ -91,10 +91,6 @@
         <font color="red">选择书籍：</font>
         <jsp:include page="book-select.jsp"/>
     </p>
-
-    <p></p>
-
-    <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
