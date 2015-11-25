@@ -105,17 +105,13 @@
     </p>
 
     <p>
-        <font color="red">搜索单词：</font><input id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
-        <font color="red">显示条数：</font><input id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
+        <font color="red">搜索单词：</font><input onchange="submit();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
+        <font color="red">显示条数：</font><input onchange="submit();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">选择书籍：</font>
         <jsp:include page="book-select.jsp"/>
     </p>
-
-    <p></p>
-
-    <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
