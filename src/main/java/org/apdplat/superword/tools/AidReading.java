@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 辅助阅读:
  * 以电影功夫熊猫使用的单词分析为例
  * 你英语四级过了吗? 功夫熊猫看了吗?
- * 去除停用词后,功夫熊猫使用了800个英语单词,你会说很简单吧,别急,这些单词中仍然有151个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
+ * 去除停用词后,功夫熊猫使用了800个英语单词,你会说很简单吧,别急,这些单词中仍然有150个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
  * Created by ysc on 11/15/15.
  */
 public class AidReading {
@@ -40,53 +40,53 @@ public class AidReading {
 
     public static void main(String[] args) throws IOException {
         WordLinker.serverRedirect = null;
-        String result = analyse(Arrays.asList("/it/movie/kungfupanda.txt"),
-                WordSources.get("/word_CET4.txt"), Dictionary.ICIBA, 6);
-        //String result = analyse(Arrays.asList("/it/movie/kungfupanda.txt", "/it/movie/kungfupanda2.txt"),
-        //        WordSources.get("/word_CET4.txt"), Dictionary.ICIBA, 6);
+        String result = analyse(WordSources.get("/word_CET4.txt"), Dictionary.ICIBA, 6, "/it/movie/kungfupanda.txt");
+        //String result = analyse(WordSources.get("/word_CET4.txt"), Dictionary.ICIBA, 6, "/it/movie/kungfupanda.txt", "/it/movie/kungfupanda2.txt");
         System.out.println(result);
     }
-    public static String analyse(List<String> resources, Set<Word> words, Dictionary dictionary, int column) {
-        return analyse(resources, words, dictionary, column, false, null);
+    public static String analyse(Set<Word> words, Dictionary dictionary, int column, String... resources) {
+        return analyse(words, dictionary, column, false, null, resources);
     }
-    public static String analyse(List<String> resources, Set<Word> words, Dictionary dictionary, int column, boolean searchOriginalText, String book) {
+    public static String analyse(Set<Word> words, Dictionary dictionary, int column, boolean searchOriginalText, String book, String... resources) {
+        List<String> text = new ArrayList<>();
+        for(String resource : resources) {
+            text.addAll(FileUtils.readResource(resource));
+        }
+        return analyse(words, dictionary, column, searchOriginalText, book, text);
+    }
+    public static String analyse(Set<Word> words, Dictionary dictionary, int column, boolean searchOriginalText, String book, List<String> text) {
         StringBuilder result = new StringBuilder();
         Map<String, AtomicInteger> map = new ConcurrentHashMap<>();
-        resources.forEach(resource -> {
-            try {
-                FileUtils.readResource(resource).forEach(line -> {
-                    StringBuilder buffer = new StringBuilder();
-                    line = line.replaceAll("n't", " not");
-                    for(org.apdplat.word.segmentation.Word term : WordSegmenter.segWithStopWords(line, SegmentationAlgorithm.PureEnglish)){
-                        String word = term.getText();
 
-                        if (word.contains("'")) {
-                            continue;
-                        }
-                        buffer.setLength(0);
-                        for (char c : word.toCharArray()) {
-                            if (Character.isAlphabetic(c)) {
-                                buffer.append(Character.toLowerCase(c));
-                            }
-                        }
-                        String baseForm = IrregularVerbs.getBaseForm(buffer.toString());
-                        buffer.setLength(0);
-                        buffer.append(baseForm);
-                        String singular = IrregularPlurals.getSingular(buffer.toString());
-                        buffer.setLength(0);
-                        buffer.append(singular);
-                        if(buffer.length()<2 || buffer.length() > 14){
-                            continue;
-                        }
-                        if(STOP_WORDS.contains(new Word(buffer.toString(), ""))){
-                            continue;
-                        }
-                        map.putIfAbsent(buffer.toString(), new AtomicInteger());
-                        map.get(buffer.toString()).incrementAndGet();
+        text.forEach(line -> {
+            StringBuilder buffer = new StringBuilder();
+            line = line.replaceAll("n't", " not");
+            for (org.apdplat.word.segmentation.Word term : WordSegmenter.segWithStopWords(line, SegmentationAlgorithm.PureEnglish)) {
+                String word = term.getText();
+
+                if (word.contains("'")) {
+                    continue;
+                }
+                buffer.setLength(0);
+                for (char c : word.toCharArray()) {
+                    if (Character.isAlphabetic(c)) {
+                        buffer.append(Character.toLowerCase(c));
                     }
-                });
-            } catch (Exception e) {
-                e.printStackTrace();
+                }
+                String baseForm = IrregularVerbs.getBaseForm(buffer.toString());
+                buffer.setLength(0);
+                buffer.append(baseForm);
+                String singular = IrregularPlurals.getSingular(buffer.toString());
+                buffer.setLength(0);
+                buffer.append(singular);
+                if (buffer.length() < 2 || buffer.length() > 14) {
+                    continue;
+                }
+                if (STOP_WORDS.contains(new Word(buffer.toString(), ""))) {
+                    continue;
+                }
+                map.putIfAbsent(buffer.toString(), new AtomicInteger());
+                map.get(buffer.toString()).incrementAndGet();
             }
         });
 
