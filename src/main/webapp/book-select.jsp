@@ -28,7 +28,7 @@
     }
 %>
 
-<select name="book" id="book">
+<select name="book" id="book" onchange="submit();">
 <%
 for(String book : books) {
     if(book.equals(request.getParameter("book"))){
