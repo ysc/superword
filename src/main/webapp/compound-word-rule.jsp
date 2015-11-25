@@ -42,7 +42,7 @@
     if(data != null && data.size() > 0) {
         Map<Word, Map<Integer, List<Word>>> temp = new HashMap<Word, Map<Integer, List<Word>>>();
         temp.put(word, data);
-        htmlFragment = HtmlFormatter.toHtmlForCompoundWord(temp);
+        htmlFragment = HtmlFormatter.toHtmlForCompoundWord(temp, WordLinker.getValidDictionary(request.getParameter("dict")));
     }else{
         htmlFragment = WordLinker.toLink(word.getWord(), WordLinker.getValidDictionary(request.getParameter("dict")));
     }
@@ -76,13 +76,11 @@
         复合词分析规则，判断一个词是不是复合词就看它是不是由2个或2个以上现有词简单拼装在一起形成的词
     </p>
     <p>
-        <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">输入单词：</font><input onchange="submit();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
-        <font color="red">每行词数：</font><input id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">每行词数：</font><input onchange="submit();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
     </p>
-    <p></p>
-    <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
