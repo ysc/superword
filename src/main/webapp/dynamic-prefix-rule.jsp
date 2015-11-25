@@ -90,14 +90,12 @@
         且除了前缀外，其他部分都相同
     </p>
     <p>
-        <font color="red">输入动态前缀：</font><input id="prefixes" name="prefixes" value="<%=prefixes==null?"":prefixes%>" size="50" maxlength="50"><br/>
+        <font color="red">输入动态前缀：</font><input onchange="submit();" id="prefixes" name="prefixes" value="<%=prefixes==null?"":prefixes%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="words-select.jsp"/>
     </p>
-    <p></p>
-    <p><a href="#" onclick="submit();">提交</a></p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>
