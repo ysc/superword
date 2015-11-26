@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 if [ -f ~/tomcat-8.0.28.zip ] ; then
     echo tomcat-8.0.28 prepared
 else
