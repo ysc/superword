@@ -27,6 +27,7 @@
   <p>升学考试、工作求职、充电提高，都少不了英语的身影，英语对我们来说实在太重要了。你还在为记不住英语单词而苦恼吗？还在为看不懂英文资料和原版书籍而伤神吗？superword可以在你英语学习的路上助你一臂之力。</p>
   <p>superword利用计算机强大的计算能力，使用机器学习和数据挖掘算法找到读音相近、外形相似、含义相关、同义反义、词根词缀的英语单词，从而非常有利于我们深入地记忆理解这些单词。</p>
 
+  <a target="_blank" href="web-aid-reading.jsp?words_type=SYLLABUS&dict=ICIBA&url=http://spark.apache.org/docs/latest/streaming-programming-guide.html&column=6">网页辅助阅读</a><br/>
   <a target="_blank" href="aid-reading.jsp?words_type=SYLLABUS&dict=ICIBA&book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&column=6">书籍辅助阅读</a><br/>
   <a target="_blank" href="aid-reading-detail.jsp?book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&word=functional&dict=ICIBA&pageSize=192">搜索单词对应书籍原文</a><br/>
   <a target="_blank" href="independence-word-rule.jsp?dict=ICIBA&column=8&words_type=SYLLABUS">独立词规则</a><br/>
