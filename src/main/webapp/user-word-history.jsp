@@ -38,7 +38,10 @@
                 .append("</td><td>")
                 .append(WordLinker.toLink(userWord.getWord(), WordLinker.getValidDictionary(request.getParameter("dict"))))
                 .append("</td><td>")
+                .append(WordLinker.toLink(userWord.getWord(), WordLinker.getValidDictionary(userWord.getDictionary())))
+                .append("(")
                 .append(userWord.getDictionary())
+                .append(")")
                 .append("</td><td>")
                 .append(userWord.getDateTimeString())
                 .append("</td></tr>");
