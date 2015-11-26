@@ -26,7 +26,7 @@
   List<Prefix> prefixes = PrefixRule.getAllPrefixes();
   StringBuilder stringBuilder = new StringBuilder();
   stringBuilder.append("<table>\n");
-  stringBuilder.append("<tr><th>序号</th><th>前缀</th><th>含义</th></tr>");
+  stringBuilder.append("<tr><th>序号</th><th>前缀</th><th>含义</th><th>英文牛津含义</th></tr>");
   int i=1;
   for(Prefix prefix : prefixes){
     stringBuilder.append("<tr><td>")
