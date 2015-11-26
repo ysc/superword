@@ -19,6 +19,7 @@
 <%@ page import="org.apdplat.superword.model.Suffix" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.rule.SuffixRule" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 
@@ -26,7 +27,7 @@
   List<Suffix> suffixes = SuffixRule.getAllSuffixes();
   StringBuilder stringBuilder = new StringBuilder();
   stringBuilder.append("<table>\n");
-  stringBuilder.append("<tr><th>序号</th><th>后缀</th><th>含义</th></tr>");
+  stringBuilder.append("<tr><th>序号</th><th>后缀</th><th>中文含义</th><th>英文牛津含义</th></tr>");
   int i=1;
   for(Suffix suffix : suffixes){
     stringBuilder.append("<tr><td>")
@@ -39,6 +40,8 @@
             .append("</a>")
             .append("</td><td>")
             .append(suffix.getDes().replace(";", ";<br/>"))
+            .append("</td><td>")
+            .append(WordLinker.toLink(suffix.getSuffix(), WordLinker.Dictionary.OXFORD))
             .append("</td></tr>\n");
   }
   stringBuilder.append("</table>\n");
