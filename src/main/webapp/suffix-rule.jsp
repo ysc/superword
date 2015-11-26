@@ -77,7 +77,7 @@
 <head>
     <title>后缀规则</title>
     <script type="text/javascript">
-        function submit(){
+        function update(){
             var suffixes = document.getElementById("suffixes").value;
             var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
@@ -92,7 +92,7 @@
         document.onkeypress=function(e){
             var e = window.event || e ;
             if(e.charCode == 13){
-                submit();
+                update();
             }
         }
     </script>
@@ -105,8 +105,8 @@
         如：ics或者ian，多个后缀可用逗号分隔，如：ence,ance,age
     </p>
     <p>
-        <font color="red">输入后缀：</font><input onchange="submit();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
-        <font color="red">每行词数：</font><input onchange="submit();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">输入后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
+        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">严格匹配：</font>
         <jsp:include page="strict-select.jsp"/><br/>
         <font color="red">选择词典：</font>

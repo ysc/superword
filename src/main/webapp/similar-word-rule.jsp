@@ -91,7 +91,7 @@
 <head>
     <title>拼写相似规则</title>
     <script type="text/javascript">
-        function submit(){
+        function update(){
             var word = document.getElementById("word").value;
             var count = document.getElementById("count").value;
             var dict = document.getElementById("dict").value;
@@ -104,7 +104,7 @@
         document.onkeypress=function(e){
             var e = window.event || e ;
             if(e.charCode == 13){
-                submit();
+                update();
             }
         }
     </script>
@@ -128,7 +128,7 @@
         <jsp:include page="words-select.jsp"/>
     </p>
     <p></p>
-    <p><a href="#" onclick="submit();">提交</a></p>
+    <p><a href="#" onclick="update();">提交</a></p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
 </body>

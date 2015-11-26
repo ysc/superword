@@ -64,7 +64,7 @@
 <head>
     <title>动态后缀规则</title>
     <script type="text/javascript">
-        function submit(){
+        function update(){
             var suffixes = document.getElementById("suffixes").value;
             var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
@@ -76,7 +76,7 @@
         document.onkeypress=function(e){
             var e = window.event || e ;
             if(e.charCode == 13){
-                submit();
+                update();
             }
         }
     </script>
@@ -90,7 +90,7 @@
         且除了后缀外，其他部分都相同
     </p>
     <p>
-        <font color="red">输入动态后缀：</font><input onchange="submit();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
+        <font color="red">输入动态后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>

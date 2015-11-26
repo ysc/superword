@@ -51,7 +51,7 @@
 <head>
     <title>复合词分析规则</title>
     <script type="text/javascript">
-        function submit(){
+        function update(){
             var word = document.getElementById("word").value;
             var dict = document.getElementById("dict").value;
             var column = document.getElementById("column").value;
@@ -64,7 +64,7 @@
         document.onkeypress=function(e){
             var e = window.event || e ;
             if(e.charCode == 13){
-                submit();
+                update();
             }
         }
     </script>
@@ -76,10 +76,10 @@
         复合词分析规则，判断一个词是不是复合词就看它是不是由2个或2个以上现有词简单拼装在一起形成的词
     </p>
     <p>
-        <font color="red">输入单词：</font><input onchange="submit();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">输入单词：</font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
-        <font color="red">每行词数：</font><input onchange="submit();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
     </p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>

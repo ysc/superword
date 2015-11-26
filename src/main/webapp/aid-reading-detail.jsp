@@ -78,7 +78,7 @@
 <head>
     <title>辅助阅读</title>
     <script type="text/javascript">
-        function submit(){
+        function update(){
             var dict = document.getElementById("dict").value;
             var book = document.getElementById("book").value;
             var word = document.getElementById("word").value;
@@ -92,7 +92,7 @@
         document.onkeypress=function(e){
             var e = window.event || e ;
             if(e.charCode == 13){
-                submit();
+                update();
             }
         }
     </script>
@@ -105,8 +105,8 @@
     </p>
 
     <p>
-        <font color="red">搜索单词：</font><input onchange="submit();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
-        <font color="red">显示条数：</font><input onchange="submit();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
+        <font color="red">搜索单词：</font><input onchange="update();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
+        <font color="red">显示条数：</font><input onchange="update();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">选择书籍：</font>

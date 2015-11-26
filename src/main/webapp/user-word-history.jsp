@@ -50,7 +50,7 @@
 <head>
     <title>用户查词记录</title>
     <script type="text/javascript">
-        function submit(){
+        function update(){
             var dict = document.getElementById("dict").value;
 
             if(dict == ""){
@@ -61,7 +61,7 @@
         document.onkeypress=function(e){
             var e = window.event || e ;
             if(e.charCode == 13){
-                submit();
+                update();
             }
         }
     </script>

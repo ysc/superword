@@ -57,7 +57,7 @@
 <head>
     <title>独立词规则</title>
     <script type="text/javascript">
-        function submit(){
+        function update(){
             var words_type = document.getElementById("words_type").value;
             var dict = document.getElementById("dict").value;
             var column = document.getElementById("column").value;
@@ -70,7 +70,7 @@
         document.onkeypress=function(e){
             var e = window.event || e ;
             if(e.charCode == 13){
-                submit();
+                update();
             }
         }
     </script>
@@ -84,7 +84,7 @@
     </p>
 
     <p>
-        <font color="red">每行词数：</font><input onchange="submit();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
         <jsp:include page="dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
