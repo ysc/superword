@@ -25,7 +25,10 @@
 
 <%
     String userName = (String) session.getAttribute("userName");
-    userName = userName==null?"anonymity":userName;
+    if(userName==null){
+        out.println("未登录用户不能查看");
+        return;
+    }
 
     List<UserWord> userWords = MySQLUtils.getHistoryUserWordsFromDatabase(userName);
     StringBuilder htmlFragment = new StringBuilder();
