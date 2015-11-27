@@ -45,5 +45,8 @@
   <a target="_blank" href="similar-word-rule.jsp?word=north&count=10&dict=ICIBA&words_type=SYLLABUS">拼写相似规则</a><br/>
   <a target="_blank" href="user-word-history.jsp?dict=ICIBA">用户查词记录</a><br/>
   <a target="_blank" href="user-text-history.jsp">文本分析记录</a>
+
+  <br/>
+  <a target="_blank" href="https://github.com/ysc/QuestionAnsweringSystem/wiki/donation">我要捐赠</a>
 </body>
 </html>
