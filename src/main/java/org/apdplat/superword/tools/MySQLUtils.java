@@ -148,7 +148,7 @@ public class MySQLUtils {
     }
 
     public static void saveUserTextToDatabase(UserText userText) {
-        String sql = "insert into user_text (user_name, text, date_time) values (?, ?, ?)";
+        String sql = "insert into user_text (user_name, text, text_hashcode, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
             return ;
@@ -159,7 +159,8 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userText.getUserName());
             pst.setString(2, userText.getText());
-            pst.setTimestamp(3, new Timestamp(userText.getDateTime().getTime()));
+            pst.setInt(3, userText.getText().hashCode());
+            pst.setTimestamp(4, new Timestamp(userText.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
             LOG.error("保存失败", e);
