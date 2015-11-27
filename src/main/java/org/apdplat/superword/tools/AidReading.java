@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 辅助阅读:
  * 以电影功夫熊猫使用的单词分析为例
  * 你英语四级过了吗? 功夫熊猫看了吗?
- * 去除停用词后,功夫熊猫使用了794个英语单词,你会说很简单吧,别急,这些单词中仍然有148个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
+ * 去除停用词后,功夫熊猫使用了789个英语单词,你会说很简单吧,别急,这些单词中仍然有148个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
  * Created by ysc on 11/15/15.
  */
 public class AidReading {
@@ -105,72 +105,96 @@ public class AidReading {
 
         List<String> list = new ArrayList<>();
 
+        Map<String, AtomicInteger> map2 = new ConcurrentHashMap<>();
+
         map.entrySet().stream().sorted((a, b) -> b.getValue().get() - a.getValue().get()).forEach(entry -> {
+            AtomicInteger v = entry.getValue();
             String w = entry.getKey().toLowerCase();
             if(w.length() < 3){
                 return;
             }
             if (wordSet.contains(w)) {
+                map2.put(w, v);
                 return;
             }
             if (w.endsWith("ly") && wordSet.contains(w.substring(0, w.length() - 2))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
                 return;
             }
             if (w.endsWith("s") && wordSet.contains(w.substring(0, w.length() - 1))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 1), v);
                 return;
             }
             if (w.endsWith("es") && wordSet.contains(w.substring(0, w.length() - 2))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
                 return;
             }
             if (w.endsWith("ies") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3)+"y", v);
                 return;
             }
             if (w.endsWith("ed") && wordSet.contains(w.substring(0, w.length() - 1))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 1), v);
                 return;
             }
             if (w.endsWith("ed") && wordSet.contains(w.substring(0, w.length() - 2))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
                 return;
             }
             if (w.endsWith("ed") && w.length()>5 && wordSet.contains(w.substring(0, w.length() - 3)) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
                 return;
             }
             if (w.endsWith("ied") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3)+"y", v);
                 return;
             }
             if (w.endsWith("ing") && wordSet.contains(w.substring(0, w.length() - 3))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
                 return;
             }
             if (w.endsWith("ing") && wordSet.contains(w.substring(0, w.length() - 3)+"e")) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3)+"e", v);
                 return;
             }
             if (w.endsWith("ing") && w.length()>6 && wordSet.contains(w.substring(0, w.length() - 4)) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 4), v);
                 return;
             }
             if (w.endsWith("er") && wordSet.contains(w.substring(0, w.length() - 1))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 1), v);
                 return;
             }
             if (w.endsWith("er") && wordSet.contains(w.substring(0, w.length() - 2))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
                 return;
             }
             if (w.endsWith("er") && w.length()>5 && wordSet.contains(w.substring(0, w.length() - 3)) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
                 return;
             }
             if (w.endsWith("est") && wordSet.contains(w.substring(0, w.length() - 2))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
                 return;
             }
             if (w.endsWith("est") && wordSet.contains(w.substring(0, w.length() - 3))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
                 return;
             }
             if (w.endsWith("est") && w.length()>6 && wordSet.contains(w.substring(0, w.length() - 4)) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
+                map2.put(w+"_"+w.substring(0, w.length() - 4), v);
                 return;
             }
             if (w.endsWith("ier") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3)+"y", v);
                 return;
             }
             if (w.endsWith("iest") && wordSet.contains(w.substring(0, w.length() - 4)+"y")) {
+                map2.put(w+"_"+w.substring(0, w.length() - 4)+"y", v);
                 return;
             }
             if (w.endsWith("ves") && wordSet.contains(w.substring(0, w.length() - 3)+"f")) {
+                map2.put(w+"_"+w.substring(0, w.length() - 3)+"f", v);
                 return;
             }
             String originalText = "";
@@ -186,16 +210,21 @@ public class AidReading {
 
         list.clear();
 
-        map.entrySet().stream().sorted((a, b) -> b.getValue().get() - a.getValue().get()).forEach(entry -> {
+        map2.entrySet().stream().sorted((a, b) -> b.getValue().get() - a.getValue().get()).forEach(entry -> {
             String originalText = "";
-            if(searchOriginalText){
-                originalText = "\t<a target=\"_blank\" href=\"aid-reading-detail.jsp?book="+book+"&word="+entry.getKey()+"&dict=ICIBA&pageSize="+entry.getValue()+"\">[" + entry.getValue() + "]</a>";
-            }else{
+            if (searchOriginalText) {
+                originalText = "\t<a target=\"_blank\" href=\"aid-reading-detail.jsp?book=" + book + "&word=" + entry.getKey() + "&dict=ICIBA&pageSize=" + entry.getValue() + "\">[" + entry.getValue() + "]</a>";
+            } else {
                 originalText = "\t[" + entry.getValue() + "]";
             }
-            list.add(WordLinker.toLink(entry.getKey(), dictionary) + originalText);
+            StringBuilder link = new StringBuilder();
+            for (String word : entry.getKey().split("_")) {
+                link.append(WordLinker.toLink(word, dictionary)).append(" | ");
+            }
+            link.setLength(link.length()-3);
+            list.add(link.toString() + originalText);
         });
-        result.append("<h3>words: (" + list.size() + ") </h3>\n");
+        result.append("<h3>words occur in specified set: (" + list.size() + ") </h3>\n");
         result.append(HtmlFormatter.toHtmlTableFragment(list, column));
         return result.toString();
     }
