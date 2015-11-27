@@ -53,9 +53,9 @@
     <title>用户文本分析记录</title>
 </head>
 <body>
-<h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
+<jsp:include page="head.jsp"/>
 <p>用户 <%=userName%> 文本分析记录</p>
 <%=htmlFragment%>
-<p><a target="_blank" href="index.jsp">主页</a></p>
+<jsp:include page="bottom.jsp"/>
 </body>
 </html>

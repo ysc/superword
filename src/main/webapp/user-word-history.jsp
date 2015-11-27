@@ -71,13 +71,13 @@
     </script>
 </head>
 <body>
-<h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
+<jsp:include page="head.jsp"/>
 <p>用户 <%=userName%> 查词记录</p>
 <p>
     <font color="red">选择词典：</font>
     <jsp:include page="dictionary-select.jsp"/><br/>
 </p>
 <%=htmlFragment%>
-<p><a target="_blank" href="index.jsp">主页</a></p>
+<jsp:include page="bottom.jsp"/>
 </body>
 </html>

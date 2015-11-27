@@ -99,7 +99,7 @@
     </script>
 </head>
 <body>
-    <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
+    <jsp:include page="head.jsp"/>
 
     <p>
         辅助阅读-搜索单词对应原文
@@ -115,5 +115,6 @@
     </p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
+    <jsp:include page="bottom.jsp"/>
 </body>
 </html>

@@ -111,7 +111,7 @@
     </script>
 </head>
 <body>
-    <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
+    <jsp:include page="head.jsp"/>
     <p>
         ***用法说明:
         拼写相似规则，英语是拼音文字而不是表意文字，
@@ -131,6 +131,6 @@
     <p></p>
     <p><a href="#" onclick="update();">提交</a></p>
     <%=htmlFragment%>
-    <p><a target="_blank" href="index.jsp">主页</a></p>
+    <jsp:include page="bottom.jsp"/>
 </body>
 </html>

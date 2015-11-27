@@ -71,7 +71,7 @@
     </script>
 </head>
 <body>
-    <h2><a href="https://github.com/ysc/superword" target="_blank">superword主页</a></h2>
+    <jsp:include page="head.jsp"/>
     <p>
         ***用法说明:
         复合词分析规则，判断一个词是不是复合词就看它是不是由2个或2个以上现有词简单拼装在一起形成的词
@@ -83,6 +83,6 @@
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
     </p>
     <%=htmlFragment%>
-    <p><a target="_blank" href="index.jsp">主页</a></p>
+    <jsp:include page="bottom.jsp"/>
 </body>
 </html>
