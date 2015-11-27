@@ -21,11 +21,25 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.Set" %>
+<%@ page import="org.apdplat.superword.model.UserBook" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
     String book = request.getParameter("book");
+    if(book == null){
+        return;
+    }
+    String userName = (String)session.getAttribute("userName");
+    UserBook userBook = new UserBook();
+    userBook.setDateTime(new Date());
+    userBook.setBook(book);
+    userBook.setUserName(userName==null?"anonymity":userName);
+    //保存用户书籍分析记录
+    MySQLUtils.saveUserBookToDatabase(userBook);
+
     String words_type = request.getParameter("words_type");
     if(words_type == null){
         words_type = "ALL";
