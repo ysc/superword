@@ -50,6 +50,7 @@
 <html>
 <head>
     <title>复合词分析规则</title>
+    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         function update(){
             var word = document.getElementById("word").value;

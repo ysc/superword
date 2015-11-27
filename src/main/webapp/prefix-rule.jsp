@@ -76,6 +76,7 @@
 <html>
 <head>
     <title>前缀规则</title>
+    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         function update(){
             var prefixes = document.getElementById("prefixes").value;

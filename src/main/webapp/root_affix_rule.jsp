@@ -51,6 +51,7 @@
 <html>
 <head>
     <title>词根词缀分析规则</title>
+    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         function update(){
             var word = document.getElementById("word").value;

@@ -54,6 +54,7 @@
 <html>
 <head>
     <title>辅助阅读</title>
+    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         function update(){
             var words_type = document.getElementById("words_type").value;

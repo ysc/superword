@@ -49,6 +49,7 @@
 
 <html>
 <head>
+    <script src="js/statistics.js"></script>
     <title>用户文本分析记录</title>
 </head>
 <body>

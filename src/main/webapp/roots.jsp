@@ -46,6 +46,7 @@
 
 <html>
 <head>
+    <script src="js/statistics.js"></script>
     <title>常见词根</title>
 </head>
 <body>

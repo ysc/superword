@@ -80,6 +80,7 @@
 <head>
    <title>网页辅助阅读</title>
 
+    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         var lock = false;
         function update(){

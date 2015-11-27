@@ -19,6 +19,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <html>
 <head>
+  <script src="js/statistics.js"></script>
   <title>superword是一个Java实现的英文单词分析软件，主要研究英语单词音近形似转化规律、前缀后缀规律、词之间的相似性规律等等。</title>
 </head>
 <body>
