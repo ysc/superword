@@ -23,12 +23,25 @@
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.Set" %>
 <%@ page import="java.net.URLDecoder" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+<%@ page import="org.apdplat.superword.model.UserText" %>
+<%@ page import="java.util.Date" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
     String text = request.getParameter("text");
+    if(text == null) {
+        return;
+    }
     text = URLDecoder.decode(text, "utf-8");
+    UserText userText = new UserText();
+    userText.setDateTime(new Date());
+    userText.setText(text);
+    String userName = (String)session.getAttribute("userName");
+    userText.setUserName(userName==null?"ysc":userName);
+    //保存用户文本分析记录
+    MySQLUtils.saveUserTextToDatabase(userText);
     String words_type = request.getParameter("words_type");
     if(words_type == null){
         words_type = "ALL";
