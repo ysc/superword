@@ -71,7 +71,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="common/head.jsp"/>
     <p>
         ***用法说明:
         复合词分析规则，判断一个词是不是复合词就看它是不是由2个或2个以上现有词简单拼装在一起形成的词
@@ -79,10 +79,10 @@
     <p>
         <font color="red">输入单词：</font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="select/dictionary-select.jsp"/><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
     </p>
     <%=htmlFragment%>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>

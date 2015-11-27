@@ -111,7 +111,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="common/head.jsp"/>
     <p>
         ***用法说明:
         拼写相似规则，英语是拼音文字而不是表意文字，
@@ -124,13 +124,13 @@
         <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
-        <jsp:include page="words-select.jsp"/>
+        <jsp:include page="select/words-select.jsp"/>
     </p>
     <p></p>
     <p><a href="#" onclick="update();">提交</a></p>
     <%=htmlFragment%>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>

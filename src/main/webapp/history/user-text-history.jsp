@@ -53,9 +53,9 @@
     <title>用户文本分析记录</title>
 </head>
 <body>
-<jsp:include page="head.jsp"/>
+<jsp:include page="../common/head.jsp"/>
 <p>用户 <%=userName%> 文本分析记录</p>
 <%=htmlFragment%>
-<jsp:include page="bottom.jsp"/>
+<jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

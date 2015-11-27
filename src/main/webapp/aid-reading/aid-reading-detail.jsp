@@ -99,7 +99,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="../common/head.jsp"/>
 
     <p>
         辅助阅读-搜索单词对应原文
@@ -109,12 +109,12 @@
         <font color="red">搜索单词：</font><input onchange="update();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
         <font color="red">显示条数：</font><input onchange="update();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择书籍：</font>
-        <jsp:include page="book-select.jsp"/>
+        <jsp:include page="../select/book-select.jsp"/>
     </p>
     <%=htmlFragment%>
     <p><a target="_blank" href="index.jsp">主页</a></p>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

@@ -23,7 +23,7 @@
   <title>superword是一个Java实现的英文单词分析和辅助阅读开源项目，主要研究英语单词音近形似转化规律、前缀后缀规律、词之间的相似性规律和辅助阅读等等。</title>
 </head>
 <body>
-  <jsp:include page="head.jsp"/>
+  <jsp:include page="common/head.jsp"/>
   <p>
     superword是一个Java实现的英文单词分析和辅助阅读开源项目，主要研究英语单词音近形似转化规律、前缀后缀规律、词之间的相似性规律和辅助阅读等等。Clean code、Fluent style、Java8 feature: Lambdas, Streams and Functional-style Programming。 升学考试、工作求职、充电提高，都少不了英语的身影，英语对我们来说实在太重要了。你还在为记不住英语单词而苦恼吗？还在为看不懂英文资料和原版书籍而伤神吗？superword可以在你英语学习的路上助你一臂之力。 superword利用计算机强大的计算能力，使用机器学习和数据挖掘算法找到读音相近、外形相似、含义相关、同义反义、词根词缀的英语单词，从而非常有利于我们深入地记忆理解这些单词，同时，辅助阅读功能更是能够提供阅读的速度和质量。 支持最权威的2部中文词典和9部英文词典，支持23种分级词汇，囊括了所有的英语考试，还专门针对程序员提供了249本最热门的技术书籍的辅助阅读功能。
   </p>
@@ -34,8 +34,8 @@
       <li><a target="_blank" href="aid-reading/aid-reading.jsp?words_type=SYLLABUS&dict=ICIBA&book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&column=6">书籍辅助阅读</a></li>
       <li><a target="_blank" href="aid-reading/aid-reading-detail.jsp?book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&word=functional&dict=ICIBA&pageSize=192">搜索单词对应书籍原文</a></li>
       <li><a target="_blank" href="independence-word-rule.jsp?dict=ICIBA&column=8&words_type=SYLLABUS">独立词规则</a></li>
-      <li><a target="_blank" href="root-affix/root_affix_rule.jsp?dict=ICIBA&word=abbreviation&column=6&strict=N">词根词缀分析规则</a></li>
       <li><a target="_blank" href="compound-word-rule.jsp?dict=ICIBA&word=fearless&column=6">复合词分析规则</a></li>
+      <li><a target="_blank" href="root-affix/root_affix_rule.jsp?dict=ICIBA&word=abbreviation&column=6&strict=N">词根词缀分析规则</a></li>
       <li><a target="_blank" href="root-affix/roots.jsp">常见词根</a></li>
       <li><a target="_blank" href="root-affix/root-rule.jsp?roots=spect,spic&dict=ICIBA&words_type=SYLLABUS&column=6">词根规则</a></li>
       <li><a target="_blank" href="root-affix/prefixes.jsp">常见前缀</a></li>

@@ -77,7 +77,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="common/head.jsp"/>
 
     <p>
         ***用法说明:
@@ -87,11 +87,11 @@
     <p>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
-        <jsp:include page="words-select.jsp"/><br/>
+        <jsp:include page="select/words-select.jsp"/><br/>
     </p>
     <%=htmlFragment%>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>

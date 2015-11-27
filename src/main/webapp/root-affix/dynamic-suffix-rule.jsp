@@ -83,7 +83,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="../common/head.jsp"/>
     <p>
         ***用法说明:
         动态后缀规则，比如规则为：ise-ize，
@@ -93,11 +93,11 @@
     <p>
         <font color="red">输入动态后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
-        <jsp:include page="words-select.jsp"/>
+        <jsp:include page="../select/words-select.jsp"/>
     </p>
     <%=htmlFragment%>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

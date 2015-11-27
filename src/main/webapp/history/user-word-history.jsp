@@ -71,13 +71,13 @@
     </script>
 </head>
 <body>
-<jsp:include page="head.jsp"/>
+<jsp:include page="../common/head.jsp"/>
 <p>用户 <%=userName%> 查词记录</p>
 <p>
     <font color="red">选择词典：</font>
-    <jsp:include page="dictionary-select.jsp"/><br/>
+    <jsp:include page="../select/dictionary-select.jsp"/><br/>
 </p>
 <%=htmlFragment%>
-<jsp:include page="bottom.jsp"/>
+<jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

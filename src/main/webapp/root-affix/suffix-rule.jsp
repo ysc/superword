@@ -99,7 +99,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="../common/head.jsp"/>
     <p>
         ***用法说明:
         后缀规则，从指定的英文单词的集合中找出符合后缀规则的单词，
@@ -109,13 +109,13 @@
         <font color="red">输入后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">严格匹配：</font>
-        <jsp:include page="strict-select.jsp"/><br/>
+        <jsp:include page="./select/strict-select.jsp"/><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="./select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
-        <jsp:include page="words-select.jsp"/>
+        <jsp:include page="../select/words-select.jsp"/>
     </p>
     <%=htmlFragment%>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

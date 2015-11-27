@@ -108,7 +108,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="../common/head.jsp"/>
 
     <p>
         网页辅助阅读
@@ -118,9 +118,9 @@
         <font color="red">网页地址：</font><input onchange="update();" id="url" name="url" value="<%=url%>" size="150" maxlength="500"><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
-        <jsp:include page="words-select.jsp"/><br/>
+        <jsp:include page="../select/words-select.jsp"/><br/>
     </p>
     <p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">网页内容(点击隐藏)：</span></font><br/>
@@ -129,6 +129,6 @@
         </div>
     </p>
     <%=htmlFragment%>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

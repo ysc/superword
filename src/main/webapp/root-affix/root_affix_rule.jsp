@@ -73,7 +73,7 @@
     </script>
 </head>
 <body>
-    <jsp:include page="head.jsp"/>
+    <jsp:include page="../common/head.jsp"/>
     <p>
         ***用法说明:
         词根词缀分析规则，分析单词可能拥有的所有前缀、后缀和词根
@@ -81,12 +81,12 @@
     <p>
         <font color="red">输入单词：</font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">严格匹配：</font>
-        <jsp:include page="strict-select.jsp"/><br/>
+        <jsp:include page="../select/strict-select.jsp"/><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="dictionary-select.jsp"/><br/>
+        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
     </p>
     <%=htmlFragment%>
-    <jsp:include page="bottom.jsp"/>
+    <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

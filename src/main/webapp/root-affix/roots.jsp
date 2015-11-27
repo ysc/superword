@@ -50,8 +50,8 @@
     <title>常见词根</title>
 </head>
 <body>
-  <jsp:include page="head.jsp"/>
+  <jsp:include page="../common/head.jsp"/>
   <%=stringBuilder.toString()%>
-  <jsp:include page="bottom.jsp"/>
+  <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>
