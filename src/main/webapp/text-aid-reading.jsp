@@ -34,7 +34,6 @@
     if(text == null) {
         return;
     }
-    text = URLDecoder.decode(text, "utf-8");
     UserText userText = new UserText();
     userText.setDateTime(new Date());
     userText.setText(text);
@@ -72,7 +71,12 @@
    <title>网页辅助阅读</title>
 
     <script type="text/javascript">
+        var lock = false;
         function update(){
+            if(lock){
+                return;
+            }
+            lock = true;
             var text = document.getElementById("text").value;
             if(text == ""){
                 return;
