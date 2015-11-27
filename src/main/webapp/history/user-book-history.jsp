@@ -18,7 +18,7 @@
 
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.util.List" %>
-<%@ page import="org.apdplat.superword.model.UserUrl" %>
+<%@ page import="org.apdplat.superword.model.UserBook" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -29,22 +29,22 @@
         return;
     }
 
-    List<UserUrl> userUrls = MySQLUtils.getHistoryUseUrlsFromDatabase(userName);
+    List<UserBook> userBooks = MySQLUtils.getHistoryUseBooksFromDatabase(userName);
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
-    htmlFragment.append("<tr><th>序号</th><th>分析网页</th><th>时间</th></tr>");
+    htmlFragment.append("<tr><th>序号</th><th>分析书籍</th><th>时间</th></tr>");
     int i = 1;
-    for (UserUrl userUrl : userUrls) {
+    for (UserBook userBook : userBooks) {
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append("<a target=\"_blank\" href=\"url-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&url=")
-                .append(userUrl.getUrl())
+                .append("<a target=\"_blank\" href=\"url-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&book=")
+                .append(userBook.getBook())
                 .append("\">")
-                .append(userUrl.getUrl())
+                .append(userBook.getBook())
                 .append("...</a>")
                 .append("</td><td>")
-                .append(userUrl.getDateTimeString())
+                .append(userBook.getDateTimeString())
                 .append("</td></tr>");
     }
     htmlFragment.append("</table>");
@@ -53,11 +53,11 @@
 <html>
 <head>
     <script src="js/statistics.js"></script>
-    <title>用户网页分析记录</title>
+    <title>用户书籍分析记录</title>
 </head>
 <body>
 <jsp:include page="../common/head.jsp"/>
-<p>用户 <%=userName%> 网页分析记录</p>
+<p>用户 <%=userName%> 书籍分析记录</p>
 <%=htmlFragment%>
 <jsp:include page="../common/bottom.jsp"/>
 </body>
