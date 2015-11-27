@@ -20,6 +20,7 @@ package org.apdplat.superword.tools;
 
 
 import org.apdplat.superword.model.UserText;
+import org.apdplat.superword.model.UserUrl;
 import org.apdplat.superword.model.UserWord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -81,6 +82,38 @@ public class MySQLUtils {
             close(con, pst, rs);
         }
         return null;
+    }
+
+    public static List<UserUrl> getHistoryUseUrlsFromDatabase(String userName) {
+        List<UserUrl> userUrls = new ArrayList<>();
+        String sql = "select id,url,date_time from user_url where user_name=?";
+        Connection con = getConnection();
+        if(con == null){
+            return userUrls;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                int id = rs.getInt(1);
+                String url = rs.getString(2);
+                Timestamp timestamp = rs.getTimestamp(3);
+                UserUrl userUrl = new UserUrl();
+                userUrl.setId(id);
+                userUrl.setUrl(url);
+                userUrl.setDateTime(new java.util.Date(timestamp.getTime()));
+                userUrl.setUserName(userName);
+                userUrls.add(userUrl);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return userUrls;
     }
 
     public static List<UserText> getHistoryUseTextsFromDatabase(String userName) {
@@ -145,6 +178,27 @@ public class MySQLUtils {
             close(con, pst, rs);
         }
         return userWords;
+    }
+
+    public static void saveUserUrlToDatabase(UserUrl userUrl) {
+        String sql = "insert into user_url (user_name, url, date_time) values (?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userUrl.getUserName());
+            pst.setString(2, userUrl.getUrl());
+            pst.setTimestamp(3, new Timestamp(userUrl.getDateTime().getTime()));
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            LOG.error("保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
     }
 
     public static void saveUserTextToDatabase(UserText userText) {
