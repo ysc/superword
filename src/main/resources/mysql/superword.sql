@@ -19,3 +19,21 @@ CREATE  TABLE `superword`.`user_word` (
   INDEX `user_name_INDEX` (`user_name` ASC) ,
 
   INDEX `date_time_INDEX` (`date_time` ASC) );
+
+CREATE  TABLE `superword`.`user_text` (
+
+  `id` INT NOT NULL AUTO_INCREMENT ,
+
+  `user_name` VARCHAR(200)  NOT NULL ,
+
+  `text` VARCHAR(200)  NOT NULL ,
+
+  `date_time` TIMESTAMP  NOT NULL ,
+
+  PRIMARY KEY (`id`) ,
+
+  UNIQUE INDEX `text_UNIQUE` (`text` ASC),
+
+  INDEX `user_name_INDEX` (`user_name` ASC) ,
+
+  INDEX `date_time_INDEX` (`date_time` ASC) );
