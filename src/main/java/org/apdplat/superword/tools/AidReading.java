@@ -73,7 +73,8 @@ public class AidReading {
         text.forEach(line -> {
             StringBuilder buffer = new StringBuilder();
             line = line.replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+'[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ")
-                       .replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+`[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ");
+                       .replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+`[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ")
+                       .replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+’[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ");
             for (org.apdplat.word.segmentation.Word term : WordSegmenter.segWithStopWords(line, SegmentationAlgorithm.PureEnglish)) {
                 String word = term.getText();
 
