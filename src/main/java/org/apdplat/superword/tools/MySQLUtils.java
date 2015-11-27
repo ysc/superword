@@ -51,9 +51,41 @@ public class MySQLUtils {
     private MySQLUtils() {
     }
 
+    public static UserText getUseTextFromDatabase(int id) {
+        String sql = "select id,text,date_time,user_name from user_text where id=?";
+        Connection con = getConnection();
+        if(con == null){
+            return null;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setInt(1, id);
+            rs = pst.executeQuery();
+            if (rs.next()) {
+                int _id = rs.getInt(1);
+                String text = rs.getString(2);
+                Timestamp timestamp = rs.getTimestamp(3);;
+                String user_name = rs.getString(4);
+                UserText userText = new UserText();
+                userText.setId(id);
+                userText.setText(text);
+                userText.setDateTime(new java.util.Date(timestamp.getTime()));
+                userText.setUserName(user_name);
+                return userText;
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return null;
+    }
+
     public static List<UserText> getHistoryUseTextsFromDatabase(String userName) {
         List<UserText> userTexts = new ArrayList<>();
-        String sql = "select text,date_time from user_text where user_name=?";
+        String sql = "select id,text,date_time from user_text where user_name=?";
         Connection con = getConnection();
         if(con == null){
             return userTexts;
@@ -65,9 +97,11 @@ public class MySQLUtils {
             pst.setString(1, userName);
             rs = pst.executeQuery();
             while (rs.next()) {
-                String text = rs.getString(1);
-                Timestamp timestamp = rs.getTimestamp(2);
+                int id = rs.getInt(1);
+                String text = rs.getString(2);
+                Timestamp timestamp = rs.getTimestamp(3);
                 UserText userText = new UserText();
+                userText.setId(id);
                 userText.setText(text);
                 userText.setDateTime(new java.util.Date(timestamp.getTime()));
                 userText.setUserName(userName);
