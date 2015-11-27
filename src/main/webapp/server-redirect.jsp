@@ -31,12 +31,15 @@
     return;
   }
 
-  UserWord userWord = new UserWord();
-  userWord.setDateTime(new Date());
   String userName = (String)session.getAttribute("userName");
-  userWord.setUserName(userName ==null?"ysc":userName);
-  userWord.setWord(word);
-  userWord.setDictionary(dict);
-  MySQLUtils.saveUserWordToDatabase(userWord);
+  if(userName != null) {
+    UserWord userWord = new UserWord();
+    userWord.setDateTime(new Date());
+    userWord.setUserName(userName);
+    userWord.setWord(word);
+    userWord.setDictionary(dict);
+    MySQLUtils.saveUserWordToDatabase(userWord);
+  }
+
   response.sendRedirect(url);
 %>
