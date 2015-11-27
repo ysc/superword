@@ -19,6 +19,7 @@
 package org.apdplat.superword.tools;
 
 
+import org.apdplat.superword.model.UserText;
 import org.apdplat.superword.model.UserWord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,36 @@ public class MySQLUtils {
     }
 
     private MySQLUtils() {
+    }
+
+    public static List<UserText> getHistoryUseTextsFromDatabase(String userName) {
+        List<UserText> userTexts = new ArrayList<>();
+        String sql = "select text,date_time from user_text where user_name=?";
+        Connection con = getConnection();
+        if(con == null){
+            return userTexts;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                String text = rs.getString(1);
+                Timestamp timestamp = rs.getTimestamp(2);
+                UserText userText = new UserText();
+                userText.setText(text);
+                userText.setDateTime(new java.util.Date(timestamp.getTime()));
+                userText.setUserName(userName);
+                userTexts.add(userText);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return userTexts;
     }
 
     public static List<UserWord> getHistoryUserWordsFromDatabase(String userName) {
@@ -82,6 +113,27 @@ public class MySQLUtils {
         return userWords;
     }
 
+    public static void saveUserTextToDatabase(UserText userText) {
+        String sql = "insert into user_text (user_name, text, date_time) values (?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userText.getUserName());
+            pst.setString(2, userText.getText());
+            pst.setTimestamp(3, new Timestamp(userText.getDateTime().getTime()));
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            LOG.error("保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+    }
+
     public static void saveUserWordToDatabase(UserWord userWord) {
         String sql = "insert into user_word (user_name, word, dictionary, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
@@ -109,7 +161,7 @@ public class MySQLUtils {
         try {
             con = DriverManager.getConnection(URL, USER, PASSWORD);
         } catch (SQLException e) {
-            LOG.debug("MySQL获取数据库连接失败：", e);
+            LOG.error("MySQL获取数据库连接失败：", e);
         }
         return con;
     }
