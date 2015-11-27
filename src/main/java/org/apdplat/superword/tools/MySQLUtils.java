@@ -19,6 +19,7 @@
 package org.apdplat.superword.tools;
 
 
+import org.apdplat.superword.model.UserBook;
 import org.apdplat.superword.model.UserText;
 import org.apdplat.superword.model.UserUrl;
 import org.apdplat.superword.model.UserWord;
@@ -82,6 +83,38 @@ public class MySQLUtils {
             close(con, pst, rs);
         }
         return null;
+    }
+
+    public static List<UserBook> getHistoryUseBooksFromDatabase(String userName) {
+        List<UserBook> userBooks = new ArrayList<>();
+        String sql = "select id,book,date_time from user_book where user_name=?";
+        Connection con = getConnection();
+        if(con == null){
+            return userBooks;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                int id = rs.getInt(1);
+                String book = rs.getString(2);
+                Timestamp timestamp = rs.getTimestamp(3);
+                UserBook userBook = new UserBook();
+                userBook.setId(id);
+                userBook.setBook(book);
+                userBook.setDateTime(new java.util.Date(timestamp.getTime()));
+                userBook.setUserName(userName);
+                userBooks.add(userBook);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return userBooks;
     }
 
     public static List<UserUrl> getHistoryUseUrlsFromDatabase(String userName) {
@@ -178,6 +211,27 @@ public class MySQLUtils {
             close(con, pst, rs);
         }
         return userWords;
+    }
+
+    public static void saveUserBookToDatabase(UserBook userBook) {
+        String sql = "insert into user_book (user_name, book, date_time) values (?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userBook.getUserName());
+            pst.setString(2, userBook.getBook());
+            pst.setTimestamp(3, new Timestamp(userBook.getDateTime().getTime()));
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            LOG.error("保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
     }
 
     public static void saveUserUrlToDatabase(UserUrl userUrl) {
