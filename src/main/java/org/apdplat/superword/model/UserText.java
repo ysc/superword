@@ -28,9 +28,18 @@ import java.util.Date;
 public class UserText {
     private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
+    private int id;
     private String userName;
     private String text;
     private Date dateTime;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
 
     public String getUserName() {
         return userName;
@@ -63,6 +72,7 @@ public class UserText {
     @Override
     public String toString() {
         return "UserWord{" +
+                "id='" + id + '\'' +
                 "userName='" + userName + '\'' +
                 ", dateTime=" + simpleDateFormat.format(dateTime) +
                 ", text='" + text + '\'' +
