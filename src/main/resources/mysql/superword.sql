@@ -24,9 +24,11 @@ CREATE  TABLE `superword`.`user_text` (
 
   `id` INT NOT NULL AUTO_INCREMENT ,
 
-  `user_name` VARCHAR(200)  NOT NULL UNIQUE,
+  `user_name` VARCHAR(200)  NOT NULL,
 
-  `text` LONGTEXT  NOT NULL ,
+  `text` TEXT  NOT NULL,
+
+  `text_hashcode` INT  NOT NULL UNIQUE,
 
   `date_time` TIMESTAMP  NOT NULL ,
 
