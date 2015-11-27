@@ -24,15 +24,13 @@ CREATE  TABLE `superword`.`user_text` (
 
   `id` INT NOT NULL AUTO_INCREMENT ,
 
-  `user_name` VARCHAR(200)  NOT NULL ,
+  `user_name` VARCHAR(200)  NOT NULL UNIQUE,
 
-  `text` VARCHAR(200)  NOT NULL ,
+  `text` LONGTEXT  NOT NULL ,
 
   `date_time` TIMESTAMP  NOT NULL ,
 
   PRIMARY KEY (`id`) ,
-
-  UNIQUE INDEX `text_UNIQUE` (`text` ASC),
 
   INDEX `user_name_INDEX` (`user_name` ASC) ,
 
