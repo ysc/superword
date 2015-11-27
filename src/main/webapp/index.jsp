@@ -34,15 +34,15 @@
       <li><a target="_blank" href="aid-reading/aid-reading.jsp?words_type=SYLLABUS&dict=ICIBA&book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&column=6">书籍辅助阅读</a></li>
       <li><a target="_blank" href="aid-reading/aid-reading-detail.jsp?book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&word=functional&dict=ICIBA&pageSize=192">搜索单词对应书籍原文</a></li>
       <li><a target="_blank" href="independence-word-rule.jsp?dict=ICIBA&column=8&words_type=SYLLABUS">独立词规则</a></li>
-      <li><a target="_blank" href="root_affix_rule.jsp?dict=ICIBA&word=abbreviation&column=6&strict=N">词根词缀分析规则</a></li>
+      <li><a target="_blank" href="root-affix/root_affix_rule.jsp?dict=ICIBA&word=abbreviation&column=6&strict=N">词根词缀分析规则</a></li>
       <li><a target="_blank" href="compound-word-rule.jsp?dict=ICIBA&word=fearless&column=6">复合词分析规则</a></li>
-      <li><a target="_blank" href="roots.jsp">常见词根</a></li>
-      <li><a target="_blank" href="root-rule.jsp?roots=spect,spic&dict=ICIBA&words_type=SYLLABUS&column=6">词根规则</a></li>
-      <li><a target="_blank" href="prefixes.jsp">常见前缀</a></li>
-      <li><a target="_blank" href="prefix-rule.jsp?prefixes=anti,counter,de,dis,il,im,in,ir,mis,non,un&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">前缀规则</a></li>
+      <li><a target="_blank" href="root-affix/roots.jsp">常见词根</a></li>
+      <li><a target="_blank" href="root-affix/root-rule.jsp?roots=spect,spic&dict=ICIBA&words_type=SYLLABUS&column=6">词根规则</a></li>
+      <li><a target="_blank" href="root-affix/prefixes.jsp">常见前缀</a></li>
+      <li><a target="_blank" href="root-affix/prefix-rule.jsp?prefixes=anti,counter,de,dis,il,im,in,ir,mis,non,un&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">前缀规则</a></li>
       <li><a target="_blank" href="dynamic-prefix-rule.jsp?prefixes=m-imm&dict=ICIBA&words_type=SYLLABUS">动态前缀规则</a></li>
-      <li><a target="_blank" href="suffixes.jsp">常见后缀</a></li>
-      <li><a target="_blank" href="suffix-rule.jsp?suffixes=ence,ance,age&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">后缀规则</a></li>
+      <li><a target="_blank" href="root-affix/suffixes.jsp">常见后缀</a></li>
+      <li><a target="_blank" href="root-affix/suffix-rule.jsp?suffixes=ence,ance,age&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">后缀规则</a></li>
       <li><a target="_blank" href="dynamic-suffix-rule.jsp?suffixes=ise-ize&dict=ICIBA&words_type=SYLLABUS">动态后缀规则</a></li>
       <li><a target="_blank" href="similar-word-rule.jsp?word=north&count=10&dict=ICIBA&words_type=SYLLABUS">拼写相似规则</a></li>
       <li><a target="_blank" href="history/user-word-history.jsp?dict=ICIBA">用户查词记录</a></li>
