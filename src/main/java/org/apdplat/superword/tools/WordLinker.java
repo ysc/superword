@@ -55,7 +55,8 @@ public class WordLinker {
     //如果是需要生成HTML代码片段贴到博客中
     //则不能使用服务器端调整
     //将此值设置为null
-    public static String serverRedirect = "common/server-redirect.jsp";
+    public static final String SERVER_REDIRECT_VALUE = "common/server-redirect.jspx";
+    public static String serverRedirect = SERVER_REDIRECT_VALUE;
 
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
