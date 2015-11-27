@@ -26,11 +26,25 @@
 <%@ page import="org.apdplat.extractor.html.HtmlFetcher" %>
 <%@ page import="org.apdplat.extractor.html.impl.HtmlUnitHtmlFetcher" %>
 <%@ page import="org.apache.commons.lang.StringUtils" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.model.UserUrl" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
     String url = request.getParameter("url");
+    if(url == null){
+        return;
+    }
+    String userName = (String)session.getAttribute("userName");
+    UserUrl userUrl = new UserUrl();
+    userUrl.setDateTime(new Date());
+    userUrl.setUrl(url);
+    userUrl.setUserName(userName==null?"anonymity":userName);
+    //保存用户网页分析记录
+    MySQLUtils.saveUserUrlToDatabase(userUrl);
+
     String words_type = request.getParameter("words_type");
     if(words_type == null){
         words_type = "ALL";
