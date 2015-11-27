@@ -32,7 +32,7 @@
   }
 
   UserWord userWord = new UserWord();
-  userWord.setDateTime(new Date(System.currentTimeMillis()));
+  userWord.setDateTime(new Date());
   String userName = (String)session.getAttribute("userName");
   userWord.setUserName(userName ==null?"ysc":userName);
   userWord.setWord(word);
