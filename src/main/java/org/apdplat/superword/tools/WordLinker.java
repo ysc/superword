@@ -85,6 +85,27 @@ public class WordLinker {
     private static final String WORDNET_CSS_PATH = "html body div.form";
     private static final String RANDOMHOUSE_CSS_PATH = "html body div.content-container.main-area div.row div.center-well-container section#source-luna.source-wrapper.source-luna.is-pm-btn-show.pm-btn-spot div.source-box.oneClick-area section.luna-box div.source-data div.def-list section.def-pbk.ce-spot div.def-set div.def-content";
 
+    public static String getLink(Dictionary dictionary, String word){
+        return getLinkPrefix(dictionary)+word;
+    }
+
+    public static String getLinkPrefix(Dictionary dictionary){
+        switch (dictionary){
+            case ICIBA: return ICIBA;
+            case YOUDAO: return YOUDAO;
+            case COLLINS: return COLLINS;
+            case WEBSTER: return WEBSTER;
+            case OXFORD: return OXFORD;
+            case CAMBRIDGE: return CAMBRIDGE;
+            case MACMILLAN: return MACMILLAN;
+            case HERITAGE: return HERITAGE;
+            case WIKTIONARY: return WIKTIONARY;
+            case WORDNET: return WORDNET;
+            case RANDOMHOUSE: return RANDOMHOUSE;
+        }
+        return ICIBA;
+    }
+
     public static List<String> getDefinition(Dictionary dictionary, String word){
         switch (dictionary){
             case ICIBA: return getDefinitionForICIBA(word);
