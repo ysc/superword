@@ -31,16 +31,24 @@
 
 <%
     String text = request.getParameter("text");
+    if(text != null) {
+        text = URLDecoder.decode(text, "utf-8");
+        UserText userText = new UserText();
+        userText.setDateTime(new Date());
+        userText.setText(text);
+        String userName = (String)session.getAttribute("userName");
+        userText.setUserName(userName==null?"ysc":userName);
+        //保存用户文本分析记录
+        MySQLUtils.saveUserTextToDatabase(userText);
+    }else{
+        String id = request.getParameter("id");
+        try {
+            text = MySQLUtils.getUseTextFromDatabase(Integer.parseInt(id)).getText();
+        }catch (Exception e){}
+    }
     if(text == null) {
         return;
     }
-    UserText userText = new UserText();
-    userText.setDateTime(new Date());
-    userText.setText(text);
-    String userName = (String)session.getAttribute("userName");
-    userText.setUserName(userName==null?"ysc":userName);
-    //保存用户文本分析记录
-    MySQLUtils.saveUserTextToDatabase(userText);
     String words_type = request.getParameter("words_type");
     if(words_type == null){
         words_type = "ALL";
