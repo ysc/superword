@@ -40,10 +40,10 @@
       <li><a target="_blank" href="root-affix/root-rule.jsp?roots=spect,spic&dict=ICIBA&words_type=SYLLABUS&column=6">词根规则</a></li>
       <li><a target="_blank" href="root-affix/prefixes.jsp">常见前缀</a></li>
       <li><a target="_blank" href="root-affix/prefix-rule.jsp?prefixes=anti,counter,de,dis,il,im,in,ir,mis,non,un&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">前缀规则</a></li>
-      <li><a target="_blank" href="dynamic-prefix-rule.jsp?prefixes=m-imm&dict=ICIBA&words_type=SYLLABUS">动态前缀规则</a></li>
+      <li><a target="_blank" href="root-affix/dynamic-prefix-rule.jsp?prefixes=m-imm&dict=ICIBA&words_type=SYLLABUS">动态前缀规则</a></li>
       <li><a target="_blank" href="root-affix/suffixes.jsp">常见后缀</a></li>
       <li><a target="_blank" href="root-affix/suffix-rule.jsp?suffixes=ence,ance,age&dict=ICIBA&words_type=SYLLABUS&strict=Y&column=6">后缀规则</a></li>
-      <li><a target="_blank" href="dynamic-suffix-rule.jsp?suffixes=ise-ize&dict=ICIBA&words_type=SYLLABUS">动态后缀规则</a></li>
+      <li><a target="_blank" href="root-affix/dynamic-suffix-rule.jsp?suffixes=ise-ize&dict=ICIBA&words_type=SYLLABUS">动态后缀规则</a></li>
       <li><a target="_blank" href="similar-word-rule.jsp?word=north&count=10&dict=ICIBA&words_type=SYLLABUS">拼写相似规则</a></li>
       <li><a target="_blank" href="history/user-word-history.jsp?dict=ICIBA">用户查词记录</a></li>
       <li><a target="_blank" href="history/user-text-history.jsp">文本分析记录</a>
