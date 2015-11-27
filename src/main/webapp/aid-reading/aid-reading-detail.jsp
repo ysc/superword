@@ -99,6 +99,19 @@
                 update();
             }
         }
+        var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
+        function querySelectionWord(){
+            var word = "";
+            if(window.getSelection){
+                word = window.getSelection();
+            }
+            else{
+                word = document.selection.createRange().text;
+            }
+            if(/^[a-zA-Z]{3,15}$/.test(word)){
+                window.open(linkPrefix+word+"&word="+word+"&dict=<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>", word, 'width=1200,height=600');
+            }
+        }
     </script>
 </head>
 <body>
@@ -116,7 +129,10 @@
         <font color="red">选择书籍：</font>
         <jsp:include page="../select/book-select.jsp"/>
     </p>
-    <%=htmlFragment%>
+    <div ondblclick="querySelectionWord();">
+        <font color="red">双击文本选中单词可查看定义</font><br/>
+        <%=htmlFragment%>
+    </div>
     <p><a target="_blank" href="index.jsp">主页</a></p>
     <jsp:include page="../common/bottom.jsp"/>
 </body>
