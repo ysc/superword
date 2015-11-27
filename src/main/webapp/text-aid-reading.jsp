@@ -34,14 +34,12 @@
     if(text != null) {
         text = URLDecoder.decode(text, "utf-8");
         String userName = (String)session.getAttribute("userName");
-        if(userName != null) {
-            UserText userText = new UserText();
-            userText.setDateTime(new Date());
-            userText.setText(text);
-            userText.setUserName(userName);
-            //保存用户文本分析记录
-            MySQLUtils.saveUserTextToDatabase(userText);
-        }
+        UserText userText = new UserText();
+        userText.setDateTime(new Date());
+        userText.setText(text);
+        userText.setUserName(userName==null?"anonymity":userName);
+        //保存用户文本分析记录
+        MySQLUtils.saveUserTextToDatabase(userText);
     }else{
         String id = request.getParameter("id");
         try {

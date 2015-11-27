@@ -25,7 +25,7 @@
 
 <%
     String userName = (String) session.getAttribute("userName");
-    userName = userName == null ? "ysc" : userName;
+    userName = userName==null?"anonymity":userName;
 
     List<UserWord> userWords = MySQLUtils.getHistoryUserWordsFromDatabase(userName);
     StringBuilder htmlFragment = new StringBuilder();

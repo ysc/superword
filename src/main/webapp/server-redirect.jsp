@@ -32,14 +32,13 @@
   }
 
   String userName = (String)session.getAttribute("userName");
-  if(userName != null) {
-    UserWord userWord = new UserWord();
-    userWord.setDateTime(new Date());
-    userWord.setUserName(userName);
-    userWord.setWord(word);
-    userWord.setDictionary(dict);
-    MySQLUtils.saveUserWordToDatabase(userWord);
-  }
+
+  UserWord userWord = new UserWord();
+  userWord.setDateTime(new Date());
+  userWord.setUserName(userName==null?"anonymity":userName);
+  userWord.setWord(word);
+  userWord.setDictionary(dict);
+  MySQLUtils.saveUserWordToDatabase(userWord);
 
   response.sendRedirect(url);
 %>
