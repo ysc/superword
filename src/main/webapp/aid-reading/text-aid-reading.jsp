@@ -100,12 +100,25 @@
             var tip = document.getElementById("tip");
             if(display){
                 text_div.style.display = "none";
-                tip.innerText = "显示文本：";
+                tip.innerText = "显示文本(双击选中单词可查看定义)：";
             }else{
                 text_div.style.display = "block";
-                tip.innerText = "隐藏文本：";
+                tip.innerText = "隐藏文本(双击选中单词可查看定义)：";
             }
             display = !display;
+        }
+        var linkPrefix = '<%=WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
+        function querySelectionWord(){
+            var word = "";
+            if(window.getSelection){
+                word = window.getSelection();
+            }
+            else{
+                word = document.selection.createRange().text;
+            }
+            if(/^[a-zA-Z]{3,15}$/.test(word)){
+                window.open(linkPrefix+word, word, 'width=1200,height=600');
+            }
         }
     </script>
 </head>
@@ -126,7 +139,7 @@
         </p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">隐藏文本：</span></font>
         <div id="text_div" style="display:block">
-            <textarea id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
+            <textarea ondblclick="querySelectionWord();" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
             <span style="cursor: pointer" onclick="update();"><font color="red">确定分析文本</font></span>
         </div>
     </form>
