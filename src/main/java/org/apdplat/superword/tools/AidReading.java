@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 辅助阅读:
  * 以电影功夫熊猫使用的单词分析为例
  * 你英语四级过了吗? 功夫熊猫看了吗?
- * 去除停用词后,功夫熊猫使用了799个英语单词,你会说很简单吧,别急,这些单词中仍然有150个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
+ * 去除停用词后,功夫熊猫使用了794个英语单词,你会说很简单吧,别急,这些单词中仍然有148个单词不在四级词汇表中,花两分钟时间看看你是否认识这些单词.
  * Created by ysc on 11/15/15.
  */
 public class AidReading {
@@ -72,7 +72,8 @@ public class AidReading {
 
         text.forEach(line -> {
             StringBuilder buffer = new StringBuilder();
-            line = line.replaceAll("n't", " not");
+            line = line.replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+'[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ")
+                       .replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+`[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ");
             for (org.apdplat.word.segmentation.Word term : WordSegmenter.segWithStopWords(line, SegmentationAlgorithm.PureEnglish)) {
                 String word = term.getText();
 
