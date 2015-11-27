@@ -24,6 +24,7 @@
 <%@ page import="org.apdplat.jsearch.search.TextSearcher" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.util.concurrent.atomic.AtomicInteger" %>
+<%@ page import="java.net.URLDecoder" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -33,6 +34,7 @@
     if(book == null || word == null){
         return;
     }
+    book = URLDecoder.decode(book, "utf-8");
     int pageSize = 10;
     try{
         pageSize = Integer.parseInt(request.getParameter("pageSize"));
@@ -88,6 +90,7 @@
             if(book == ""){
                 return;
             }
+            book = encodeURIComponent(book);
             location.href = "aid-reading-detail.jsp?word="+word+"&dict="+dict+"&book="+book+"&pageSize="+pageSize;
         }
         document.onkeypress=function(e){

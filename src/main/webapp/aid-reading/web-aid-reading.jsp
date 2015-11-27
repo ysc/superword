@@ -29,6 +29,7 @@
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.model.UserUrl" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+<%@ page import="java.net.URLDecoder" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -37,6 +38,7 @@
     if(url == null){
         return;
     }
+    url = URLDecoder.decode(url, "utf-8");
     String userName = (String)session.getAttribute("userName");
     UserUrl userUrl = new UserUrl();
     userUrl.setDateTime(new Date());
@@ -98,6 +100,7 @@
             if(url == ""){
                 return;
             }
+            url = encodeURIComponent(url);
             location.href = "web-aid-reading.jsp?words_type="+words_type+"&dict="+dict+"&url="+url+"&column="+column;
         }
         document.onkeypress=function(e){

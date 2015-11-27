@@ -24,6 +24,7 @@
 <%@ page import="org.apdplat.superword.model.UserBook" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+<%@ page import="java.net.URLDecoder" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -32,6 +33,7 @@
     if(book == null){
         return;
     }
+    book = URLDecoder.decode(book, "utf-8");
     String userName = (String)session.getAttribute("userName");
     UserBook userBook = new UserBook();
     userBook.setDateTime(new Date());
@@ -79,6 +81,7 @@
             if(book == ""){
                 return;
             }
+            book = encodeURIComponent(book);
             location.href = "aid-reading.jsp?words_type="+words_type+"&dict="+dict+"&book="+book+"&column="+column;
         }
         document.onkeypress=function(e){
