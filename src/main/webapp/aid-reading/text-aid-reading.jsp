@@ -76,7 +76,7 @@
 
 <html>
 <head>
-   <title>网页辅助阅读</title>
+   <title>文本辅助阅读</title>
 
     <script src="js/statistics.js"></script>
     <script type="text/javascript">
