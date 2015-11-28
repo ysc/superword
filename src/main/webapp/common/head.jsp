@@ -35,6 +35,28 @@
         <a class="bds_count" data-cmd="count"></a>
       </div>
     </td>
+<%
+  String userName = (String) session.getAttribute("userName");
+  if(userName==null){
+%>
+    <td>
+      <a href="<%=request.getContextPath()+"/system/register.jsp"%>">注册</a>
+    </td>
+    <td>
+      <a href="<%=request.getContextPath()+"/system/login.jsp"%>">登录</a>
+    </td>
+<%
+  }else{
+%>
+    <td>
+      欢迎【<%=userName%>】
+    </td>
+    <td>
+      <a href="<%=request.getContextPath()+"/system/logout.jsp"%>">注销</a>
+    </td>
+<%
+  }
+%>
   </tr>
 </table>
 <script>
