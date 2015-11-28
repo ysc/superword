@@ -69,3 +69,19 @@ CREATE  TABLE `superword`.`user_book` (
   INDEX `user_name_INDEX` (`user_name` ASC) ,
 
   INDEX `date_time_INDEX` (`date_time` ASC) );
+
+CREATE  TABLE `superword`.`user` (
+
+  `id` INT NOT NULL AUTO_INCREMENT ,
+
+  `user_name` VARCHAR(20)  NOT NULL UNIQUE,
+
+  `password` VARCHAR(32)  NOT NULL,
+
+  `date_time` TIMESTAMP  NOT NULL ,
+
+  PRIMARY KEY (`id`) ,
+
+  INDEX `user_name_INDEX` (`user_name` ASC) ,
+
+  INDEX `date_time_INDEX` (`date_time` ASC) );
