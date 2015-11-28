@@ -18,6 +18,8 @@
 
 package org.apdplat.superword.tools;
 
+import org.apache.commons.lang.StringUtils;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,7 +36,9 @@ public class FileUtils {
             BufferedReader bufferReader = new BufferedReader(new InputStreamReader(stream));
             String line = null;
             while ((line = bufferReader.readLine()) != null) {
-                data.add(line.trim());
+                if(StringUtils.isNotBlank(line)) {
+                    data.add(line.trim());
+                }
             }
         }catch (Exception e){
             e.printStackTrace();
