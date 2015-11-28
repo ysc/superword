@@ -20,7 +20,13 @@
 
 
 <p>
+  <%
+    if(!"true".equals(request.getParameter("index"))){
+  %>
   <a target="_blank" href="<%=request.getContextPath()%>/index.jsp">返回主页</a> <br/>
+  <%
+    }
+  %>
   <a target="_blank" href="<%=request.getContextPath()%>/common/feedback.jsp">建议反馈</a> <br/>
   <a target="_blank" href="https://github.com/ysc/QuestionAnsweringSystem/wiki/donation">爱心捐赠支持superword的发展</a>
 </p>

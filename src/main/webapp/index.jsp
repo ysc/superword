@@ -45,12 +45,11 @@
       <li><a target="_blank" href="root-affix/dynamic-suffix-rule.jsp?suffixes=ise-ize&dict=ICIBA&words_type=CET4">动态后缀规则</a></li>
       <li><a target="_blank" href="similar-word-rule.jsp?word=north&count=10&dict=ICIBA&words_type=CET4">拼写相似规则</a></li>
       <li><a target="_blank" href="history/user-word-history.jsp?dict=ICIBA">用户查词记录</a></li>
-      <li><a target="_blank" href="history/user-text-history.jsp">文本分析记录</a>
+      <li><a target="_blank" href="history/user-text-history.jsp">文本分析记录</a></li>
       <li><a target="_blank" href="history/user-url-history.jsp">网页分析记录</a></li>
-      <li><a target="_blank" href="history/user-book-history.jsp">书籍分析记录</a>
+      <li><a target="_blank" href="history/user-book-history.jsp">书籍分析记录</a></li>
     </ol>
   </p>
-  <a target="_blank" href="https://github.com/ysc/QuestionAnsweringSystem/wiki/donation">爱心捐赠支持superword的发展</a>
-  <br/>
+  <jsp:include page="common/bottom.jsp?index=true"/>
 </body>
 </html>
