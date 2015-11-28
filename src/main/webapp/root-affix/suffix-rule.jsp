@@ -109,9 +109,9 @@
         <font color="red">输入后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">严格匹配：</font>
-        <jsp:include page="./select/strict-select.jsp"/><br/>
+        <jsp:include page="../select/strict-select.jsp"/><br/>
         <font color="red">选择词典：</font>
-        <jsp:include page="./select/dictionary-select.jsp"/><br/>
+        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>
