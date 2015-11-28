@@ -19,6 +19,7 @@
 <%@ page import="org.apdplat.superword.model.Prefix" %>
 <%@ page import="org.apdplat.superword.rule.PrefixRule" %>
 <%@ page import="java.util.List" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 
@@ -39,6 +40,8 @@
             .append("</a>")
             .append("</td><td>")
             .append(prefix.getDes().replace(";", ";<br/>"))
+            .append("</td><td>")
+            .append(WordLinker.toLink(prefix.getPrefix(), WordLinker.Dictionary.OXFORD))
             .append("</td></tr>\n");
   }
   stringBuilder.append("</table>\n");
