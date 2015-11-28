@@ -132,7 +132,6 @@
         <font color="red">双击文本选中单词可查看定义</font><br/>
         <%=htmlFragment%>
     </div>
-    <p><a target="_blank" href="index.jsp">主页</a></p>
     <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>
