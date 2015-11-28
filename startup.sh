@@ -12,7 +12,7 @@ if [ -f ~/apache-tomcat-8.0.29.zip ] ; then
     echo tomcat-8.0.29 prepared
     pid=$(jps | grep Bootstrap | awk -F ' ' '{print $1}')
     kill -9 $pid
-    echo tomcat stoped
+    echo tomcat stopped
 else
     echo downloading tomcat8.0.29...
     wget http://archive.apache.org/dist/tomcat/tomcat-8/v8.0.29/bin/apache-tomcat-8.0.29.zip
