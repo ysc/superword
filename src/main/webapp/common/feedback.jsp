@@ -28,11 +28,11 @@
   <tr>
     <td>
       <font color="red">如有什么意见或建议，请和superword作者<br/>杨尚川联系，请加如下微信：</font><br/>
-      <img src="http://apdplat.org/word/images/weixin.jpg" alt="微信账号：yang-shangchuan"/>
+      <img src="../images/weixin.jpg" alt="微信账号：yang-shangchuan"/>
     </td>
     <td>
       <font color="red">如需要和更多的superword用户一起交流<br/>讨论，请加入以下QQ群：</font><br/>
-      <img src="http://apdplat.org/word/images/superword.jpg" alt="QQ群：518651591"/>
+      <img src="../images/superword.jpg" alt="QQ群：518651591"/>
     </td>
   </tr>
 </table>
