@@ -42,7 +42,7 @@
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append("<a target=\"_blank\" href=\"text-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&id=")
+                .append("<a target=\"_blank\" href=\"../aid-reading/text-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&id=")
                 .append(userText.getId())
                 .append("\">")
                 .append(userText.getText().substring(0, 100))

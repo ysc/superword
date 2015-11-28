@@ -19,6 +19,7 @@
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.model.UserUrl" %>
+<%@ page import="java.net.URLEncoder" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -42,11 +43,11 @@
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append("<a target=\"_blank\" href=\"url-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&url=")
-                .append(userUrl.getUrl())
+                .append("<a target=\"_blank\" href=\"../aid-reading/web-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&url=")
+                .append(URLEncoder.encode(userUrl.getUrl(), "utf-8"))
                 .append("\">")
                 .append(userUrl.getUrl())
-                .append("...</a>")
+                .append("</a>")
                 .append("</td><td>")
                 .append(userUrl.getDateTimeString())
                 .append("</td></tr>");

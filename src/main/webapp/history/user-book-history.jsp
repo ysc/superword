@@ -19,6 +19,7 @@
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.model.UserBook" %>
+<%@ page import="java.net.URLEncoder" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -42,8 +43,8 @@
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append("<a target=\"_blank\" href=\"url-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&book=")
-                .append(userBook.getBook())
+                .append("<a target=\"_blank\" href=\"../aid-reading/aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&book=")
+                .append(URLEncoder.encode(userBook.getBook(), "utf-8"))
                 .append("\">")
                 .append(userBook.getBook())
                 .append("...</a>")
