@@ -272,7 +272,7 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userBook.getUserName());
             pst.setString(2, userBook.getBook());
-            pst.setString(3, userBook.getUserName()+userBook.getBook());
+            pst.setString(3, MD5(userBook.getUserName()+userBook.getBook()));
             pst.setTimestamp(4, new Timestamp(userBook.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
@@ -294,7 +294,7 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userUrl.getUserName());
             pst.setString(2, userUrl.getUrl());
-            pst.setString(3, userUrl.getUserName()+userUrl.getUrl());
+            pst.setString(3, MD5(userUrl.getUserName()+userUrl.getUrl()));
             pst.setTimestamp(4, new Timestamp(userUrl.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
@@ -305,7 +305,7 @@ public class MySQLUtils {
     }
 
     public static void saveUserTextToDatabase(UserText userText) {
-        String sql = "insert into user_text (user_name, text, md5, text_hashcode, date_time) values (?, ?, ?, ?, ?)";
+        String sql = "insert into user_text (user_name, text, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
             return ;
@@ -316,7 +316,7 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userText.getUserName());
             pst.setString(2, userText.getText());
-            pst.setString(3, userText.getUserName() + userText.getText());
+            pst.setString(3, MD5(userText.getUserName() + userText.getText()));
             pst.setTimestamp(4, new Timestamp(userText.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
