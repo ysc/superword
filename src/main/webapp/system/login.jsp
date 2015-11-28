@@ -81,7 +81,11 @@
         <font color="red">用户密码：</font><input id="password" name="password" type="password" size="50" maxlength="50"/><br/>
     </p>
     <script type="text/javascript">
-        document.getElementById('password').focus();
+        if(document.getElementById('userName').value==""){
+            document.getElementById('userName').focus();
+        }else {
+            document.getElementById('password').focus();
+        }
     </script>
     <font color="red"><span style="cursor: pointer" onclick="login();">登录系统</span></font>
 </form>
