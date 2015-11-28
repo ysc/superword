@@ -20,14 +20,15 @@
 
 
 <p>
+  目前正在开发测试中，每天都会增加功能 <br/>
   <%
     if(!"true".equals(request.getParameter("index"))){
   %>
   <a target="_blank" href="<%=request.getContextPath()%>/index.jsp">返回主页</a> <br/>
   <%
     }
-  %
-  目前正在开发测试中，每天都会增加功能，欢迎 <a target="_blank" href="<%=request.getContextPath()%>/common/feedback.jsp">建议反馈</a> <br/>
+  %>
+  <a target="_blank" href="<%=request.getContextPath()%>/common/feedback.jsp">建议反馈</a> <br/>
   <a target="_blank" href="https://github.com/ysc/QuestionAnsweringSystem/wiki/donation">爱心捐赠支持superword的发展</a>
 </p>
 <script type="text/javascript">
