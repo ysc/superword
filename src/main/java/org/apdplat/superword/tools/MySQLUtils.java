@@ -261,7 +261,7 @@ public class MySQLUtils {
     }
 
     public static void saveUserBookToDatabase(UserBook userBook) {
-        String sql = "insert into user_book (user_name, book, date_time) values (?, ?, ?)";
+        String sql = "insert into user_book (user_name, book, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
             return ;
@@ -272,7 +272,8 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userBook.getUserName());
             pst.setString(2, userBook.getBook());
-            pst.setTimestamp(3, new Timestamp(userBook.getDateTime().getTime()));
+            pst.setString(3, userBook.getUserName()+userBook.getBook());
+            pst.setTimestamp(4, new Timestamp(userBook.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
             LOG.error("保存失败", e);
@@ -282,7 +283,7 @@ public class MySQLUtils {
     }
 
     public static void saveUserUrlToDatabase(UserUrl userUrl) {
-        String sql = "insert into user_url (user_name, url, date_time) values (?, ?, ?)";
+        String sql = "insert into user_url (user_name, url, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
             return ;
@@ -293,7 +294,8 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userUrl.getUserName());
             pst.setString(2, userUrl.getUrl());
-            pst.setTimestamp(3, new Timestamp(userUrl.getDateTime().getTime()));
+            pst.setString(3, userUrl.getUserName()+userUrl.getUrl());
+            pst.setTimestamp(4, new Timestamp(userUrl.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
             LOG.error("保存失败", e);
@@ -303,7 +305,7 @@ public class MySQLUtils {
     }
 
     public static void saveUserTextToDatabase(UserText userText) {
-        String sql = "insert into user_text (user_name, text, text_hashcode, date_time) values (?, ?, ?, ?)";
+        String sql = "insert into user_text (user_name, text, md5, text_hashcode, date_time) values (?, ?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
             return ;
@@ -314,7 +316,7 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userText.getUserName());
             pst.setString(2, userText.getText());
-            pst.setInt(3, userText.getText().hashCode());
+            pst.setString(3, userText.getUserName() + userText.getText());
             pst.setTimestamp(4, new Timestamp(userText.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
@@ -390,7 +392,19 @@ public class MySQLUtils {
     public static void close(Connection con) {
         close(con, null, null);
     }
-
+    public static String MD5(String md5) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5");
+            byte[] array = md.digest(md5.getBytes());
+            StringBuffer sb = new StringBuffer();
+            for (int i = 0; i < array.length; ++i) {
+                sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3));
+            }
+            return sb.toString();
+        } catch (java.security.NoSuchAlgorithmException e) {
+        }
+        return null;
+    }
     public static void main(String[] args) throws Exception {
         UserWord userWord = new UserWord();
         userWord.setDateTime(new Date(System.currentTimeMillis()));
