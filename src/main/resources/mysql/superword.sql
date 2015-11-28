@@ -28,7 +28,7 @@ CREATE  TABLE `superword`.`user_text` (
 
   `text` TEXT  NOT NULL,
 
-  `text_hashcode` INT  NOT NULL UNIQUE,
+  `md5` VARCHAR(32)  NOT NULL UNIQUE,
 
   `date_time` TIMESTAMP  NOT NULL ,
 
@@ -44,7 +44,9 @@ CREATE  TABLE `superword`.`user_url` (
 
   `user_name` VARCHAR(200)  NOT NULL,
 
-  `url` VARCHAR(200)  NOT NULL UNIQUE,
+  `url` VARCHAR(200)  NOT NULL,
+
+  `md5` VARCHAR(32)  NOT NULL UNIQUE,
 
   `date_time` TIMESTAMP  NOT NULL ,
 
@@ -60,7 +62,9 @@ CREATE  TABLE `superword`.`user_book` (
 
   `user_name` VARCHAR(200)  NOT NULL,
 
-  `book` VARCHAR(200)  NOT NULL UNIQUE,
+  `book` VARCHAR(200)  NOT NULL,
+
+  `md5` VARCHAR(32)  NOT NULL UNIQUE,
 
   `date_time` TIMESTAMP  NOT NULL ,
 
