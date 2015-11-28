@@ -52,7 +52,6 @@
 
 <html>
 <head>
-    <script src="js/statistics.js"></script>
     <title>用户书籍分析记录</title>
 </head>
 <body>

@@ -55,7 +55,6 @@
 <html>
 <head>
     <title>用户查词记录</title>
-    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         function update(){
             var dict = document.getElementById("dict").value;

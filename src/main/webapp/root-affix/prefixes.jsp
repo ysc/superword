@@ -49,7 +49,6 @@
 
 <html>
 <head>
-    <script src="js/statistics.js"></script>
     <title>常见前缀</title>
 </head>
 <body>

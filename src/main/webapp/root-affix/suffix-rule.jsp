@@ -76,7 +76,6 @@
 <html>
 <head>
     <title>后缀规则</title>
-    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         function update(){
             var suffixes = document.getElementById("suffixes").value;

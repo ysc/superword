@@ -90,7 +90,6 @@
 <html>
 <head>
     <title>拼写相似规则</title>
-    <script src="js/statistics.js"></script>
     <script type="text/javascript">
         function update(){
             var word = document.getElementById("word").value;
