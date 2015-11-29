@@ -19,12 +19,13 @@ package org.apdplat.superword.rule;
 
 import org.apdplat.superword.tools.WordSources;
 import org.apdplat.word.analysis.*;
+import org.apdplat.word.segmentation.SegmentationAlgorithm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,13 +39,27 @@ import java.util.stream.Collectors;
 public class SimilarWord {
     private static final Logger LOGGER = LoggerFactory.getLogger(SimilarWord.class);
     //所有的文本相似度算法
-    private static final List<TextSimilarity> ALL_TEXT_SIMILARITIES = Arrays.asList(
-            new EditDistanceTextSimilarity(),
-            new JaroDistanceTextSimilarity(),
-            new JaroWinklerDistanceTextSimilarity());
+    private static final List<TextSimilarity> ALL_TEXT_SIMILARITIES = new ArrayList<>();
+    static {
+        TextSimilarity similarity = new EditDistanceTextSimilarity();
+        similarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
+        ALL_TEXT_SIMILARITIES.add(similarity);
+
+        similarity = new JaroDistanceTextSimilarity();
+        similarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
+        ALL_TEXT_SIMILARITIES.add(similarity);
+
+        similarity = new JaroWinklerDistanceTextSimilarity();
+        similarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
+        ALL_TEXT_SIMILARITIES.add(similarity);
+    }
+    public SimilarWord(){
+        textSimilarity = new EditDistanceTextSimilarity();
+        textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
+    }
     private boolean all = false;
     private int limit = 45;
-    private TextSimilarity textSimilarity = new EditDistanceTextSimilarity();
+    private TextSimilarity textSimilarity = null;
 
     public int getLimit() {
         return limit;
@@ -61,6 +76,7 @@ public class SimilarWord {
 
     public void setTextSimilarity(TextSimilarity textSimilarity) {
         this.textSimilarity = textSimilarity;
+        this.textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
         LOGGER.info("设置相似度算法为："+textSimilarity.getClass().getName());
     }
 
