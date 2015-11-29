@@ -25,15 +25,6 @@
 
 <%
     String userName = (String) session.getAttribute("userName");
-    if(userName==null){
-%>
-未登录用户不能查看!<br/>
-<a href="<%=request.getContextPath()+"/system/register.jsp"%>">注册</a>
-<a href="<%=request.getContextPath()+"/system/login.jsp"%>">登录</a>
-<%
-        return;
-    }
-
     List<UserUrl> userUrls = MySQLUtils.getHistoryUserUrlsFromDatabase(userName);
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
