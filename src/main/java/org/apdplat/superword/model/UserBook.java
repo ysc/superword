@@ -18,36 +18,12 @@
 
 package org.apdplat.superword.model;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 /**
  * 用户书籍分析记录
  * Created by ysc on 11/24/15.
  */
-public class UserBook {
-    private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-    private int id;
-    private String userName;
+public class UserBook extends HistoryRecord {
     private String book;
-    private Date dateTime;
-
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
 
     public String getBook() {
         return book;
@@ -57,21 +33,9 @@ public class UserBook {
         this.book = book;
     }
 
-    public Date getDateTime() {
-        return dateTime;
-    }
-
-    public String getDateTimeString(){
-        return simpleDateFormat.format(dateTime);
-    }
-
-    public void setDateTime(Date dateTime) {
-        this.dateTime = dateTime;
-    }
-
     @Override
     public String toString() {
-        return "UserWord{" +
+        return "UserBook{" +
                 "id='" + id + '\'' +
                 "userName='" + userName + '\'' +
                 ", dateTime=" + simpleDateFormat.format(dateTime) +

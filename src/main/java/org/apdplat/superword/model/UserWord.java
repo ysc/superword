@@ -18,28 +18,13 @@
 
 package org.apdplat.superword.model;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 /**
  * 用户查词记录
  * Created by ysc on 11/24/15.
  */
-public class UserWord {
-    private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-    private String userName;
+public class UserWord extends HistoryRecord {
     private String word;
     private String dictionary;
-    private Date dateTime;
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
 
     public String getWord() {
         return word;
@@ -55,18 +40,6 @@ public class UserWord {
 
     public void setDictionary(String dictionary) {
         this.dictionary = dictionary;
-    }
-
-    public Date getDateTime() {
-        return dateTime;
-    }
-
-    public String getDateTimeString(){
-        return simpleDateFormat.format(dateTime);
-    }
-
-    public void setDateTime(Date dateTime) {
-        this.dateTime = dateTime;
     }
 
     @Override
