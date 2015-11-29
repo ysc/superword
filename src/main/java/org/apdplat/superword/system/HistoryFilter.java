@@ -37,11 +37,13 @@ public class HistoryFilter implements Filter {
 
         if(userName==null){
             HttpServletResponse response = (HttpServletResponse)resp;
+            response.setContentType("text/html");
+            response.setCharacterEncoding("utf-8");
             response.getWriter().write("未登录用户不能查看!<br/>");
             response.getWriter().write("<a href=\"");
             response.getWriter().write(request.getContextPath());
             response.getWriter().write("/system/register.jsp\">注册</a>");
-            response.getWriter().write("<a href=\"");
+            response.getWriter().write("    <a href=\"");
             response.getWriter().write(request.getContextPath());
             response.getWriter().write("/system/login.jsp\">登录</a>");
 
