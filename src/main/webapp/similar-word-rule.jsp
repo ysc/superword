@@ -17,7 +17,6 @@
   --%>
 
 <%@ page import="org.apdplat.superword.model.Word" %>
-<%@ page import="org.apdplat.superword.rule.SimilarWord" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="org.apdplat.word.analysis.Hit" %>
