@@ -24,12 +24,22 @@
 <%@ page import="org.apdplat.superword.rule.DynamicPrefixRule" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="org.apdplat.superword.model.UserDynamicPrefix" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
     String prefixes = request.getParameter("prefixes");
     String htmlFragment = "";
     if(prefixes != null && !"".equals(prefixes.trim()) && prefixes.contains("-")){
+        String userName = (String)session.getAttribute("userName");
+        UserDynamicPrefix userDynamicPrefix = new UserDynamicPrefix();
+        userDynamicPrefix.setDynamicPrefix(prefixes);
+        userDynamicPrefix.setDateTime(new Date());
+        userDynamicPrefix.setUserName(userName == null ? "anonymity" : userName);
+        MySQLUtils.saveUserDynamicPrefixToDatabase(userDynamicPrefix);
+
         String words_type = request.getParameter("words_type");
         if(words_type == null){
             words_type = "ALL";
