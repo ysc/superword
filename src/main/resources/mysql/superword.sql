@@ -107,3 +107,21 @@ CREATE  TABLE `superword`.`user_dynamic_suffix` (
   INDEX `user_name_INDEX` (`user_name` ASC) ,
 
   INDEX `date_time_INDEX` (`date_time` ASC) );
+
+CREATE  TABLE `superword`.`user_dynamic_prefix` (
+
+  `id` INT NOT NULL AUTO_INCREMENT ,
+
+  `user_name` VARCHAR(200)  NOT NULL,
+
+  `dynamic_prefix` VARCHAR(50)  NOT NULL,
+
+  `md5` VARCHAR(32)  NOT NULL UNIQUE,
+
+  `date_time` TIMESTAMP  NOT NULL ,
+
+  PRIMARY KEY (`id`) ,
+
+  INDEX `user_name_INDEX` (`user_name` ASC) ,
+
+  INDEX `date_time_INDEX` (`date_time` ASC) );
