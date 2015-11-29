@@ -24,12 +24,22 @@
 <%@ page import="org.apdplat.superword.rule.DynamicSuffixRule" %>
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="org.apdplat.superword.model.UserDynamicSuffix" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
     String suffixes = request.getParameter("suffixes");
     String htmlFragment = "";
     if(suffixes != null && !"".equals(suffixes.trim()) && suffixes.contains("-")){
+        String userName = (String)session.getAttribute("userName");
+        UserDynamicSuffix userDynamicSuffix = new UserDynamicSuffix();
+        userDynamicSuffix.setDynamicSuffix(suffixes);
+        userDynamicSuffix.setDateTime(new Date());
+        userDynamicSuffix.setUserName(userName == null ? "anonymity" : userName);
+        MySQLUtils.saveUserDynamicSuffixToDatabase(userDynamicSuffix);
+
         String words_type = request.getParameter("words_type");
         if(words_type == null){
             words_type = "ALL";
