@@ -260,6 +260,28 @@ public class MySQLUtils {
         return userWords;
     }
 
+    public static void saveUserSimilarWordToDatabase(UserSimilarWord userSimilarWord) {
+        String sql = "insert into user_similar_word (user_name, similar_word, md5, date_time) values (?, ?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userSimilarWord.getUserName());
+            pst.setString(2, userSimilarWord.getSimilarWord());
+            pst.setString(3, MD5(userSimilarWord.getUserName()+userSimilarWord.getSimilarWord()));
+            pst.setTimestamp(4, new Timestamp(userSimilarWord.getDateTime().getTime()));
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            LOG.error("保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+    }
+
     public static void saveUserDynamicPrefixToDatabase(UserDynamicPrefix userDynamicPrefix) {
         String sql = "insert into user_dynamic_prefix (user_name, dynamic_prefix, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
