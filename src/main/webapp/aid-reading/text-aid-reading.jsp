@@ -55,7 +55,7 @@
     }
     request.setAttribute("words_type", words_type.trim());
     String key = "words_"+words_type;
-    Set<Word> words = (Set<Word>)session.getAttribute(key);
+    Set<Word> words = (Set<Word>)application.getAttribute(key);
     if(words == null){
         if("ALL".equals(words_type.trim())){
             words = WordSources.getAll();
@@ -65,7 +65,7 @@
             String resource = "/word_"+words_type+".txt";
             words = WordSources.get(resource);
         }
-        session.setAttribute(key, words);
+        application.setAttribute(key, words);
     }
     int column = 10;
     try{

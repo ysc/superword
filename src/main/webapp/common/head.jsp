@@ -57,6 +57,15 @@
 <%
   }
 %>
+<%
+  if(!"true".equals(request.getParameter("index"))){
+%>
+    <td>
+    <a href="<%=request.getContextPath()%>/index.jsp">返回主页</a> <br/>
+    </td>
+<%
+  }
+%>
   </tr>
 </table>
 <script>

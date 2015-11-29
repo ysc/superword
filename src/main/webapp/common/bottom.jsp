@@ -20,11 +20,11 @@
 
 
 <p>
-  目前正在开发测试中，每天都会增加功能 <br/>
+  目前正在开发测试中，经常会增加新功能 <br/>
   <%
     if(!"true".equals(request.getParameter("index"))){
   %>
-  <a target="_blank" href="<%=request.getContextPath()%>/index.jsp">返回主页</a> <br/>
+  <a href="<%=request.getContextPath()%>/index.jsp">返回主页</a> <br/>
   <%
     }
   %>
