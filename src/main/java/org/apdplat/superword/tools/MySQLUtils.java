@@ -132,7 +132,103 @@ public class MySQLUtils {
         return null;
     }
 
-    public static List<UserBook> getHistoryUseBooksFromDatabase(String userName) {
+    public static List<UserDynamicPrefix> getHistoryUserDynamicPrefixesFromDatabase(String userName) {
+        List<UserDynamicPrefix> userDynamicPrefixes = new ArrayList<>();
+        String sql = "select id,dynamic_prefix,date_time from user_dynamic_prefix where user_name=?";
+        Connection con = getConnection();
+        if(con == null){
+            return userDynamicPrefixes;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                int id = rs.getInt(1);
+                String dynamicPrefix = rs.getString(2);
+                Timestamp timestamp = rs.getTimestamp(3);
+                UserDynamicPrefix userDynamicPrefix = new UserDynamicPrefix();
+                userDynamicPrefix.setId(id);
+                userDynamicPrefix.setDynamicPrefix(dynamicPrefix);
+                userDynamicPrefix.setDateTime(new java.util.Date(timestamp.getTime()));
+                userDynamicPrefix.setUserName(userName);
+                userDynamicPrefixes.add(userDynamicPrefix);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return userDynamicPrefixes;
+    }
+
+    public static List<UserDynamicSuffix> getHistoryUserDynamicSuffixesFromDatabase(String userName) {
+        List<UserDynamicSuffix> userDynamicSuffixes = new ArrayList<>();
+        String sql = "select id,dynamic_suffix,date_time from user_dynamic_suffix where user_name=?";
+        Connection con = getConnection();
+        if(con == null){
+            return userDynamicSuffixes;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                int id = rs.getInt(1);
+                String dynamicSuffix = rs.getString(2);
+                Timestamp timestamp = rs.getTimestamp(3);
+                UserDynamicSuffix userDynamicSuffix = new UserDynamicSuffix();
+                userDynamicSuffix.setId(id);
+                userDynamicSuffix.setDynamicSuffix(dynamicSuffix);
+                userDynamicSuffix.setDateTime(new java.util.Date(timestamp.getTime()));
+                userDynamicSuffix.setUserName(userName);
+                userDynamicSuffixes.add(userDynamicSuffix);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return userDynamicSuffixes;
+    }
+
+    public static List<UserSimilarWord> getHistoryUserSimilarWordsFromDatabase(String userName) {
+        List<UserSimilarWord> userSimilarWords = new ArrayList<>();
+        String sql = "select id,similar_word,date_time from user_similar_word where user_name=?";
+        Connection con = getConnection();
+        if(con == null){
+            return userSimilarWords;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                int id = rs.getInt(1);
+                String similarWord = rs.getString(2);
+                Timestamp timestamp = rs.getTimestamp(3);
+                UserSimilarWord userSimilarWord = new UserSimilarWord();
+                userSimilarWord.setId(id);
+                userSimilarWord.setSimilarWord(similarWord);
+                userSimilarWord.setDateTime(new java.util.Date(timestamp.getTime()));
+                userSimilarWord.setUserName(userName);
+                userSimilarWords.add(userSimilarWord);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return userSimilarWords;
+    }
+
+    public static List<UserBook> getHistoryUserBooksFromDatabase(String userName) {
         List<UserBook> userBooks = new ArrayList<>();
         String sql = "select id,book,date_time from user_book where user_name=?";
         Connection con = getConnection();
@@ -164,7 +260,7 @@ public class MySQLUtils {
         return userBooks;
     }
 
-    public static List<UserUrl> getHistoryUseUrlsFromDatabase(String userName) {
+    public static List<UserUrl> getHistoryUserUrlsFromDatabase(String userName) {
         List<UserUrl> userUrls = new ArrayList<>();
         String sql = "select id,url,date_time from user_url where user_name=?";
         Connection con = getConnection();
@@ -196,7 +292,7 @@ public class MySQLUtils {
         return userUrls;
     }
 
-    public static List<UserText> getHistoryUseTextsFromDatabase(String userName) {
+    public static List<UserText> getHistoryUserTextsFromDatabase(String userName) {
         List<UserText> userTexts = new ArrayList<>();
         String sql = "select id,text,date_time from user_text where user_name=?";
         Connection con = getConnection();
@@ -230,7 +326,7 @@ public class MySQLUtils {
 
     public static List<UserWord> getHistoryUserWordsFromDatabase(String userName) {
         List<UserWord> userWords = new ArrayList<>();
-        String sql = "select word,dictionary,date_time from user_word where user_name=?";
+        String sql = "select id,word,dictionary,date_time from user_word where user_name=?";
         Connection con = getConnection();
         if(con == null){
             return userWords;
@@ -242,10 +338,12 @@ public class MySQLUtils {
             pst.setString(1, userName);
             rs = pst.executeQuery();
             while (rs.next()) {
-                String word = rs.getString(1);
-                String dictionary = rs.getString(2);
-                Timestamp timestamp = rs.getTimestamp(3);
+                int id = rs.getInt(1);
+                String word = rs.getString(2);
+                String dictionary = rs.getString(3);
+                Timestamp timestamp = rs.getTimestamp(4);
                 UserWord userWord = new UserWord();
+                userWord.setId(id);
                 userWord.setWord(word);
                 userWord.setDictionary(dictionary);
                 userWord.setDateTime(new java.util.Date(timestamp.getTime()));

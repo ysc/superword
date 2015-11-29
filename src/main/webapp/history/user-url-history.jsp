@@ -34,7 +34,7 @@
         return;
     }
 
-    List<UserUrl> userUrls = MySQLUtils.getHistoryUseUrlsFromDatabase(userName);
+    List<UserUrl> userUrls = MySQLUtils.getHistoryUserUrlsFromDatabase(userName);
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
     htmlFragment.append("<tr><th>序号</th><th>分析网页</th><th>时间</th></tr>");

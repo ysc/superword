@@ -33,7 +33,7 @@
         return;
     }
 
-    List<UserText> userTexts = MySQLUtils.getHistoryUseTextsFromDatabase(userName);
+    List<UserText> userTexts = MySQLUtils.getHistoryUserTextsFromDatabase(userName);
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
     htmlFragment.append("<tr><th>序号</th><th>分析文本</th><th>时间</th></tr>");
