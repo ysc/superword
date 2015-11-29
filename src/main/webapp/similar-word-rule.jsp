@@ -21,11 +21,10 @@
 <%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="org.apdplat.word.analysis.Hit" %>
 <%@ page import="org.apdplat.word.analysis.Hits" %>
-<%@ page import="java.util.ArrayList" %>
-<%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.word.analysis.EditDistanceTextSimilarity" %>
 <%@ page import="org.apdplat.word.analysis.TextSimilarity" %>
 <%@ page import="org.apdplat.word.segmentation.SegmentationAlgorithm" %>
+<%@ page import="java.util.*" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -46,30 +45,27 @@
             words_type = "ALL";
         }
         request.setAttribute("words_type", words_type.trim());
-        String key = "words_string_"+words_type;
-        List<String> words = (List<String>)application.getAttribute(key);
+        String key = "words_"+words_type;
+        Set<Word> words = (Set<Word>)application.getAttribute(key);
         if(words == null){
-            words = new ArrayList<String>();
             if("ALL".equals(words_type.trim())){
-                for(Word item : WordSources.getAll()){
-                    words.add(item.getWord());
-                }
+                words = WordSources.getAll();
             }else if("SYLLABUS".equals(words_type.trim())){
-                for(Word item : WordSources.getSyllabusVocabulary()){
-                    words.add(item.getWord());
-                }
+                words = WordSources.getSyllabusVocabulary();
             }else{
                 String resource = "/word_"+words_type+".txt";
-                for(Word item : WordSources.get(resource)){
-                    words.add(item.getWord());
-                }
+                words = WordSources.get(resource);
             }
             application.setAttribute(key, words);
         }
 
         TextSimilarity textSimilarity = new EditDistanceTextSimilarity();
         textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
-        Hits result = textSimilarity.rank(word, words, count);
+        List<String> target = new ArrayList<>();
+        for(Word w : words){
+            target.add(w.getWord());
+        }
+        Hits result = textSimilarity.rank(word, target, count);
 
         StringBuilder temp = new StringBuilder();
         int i=1;
