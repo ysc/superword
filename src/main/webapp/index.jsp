@@ -48,6 +48,9 @@
       <li><a href='<%=request.getContextPath()+"/history/user-text-history.jsp"%>'>文本分析记录</a></li>
       <li><a href='<%=request.getContextPath()+"/history/user-url-history.jsp"%>'>网页分析记录</a></li>
       <li><a href='<%=request.getContextPath()+"/history/user-book-history.jsp"%>'>书籍分析记录</a></li>
+      <li><a href='<%=request.getContextPath()+"/history/user-similar-word-history.jsp"%>'>相似单词分析记录</a></li>
+      <li><a href='<%=request.getContextPath()+"/history/user-dynamic-prefix-history.jsp"%>'>动态前缀分析记录</a></li>
+      <li><a href='<%=request.getContextPath()+"/history/user-dynamic-suffix-history.jsp"%>'>动态后缀分析记录</a></li>
     </ol>
   </p>
   <jsp:include page="common/bottom.jsp?index=true"/>
