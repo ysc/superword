@@ -25,6 +25,8 @@
 <%@ page import="java.util.ArrayList" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.word.analysis.EditDistanceTextSimilarity" %>
+<%@ page import="org.apdplat.word.analysis.TextSimilarity" %>
+<%@ page import="org.apdplat.word.segmentation.SegmentationAlgorithm" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -46,7 +48,7 @@
         }
         request.setAttribute("words_type", words_type.trim());
         String key = "words_string_"+words_type;
-        List<String> words = (List<String>)session.getAttribute(key);
+        List<String> words = (List<String>)application.getAttribute(key);
         if(words == null){
             words = new ArrayList<String>();
             if("ALL".equals(words_type.trim())){
@@ -63,10 +65,12 @@
                     words.add(item.getWord());
                 }
             }
-            session.setAttribute(key, words);
+            application.setAttribute(key, words);
         }
-        SimilarWord similarWord = new SimilarWord();
-        Hits result = similarWord.compute(word, new EditDistanceTextSimilarity(), words, count);
+
+        TextSimilarity textSimilarity = new EditDistanceTextSimilarity();
+        textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
+        Hits result = textSimilarity.rank(word, words, count);
 
         StringBuilder temp = new StringBuilder();
         int i=1;
