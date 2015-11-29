@@ -282,6 +282,28 @@ public class MySQLUtils {
         }
     }
 
+    public static void saveUserDynamicSuffixToDatabase(UserDynamicSuffix userDynamicSuffix) {
+        String sql = "insert into user_dynamic_suffix (user_name, dynamic_suffix, md5, date_time) values (?, ?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userDynamicSuffix.getUserName());
+            pst.setString(2, userDynamicSuffix.getDynamicSuffix());
+            pst.setString(3, MD5(userDynamicSuffix.getUserName()+userDynamicSuffix.getDynamicSuffix()));
+            pst.setTimestamp(4, new Timestamp(userDynamicSuffix.getDateTime().getTime()));
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            LOG.error("保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+    }
+
     public static void saveUserBookToDatabase(UserBook userBook) {
         String sql = "insert into user_book (user_name, book, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
