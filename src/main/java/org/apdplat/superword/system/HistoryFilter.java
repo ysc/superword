@@ -48,6 +48,9 @@ public class HistoryFilter implements Filter {
             response.getWriter().write("    <a href=\"");
             response.getWriter().write(request.getContextPath());
             response.getWriter().write("/system/login.jsp\">登录</a>");
+            response.getWriter().write("    <a href=\"");
+            response.getWriter().write(request.getContextPath());
+            response.getWriter().write("/system/login.jspx\">QQ账号登录</a>");
 
             return;
         }
