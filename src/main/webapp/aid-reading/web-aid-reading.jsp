@@ -24,13 +24,13 @@
 <%@ page import="java.util.Set" %>
 <%@ page import="org.jsoup.Jsoup" %>
 <%@ page import="org.apdplat.extractor.html.HtmlFetcher" %>
-<%@ page import="org.apdplat.extractor.html.impl.HtmlUnitHtmlFetcher" %>
 <%@ page import="org.apache.commons.lang.StringUtils" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.model.UserUrl" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.net.URLDecoder" %>
 <%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.extractor.html.impl.JSoupHtmlFetcher" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -73,7 +73,7 @@
     String text = "";
     String htmlFragment = "";
     try{
-        HtmlFetcher htmlFetcher = new HtmlUnitHtmlFetcher();
+        HtmlFetcher htmlFetcher = new JSoupHtmlFetcher();
 
         text = Jsoup.parse(htmlFetcher.fetch(url)).text();
         if(StringUtils.isBlank(text)){
