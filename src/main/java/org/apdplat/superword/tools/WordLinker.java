@@ -25,10 +25,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Element;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,6 +54,7 @@ public class WordLinker {
     //将此值设置为null
     public static final String SERVER_REDIRECT_VALUE = "common/server-redirect.jspx";
     public static String serverRedirect = SERVER_REDIRECT_VALUE;
+    public static boolean jsDefinition = true;
 
     private static final String EM_PRE = "<span style=\"color:red\">";
     private static final String EM_SUF = "</span>";
@@ -275,9 +273,18 @@ public class WordLinker {
         if(serverRedirect != null){
             url = serverRedirect+"?url="+url+"&word="+word+"&dict="+dictionary.name();
         }
-        html.append("<a target=\"_blank\" href=\"")
-                .append(url)
-                .append("\">");
+        if(jsDefinition){
+            html.append("<a href=\"#")
+                    .append(UUID.randomUUID())
+                    .append("\" onclick=\"viewDefinition('")
+                    .append(url)
+                    .append("', '"+word+"');\">");
+
+        }else {
+            html.append("<a target=\"_blank\" href=\"")
+                    .append(url)
+                    .append("\">");
+        }
         if(StringUtils.isNotBlank(emphasize)) {
             Set<String> targets = new HashSet<>();
             Matcher matcher = pattern.matcher(word);
