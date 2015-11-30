@@ -178,8 +178,18 @@ public class WordLinker {
         }catch (Exception e){}
         return Dictionary.ICIBA;
     }
+
     public static enum Dictionary{
-        ICIBA, YOUDAO, COLLINS, WEBSTER, OXFORD, CAMBRIDGE, MACMILLAN, HERITAGE, WIKTIONARY, WORDNET, RANDOMHOUSE
+        ICIBA("爱词霸"), YOUDAO("有道"), COLLINS("柯林斯"), WEBSTER("韦氏"), OXFORD("牛津"),
+        CAMBRIDGE("剑桥"), MACMILLAN("麦克米伦"), HERITAGE("美国传统"), WIKTIONARY("维基词典"),
+        WORDNET("WordNet"), RANDOMHOUSE("RandomHouse");
+        private String des;
+        private Dictionary(String des){
+            this.des = des;
+        }
+        public String getDes(){
+            return des;
+        }
     }
 
     public static String toLink(String word){
