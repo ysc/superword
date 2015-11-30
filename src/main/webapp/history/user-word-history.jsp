@@ -20,6 +20,7 @@
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.model.UserWord" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -38,7 +39,7 @@
                 .append("</td><td>")
                 .append(WordLinker.toLink(userWord.getWord(), WordLinker.getValidDictionary(userWord.getDictionary())))
                 .append("(")
-                .append(userWord.getDictionary())
+                .append(Dictionary.valueOf(userWord.getDictionary()).getDes())
                 .append(")")
                 .append("</td><td>")
                 .append(userWord.getDateTimeString())
