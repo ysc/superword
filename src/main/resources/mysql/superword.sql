@@ -1,4 +1,6 @@
-CREATE DATABASE superword;
+CREATE DATABASE superword
+  DEFAULT CHARACTER SET utf8
+  DEFAULT COLLATE utf8_general_ci;
 
 USE superword;
 
