@@ -74,7 +74,7 @@
         }
     </script>
 </head>
-<body id="back-to-top">
+<body id="top">
 <jsp:include page="../common/head.jsp"/>
 <form method="post" id="form" action="login.jsp">
     <p><font color="red"><span id="tip"><%=tip%></span></font></p>

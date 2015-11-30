@@ -94,7 +94,7 @@
         }
     </script>
 </head>
-<body id="back-to-top">
+<body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
         ***用法说明:

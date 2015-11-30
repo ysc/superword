@@ -65,7 +65,7 @@
         }
     </script>
 </head>
-<body id="back-to-top">
+<body id="top">
     <jsp:include page="common/head.jsp"/>
     <p>
         <font color="red"><span id="tip"></span></font><br/>

@@ -71,7 +71,7 @@
         }
     </script>
 </head>
-<body id="back-to-top">
+<body id="top">
 <jsp:include page="../common/head.jsp"/>
 <p>用户 <%=userName%> 查词记录</p>
 <p>

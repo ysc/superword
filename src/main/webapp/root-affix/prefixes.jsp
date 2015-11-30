@@ -54,7 +54,7 @@
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 </head>
-<body id="back-to-top">
+<body id="top">
   <jsp:include page="../common/head.jsp"/>
   <%=stringBuilder.toString()%>
   <jsp:include page="../common/bottom.jsp"/>
