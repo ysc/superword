@@ -18,6 +18,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
-    session.setAttribute("userName", null);
+    session.setAttribute("user", null);
     response.sendRedirect(request.getContextPath()+"/");
 %>

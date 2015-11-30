@@ -27,17 +27,18 @@
 <%@ page import="org.apdplat.superword.model.UserDynamicPrefix" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+<%@ page import="org.apdplat.superword.model.User" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
     String prefixes = request.getParameter("prefixes");
     String htmlFragment = "";
     if(prefixes != null && !"".equals(prefixes.trim()) && prefixes.contains("-")){
-        String userName = (String)session.getAttribute("userName");
+        User user = (User)session.getAttribute("user");
         UserDynamicPrefix userDynamicPrefix = new UserDynamicPrefix();
         userDynamicPrefix.setDynamicPrefix(prefixes);
         userDynamicPrefix.setDateTime(new Date());
-        userDynamicPrefix.setUserName(userName == null ? "anonymity" : userName);
+        userDynamicPrefix.setUserName(user == null ? "anonymity" : user.getUserName());
         MySQLUtils.saveUserDynamicPrefixToDatabase(userDynamicPrefix);
 
         String words_type = request.getParameter("words_type");

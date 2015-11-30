@@ -25,6 +25,7 @@
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.net.URLDecoder" %>
+<%@ page import="org.apdplat.superword.model.User" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -34,11 +35,11 @@
         return;
     }
     book = URLDecoder.decode(book, "utf-8");
-    String userName = (String)session.getAttribute("userName");
+    User user = (User)session.getAttribute("user");
     UserBook userBook = new UserBook();
     userBook.setDateTime(new Date());
     userBook.setBook(book);
-    userBook.setUserName(userName==null?"anonymity":userName);
+    userBook.setUserName(user==null?"anonymity":user.getUserName());
     //保存用户书籍分析记录
     MySQLUtils.saveUserBookToDatabase(userBook);
 
@@ -98,7 +99,7 @@
     <jsp:include page="../common/head.jsp"/>
 
     <p>
-        辅助阅读
+        书籍辅助阅读
     </p>
 
     <p>

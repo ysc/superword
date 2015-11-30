@@ -120,7 +120,7 @@
     <jsp:include page="../common/head.jsp"/>
 
     <p>
-        辅助阅读-搜索单词对应原文
+        书籍辅助阅读-搜索单词对应原文
     </p>
 
     <p>

@@ -26,6 +26,7 @@
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="org.apdplat.superword.model.UserText" %>
 <%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.model.User" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -33,11 +34,11 @@
     String text = request.getParameter("text");
     if(text != null) {
         text = URLDecoder.decode(text, "utf-8");
-        String userName = (String)session.getAttribute("userName");
+        User user = (User)session.getAttribute("user");
         UserText userText = new UserText();
         userText.setDateTime(new Date());
         userText.setText(text);
-        userText.setUserName(userName==null?"anonymity":userName);
+        userText.setUserName(user==null?"anonymity":user.getUserName());
         //保存用户文本分析记录
         MySQLUtils.saveUserTextToDatabase(userText);
     }else{

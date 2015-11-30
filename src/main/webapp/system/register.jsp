@@ -22,6 +22,9 @@
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
+    if(session.getAttribute("user") != null){
+        request.getRequestDispatcher("/index.jsp").forward(request, response);
+    }
     String userName = request.getParameter("userName");
     String password = request.getParameter("password");
     String tip = "";
@@ -32,7 +35,7 @@
         user.setPassword(password);
         boolean success = MySQLUtils.register(user);
         if(success) {
-            session.setAttribute("userName", userName);
+            session.setAttribute("user", user);
             response.sendRedirect(request.getContextPath()+"/");
         }else{
             tip = "注册失败，请稍后重试或与管理员联系！";

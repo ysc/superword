@@ -18,6 +18,8 @@
 
 package org.apdplat.superword.system;
 
+import org.apdplat.superword.model.User;
+
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,9 +35,9 @@ public class HistoryFilter implements Filter {
 
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
         HttpServletRequest request = (HttpServletRequest)req;
-        String userName = (String) request.getSession().getAttribute("userName");
+        User user = (User) request.getSession().getAttribute("user");
 
-        if(userName==null){
+        if(user==null){
             HttpServletResponse response = (HttpServletResponse)resp;
             response.setContentType("text/html");
             response.setCharacterEncoding("utf-8");

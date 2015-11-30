@@ -20,12 +20,18 @@
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.model.UserUrl" %>
 <%@ page import="java.net.URLEncoder" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.QQUser" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
-    String userName = (String) session.getAttribute("userName");
-    List<UserUrl> userUrls = MySQLUtils.getHistoryUserUrlsFromDatabase(userName);
+    User user = (User)session.getAttribute("user");
+    String displayName = user.getUserName();
+    if(user instanceof QQUser){
+        displayName = ((QQUser)user).getNickname();
+    }
+    List<UserUrl> userUrls = MySQLUtils.getHistoryUserUrlsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
     htmlFragment.append("<tr><th>序号</th><th>分析网页</th><th>时间</th></tr>");
@@ -55,7 +61,7 @@
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>用户 <%=userName%> 网页分析记录</p>
+<p>用户 <%=displayName%> 网页分析记录</p>
 <%=htmlFragment%>
 <jsp:include page="../common/bottom.jsp"/>
 </body>

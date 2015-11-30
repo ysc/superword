@@ -21,12 +21,18 @@
 <%@ page import="org.apdplat.superword.model.UserWord" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.QQUser" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
-    String userName = (String) session.getAttribute("userName");
-    List<UserWord> userWords = MySQLUtils.getHistoryUserWordsFromDatabase(userName);
+    User user = (User)session.getAttribute("user");
+    String displayName = user.getUserName();
+    if(user instanceof QQUser){
+        displayName = ((QQUser)user).getNickname();
+    }
+    List<UserWord> userWords = MySQLUtils.getHistoryUserWordsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
     htmlFragment.append("<tr><th>序号</th><th>单词</th><th>所有词典定义</th><th>时间</th></tr>");
@@ -69,7 +75,7 @@
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>用户 <%=userName%> 查词记录</p>
+<p>用户 <%=displayName%> 查词记录</p>
 
 <%=htmlFragment%>
 

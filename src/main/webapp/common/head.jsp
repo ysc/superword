@@ -1,3 +1,5 @@
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.QQUser" %>
 <%--
   ~ APDPlat - Application Product Development Platform
   ~ Copyright (c) 2013, 杨尚川, yang-shangchuan@qq.com
@@ -36,20 +38,27 @@
       </div>
     </td>
 <%
-  String userName = (String) session.getAttribute("userName");
-  if(userName==null){
+  User user = (User)session.getAttribute("user");
+  if(user==null){
 %>
     <td>
-      <a href="<%=request.getContextPath()+"/system/register.jsp"%>">注册</a>
+      <a href="<%=request.getContextPath()%>/system/register.jsp">注册</a>
     </td>
     <td>
-      <a href="<%=request.getContextPath()+"/system/login.jsp"%>">登录</a>
+      <a href="<%=request.getContextPath()%>/system/login.jsp">登录</a>
+    </td>
+    <td>
+      <a href="<%=request.getContextPath()%>/system/login.jspx">QQ账号登录</a>
     </td>
 <%
   }else{
+      String displayName = user.getUserName();
+      if(user instanceof QQUser){
+          displayName = ((QQUser)user).getNickname();
+      }
 %>
     <td>
-      欢迎【<%=userName%>】
+      欢迎【<%=displayName%>】
     </td>
     <td>
       <a href="<%=request.getContextPath()+"/system/logout.jsp"%>">注销</a>

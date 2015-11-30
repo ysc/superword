@@ -27,6 +27,7 @@
 <%@ page import="java.util.*" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="org.apdplat.superword.model.UserSimilarWord" %>
+<%@ page import="org.apdplat.superword.model.User" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -42,11 +43,11 @@
     }
     String htmlFragment = "";
     if(word != null && !"".equals(word.trim())){
-        String userName = (String)session.getAttribute("userName");
+        User user = (User)session.getAttribute("user");
         UserSimilarWord userSimilarWord = new UserSimilarWord();
         userSimilarWord.setSimilarWord(word);
         userSimilarWord.setDateTime(new Date());
-        userSimilarWord.setUserName(userName == null ? "anonymity" : userName);
+        userSimilarWord.setUserName(user == null ? "anonymity" : user.getUserName());
         MySQLUtils.saveUserSimilarWordToDatabase(userSimilarWord);
 
         String words_type = request.getParameter("words_type");

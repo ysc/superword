@@ -1,7 +1,3 @@
-<%@ page import="org.apache.commons.lang.StringUtils" %>
-<%@ page import="org.apdplat.superword.model.User" %>
-<%@ page import="java.util.Date" %>
-<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%--
   ~ APDPlat - Application Product Development Platform
   ~ Copyright (c) 2013, 杨尚川, yang-shangchuan@qq.com
@@ -20,8 +16,16 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
+<%@ page import="org.apache.commons.lang.StringUtils" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
+    if(session.getAttribute("user") != null){
+        request.getRequestDispatcher("/index.jsp").forward(request, response);
+    }
     String userName = request.getParameter("userName");
     String password = request.getParameter("password");
     String tip = "";
@@ -32,7 +36,7 @@
         user.setPassword(password);
         boolean success = MySQLUtils.login(user);
         if(success) {
-            session.setAttribute("userName", userName);
+            session.setAttribute("user", user);
             response.sendRedirect(request.getContextPath()+"/");
         }else{
             tip = "登录失败，用户名或者密码错误！";

@@ -30,6 +30,7 @@
 <%@ page import="org.apdplat.superword.model.UserUrl" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.net.URLDecoder" %>
+<%@ page import="org.apdplat.superword.model.User" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -39,11 +40,11 @@
         return;
     }
     url = URLDecoder.decode(url, "utf-8");
-    String userName = (String)session.getAttribute("userName");
+    User user = (User)session.getAttribute("user");
     UserUrl userUrl = new UserUrl();
     userUrl.setDateTime(new Date());
     userUrl.setUrl(url);
-    userUrl.setUserName(userName==null?"anonymity":userName);
+    userUrl.setUserName(user==null?"anonymity":user.getUserName());
     //保存用户网页分析记录
     MySQLUtils.saveUserUrlToDatabase(userUrl);
 

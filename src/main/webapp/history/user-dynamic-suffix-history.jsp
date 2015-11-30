@@ -19,12 +19,18 @@
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.model.UserDynamicSuffix" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.QQUser" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
-    String userName = (String) session.getAttribute("userName");
-    List<UserDynamicSuffix> userDynamicSuffixes = MySQLUtils.getHistoryUserDynamicSuffixesFromDatabase(userName);
+    User user = (User)session.getAttribute("user");
+    String displayName = user.getUserName();
+    if(user instanceof QQUser){
+        displayName = ((QQUser)user).getNickname();
+    }
+    List<UserDynamicSuffix> userDynamicSuffixes = MySQLUtils.getHistoryUserDynamicSuffixesFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
     htmlFragment.append("<tr><th>序号</th><th>动态后缀</th><th>时间</th></tr>");
@@ -54,7 +60,7 @@
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>用户 <%=userName%> 动态后缀分析记录</p>
+<p>用户 <%=displayName%> 动态后缀分析记录</p>
 <%=htmlFragment%>
 <jsp:include page="../common/bottom.jsp"/>
 </body>

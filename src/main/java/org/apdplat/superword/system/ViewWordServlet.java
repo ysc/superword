@@ -18,6 +18,7 @@
 
 package org.apdplat.superword.system;
 
+import org.apdplat.superword.model.User;
 import org.apdplat.superword.model.UserWord;
 import org.apdplat.superword.tools.MySQLUtils;
 
@@ -50,11 +51,11 @@ public class ViewWordServlet extends HttpServlet {
             return;
         }
 
-        String userName = (String)request.getSession().getAttribute("userName");
+        User user = (User)request.getSession().getAttribute("user");
 
         UserWord userWord = new UserWord();
         userWord.setDateTime(new Date());
-        userWord.setUserName(userName==null?"anonymity":userName);
+        userWord.setUserName(user==null?"anonymity":user.getUserName());
         userWord.setWord(word);
         userWord.setDictionary(dict);
         MySQLUtils.saveUserWordToDatabase(userWord);
