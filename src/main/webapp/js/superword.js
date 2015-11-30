@@ -50,3 +50,8 @@ $(document).ready(function(){
     s.parentNode.insertBefore(hm, s);
   })();
 });
+
+//查看定义
+function viewDefinition(url, word){
+  window.open(url, word, 'width=1200,height=600');
+}
