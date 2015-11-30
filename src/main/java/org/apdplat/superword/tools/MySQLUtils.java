@@ -51,6 +51,29 @@ public class MySQLUtils {
     private MySQLUtils() {
     }
 
+    public static boolean existUser(User user, String table){
+        String sql = "select id from "+table+" where user_name=?";
+        Connection con = getConnection();
+        if(con == null){
+            return false;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, user.getUserName());
+            rs = pst.executeQuery();
+            if (rs.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            LOG.error("操作失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return false;
+    }
+
     public static boolean login(User user){
         String sql = "select password from user where user_name=?";
         Connection con = getConnection();
@@ -93,6 +116,7 @@ public class MySQLUtils {
             pst.executeUpdate();
             return true;
         } catch (SQLException e) {
+            e.printStackTrace();
             LOG.error("注册失败", e);
         } finally {
             close(con, pst, rs);
@@ -577,5 +601,48 @@ public class MySQLUtils {
         MySQLUtils.saveUserWordToDatabase(userWord);
 
         System.out.println(MySQLUtils.getHistoryUserWordsFromDatabase("ysc"));
+    }
+
+    public static boolean processQQUser(QQUser qqUser) {
+        if(qqUser.getUserName() == null){
+            return false;
+        }
+        qqUser.setPassword("");
+        if(!existUser(qqUser, "user")){
+            register(qqUser);
+        }
+        if(!existUser(qqUser, "user_qq")){
+            saveQQUser(qqUser);
+        }
+        return true;
+    }
+
+    private static void saveQQUser(QQUser user) {
+        String sql = "insert into user_qq (user_name, password, nickname, gender, birthday, location, avatarURL30, avatarURL50, avatarURL100, date_time) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, user.getUserName());
+            pst.setString(2, user.getPassword());
+            pst.setString(3, user.getNickname());
+            pst.setString(4, user.getGender());
+            pst.setString(5, user.getBirthday());
+            pst.setString(6, user.getLocation());
+            pst.setString(7, user.getAvatarURL30());
+            pst.setString(8, user.getAvatarURL50());
+            pst.setString(9, user.getAvatarURL100());
+            pst.setTimestamp(10, new Timestamp(user.getDateTime().getTime()));
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            LOG.error("保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
     }
 }
