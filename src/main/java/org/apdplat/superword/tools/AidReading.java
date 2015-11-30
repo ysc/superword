@@ -118,84 +118,69 @@ public class AidReading {
                 map2.put(w, v);
                 return;
             }
+            StringBuilder str = new StringBuilder(w);
             if (w.endsWith("ly") && wordSet.contains(w.substring(0, w.length() - 2))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 2));
             }
             if (w.endsWith("s") && wordSet.contains(w.substring(0, w.length() - 1))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 1), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 1));
             }
             if (w.endsWith("es") && wordSet.contains(w.substring(0, w.length() - 2))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 2));
             }
             if (w.endsWith("ies") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3)+"y", v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3)+"y");
             }
             if (w.endsWith("ed") && wordSet.contains(w.substring(0, w.length() - 1))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 1), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 1));
             }
             if (w.endsWith("ed") && wordSet.contains(w.substring(0, w.length() - 2))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 2));
             }
             if (w.endsWith("ed") && w.length()>5 && wordSet.contains(w.substring(0, w.length() - 3)) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3));
             }
             if (w.endsWith("ied") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3)+"y", v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3)+"y");
             }
             if (w.endsWith("ing") && wordSet.contains(w.substring(0, w.length() - 3)+"e")) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3)+"e", v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3)+"e");
             }
             if (w.endsWith("ing") && w.length()>6 && wordSet.contains(w.substring(0, w.length() - 4)) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 4), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 4));
             }
             if (w.endsWith("ing") && wordSet.contains(w.substring(0, w.length() - 3))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3));
             }
             if (w.endsWith("er") && wordSet.contains(w.substring(0, w.length() - 1))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 1), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 1));
             }
             if (w.endsWith("er") && wordSet.contains(w.substring(0, w.length() - 2))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 2));
             }
             if (w.endsWith("er") && w.length()>5 && wordSet.contains(w.substring(0, w.length() - 3)) && (w.charAt(w.length()-3)==w.charAt(w.length()-4))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3));
             }
             if (w.endsWith("est") && wordSet.contains(w.substring(0, w.length() - 2))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 2), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 2));
             }
             if (w.endsWith("est") && wordSet.contains(w.substring(0, w.length() - 3))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3));
             }
             if (w.endsWith("est") && w.length()>6 && wordSet.contains(w.substring(0, w.length() - 4)) && (w.charAt(w.length()-4)==w.charAt(w.length()-5))) {
-                map2.put(w+"_"+w.substring(0, w.length() - 4), v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 4));
             }
             if (w.endsWith("ier") && wordSet.contains(w.substring(0, w.length() - 3)+"y")) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3)+"y", v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 3)+"y");
             }
             if (w.endsWith("iest") && wordSet.contains(w.substring(0, w.length() - 4)+"y")) {
-                map2.put(w+"_"+w.substring(0, w.length() - 4)+"y", v);
-                return;
+                str.append("_"+w.substring(0, w.length() - 4)+"y");
             }
             if (w.endsWith("ves") && wordSet.contains(w.substring(0, w.length() - 3)+"f")) {
-                map2.put(w+"_"+w.substring(0, w.length() - 3)+"f", v);
+                str.append("_"+w.substring(0, w.length() - 3)+"f");
+            }
+            if(str.length() > w.length()){
+                map2.put(str.toString(), v);
                 return;
             }
             String originalText = "";
