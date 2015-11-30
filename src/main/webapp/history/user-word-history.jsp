@@ -29,18 +29,25 @@
     List<UserWord> userWords = MySQLUtils.getHistoryUserWordsFromDatabase(userName);
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
-    htmlFragment.append("<tr><th>序号</th><th>单词</th><th>词典</th><th>时间</th></tr>");
+    htmlFragment.append("<tr><th>序号</th><th>单词</th><th>所有词典定义</th><th>时间</th></tr>");
     int i = 1;
     for (UserWord userWord : userWords) {
+        String word = userWord.getWord();
+        String definitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.valueOf(userWord.getDictionary()))+word+"&word="+word+"&dict="+Dictionary.valueOf(userWord.getDictionary()).name();
+        String definitionHtml = "<span style=\"cursor:pointer;color:red\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+userWord.getWord()+"("+Dictionary.valueOf(userWord.getDictionary()).getDes()+")"+"</span>";
+        StringBuilder all = new StringBuilder();
+        for(Dictionary dictionary : Dictionary.values()){
+            String url = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(dictionary)+word+"&word="+word+"&dict="+dictionary.name();
+            String html = "<span style=\"cursor:pointer;color:red\" onclick=\"viewDefinition('"+url+"', '"+word+"');\">"+dictionary.getDes()+"</span>";
+            all.append(html).append(" | ");
+        }
+        all.setLength(all.length()-3);
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append(WordLinker.toLink(userWord.getWord(), WordLinker.getValidDictionary(request.getParameter("dict"))))
+                .append(definitionHtml)
                 .append("</td><td>")
-                .append(WordLinker.toLink(userWord.getWord(), WordLinker.getValidDictionary(userWord.getDictionary())))
-                .append("(")
-                .append(Dictionary.valueOf(userWord.getDictionary()).getDes())
-                .append(")")
+                .append(all.toString())
                 .append("</td><td>")
                 .append(userWord.getDateTimeString())
                 .append("</td></tr>");
@@ -55,30 +62,17 @@
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
     <script type="text/javascript">
-        function update(){
-            var dict = document.getElementById("dict").value;
-
-            if(dict == ""){
-                return;
-            }
-            location.href = "user-word-history.jsp?dict="+dict;
-        }
-        document.onkeypress=function(e){
-            var e = window.event || e ;
-            if(e.charCode == 13){
-                update();
-            }
+        function viewDefinition(url, word){
+            window.open(url, word, 'width=1200,height=600');
         }
     </script>
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
 <p>用户 <%=userName%> 查词记录</p>
-<p>
-    <font color="red">选择词典：</font>
-    <jsp:include page="../select/dictionary-select.jsp"/><br/>
-</p>
+
 <%=htmlFragment%>
+
 <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

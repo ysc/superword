@@ -48,7 +48,7 @@
       <li><a href='<%=request.getContextPath()+"/root-affix/suffix-rule.jsp?suffixes=ence,ance,age&dict=ICIBA&words_type=CET4&strict=Y&column=6"%>'>后缀规则</a></li>
       <li><a href='<%=request.getContextPath()+"/root-affix/dynamic-suffix-rule.jsp?suffixes=ise-ize&dict=ICIBA&words_type=SYLLABUS"%>'>动态后缀规则</a></li>
       <li><a href='<%=request.getContextPath()+"/similar-word-rule.jsp?word=north&count=10&dict=ICIBA&words_type=CET4"%>'>拼写相似规则</a></li>
-      <li><a href='<%=request.getContextPath()+"/history/user-word-history.jsp?dict=ICIBA"%>'>用户查词记录</a></li>
+      <li><a href='<%=request.getContextPath()+"/history/user-word-history.jsp"%>'>用户查词记录</a></li>
       <li><a href='<%=request.getContextPath()+"/history/user-text-history.jsp"%>'>文本分析记录</a></li>
       <li><a href='<%=request.getContextPath()+"/history/user-url-history.jsp"%>'>网页分析记录</a></li>
       <li><a href='<%=request.getContextPath()+"/history/user-book-history.jsp"%>'>书籍分析记录</a></li>
