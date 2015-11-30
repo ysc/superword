@@ -18,6 +18,7 @@
 
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="java.util.UUID" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -32,7 +33,7 @@
     int i=1;
     for(Dictionary dictionary : Dictionary.values()){
         String definitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(dictionary)+word+"&word="+word+"&dict="+dictionary.name();
-        String definitionHtml = "<span style=\"cursor:pointer;color:red\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+word+"</span>";
+        String definitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+word+"</a>";
         definitionHtmls.append("<tr><td>").append(i++).append("</td><td>").append(dictionary.getDes()).append("</td><td>").append(definitionHtml).append("</td></tr>");
     }
     definitionHtmls.append("</table>");
@@ -45,9 +46,6 @@
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
     <script type="text/javascript">
-        function viewDefinition(url, word){
-            window.open(url, word, 'width=1200,height=600');
-        }
         var lock = false;
         function query() {
             var word = document.getElementById("word").value;

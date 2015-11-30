@@ -23,6 +23,7 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.superword.model.QQUser" %>
+<%@ page import="java.util.UUID" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -40,11 +41,11 @@
     for (UserWord userWord : userWords) {
         String word = userWord.getWord();
         String definitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.valueOf(userWord.getDictionary()))+word+"&word="+word+"&dict="+Dictionary.valueOf(userWord.getDictionary()).name();
-        String definitionHtml = "<span style=\"cursor:pointer;color:red\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+userWord.getWord()+"("+Dictionary.valueOf(userWord.getDictionary()).getDes()+")"+"</span>";
+        String definitionHtml = "<a  href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+userWord.getWord()+"("+Dictionary.valueOf(userWord.getDictionary()).getDes()+")"+"</a>";
         StringBuilder all = new StringBuilder();
         for(Dictionary dictionary : Dictionary.values()){
             String url = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(dictionary)+word+"&word="+word+"&dict="+dictionary.name();
-            String html = "<span style=\"cursor:pointer;color:red\" onclick=\"viewDefinition('"+url+"', '"+word+"');\">"+dictionary.getDes()+"</span>";
+            String html = "<a  href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+url+"', '"+word+"');\">"+dictionary.getDes()+"</a>";
             all.append(html).append(" | ");
         }
         all.setLength(all.length()-3);
@@ -67,11 +68,6 @@
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
-    <script type="text/javascript">
-        function viewDefinition(url, word){
-            window.open(url, word, 'width=1200,height=600');
-        }
-    </script>
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
