@@ -76,7 +76,10 @@
 
 <html>
 <head>
-   <title>文本辅助阅读</title>
+    <title>文本辅助阅读</title>
+    <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 
     <script type="text/javascript">
         var lock = false;
@@ -121,7 +124,7 @@
         }
     </script>
 </head>
-<body>
+<body id="back-to-top">
     <jsp:include page="../common/head.jsp"/>
 
     <p>

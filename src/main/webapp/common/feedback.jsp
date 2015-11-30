@@ -20,8 +20,11 @@
 <html>
 <head>
     <title>建议反馈</title>
+  <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
+  <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
+  <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 </head>
-<body>
+<body id="back-to-top">
 <jsp:include page="head.jsp"/>
 
 <table>

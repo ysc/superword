@@ -46,6 +46,9 @@
 <head>
     <title>用户注册</title>
     <script type="text/javascript" src="../js/md5.js"></script>
+    <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
     <script type="text/javascript">
         var lock = false;
         function login() {
@@ -71,7 +74,7 @@
         }
     </script>
 </head>
-<body>
+<body id="back-to-top">
 <jsp:include page="../common/head.jsp"/>
 <form method="post" id="form" action="login.jsp">
     <p><font color="red"><span id="tip"><%=tip%></span></font></p>

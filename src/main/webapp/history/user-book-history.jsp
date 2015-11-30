@@ -49,8 +49,11 @@
 <html>
 <head>
     <title>用户书籍分析记录</title>
+    <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 </head>
-<body>
+<body id="back-to-top">
 <jsp:include page="../common/head.jsp"/>
 <p>用户 <%=userName%> 书籍分析记录</p>
 <%=htmlFragment%>
