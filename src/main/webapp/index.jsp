@@ -28,6 +28,7 @@
   </p>
   <p>
     <ol>
+      <li><a href='<%=request.getContextPath()+"/definition.jsp?word=fantastic"%>'>定义查询</a></li>
       <li><a href='<%=request.getContextPath()+"/aid-reading/text-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&text=A+macadamia+is+an+Australian+rainforest+tree+with+slender%2c+glossy+evergreen+leaves+and+globular+edible+nuts.%0d%0a%0d%0aA+dandelion+is+a+wild+plant+which+has+yellow+flowers+with+lots+of+thin+petals.+When+the+petals+of+each+flower+drop+off%2c+a+fluffy+white+ball+of+seeds+grows.%0d%0a%0d%0aReeds+are+tall+plants+that+grow+in+large+groups+in+shallow+water+or+on+ground+that+is+always+wet+and+soft.+They+have+strong%2c+hollow+stems+that+can+be+used+for+making+things+such+as+mats+or+baskets.%0d%0a%0d%0aA+hummingbird+is+a+small+nectar-feeding+tropical+brightly+coloured+American+bird+that+is+able+to+hover+and+fly+backwards%2c+and+typically+has+colourful+iridescent+plumage.+It+has+a+long+thin+beak+and+powerful+narrow+wings+that+can+move+very+fast.%0d%0a%0d%0aA+prawn+is+a+small+shellfish+with+a+long+tail+and+many+legs%2c+which+can+be+eaten."%>'>文本辅助阅读</a></li>
       <li><a href='<%=request.getContextPath()+"/aid-reading/web-aid-reading.jsp?words_type=CET4&dict=ICIBA&url=http://spark.apache.org/docs/latest/streaming-programming-guide.html&column=6"%>'>网页辅助阅读</a></li>
       <li><a href='<%=request.getContextPath()+"/aid-reading/aid-reading.jsp?words_type=CET4&dict=ICIBA&book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&column=6"%>'>书籍辅助阅读</a></li>
