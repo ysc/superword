@@ -26,12 +26,12 @@ import java.util.Date;
  * Created by ysc on 11/24/15.
  */
 public class User {
-    private static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    protected static SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
-    private int id;
-    private String userName;
-    private String password;
-    private Date dateTime;
+    protected int id;
+    protected String userName;
+    protected String password;
+    protected Date dateTime;
 
     public int getId() {
         return id;
