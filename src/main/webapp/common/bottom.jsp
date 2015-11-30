@@ -20,7 +20,7 @@
 
 
 <p>
-  目前正在开发测试中，经常会增加新功能 <br/>
+  目前正在开发测试中，经常会增加新功能，推荐使用<a target="_blank" href="https://www.google.com/chrome/">Chrome浏览器</a><br/>
   <%
     if(!"true".equals(request.getParameter("index"))){
   %>
