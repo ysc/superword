@@ -81,7 +81,7 @@ public class CompoundWord {
         Set<Word> target = WordSources.getSyllabusVocabulary();
 
         Map<Word, Map<Integer, List<Word>>> data = CompoundWord.find(words, target);
-        String htmlFragment = HtmlFormatter.toHtmlForCompoundWord(data);
+        String htmlFragment = HtmlFormatter.toHtmlForCompoundWord(data, 5);
 
         Files.write(Paths.get("src/main/resources/compound_word.txt"), htmlFragment.getBytes("utf-8"));
 
