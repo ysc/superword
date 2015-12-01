@@ -55,3 +55,7 @@ $(document).ready(function(){
 function viewDefinition(url, word){
   window.open(url, word, 'width=1200,height=600');
 }
+//trim()
+function trim(x) {
+  return x.replace(/^\s+|\s+$/gm,'');
+}
