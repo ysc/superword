@@ -29,6 +29,6 @@
   %>
   <a target="_blank" href="<%=request.getContextPath()%>/common/feedback.jsp">建议反馈</a> <br/>
   <a target="_blank" href="https://github.com/ysc/QuestionAnsweringSystem/wiki/donation">爱心捐赠支持superword的发展</a><br/>
-  目前正在开发测试中，经常会增加新功能，推荐使用<a target="_blank" href="https://www.google.com/chrome/">Chrome浏览器</a>
+  目前正在开发测试中，经常会增加新功能，推荐使用<a target="_blank" href="http://pan.baidu.com/s/1bnwTVC7">Chrome浏览器</a>
 </p>
 <p id="back-to-top"><a href="#top"><span></span>返回顶部</a></p>
