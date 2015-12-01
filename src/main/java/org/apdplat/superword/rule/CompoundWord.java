@@ -39,7 +39,12 @@ public class CompoundWord {
     }
     public static Map<Word, Map<Integer, List<Word>>> find(Set<Word> words, Set<Word> target){
         Map<Word, Map<Integer, List<Word>>> data = new HashMap<>();
-        target.forEach(word -> data.put(word, find(words, word)));
+        target.forEach(word -> {
+            Map<Integer, List<Word>> compound = find(words, word);
+            if(!compound.isEmpty()) {
+                data.put(word, compound);
+            }
+        });
         return data;
     }
 
