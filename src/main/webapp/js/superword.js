@@ -57,5 +57,11 @@ function viewDefinition(url, word){
 }
 //trim()
 function trim(x) {
-  return x.replace(/^\s+|\s+$/gm,'');
+  if(x.trim){
+    return x.trim();
+  }
+  if(x.replace) {
+    return x.replace(/^\s+|\s+$/gm, '');
+  }
+  return x;
 }
