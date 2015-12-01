@@ -70,7 +70,7 @@
                     .append(" </td><td> ")
                     .append(hit.getScore())
                     .append("</td><td> ")
-                    .append("<a target=\"_blank\" href=\"similar-word-rule.jsp?word=" + hit.getText() + "&count=" + count + "&dict=" + WordLinker.getValidDictionary(request.getParameter("dict")).name() + "&words_type=" + words_type + "\">相似</a>")
+                    .append("<a target=\"_blank\" href=\"similar-word-rule.jsp?word=" + hit.getText() + "&count=" + count + "&dict=" + WordLinker.getValidDictionary(request.getParameter("dict")).name() + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
                     .append(" </td>\n");
             temp.append("</tr>\n");
         }
