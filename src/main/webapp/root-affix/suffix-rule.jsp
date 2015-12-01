@@ -21,7 +21,6 @@
 <%@ page import="org.apdplat.superword.rule.SuffixRule" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
-<%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.util.concurrent.ConcurrentHashMap" %>
 
@@ -31,24 +30,6 @@
     String htmlFragment = "";
     int column = 10;
     if(suffixes != null && !"".equals(suffixes.trim())){
-        String words_type = request.getParameter("words_type");
-        if(words_type == null){
-            words_type = "ALL";
-        }
-        request.setAttribute("words_type", words_type.trim());
-        String key = "words_"+words_type;
-        Set<Word> words = (Set<Word>)application.getAttribute(key);
-        if(words == null){
-            if("ALL".equals(words_type.trim())){
-                words = WordSources.getAll();
-            }else if("SYLLABUS".equals(words_type.trim())){
-                words = WordSources.getSyllabusVocabulary();
-            }else{
-                String resource = "/word_"+words_type+".txt";
-                words = WordSources.get(resource);
-            }
-            application.setAttribute(key, words);
-        }
         Map<String, Suffix> map = (Map<String, Suffix>)application.getAttribute("all_suffix");
         if(map == null){
             map = new ConcurrentHashMap<String, Suffix>();
@@ -61,6 +42,7 @@
         for(String suffix : suffixes.trim().split(",")){
             suffixList.add(new Suffix(suffix, map.get(suffix.replace("-", ""))==null?"":map.get(suffix.replace("-", "")).getDes()));
         }
+        Set<Word> words = (Set<Word>)application.getAttribute("words_"+request.getAttribute("words_type"));
         TreeMap<Suffix, List<Word>> data = SuffixRule.findBySuffix(words, suffixList, "N".equalsIgnoreCase(request.getParameter("strict")) ? false : true);
         for(Map.Entry<Suffix, List<Word>> entry : data.entrySet()){
             if(entry.getValue().size() > 500) {

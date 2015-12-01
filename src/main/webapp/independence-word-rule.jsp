@@ -20,31 +20,13 @@
 <%@ page import="org.apdplat.superword.rule.IndependentWordRule" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
-<%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Set" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
-    String words_type = request.getParameter("words_type");
-    if(words_type == null){
-        words_type = "ALL";
-    }
-    request.setAttribute("words_type", words_type.trim());
-    String key = "words_"+words_type;
-    Set<Word> words = (Set<Word>)application.getAttribute(key);
-    if(words == null){
-        if("ALL".equals(words_type.trim())){
-            words = WordSources.getAll();
-        }else if("SYLLABUS".equals(words_type.trim())){
-            words = WordSources.getSyllabusVocabulary();
-        }else{
-            String resource = "/word_"+words_type+".txt";
-            words = WordSources.get(resource);
-        }
-        application.setAttribute(key, words);
-    }
+    Set<Word> words = (Set<Word>)application.getAttribute("words_"+request.getAttribute("words_type"));
     int column = 10;
     try{
         column = Integer.parseInt(request.getParameter("column"));

@@ -21,7 +21,6 @@
 <%@ page import="org.apdplat.superword.rule.RootRule" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
-<%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.util.concurrent.ConcurrentHashMap" %>
 
@@ -31,24 +30,6 @@
     String htmlFragment = "";
     int column = 10;
     if(roots != null && !"".equals(roots.trim())){
-        String words_type = request.getParameter("words_type");
-        if(words_type == null){
-            words_type = "ALL";
-        }
-        request.setAttribute("words_type", words_type.trim());
-        String key = "words_"+words_type;
-        Set<Word> words = (Set<Word>)application.getAttribute(key);
-        if(words == null){
-            if("ALL".equals(words_type.trim())){
-                words = WordSources.getAll();
-            }else if("SYLLABUS".equals(words_type.trim())){
-                words = WordSources.getSyllabusVocabulary();
-            }else{
-                String resource = "/word_"+words_type+".txt";
-                words = WordSources.get(resource);
-            }
-            application.setAttribute(key, words);
-        }
         Map<String, Word> map = (Map<String, Word>)application.getAttribute("all_root");
         if(map == null){
             map = new ConcurrentHashMap<String, Word>();
@@ -61,6 +42,7 @@
         for(String root : roots.trim().split(",")){
             rootList.add(new Word(root, map.get(root.replace("-", ""))==null?"":map.get(root.replace("-", "")).getMeaning()));
         }
+        Set<Word> words = (Set<Word>)application.getAttribute("words_"+request.getAttribute("words_type"));
         TreeMap<Word, List<Word>> data = RootRule.findByRoot(words, rootList);
         for(Map.Entry<Word, List<Word>> entry : data.entrySet()){
             if(entry.getValue().size() > 500) {

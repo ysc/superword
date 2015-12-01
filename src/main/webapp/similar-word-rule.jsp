@@ -18,7 +18,6 @@
 
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
-<%@ page import="org.apdplat.superword.tools.WordSources" %>
 <%@ page import="org.apdplat.word.analysis.Hit" %>
 <%@ page import="org.apdplat.word.analysis.Hits" %>
 <%@ page import="org.apdplat.word.analysis.EditDistanceTextSimilarity" %>
@@ -50,28 +49,11 @@
         userSimilarWord.setUserName(user == null ? "anonymity" : user.getUserName());
         MySQLUtils.saveUserSimilarWordToDatabase(userSimilarWord);
 
-        String words_type = request.getParameter("words_type");
-        if(words_type == null){
-            words_type = "ALL";
-        }
-        request.setAttribute("words_type", words_type.trim());
-        String key = "words_"+words_type;
-        Set<Word> words = (Set<Word>)application.getAttribute(key);
-        if(words == null){
-            if("ALL".equals(words_type.trim())){
-                words = WordSources.getAll();
-            }else if("SYLLABUS".equals(words_type.trim())){
-                words = WordSources.getSyllabusVocabulary();
-            }else{
-                String resource = "/word_"+words_type+".txt";
-                words = WordSources.get(resource);
-            }
-            application.setAttribute(key, words);
-        }
+        Set<Word> words = (Set<Word>)application.getAttribute("words_"+request.getAttribute("words_type"));
 
         TextSimilarity textSimilarity = new EditDistanceTextSimilarity();
         textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
-        List<String> target = new ArrayList<>();
+        List<String> target = new ArrayList<String>();
         for(Word w : words){
             target.add(w.getWord());
         }
