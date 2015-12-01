@@ -37,7 +37,7 @@
       <li><a href='<%=request.getContextPath()+"/aid-reading/aid-reading.jsp?words_type=CET4&dict=ICIBA&book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&column=6"%>'>书籍辅助阅读</a></li>
       <li><a href='<%=request.getContextPath()+"/aid-reading/aid-reading-detail.jsp?book=/it/java/Java%208%20in%20Action%20Lambdas,%20Streams%20and%20Functional-style%20Programming.txt&word=functional&dict=ICIBA&pageSize=192"%>'>搜索单词对应书籍原文</a></li>
       <li><a href='<%=request.getContextPath()+"/independence-word-rule.jsp?dict=ICIBA&column=8&words_type=CET4"%>'>独立词规则</a></li>
-      <li><a href='<%=request.getContextPath()+"/compound-word-rule.jsp?dict=ICIBA&word=fearless&column=6"%>'>复合词分析规则</a></li>
+      <li><a href='<%=request.getContextPath()+"/compound-word-rule.jsp?all=false&dict=ICIBA&word=fearless&words_type=CET6&column=12"%>'>复合词分析规则</a></li>
       <li><a href='<%=request.getContextPath()+"/root-affix/root_affix_rule.jsp?dict=ICIBA&word=abbreviation&column=6&strict=N"%>'>词根词缀分析规则</a></li>
       <li><a href='<%=request.getContextPath()+"/root-affix/roots.jsp"%>'>常见词根</a></li>
       <li><a href='<%=request.getContextPath()+"/root-affix/root-rule.jsp?roots=spect,spic&dict=ICIBA&words_type=CET4&column=6"%>'>词根规则</a></li>
