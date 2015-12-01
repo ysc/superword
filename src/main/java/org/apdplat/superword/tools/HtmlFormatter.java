@@ -222,6 +222,11 @@ public class HtmlFormatter {
     public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data, int rowLength, Dictionary dictionary){
         Set<Word> elements = new HashSet<>();
         StringBuilder html = new StringBuilder();
+
+        html.append("<br/>复合词数(")
+                .append(data.size())
+                .append("): <br/><br/>\n");
+
         html.append("<table  border=\"1\">\n");
         AtomicInteger i = new AtomicInteger();
         data
@@ -254,9 +259,9 @@ public class HtmlFormatter {
             return html.toString();
         }
 
-        html.append("\n不重复的被组合词有：")
+        html.append("\n<br/>不重复的被组合词数(")
                 .append(elements.size())
-                .append("个，分别是：<br/>\n");
+                .append("): <br/><br/>\n");
 
         List<String> words = elements
                 .stream()
