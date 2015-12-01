@@ -36,8 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Created by ysc on 11/15/15.
  */
 public class AidReading {
-    private static final Set<Word> STOP_WORDS = WordSources.get("/word_stop.txt");
-
     public static void main(String[] args) throws IOException {
         WordLinker.serverRedirect = null;
 
@@ -75,7 +73,7 @@ public class AidReading {
             line = line.replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+'[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ")
                        .replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+`[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ")
                        .replaceAll("[^a-zA-Z0-9]*[a-zA-Z0-9]+’[a-zA-Z0-9]+[^a-zA-Z0-9]*", " ");
-            for (org.apdplat.word.segmentation.Word term : WordSegmenter.segWithStopWords(line, SegmentationAlgorithm.PureEnglish)) {
+            for (org.apdplat.word.segmentation.Word term : WordSegmenter.seg(line, SegmentationAlgorithm.PureEnglish)) {
                 String word = term.getText();
 
                 if (word.contains("'")) {
@@ -94,9 +92,6 @@ public class AidReading {
                 buffer.setLength(0);
                 buffer.append(singular);
                 if (buffer.length() < 2 || buffer.length() > 14) {
-                    continue;
-                }
-                if (STOP_WORDS.contains(new Word(buffer.toString().toLowerCase(), ""))) {
                     continue;
                 }
                 map.putIfAbsent(buffer.toString(), new AtomicInteger());
