@@ -68,7 +68,7 @@
                 return;
             }
             book = encodeURIComponent(book);
-            location.href = "aid-reading.jsp?words_type="+words_type+"&dict="+dict+"&book="+book+"&column="+column;
+            location.href = "book-aid-reading.jsp?words_type="+words_type+"&dict="+dict+"&book="+book+"&column="+column;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;

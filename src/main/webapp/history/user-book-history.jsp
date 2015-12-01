@@ -40,7 +40,7 @@
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append("<a target=\"_blank\" href=\"../aid-reading/aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&book=")
+                .append("<a target=\"_blank\" href=\"../aid-reading/book-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&book=")
                 .append(URLEncoder.encode(userBook.getBook(), "utf-8"))
                 .append("\">")
                 .append(userBook.getBook())

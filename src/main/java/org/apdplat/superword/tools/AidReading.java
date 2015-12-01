@@ -185,7 +185,7 @@ public class AidReading {
             }
             String originalText = "";
             if(searchOriginalText){
-                originalText = "\t<a target=\"_blank\" href=\"aid-reading-detail.jsp?book="+book+"&word="+entry.getKey()+"&dict=ICIBA&pageSize="+entry.getValue()+"\">[" + entry.getValue() + "]</a>";
+                originalText = "\t<a target=\"_blank\" href=\"book-aid-reading-detail.jsp?book="+book+"&word="+entry.getKey()+"&dict=ICIBA&pageSize="+entry.getValue()+"\">[" + entry.getValue() + "]</a>";
             }else{
                 originalText = "\t[" + entry.getValue() + "]";
             }
@@ -199,7 +199,7 @@ public class AidReading {
         map2.entrySet().stream().sorted((a, b) -> b.getValue().get() - a.getValue().get()).forEach(entry -> {
             String originalText = "";
             if (searchOriginalText) {
-                originalText = "\t<a target=\"_blank\" href=\"aid-reading-detail.jsp?book=" + book + "&word=" + entry.getKey() + "&dict=ICIBA&pageSize=" + entry.getValue() + "\">[" + entry.getValue() + "]</a>";
+                originalText = "\t<a target=\"_blank\" href=\"book-aid-reading-detail.jsp?book=" + book + "&word=" + entry.getKey() + "&dict=ICIBA&pageSize=" + entry.getValue() + "\">[" + entry.getValue() + "]</a>";
             } else {
                 originalText = "\t[" + entry.getValue() + "]";
             }
