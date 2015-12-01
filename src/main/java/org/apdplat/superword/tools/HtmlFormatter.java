@@ -216,10 +216,10 @@ public class HtmlFormatter {
         return s.toString();
     }
 
-    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data){
-        return toHtmlForCompoundWord(data, Dictionary.ICIBA);
+    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data, int rowLength){
+        return toHtmlForCompoundWord(data, rowLength, Dictionary.ICIBA);
     }
-    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data, Dictionary dictionary){
+    public static String toHtmlForCompoundWord(Map<Word, Map<Integer, List<Word>>> data, int rowLength, Dictionary dictionary){
         Set<Word> elements = new HashSet<>();
         StringBuilder html = new StringBuilder();
         html.append("<table  border=\"1\">\n");
@@ -263,7 +263,7 @@ public class HtmlFormatter {
                 .sorted()
                 .map(word -> WordLinker.toLink(word.getWord(), dictionary))
                 .collect(Collectors.toList());
-        html.append(toHtmlTableFragment(words, 5));
+        html.append(toHtmlTableFragment(words, rowLength));
 
         return html.toString();
     }
