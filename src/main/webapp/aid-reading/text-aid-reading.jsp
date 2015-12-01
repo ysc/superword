@@ -108,6 +108,7 @@
             }else{
                 word = document.selection.createRange().text;
             }
+            word = trim(word);
             if(/^[a-zA-Z]{3,15}$/.test(word)){
                 window.open(linkPrefix+word+"&word="+word+"&dict=<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>", word, 'width=1200,height=600');
             }
