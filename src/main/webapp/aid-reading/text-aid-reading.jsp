@@ -98,9 +98,14 @@
         function querySelectionWord(){
             var word = "";
             if(window.getSelection){
-                word = window.getSelection();
-            }
-            else{
+                word = window.getSelection().toString();
+                if("" == word){
+                    var textArea = document.getElementById("text");
+                    var start = textArea.selectionStart;
+                    var finish = textArea.selectionEnd;
+                    word = textArea.value.substring(start, finish);
+                }
+            }else{
                 word = document.selection.createRange().text;
             }
             if(/^[a-zA-Z]{3,15}$/.test(word)){
