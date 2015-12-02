@@ -66,7 +66,11 @@ public class Definition {
         }
         StringBuilder string = new StringBuilder();
         list.forEach(d -> string.append(d).append(joinString));
-        string.setLength(string.length()-joinString.length());
+        int len = string.length()-joinString.length();
+        if(len < 1){
+            return "";
+        }
+        string.setLength(len);
         return string.toString();
     }
 
@@ -152,7 +156,7 @@ public class Definition {
         int times = 0;
         while(html.contains("非常抱歉，来自您ip的请求异常频繁") || StringUtils.isBlank(html)){
             //使用新的IP地址
-            ProxyIp.toNewIp();
+            DynamicIp.toNewIp();
             html = _getContent(url);
             if(++times > 2){
                 break;
