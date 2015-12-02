@@ -96,7 +96,7 @@
     <jsp:include page="common/head.jsp"/>
     <p>
         <font color="red"><span id="tip"></span></font><br/>
-        <font color="red">输入单词：</font><input id="word" name="word" value="<%=word%>" size="50" maxlength="50"/><br/><br/>
+        <font color="red">输入单词：</font><input onchange="query();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"/>
         <button type="button" onclick="query();">查询定义</button><br/>
     </p>
     <script type="text/javascript">
