@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
  * 利用有道词典筛选词表中属于各大考试的词
  * 提取有道词典页面中的自定义信息
  * 考虑到有道词典的防爬虫限制，特提供包含63789个单词的有道词典HTML页面origin_html_youdao.zip文件供下载
- * 下载地址http://pan.baidu.com/s/1bnD9gy7
+ * 下载地址http://pan.baidu.com/s/1pJH4ugj
  * @author 杨尚川
  */
 public class WordClassifierForYouDao {
@@ -168,7 +168,7 @@ public class WordClassifierForYouDao {
         LOGGER.debug("html:"+html);
         String[] attr = html.split("杨尚川");
         if(attr == null || attr.length != 2){
-            LOGGER.error("解析文本失败，文本应该以'杨尚川'分割，前面是词，后面是网页，网页内容是去除换行符之后的一整行文本："+html);
+            LOGGER.debug("解析文本失败，文本应该以'杨尚川'分割，前面是词，后面是网页，网页内容是去除换行符之后的一整行文本："+html);
             return;
         }
         String word = attr[0];
@@ -303,7 +303,7 @@ public class WordClassifierForYouDao {
         //classify(words);
         //classify(WordSources.getAll());
         //parse("src/main/resources/origin_html_1449054801557.txt");
-        //origin_html_youdao.zip包含63789个单词的有道词典解析HTML页面，下载地址http://pan.baidu.com/s/1bnD9gy7
+        //origin_html_youdao.zip包含63789个单词的有道词典解析HTML页面，下载地址http://pan.baidu.com/s/1pJH4ugj
         parse("/Users/apple/百度云同步盘/origin_html_youdao.zip");
     }
 }
