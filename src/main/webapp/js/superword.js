@@ -65,3 +65,17 @@ function trim(x) {
   }
   return x;
 }
+
+function querySelectionWord(linkPrefix, dict){
+  var word = "";
+  if(window.getSelection){
+    word = window.getSelection();
+  }
+  else{
+    word = document.selection.createRange().text;
+  }
+  word = trim(word);
+  if(/^[a-zA-Z]{3,15}$/.test(word)){
+    viewDefinition(linkPrefix+word+"&word="+word+"&dict="+dict, word);
+  }
+}
