@@ -21,6 +21,7 @@ package org.apdplat.superword.tools;
 import org.apache.commons.lang.StringUtils;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,9 @@ public class Definition {
     private static final Logger LOGGER = LoggerFactory.getLogger(Definition.class);
 
     private static final String ICIBA_CSS_PATH = "ul.base-list li";
-    private static final String YOUDAO_CSS_PATH = "div#phrsListTab.trans-wrapper.clearfix div.trans-container ul li";
+    //使用 | 分割多个CSSPATH, 如果第一个CSSPATH未提取到内容, 则使用第二个, 以此类推
+    private static final String YOUDAO_CSS_PATH = "div#phrsListTab.trans-wrapper.clearfix div.trans-container ul li" +
+            " | div.trans-container ul p.wordGroup";
     private static final String COLLINS_CSS_PATH = "html body div#wrapper div.content.english div.dictionary div.definition_wrapper.english div.definition_main div.definition_content.col.main_bar";
     private static final String WEBSTER_CSS_PATH = "html body div.body_container div.upper_content_container div.left_content_well div.main_content_area div#wordclick.wordclick div.border-top div.border-left div.border-right div.border-bottom div.corner-top-left div.corner-top-right div.corner-bottom-left div.corner-bottom-right div#mwEntryData";
     private static final String OXFORD_CSS_PATH = "div.entryPageContent";
@@ -133,13 +136,24 @@ public class Definition {
 
         List<String> list = new ArrayList<>();
         try {
-            for(Element element : Jsoup.parse(getContent(url)).select(cssPath)){
-                String definition = element.text();
-                if(StringUtils.isNotBlank(definition)){
-                    definition = definition.trim();
-                    if(!definition.startsWith("变形")) {
-                        list.add(definition);
+            String html = getContent(url);
+            Document document = Jsoup.parse(html);
+            for(String cp : cssPath.split("\\|")) {
+                cp = cp.trim();
+                if(StringUtils.isBlank(cp)){
+                    continue;
+                }
+                for (Element element : document.select(cp)) {
+                    String definition = element.text();
+                    if (StringUtils.isNotBlank(definition)) {
+                        definition = definition.trim();
+                        if (!definition.startsWith("变形")) {
+                            list.add(definition);
+                        }
                     }
+                }
+                if(!list.isEmpty()){
+                    break;
                 }
             }
         } catch (Exception e){
@@ -156,7 +170,7 @@ public class Definition {
         int times = 0;
         while(html.contains("非常抱歉，来自您ip的请求异常频繁") || StringUtils.isBlank(html)){
             //使用新的IP地址
-            DynamicIp.toNewIp();
+            ProxyIp.toNewIp();
             html = _getContent(url);
             if(++times > 2){
                 break;
