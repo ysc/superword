@@ -46,9 +46,11 @@
     definitionHtmls.append(otherDictionary.toString())
             .append("<br/><br/>");
 
-    String icibaDefinitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.ICIBA)+word+"&word="+word+"&dict="+Dictionary.ICIBA.name();
+    String icibaLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.ICIBA);
+    String icibaDefinitionURL = icibaLinkPrefix+word+"&word="+word+"&dict="+Dictionary.ICIBA.name();
     String icibaDefinitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+icibaDefinitionURL+"', '"+word+"');\">爱词霸解释</a>";
-    String youdaoDefinitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.YOUDAO)+word+"&word="+word+"&dict="+Dictionary.YOUDAO.name();
+    String youdaoLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.YOUDAO);
+    String youdaoDefinitionURL = youdaoLinkPrefix+word+"&word="+word+"&dict="+Dictionary.YOUDAO.name();
     String youdaoDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+youdaoDefinitionURL+"', '"+word+"');\">有道解释</a>";
     definitionHtmls.append("<table border=\"1\">")
             .append("<tr><td>")
@@ -56,9 +58,13 @@
             .append("</td><td>")
             .append(youdaoDefinitionHtml)
             .append("</td></tr>")
-            .append("<tr><td>")
+            .append("<tr><td ondblclick=\"querySelectionWord('")
+            .append(icibaLinkPrefix)
+            .append("', 'ICIBA');\">")
             .append(Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"))
-            .append("</td><td>")
+            .append("</td><td ondblclick=\"querySelectionWord('")
+            .append(youdaoLinkPrefix)
+            .append("', 'YOUDAO');\">")
             .append(Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"))
             .append("</td></tr>")
             .append("</table>");
@@ -90,6 +96,8 @@
                 query();
             }
         }
+        var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
+        var dict = '<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>';
     </script>
 </head>
 <body id="top">
