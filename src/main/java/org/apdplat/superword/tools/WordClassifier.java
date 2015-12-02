@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
 /**
  * 利用爱词霸筛选词表中属于各大考试的词
  * 提取爱词霸页面中的自定义信息
- * 考虑到爱词霸的防爬虫限制，特提供包含61821个单词的爱词霸HTML页面origin_html.zip文件供下载
+ * 考虑到爱词霸的防爬虫限制，特提供包含61809个单词的爱词霸HTML页面origin_html.zip文件供下载
  * 下载地址http://pan.baidu.com/s/1bnD9gy7
  * @author 杨尚川
  */
@@ -102,8 +102,7 @@ public class WordClassifier {
     public static void parse(String path){
         if(path.endsWith(".zip")){
             parseZip(path);
-        }
-        if(Files.isDirectory(Paths.get(path))){
+        }else if(Files.isDirectory(Paths.get(path))){
             parseDir(path);
         }else{
             parseFile(path);
@@ -152,7 +151,7 @@ public class WordClassifier {
     }
 
     public static void parseFile(String file){
-        LOGGER.info("开始解析文件："+file);
+        LOGGER.info("开始解析文件：" + file);
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(
                         new BufferedInputStream(
@@ -175,15 +174,15 @@ public class WordClassifier {
             return;
         }
         String word = attr[0];
-        LOGGER.info(COUNT.incrementAndGet()+"、解析单词：" + word);
+        LOGGER.info(COUNT.incrementAndGet() + "、解析单词：" + word);
         String htm = attr[1];
         parse(word, htm, data);
     }
 
     public static void showStatus(Map<String, List<String>> data, int current, int total, String word){
-        LOGGER.debug("开始处理词 "+current+"/"+total+" ，完成进度 "+current/(float)total*100+"% ："+word);
+        LOGGER.debug("开始处理词 " + current + "/" + total + " ，完成进度 " + current / (float) total * 100 + "% ：" + word);
         data.entrySet().forEach(e -> {
-            LOGGER.debug(e.getKey()+"\t"+e.getValue().size());
+            LOGGER.debug(e.getKey() + "\t" + e.getValue().size());
         });
     }
 
@@ -191,7 +190,7 @@ public class WordClassifier {
             LOGGER.info("将数据写入磁盘，防止丢失");
             data.keySet().forEach(key -> {
                 try {
-                    String path = "src/main/resources/word_" + key + ".txt";
+                    String path = "src/main/resources/word_" + ("考 研".equals(key)?"KY":key) + ".txt";
                     LOGGER.info("保存词典文件：" + path);
                     List<String> existWords = Files.readAllLines(Paths.get(path));
                     Set<String> allWords = new HashSet<>();
@@ -262,6 +261,7 @@ public class WordClassifier {
                 .header("Referer", REFERER)
                 .header("Host", HOST)
                 .header("User-Agent", USER_AGENT)
+                .timeout(60000)
                 .ignoreContentType(true);
         String html = "";
         try {
@@ -303,7 +303,7 @@ public class WordClassifier {
         //classify(words);
         //classify(WordSources.getAll());
         //parse("src/main/resources/origin_html_1427060576977.txt");
-        //origin_html.zip包含61821个单词的爱词霸解析HTML页面，下载地址http://pan.baidu.com/s/1bnD9gy7
+        //origin_html.zip包含61809个单词的爱词霸解析HTML页面，下载地址http://pan.baidu.com/s/1bnD9gy7
         parse("/Users/apple/百度云同步盘/origin_html.zip");
     }
 }

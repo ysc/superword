@@ -99,8 +99,7 @@ public class WordClassifierForYouDao {
     public static void parse(String path){
         if(path.endsWith(".zip")){
             parseZip(path);
-        }
-        if(Files.isDirectory(Paths.get(path))){
+        }else if(Files.isDirectory(Paths.get(path))){
             parseDir(path);
         }else{
             parseFile(path);
@@ -168,7 +167,7 @@ public class WordClassifierForYouDao {
         LOGGER.debug("html:"+html);
         String[] attr = html.split("杨尚川");
         if(attr == null || attr.length != 2){
-            LOGGER.debug("解析文本失败，文本应该以'杨尚川'分割，前面是词，后面是网页，网页内容是去除换行符之后的一整行文本："+html);
+            LOGGER.error("解析文本失败，文本应该以'杨尚川'分割，前面是词，后面是网页，网页内容是去除换行符之后的一整行文本："+html);
             return;
         }
         String word = attr[0];
