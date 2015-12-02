@@ -109,19 +109,7 @@
             display = !display;
         }
         var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
-        function querySelectionWord(){
-            var word = "";
-            if(window.getSelection){
-                word = window.getSelection();
-            }
-            else{
-                word = document.selection.createRange().text;
-            }
-            word = trim(word);
-            if(/^[a-zA-Z]{3,15}$/.test(word)){
-                window.open(linkPrefix+word+"&word="+word+"&dict=<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>", word, 'width=1200,height=600');
-            }
-        }
+        var dict = '<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>';
     </script>
 </head>
 <body id="top">
@@ -141,7 +129,7 @@
     </p>
     <p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">双击网页内容选中单词可查看定义(点击隐藏)：</span></font><br/>
-        <div ondblclick="querySelectionWord();" id="text_div" style="display:block">
+        <div ondblclick="querySelectionWord(linkPrefix, dict);" id="text_div" style="display:block">
             <%=text%>
         </div>
     </p>
