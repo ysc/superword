@@ -61,6 +61,8 @@ public class WordClassifier {
     private static final Set<String> NOT_FOUND_WORDS = new HashSet<>();
     private static final Set<String> ORIGIN_HTML = new HashSet<>();
 
+    private static final AtomicInteger COUNT = new AtomicInteger();
+
     public static void classify(Set<Word> words){
         LOGGER.debug("待处理词数目："+words.size());
         AtomicInteger i = new AtomicInteger();
@@ -173,7 +175,7 @@ public class WordClassifier {
             return;
         }
         String word = attr[0];
-        LOGGER.info("解析单词："+word);
+        LOGGER.info(COUNT.incrementAndGet()+"、解析单词：" + word);
         String htm = attr[1];
         parse(word, htm, data);
     }
