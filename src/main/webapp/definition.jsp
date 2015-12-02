@@ -19,6 +19,7 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.util.UUID" %>
+<%@ page import="org.apdplat.superword.tools.Definition" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -27,16 +28,40 @@
     if(word == null){
         word = "fantastic";
     }
+    word = word.trim();
     StringBuilder definitionHtmls = new StringBuilder();
-    definitionHtmls.append("<table>")
-                   .append("<tr><td>序号</td><td>词典</td><td>单词</td></tr>");
-    int i=1;
+    definitionHtmls.append("英文词典解释: ");
+
+    StringBuilder otherDictionary = new StringBuilder();
     for(Dictionary dictionary : Dictionary.values()){
+        if(dictionary == Dictionary.ICIBA || dictionary == Dictionary.YOUDAO){
+            continue;
+        }
         String definitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(dictionary)+word+"&word="+word+"&dict="+dictionary.name();
-        String definitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+word+"</a>";
-        definitionHtmls.append("<tr><td>").append(i++).append("</td><td>").append(dictionary.getDes()).append("</td><td>").append(definitionHtml).append("</td></tr>");
+        String definitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+dictionary.getDes()+"</a>";
+        otherDictionary.append(definitionHtml).append(" | ");
     }
-    definitionHtmls.append("</table>");
+    otherDictionary.setLength(otherDictionary.length() - 3);
+
+    definitionHtmls.append(otherDictionary.toString())
+            .append("<br/><br/>");
+
+    String icibaDefinitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.ICIBA)+word+"&word="+word+"&dict="+Dictionary.ICIBA.name();
+    String icibaDefinitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+icibaDefinitionURL+"', '"+word+"');\">爱词霸解释</a>";
+    String youdaoDefinitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.YOUDAO)+word+"&word="+word+"&dict="+Dictionary.YOUDAO.name();
+    String youdaoDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+youdaoDefinitionURL+"', '"+word+"');\">有道解释</a>";
+    definitionHtmls.append("<table border=\"1\">")
+            .append("<tr><td>")
+            .append(icibaDefinitionHtml)
+            .append("</td><td>")
+            .append(youdaoDefinitionHtml)
+            .append("</td></tr>")
+            .append("<tr><td>")
+            .append(Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"))
+            .append("</td><td>")
+            .append(Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"))
+            .append("</td></tr>")
+            .append("</table>");
 %>
 
 <html>
