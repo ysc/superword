@@ -19,11 +19,15 @@
 package org.apdplat.superword.tools;
 
 
+import org.apache.commons.dbcp2.*;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.pool2.ObjectPool;
+import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apdplat.superword.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,9 +44,12 @@ public class MySQLUtils {
     private static final String USER = "root";
     private static final String PASSWORD = "root";
 
+    private static DataSource dataSource = null;
+
     static {
         try {
             Class.forName(DRIVER);
+            dataSource = setupDataSource(URL, USER, PASSWORD);
         } catch (ClassNotFoundException e) {
             LOG.error("MySQL驱动加载失败：", e);
         }
@@ -584,11 +591,53 @@ public class MySQLUtils {
     public static Connection getConnection() {
         Connection con = null;
         try {
-            con = DriverManager.getConnection(URL, USER, PASSWORD);
-        } catch (SQLException e) {
+            con = dataSource.getConnection();
+        } catch (Exception e) {
             LOG.error("MySQL获取数据库连接失败：", e);
         }
         return con;
+    }
+
+    private static DataSource setupDataSource(String connectUri, String uname, String passwd) {
+        //
+        // First, we'll create a ConnectionFactory that the
+        // pool will use to create Connections.
+        // We'll use the DriverManagerConnectionFactory,
+        // using the connect string passed in the command line
+        // arguments.
+        //
+        ConnectionFactory connectionFactory =
+                new DriverManagerConnectionFactory(connectUri, uname, passwd);
+
+        //
+        // Next we'll create the PoolableConnectionFactory, which wraps
+        // the "real" Connections created by the ConnectionFactory with
+        // the classes that implement the pooling functionality.
+        //
+        PoolableConnectionFactory poolableConnectionFactory =
+                new PoolableConnectionFactory(connectionFactory, null);
+
+        //
+        // Now we'll need a ObjectPool that serves as the
+        // actual pool of connections.
+        //
+        // We'll use a GenericObjectPool instance, although
+        // any ObjectPool implementation will suffice.
+        //
+        ObjectPool<PoolableConnection> connectionPool =
+                new GenericObjectPool<>(poolableConnectionFactory);
+
+        // Set the factory's pool property to the owning pool
+        poolableConnectionFactory.setPool(connectionPool);
+
+        //
+        // Finally, we create the PoolingDriver itself,
+        // passing in the object pool we created.
+        //
+        PoolingDataSource<PoolableConnection> dataSource =
+                new PoolingDataSource<>(connectionPool);
+
+        return dataSource;
     }
 
     public static void close(Statement st) {
