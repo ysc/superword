@@ -95,24 +95,7 @@
             display = !display;
         }
         var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
-        function querySelectionWord(){
-            var word = "";
-            if(window.getSelection){
-                word = window.getSelection().toString();
-                if("" == word){
-                    var textArea = document.getElementById("text");
-                    var start = textArea.selectionStart;
-                    var finish = textArea.selectionEnd;
-                    word = textArea.value.substring(start, finish);
-                }
-            }else{
-                word = document.selection.createRange().text;
-            }
-            word = trim(word);
-            if(/^[a-zA-Z]{3,15}$/.test(word)){
-                window.open(linkPrefix+word+"&word="+word+"&dict=<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>", word, 'width=1200,height=600');
-            }
-        }
+        var dict = '<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>';
     </script>
 </head>
 <body id="top">
@@ -132,7 +115,7 @@
         </p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">隐藏文本(双击选中单词可查看定义)：</span></font>
         <div id="text_div" style="display:block">
-            <textarea ondblclick="querySelectionWord();" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
+            <textarea ondblclick="querySelectionWord(linkPrefix, dict);" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
             <span style="cursor: pointer" onclick="update();"><font color="red">确定分析文本</font></span>
         </div>
     </form>
