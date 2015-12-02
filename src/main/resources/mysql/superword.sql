@@ -175,3 +175,13 @@ CREATE  TABLE `superword`.`user_qq` (
   INDEX `user_name_INDEX` (`user_name` ASC) ,
 
   INDEX `date_time_INDEX` (`date_time` ASC) );
+
+CREATE  TABLE `superword`.`word_definition` (
+
+  `word` VARCHAR(32)  NOT NULL,
+
+  `dictionary` VARCHAR(32)  NOT NULL,
+
+  `definition` TEXT  NOT NULL,
+
+  PRIMARY KEY (`word`, `dictionary`) );
