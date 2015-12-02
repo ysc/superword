@@ -58,6 +58,26 @@ public class MySQLUtils {
     private MySQLUtils() {
     }
 
+    public static boolean deleteWordDefinition(String word) {
+        String sql = "delete from word_definition where word=?";
+        Connection con = getConnection();
+        if(con == null){
+            return false;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, word);
+            return pst.execute();
+        } catch (SQLException e) {
+            LOG.error("删除单词定义失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return false;
+    }
+
     public static String getWordDefinition(String word, String dictionary) {
         String sql = "select definition from word_definition where word=? and dictionary=?";
         Connection con = getConnection();
