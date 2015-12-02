@@ -60,6 +60,8 @@ public class WordClassifierForYouDao {
     private static final Set<String> NOT_FOUND_WORDS = new HashSet<>();
     private static final Set<String> ORIGIN_HTML = new HashSet<>();
 
+    private static final AtomicInteger COUNT = new AtomicInteger();
+
     public static void classify(Set<Word> words){
         LOGGER.debug("待处理词数目："+words.size());
         AtomicInteger i = new AtomicInteger();
@@ -167,11 +169,11 @@ public class WordClassifierForYouDao {
         LOGGER.debug("html:"+html);
         String[] attr = html.split("杨尚川");
         if(attr == null || attr.length != 2){
-            LOGGER.error("解析文本失败，文本应该以'杨尚川'分割，前面是词，后面是网页，网页内容是去除换行符之后的一整行文本："+html);
+            LOGGER.error("解析文本失败，文本应该以'杨尚川'分割，前面是词，后面是网页，网页内容是去除换行符之后的一整行文本：" + html);
             return;
         }
         String word = attr[0];
-        LOGGER.info("解析单词：" + word);
+        LOGGER.info(COUNT.incrementAndGet() + "、解析单词：" + word);
         String htm = attr[1];
         parse(word, htm, data);
     }
