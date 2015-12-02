@@ -44,10 +44,10 @@ import java.util.stream.Collectors;
  * 下载地址http://pan.baidu.com/s/1bnD9gy7
  * @author 杨尚川
  */
-public class WordClassifierForICIBA {
-    private WordClassifierForICIBA(){}
+public class WordClassifier {
+    private WordClassifier(){}
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WordClassifierForICIBA.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(WordClassifier.class);
     private static final String ICIBA = WordLinker.ICIBA;
     private static final String TYPE_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.dictbar div.wd_genre a";
     private static final String UNFOUND_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div#question.question.unfound_tips";
@@ -127,7 +127,7 @@ public class WordClassifierForICIBA {
 
     public static void parseZip(String zipFile){
         LOGGER.info("开始解析ZIP文件："+zipFile);
-        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifierForICIBA.class.getClassLoader())) {
+        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifier.class.getClassLoader())) {
             for(Path path : fs.getRootDirectories()){
                 LOGGER.info("处理目录："+path);
                 Files.walkFileTree(path, new SimpleFileVisitor<Path>(){
@@ -190,7 +190,7 @@ public class WordClassifierForICIBA {
             data.keySet().forEach(key -> {
                 try {
                     String path = "src/main/resources/word_" + key + ".txt";
-                    LOGGER.error("保存词典文件：" + path);
+                    LOGGER.info("保存词典文件：" + path);
                     List<String> existWords = Files.readAllLines(Paths.get(path));
                     Set<String> allWords = new HashSet<>();
                     existWords.forEach(line -> {
@@ -226,7 +226,7 @@ public class WordClassifierForICIBA {
         try {
             if(!NOT_FOUND_WORDS.isEmpty()) {
                 String path = "src/main/resources/word_not_found.txt";
-                LOGGER.error("保存词典文件：" + path);
+                LOGGER.info("保存词典文件：" + path);
                 AtomicInteger i = new AtomicInteger();
                 //NOT_FOUND_WORDS比较少，常驻内存
                 List<String> list = NOT_FOUND_WORDS
@@ -240,7 +240,7 @@ public class WordClassifierForICIBA {
             //保存原始HTML
             if(!ORIGIN_HTML.isEmpty()) {
                 String path = "src/main/resources/origin_html_" + System.currentTimeMillis() + ".txt";
-                LOGGER.error("保存词典文件：" + path);
+                LOGGER.info("保存词典文件：" + path);
                 Files.write(Paths.get(path), ORIGIN_HTML);
                 ORIGIN_HTML.clear();
             }
