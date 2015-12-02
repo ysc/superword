@@ -44,11 +44,11 @@ import java.util.stream.Collectors;
  * 下载地址http://pan.baidu.com/s/1bnD9gy7
  * @author 杨尚川
  */
-public class WordClassifier {
-    private WordClassifier(){}
+public class WordClassifierForICIBA {
+    private WordClassifierForICIBA(){}
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(WordClassifier.class);
-    private static final String ICIBA = "http://www.iciba.com/";
+    private static final Logger LOGGER = LoggerFactory.getLogger(WordClassifierForICIBA.class);
+    private static final String ICIBA = WordLinker.ICIBA;
     private static final String TYPE_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.dictbar div.wd_genre a";
     private static final String UNFOUND_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div#question.question.unfound_tips";
     private static final String ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
@@ -72,11 +72,16 @@ public class WordClassifier {
             showStatus(data, i.incrementAndGet(), words.size(), word.getWord());
             String html = getContent(word.getWord());
             //LOGGER.debug("获取到的HTML：" +html);
-            while(html.contains("非常抱歉，来自您ip的请求异常频繁")){
+            int times = 0;
+            while(html.contains("非常抱歉，来自您ip的请求异常频繁") || StringUtils.isBlank(html)){
                 //使用新的IP地址
                 DynamicIp.toNewIp();
                 html = getContent(word.getWord());
+                if(++times > 2){
+                    break;
+                }
             }
+
             if(StringUtils.isNotBlank(html)) {
                 parse(word.getWord(), html, data);
                 if(!NOT_FOUND_WORDS.contains(word.getWord())) {
@@ -122,7 +127,7 @@ public class WordClassifier {
 
     public static void parseZip(String zipFile){
         LOGGER.info("开始解析ZIP文件："+zipFile);
-        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifier.class.getClassLoader())) {
+        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile), WordClassifierForICIBA.class.getClassLoader())) {
             for(Path path : fs.getRootDirectories()){
                 LOGGER.info("处理目录："+path);
                 Files.walkFileTree(path, new SimpleFileVisitor<Path>(){
