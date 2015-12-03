@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
 import org.apdplat.superword.tools.WordLinker.Dictionary;
 
 /**
@@ -43,7 +44,6 @@ public class Definition {
             " | div.trans-container ul p.wordGroup";
     public static final String COLLINS_CSS_PATH = "html body div#wrapper div.content.english div.dictionary div.definition_wrapper.english div.definition_main div.definition_content.col.main_bar";
     public static final String WEBSTER_CSS_PATH = "html body div.body_container div.upper_content_container div.left_content_well div.main_content_area div#wordclick.wordclick div.border-top div.border-left div.border-right div.border-bottom div.corner-top-left div.corner-top-right div.corner-bottom-left div.corner-bottom-right div#mwEntryData";
-    public static final String OXFORD_CSS_PATH = "div.entryPageContent";
     public static final String CAMBRIDGE_CSS_PATH = "html body div.wrapper.responsive_container div.cdo-dblclick-area div.responsive_row div.responsive_cell_center div.cdo-section div#entryContent.entrybox.english";
     public static final String MACMILLAN_CSS_PATH = "html body div.responsive_container div.responsive_row div#rightcol.responsive_cell_center_plus_right div#contentpanel div#entryContent div.responsive_cell_center_plus_right div.HOMOGRAPH";
     public static final String HERITAGE_CSS_PATH = "html body div#content.container div.container3 div#results table tbody tr td div.pseg div.ds-list";
@@ -107,7 +107,7 @@ public class Definition {
         return parseDefinition(WordLinker.WEBSTER + word, WEBSTER_CSS_PATH, word, Dictionary.WEBSTER);
     }
     public static List<String> getDefinitionForOXFORD(String word){
-        return parseDefinition(WordLinker.OXFORD + word, OXFORD_CSS_PATH, word, Dictionary.OXFORD);
+        return parseDefinition(WordLinker.OXFORD + word, null, word, Dictionary.OXFORD);
     }
     public static List<String> getDefinitionForCAMBRIDGE(String word){
         return parseDefinition(WordLinker.CAMBRIDGE + word, CAMBRIDGE_CSS_PATH, word, Dictionary.CAMBRIDGE);
@@ -142,6 +142,9 @@ public class Definition {
     }
 
     public static List<String> parseDefinitionFromHtml(String html, String cssPath, String word, Dictionary dictionary){
+        if(dictionary == Dictionary.OXFORD){
+            return parseDefinitionForOxford(html, cssPath);
+        }
         List<String> list = new ArrayList<>();
         try {
             Document document = Jsoup.parse(html);
@@ -165,6 +168,33 @@ public class Definition {
             }
         } catch (Exception e){
             LOGGER.error("解析定义出错：" + word, e);
+        }
+        return list;
+    }
+
+    public static List<String> parseDefinitionForOxford(String html, String cssPath){
+        List<String> list = new ArrayList<>();
+        try {
+            for (Element element : Jsoup.parse(html).select("section.se1.senseGroup")) {
+                StringBuilder definition = new StringBuilder();
+                String partOfSpeech = element.select("span.partOfSpeech").text().trim();
+                for (Element defElement : element.select("div.senseInnerWrapper")){
+                    String seq = defElement.select("span.iteration").text().trim();
+                    String def = defElement.select("span.definition").text().trim();
+                    if(def.endsWith(":")){
+                        def = def.substring(0, def.length()-1);
+                    }
+                    definition.append(partOfSpeech)
+                            .append(" ")
+                            .append(seq)
+                            .append(" ")
+                            .append(def);
+                    list.add(definition.toString());
+                    definition.setLength(0);
+                }
+            }
+        } catch (Exception e){
+            LOGGER.error("解析定义出错：", e);
         }
         return list;
     }
@@ -202,5 +232,9 @@ public class Definition {
             LOGGER.error("获取URL：" + url + "页面出错", e);
         }
         return html;
+    }
+
+    public static void main(String[] args) {
+        getDefinitionForOXFORD("make").stream().forEach(System.out::println);
     }
 }
