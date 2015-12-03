@@ -37,19 +37,19 @@ import org.apdplat.superword.tools.WordLinker.Dictionary;
 public class Definition {
     private static final Logger LOGGER = LoggerFactory.getLogger(Definition.class);
 
-    private static final String ICIBA_CSS_PATH = "ul.base-list li";
+    public static final String ICIBA_CSS_PATH = "ul.base-list li";
     //使用 | 分割多个CSSPATH, 如果第一个CSSPATH未提取到内容, 则使用第二个, 以此类推
-    private static final String YOUDAO_CSS_PATH = "div#phrsListTab.trans-wrapper.clearfix div.trans-container ul li" +
+    public static final String YOUDAO_CSS_PATH = "div#phrsListTab.trans-wrapper.clearfix div.trans-container ul li" +
             " | div.trans-container ul p.wordGroup";
-    private static final String COLLINS_CSS_PATH = "html body div#wrapper div.content.english div.dictionary div.definition_wrapper.english div.definition_main div.definition_content.col.main_bar";
-    private static final String WEBSTER_CSS_PATH = "html body div.body_container div.upper_content_container div.left_content_well div.main_content_area div#wordclick.wordclick div.border-top div.border-left div.border-right div.border-bottom div.corner-top-left div.corner-top-right div.corner-bottom-left div.corner-bottom-right div#mwEntryData";
-    private static final String OXFORD_CSS_PATH = "div.entryPageContent";
-    private static final String CAMBRIDGE_CSS_PATH = "html body div.wrapper.responsive_container div.cdo-dblclick-area div.responsive_row div.responsive_cell_center div.cdo-section div#entryContent.entrybox.english";
-    private static final String MACMILLAN_CSS_PATH = "html body div.responsive_container div.responsive_row div#rightcol.responsive_cell_center_plus_right div#contentpanel div#entryContent div.responsive_cell_center_plus_right div.HOMOGRAPH";
-    private static final String HERITAGE_CSS_PATH = "html body div#content.container div.container3 div#results table tbody tr td div.pseg div.ds-list";
-    private static final String WIKTIONARY_CSS_PATH = "html body div#content.mw-body div#bodyContent.mw-body-content div#mw-content-text.mw-content-ltr";
-    private static final String WORDNET_CSS_PATH = "html body div.form";
-    private static final String RANDOMHOUSE_CSS_PATH = "html body div.content-container.main-area div.row div.center-well-container section#source-luna.source-wrapper.source-luna.is-pm-btn-show.pm-btn-spot div.source-box.oneClick-area section.luna-box div.source-data div.def-list section.def-pbk.ce-spot div.def-set div.def-content";
+    public static final String COLLINS_CSS_PATH = "html body div#wrapper div.content.english div.dictionary div.definition_wrapper.english div.definition_main div.definition_content.col.main_bar";
+    public static final String WEBSTER_CSS_PATH = "html body div.body_container div.upper_content_container div.left_content_well div.main_content_area div#wordclick.wordclick div.border-top div.border-left div.border-right div.border-bottom div.corner-top-left div.corner-top-right div.corner-bottom-left div.corner-bottom-right div#mwEntryData";
+    public static final String OXFORD_CSS_PATH = "div.entryPageContent";
+    public static final String CAMBRIDGE_CSS_PATH = "html body div.wrapper.responsive_container div.cdo-dblclick-area div.responsive_row div.responsive_cell_center div.cdo-section div#entryContent.entrybox.english";
+    public static final String MACMILLAN_CSS_PATH = "html body div.responsive_container div.responsive_row div#rightcol.responsive_cell_center_plus_right div#contentpanel div#entryContent div.responsive_cell_center_plus_right div.HOMOGRAPH";
+    public static final String HERITAGE_CSS_PATH = "html body div#content.container div.container3 div#results table tbody tr td div.pseg div.ds-list";
+    public static final String WIKTIONARY_CSS_PATH = "html body div#content.mw-body div#bodyContent.mw-body-content div#mw-content-text.mw-content-ltr";
+    public static final String WORDNET_CSS_PATH = "html body div.form";
+    public static final String RANDOMHOUSE_CSS_PATH = "html body div.content-container.main-area div.row div.center-well-container section#source-luna.source-wrapper.source-luna.is-pm-btn-show.pm-btn-spot div.source-box.oneClick-area section.luna-box div.source-data div.def-list section.def-pbk.ce-spot div.def-set div.def-content";
 
     private static final String ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     private static final String ENCODING = "gzip, deflate";
@@ -95,48 +95,52 @@ public class Definition {
     }
 
     public static List<String> getDefinitionForICIBA(String word){
-        return parseDefinition(WordLinker.ICIBA + word, ICIBA_CSS_PATH, word, "ICIBA");
+        return parseDefinition(WordLinker.ICIBA + word, ICIBA_CSS_PATH, word, Dictionary.ICIBA);
     }
     public static List<String> getDefinitionForYOUDAO(String word){
-        return parseDefinition(WordLinker.YOUDAO + word, YOUDAO_CSS_PATH, word, "YOUDAO");
+        return parseDefinition(WordLinker.YOUDAO + word, YOUDAO_CSS_PATH, word, Dictionary.YOUDAO);
     }
     public static List<String> getDefinitionForCOLLINS(String word){
-        return parseDefinition(WordLinker.COLLINS + word, COLLINS_CSS_PATH, word, "COLLINS");
+        return parseDefinition(WordLinker.COLLINS + word, COLLINS_CSS_PATH, word, Dictionary.COLLINS);
     }
     public static List<String> getDefinitionForWEBSTER(String word){
-        return parseDefinition(WordLinker.WEBSTER + word, WEBSTER_CSS_PATH, word, "WEBSTER");
+        return parseDefinition(WordLinker.WEBSTER + word, WEBSTER_CSS_PATH, word, Dictionary.WEBSTER);
     }
     public static List<String> getDefinitionForOXFORD(String word){
-        return parseDefinition(WordLinker.OXFORD + word, OXFORD_CSS_PATH, word, "OXFORD");
+        return parseDefinition(WordLinker.OXFORD + word, OXFORD_CSS_PATH, word, Dictionary.OXFORD);
     }
     public static List<String> getDefinitionForCAMBRIDGE(String word){
-        return parseDefinition(WordLinker.CAMBRIDGE + word, CAMBRIDGE_CSS_PATH, word, "CAMBRIDGE");
+        return parseDefinition(WordLinker.CAMBRIDGE + word, CAMBRIDGE_CSS_PATH, word, Dictionary.CAMBRIDGE);
     }
     public static List<String> getDefinitionForMACMILLAN(String word){
-        return parseDefinition(WordLinker.MACMILLAN + word, MACMILLAN_CSS_PATH, word, "MACMILLAN");
+        return parseDefinition(WordLinker.MACMILLAN + word, MACMILLAN_CSS_PATH, word, Dictionary.MACMILLAN);
     }
     public static List<String> getDefinitionForHERITAGE(String word){
-        return parseDefinition(WordLinker.HERITAGE + word, HERITAGE_CSS_PATH, word, "HERITAGE");
+        return parseDefinition(WordLinker.HERITAGE + word, HERITAGE_CSS_PATH, word, Dictionary.HERITAGE);
     }
     public static List<String> getDefinitionForWIKTIONARY(String word){
-        return parseDefinition(WordLinker.WIKTIONARY + word, WIKTIONARY_CSS_PATH, word, "WIKTIONARY");
+        return parseDefinition(WordLinker.WIKTIONARY + word, WIKTIONARY_CSS_PATH, word, Dictionary.WIKTIONARY);
     }
     public static List<String> getDefinitionForWORDNET(String word){
-        return parseDefinition(WordLinker.WORDNET + word, WORDNET_CSS_PATH, word, "WORDNET");
+        return parseDefinition(WordLinker.WORDNET + word, WORDNET_CSS_PATH, word, Dictionary.WORDNET);
     }
     public static List<String> getDefinitionForRANDOMHOUSE(String word){
-        return parseDefinition(WordLinker.RANDOMHOUSE + word, RANDOMHOUSE_CSS_PATH, word, "RANDOMHOUSE");
+        return parseDefinition(WordLinker.RANDOMHOUSE + word, RANDOMHOUSE_CSS_PATH, word, Dictionary.RANDOMHOUSE);
     }
 
-    public static List<String> parseDefinition(String url, String cssPath, String word, String dictionary){
-        String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary);
+    public static List<String> parseDefinition(String url, String cssPath, String word, Dictionary dictionary){
+        String html = getContent(url);
+        return parseDefinitionFromHtml(html, cssPath, word, dictionary);
+    }
+
+    public static List<String> parseDefinitionFromHtml(String html, String cssPath, String word, Dictionary dictionary){
+        String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary.name());
         if(StringUtils.isNotBlank(wordDefinition)){
             return Arrays.asList(wordDefinition.split("<br/>"));
         }
 
         List<String> list = new ArrayList<>();
         try {
-            String html = getContent(url);
             Document document = Jsoup.parse(html);
             for(String cp : cssPath.split("\\|")) {
                 cp = cp.trim();
@@ -157,10 +161,10 @@ public class Definition {
                 }
             }
         } catch (Exception e){
-            LOGGER.error("解析定义出错：" + url, e);
+            LOGGER.error("解析定义出错：" + word, e);
         }
         if(!list.isEmpty()){
-            MySQLUtils.saveWordDefinition(word, dictionary, concat(list, "<br/>"));
+            MySQLUtils.saveWordDefinition(word, dictionary.name(), concat(list, "<br/>"));
         }
         return list;
     }
