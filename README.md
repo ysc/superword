@@ -29,13 +29,17 @@
         git clone https://git.oschina.net/ysc/superword.git
         
     3、配置MySQL数据库
-        在MySQL命令行中执行superword/src/main/resources/mysql/superword.sql文件中的脚本   
         MySQL编码：UTF-8，
         主机：127.0.0.1
         端口：3306
         数据库：superword
         用户名：root
         密码：root
+        在MySQL命令行中执行
+        superword/src/main/resources/mysql/superword.sql
+        和
+        superword/src/main/resources/mysql/word_definition.sql
+        文件中的脚本   
     
     4、运行项目
         unix类操作系统执行：
