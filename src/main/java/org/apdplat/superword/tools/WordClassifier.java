@@ -34,14 +34,15 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
  * 利用爱词霸筛选词表中属于各大考试的词
  * 提取爱词霸页面中的自定义信息
- * 考虑到爱词霸的防爬虫限制，特提供包含61809个单词的爱词霸HTML页面origin_html.zip文件供下载
- * 下载地址http://pan.baidu.com/s/1bnD9gy7
+ * 考虑到爱词霸的防爬虫限制，特提供包含63777个单词的爱词霸HTML页面origin_html_iciba__new.zip文件供下载
+ * 下载地址http://pan.baidu.com/s/1ntky0zR
  * @author 杨尚川
  */
 public class WordClassifier {
@@ -49,7 +50,7 @@ public class WordClassifier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WordClassifier.class);
     private static final String ICIBA = WordLinker.ICIBA;
-    private static final String TYPE_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div.dictbar div.wd_genre a";
+    private static final String TYPE_CSS_PATH = "html body div.main-container div.main-result div.result-info div.info-article.info-base div.base-level span";
     private static final String UNFOUND_CSS_PATH = "html body.bg_main div#layout div#center div#main_box div#dict_main div#question.question.unfound_tips";
     private static final String ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     private static final String ENCODING = "gzip, deflate";
@@ -58,38 +59,38 @@ public class WordClassifier {
     private static final String HOST = "www.iciba.com";
     private static final String REFERER = "http://www.iciba.com/";
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
-    private static final Set<String> NOT_FOUND_WORDS = new HashSet<>();
-    private static final Set<String> ORIGIN_HTML = new HashSet<>();
+    private static final Set<String> NOT_FOUND_WORDS = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private static final Set<String> ORIGIN_HTML = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private static final AtomicInteger COUNT = new AtomicInteger();
 
     public static void classify(Set<Word> words){
         LOGGER.debug("待处理词数目："+words.size());
         AtomicInteger i = new AtomicInteger();
-        Map<String, List<String>> data = new HashMap<>();
-        words.forEach(word -> {
-            if(i.get()%1000 == 999){
+        Map<String, List<String>> data = new ConcurrentHashMap<>();
+        words.parallelStream().forEach(word -> {
+            if (i.get() % 1000 == 999) {
                 save(data);
             }
             showStatus(data, i.incrementAndGet(), words.size(), word.getWord());
             String html = getContent(word.getWord());
             //LOGGER.debug("获取到的HTML：" +html);
             int times = 0;
-            while(html.contains("非常抱歉，来自您ip的请求异常频繁") || StringUtils.isBlank(html)){
+            while (StringUtils.isNotBlank(html) && html.contains("非常抱歉，来自您ip的请求异常频繁")) {
                 //使用新的IP地址
                 DynamicIp.toNewIp();
                 html = getContent(word.getWord());
-                if(++times > 2){
+                if (++times > 2) {
                     break;
                 }
             }
 
-            if(StringUtils.isNotBlank(html)) {
+            if (StringUtils.isNotBlank(html)) {
                 parse(word.getWord(), html, data);
-                if(!NOT_FOUND_WORDS.contains(word.getWord())) {
+                if (!NOT_FOUND_WORDS.contains(word.getWord())) {
                     ORIGIN_HTML.add(word.getWord() + "杨尚川" + html);
                 }
-            }else{
+            } else {
                 NOT_FOUND_WORDS.add(word.getWord());
             }
 
@@ -156,7 +157,7 @@ public class WordClassifier {
                 new InputStreamReader(
                         new BufferedInputStream(
                                 new FileInputStream(file))))) {
-            Map<String, List<String>> data = new HashMap<>();
+            Map<String, List<String>> data = new ConcurrentHashMap<>();
             String line = null;
             while ((line = reader.readLine()) != null) {
                 parse(line, data);
@@ -186,11 +187,11 @@ public class WordClassifier {
         });
     }
 
-    public static void save(Map<String, List<String>> data){
+    public static synchronized void save(Map<String, List<String>> data){
             LOGGER.info("将数据写入磁盘，防止丢失");
             data.keySet().forEach(key -> {
                 try {
-                    String path = "src/main/resources/word_" + ("考 研".equals(key)?"KY":key) + ".txt";
+                    String path = "src/main/resources/word_" + (("考 研".equals(key)||"考研".equals(key))?"KY":key) + ".txt";
                     LOGGER.info("保存词典文件：" + path);
                     List<String> existWords = Files.readAllLines(Paths.get(path));
                     Set<String> allWords = new HashSet<>();
@@ -207,7 +208,9 @@ public class WordClassifier {
                             allWords.add(w);
                         }
                     });
-                    allWords.addAll(data.get(key));
+                    if(data.get(key) != null) {
+                        allWords.addAll(data.get(key));
+                    }
                     AtomicInteger i = new AtomicInteger();
                     List<String> list = allWords
                             .stream()
@@ -215,7 +218,9 @@ public class WordClassifier {
                             .map(word -> i.incrementAndGet()+"\t" + word)
                             .collect(Collectors.toList());
                     Files.write(Paths.get(path), list);
-                    data.get(key).clear();
+                    if(data.get(key) != null) {
+                        data.get(key).clear();
+                    }
                     existWords.clear();
                     allWords.clear();
                     list.clear();
@@ -303,7 +308,7 @@ public class WordClassifier {
         //classify(words);
         //classify(WordSources.getAll());
         //parse("src/main/resources/origin_html_1427060576977.txt");
-        //origin_html.zip包含61809个单词的爱词霸解析HTML页面，下载地址http://pan.baidu.com/s/1bnD9gy7
-        parse("/Users/apple/百度云同步盘/origin_html.zip");
+        //origin_html_iciba__new.zip包含63777个单词的爱词霸解析HTML页面，下载地址http://pan.baidu.com/s/1ntky0zR
+        parse("/Users/apple/百度云同步盘/origin_html_iciba__new.zip");
     }
 }
