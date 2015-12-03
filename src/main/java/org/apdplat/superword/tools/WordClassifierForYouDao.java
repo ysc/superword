@@ -33,6 +33,7 @@ import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -57,38 +58,38 @@ public class WordClassifierForYouDao {
     private static final String HOST = "dict.youdao.com";
     private static final String REFERER = "http://dict.youdao.com/";
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
-    private static final Set<String> NOT_FOUND_WORDS = new HashSet<>();
-    private static final Set<String> ORIGIN_HTML = new HashSet<>();
+    private static final Set<String> NOT_FOUND_WORDS = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private static final Set<String> ORIGIN_HTML = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private static final AtomicInteger COUNT = new AtomicInteger();
 
     public static void classify(Set<Word> words){
         LOGGER.debug("待处理词数目："+words.size());
         AtomicInteger i = new AtomicInteger();
-        Map<String, List<String>> data = new HashMap<>();
-        words.forEach(word -> {
-            if(i.get()%1000 == 999){
+        Map<String, List<String>> data = new ConcurrentHashMap<>();
+        words.parallelStream().forEach(word -> {
+            if (i.get() % 1000 == 999) {
                 save(data);
             }
             showStatus(data, i.incrementAndGet(), words.size(), word.getWord());
             String html = getContent(word.getWord());
             //LOGGER.debug("获取到的HTML：" +html);
             int times = 0;
-            while(html.contains("非常抱歉，来自您ip的请求异常频繁") || StringUtils.isBlank(html)){
+            while (StringUtils.isNotBlank(html) && html.contains("非常抱歉，来自您ip的请求异常频繁")) {
                 //使用新的IP地址
                 DynamicIp.toNewIp();
                 html = getContent(word.getWord());
-                if(++times > 2){
+                if (++times > 2) {
                     break;
                 }
             }
 
-            if(StringUtils.isNotBlank(html)) {
+            if (StringUtils.isNotBlank(html)) {
                 parse(word.getWord(), html, data);
-                if(!NOT_FOUND_WORDS.contains(word.getWord())) {
+                if (!NOT_FOUND_WORDS.contains(word.getWord())) {
                     ORIGIN_HTML.add(word.getWord() + "杨尚川" + html);
                 }
-            }else{
+            } else {
                 NOT_FOUND_WORDS.add(word.getWord());
             }
 
@@ -155,7 +156,7 @@ public class WordClassifierForYouDao {
                 new InputStreamReader(
                         new BufferedInputStream(
                                 new FileInputStream(file))))) {
-            Map<String, List<String>> data = new HashMap<>();
+            Map<String, List<String>> data = new ConcurrentHashMap<>();
             String line = null;
             while ((line = reader.readLine()) != null) {
                 parse(line, data);
@@ -185,7 +186,7 @@ public class WordClassifierForYouDao {
         });
     }
 
-    public static void save(Map<String, List<String>> data){
+    public static synchronized void save(Map<String, List<String>> data){
             LOGGER.info("将数据写入磁盘，防止丢失");
             data.keySet().forEach(key -> {
                 try {
@@ -206,7 +207,9 @@ public class WordClassifierForYouDao {
                             allWords.add(w);
                         }
                     });
-                    allWords.addAll(data.get(key));
+                    if(data.get(key) != null) {
+                        allWords.addAll(data.get(key));
+                    }
                     AtomicInteger i = new AtomicInteger();
                     List<String> list = allWords
                             .stream()
@@ -214,7 +217,9 @@ public class WordClassifierForYouDao {
                             .map(word -> i.incrementAndGet() + "\t" + word)
                             .collect(Collectors.toList());
                     Files.write(Paths.get(path), list);
-                    data.get(key).clear();
+                    if(data.get(key) != null) {
+                        data.get(key).clear();
+                    }
                     existWords.clear();
                     allWords.clear();
                     list.clear();
