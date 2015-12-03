@@ -129,16 +129,19 @@ public class Definition {
     }
 
     public static List<String> parseDefinition(String url, String cssPath, String word, Dictionary dictionary){
-        String html = getContent(url);
-        return parseDefinitionFromHtml(html, cssPath, word, dictionary);
-    }
-
-    public static List<String> parseDefinitionFromHtml(String html, String cssPath, String word, Dictionary dictionary){
         String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary.name());
         if(StringUtils.isNotBlank(wordDefinition)){
             return Arrays.asList(wordDefinition.split("<br/>"));
         }
+        String html = getContent(url);
+        List<String> list = parseDefinitionFromHtml(html, cssPath, word, dictionary);
+        if(!list.isEmpty()){
+            MySQLUtils.saveWordDefinition(word, dictionary.name(), concat(list, "<br/>"));
+        }
+        return list;
+    }
 
+    public static List<String> parseDefinitionFromHtml(String html, String cssPath, String word, Dictionary dictionary){
         List<String> list = new ArrayList<>();
         try {
             Document document = Jsoup.parse(html);
@@ -162,9 +165,6 @@ public class Definition {
             }
         } catch (Exception e){
             LOGGER.error("解析定义出错：" + word, e);
-        }
-        if(!list.isEmpty()){
-            MySQLUtils.saveWordDefinition(word, dictionary.name(), concat(list, "<br/>"));
         }
         return list;
     }
