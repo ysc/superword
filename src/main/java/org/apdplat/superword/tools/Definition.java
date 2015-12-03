@@ -172,7 +172,7 @@ public class Definition {
     public static String getContent(String url) {
         String html = _getContent(url);
         int times = 0;
-        while(html.contains("非常抱歉，来自您ip的请求异常频繁") || StringUtils.isBlank(html)){
+        while(StringUtils.isNotBlank(html) && html.contains("非常抱歉，来自您ip的请求异常频繁")){
             //使用新的IP地址
             ProxyIp.toNewIp();
             html = _getContent(url);
