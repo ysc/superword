@@ -24,7 +24,6 @@ package org.apdplat.superword.model;
  */
 public class UserWord extends HistoryRecord {
     private String word;
-    private String dictionary;
 
     public String getWord() {
         return word;
@@ -34,20 +33,11 @@ public class UserWord extends HistoryRecord {
         this.word = word;
     }
 
-    public String getDictionary() {
-        return dictionary;
-    }
-
-    public void setDictionary(String dictionary) {
-        this.dictionary = dictionary;
-    }
-
     @Override
     public String toString() {
         return "UserWord{" +
                 "userName='" + userName + '\'' +
                 ", word='" + word + '\'' +
-                ", dictionary='" + dictionary + '\'' +
                 ", dateTime=" + simpleDateFormat.format(dateTime) +
                 '}';
     }
