@@ -30,11 +30,13 @@
     }
     word = word.trim();
     StringBuilder definitionHtmls = new StringBuilder();
-    definitionHtmls.append("英文词典解释: ");
 
     StringBuilder otherDictionary = new StringBuilder();
     for(Dictionary dictionary : Dictionary.values()){
-        if(dictionary == Dictionary.ICIBA || dictionary == Dictionary.YOUDAO){
+        if(dictionary == Dictionary.ICIBA
+                || dictionary == Dictionary.YOUDAO
+                || dictionary == Dictionary.OXFORD
+                || dictionary == Dictionary.WEBSTER){
             continue;
         }
         String definitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(dictionary)+word+"&word="+word+"&dict="+dictionary.name();
@@ -43,31 +45,60 @@
     }
     otherDictionary.setLength(otherDictionary.length() - 3);
 
-    definitionHtmls.append(otherDictionary.toString())
-            .append("<br/><br/>");
+    String linkPrefix = request.getServletContext().getContextPath()+"/definition.jsp?word=";
 
     String icibaLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.ICIBA);
     String icibaDefinitionURL = icibaLinkPrefix+word+"&word="+word+"&dict="+Dictionary.ICIBA.name();
     String icibaDefinitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+icibaDefinitionURL+"', '"+word+"');\">爱词霸解释</a>";
+
     String youdaoLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.YOUDAO);
     String youdaoDefinitionURL = youdaoLinkPrefix+word+"&word="+word+"&dict="+Dictionary.YOUDAO.name();
     String youdaoDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+youdaoDefinitionURL+"', '"+word+"');\">有道解释</a>";
-    definitionHtmls.append("<table border=\"1\">")
-            .append("<tr><td>")
+
+    String oxfordLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.OXFORD);
+    String oxfordDefinitionURL = oxfordLinkPrefix+word+"&word="+word+"&dict="+Dictionary.OXFORD.name();
+    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a>";
+
+    String websterLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.WEBSTER);
+    String websterDefinitionURL = websterLinkPrefix+word+"&word="+word+"&dict="+Dictionary.WEBSTER.name();
+    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a>";
+
+    definitionHtmls.append("<table border=\"1\">");
+
+    definitionHtmls.append("<tr><td>")
             .append(icibaDefinitionHtml)
             .append("</td><td>")
             .append(youdaoDefinitionHtml)
             .append("</td></tr>")
             .append("<tr><td ondblclick=\"querySelectionWord('")
-            .append(icibaLinkPrefix)
-            .append("', 'ICIBA');\">")
+            .append(linkPrefix)
+            .append("', '');\">")
             .append(Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"))
             .append("</td><td ondblclick=\"querySelectionWord('")
-            .append(youdaoLinkPrefix)
-            .append("', 'YOUDAO');\">")
+            .append(linkPrefix)
+            .append("', '');\">")
             .append(Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"))
+            .append("</td></tr>");
+
+    definitionHtmls.append("<tr><td>")
+            .append(oxfordDefinitionHtml)
+            .append("</td><td>")
+            .append(websterDefinitionHtml)
             .append("</td></tr>")
-            .append("</table>");
+            .append("<tr><td ondblclick=\"querySelectionWord('")
+            .append(linkPrefix)
+            .append("', '');\">")
+            .append(Definition.getDefinitionString(Dictionary.OXFORD, word, "<br/>"))
+            .append("</td><td ondblclick=\"querySelectionWord('")
+            .append(linkPrefix)
+            .append("', '');\">")
+            .append(Definition.getDefinitionString(Dictionary.WEBSTER, word, "<br/>"))
+            .append("</td></tr>");
+
+    definitionHtmls.append("</table>")
+            .append("<br/><br/>");
+
+    definitionHtmls.append("<font color=\"red\">其他英文词典解释: </font>").append(otherDictionary.toString());
 %>
 
 <html>
