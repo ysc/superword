@@ -77,6 +77,10 @@ public class DynamicPrefixRule {
                     .collect(Collectors.toList());
         }
 
+        public static String toHtmlFragment(List<Word> words, List<Prefix> prefixes) {
+            return toHtmlFragment(words, prefixes, Dictionary.ICIBA);
+        }
+
         public static String toHtmlFragment(List<Word> words, List<Prefix> prefixes, Dictionary dictionary) {
             StringBuilder html = new StringBuilder();
             html.append("<h4>common suffix different prefix: ");
