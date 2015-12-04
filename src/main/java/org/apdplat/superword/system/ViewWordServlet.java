@@ -57,7 +57,6 @@ public class ViewWordServlet extends HttpServlet {
         userWord.setDateTime(new Date());
         userWord.setUserName(user==null?"anonymity":user.getUserName());
         userWord.setWord(word);
-        userWord.setDictionary(dict);
         MySQLUtils.saveUserWordToDatabase(userWord);
 
         response.sendRedirect(url);
