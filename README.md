@@ -93,6 +93,8 @@
 
 包含33376个单词的牛津词典HTML页面：[下载地址](http://pan.baidu.com/s/1pJmwr95)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForOxford.java)
 
+包含59809个单词的韦氏词典解析HTML页面：[下载地址](http://pan.baidu.com/s/1ntGmA3B)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForWebster.java)
+
 包含61809个单词的爱词霸旧版HTML页面：[下载地址](http://pan.baidu.com/s/1bnD9gy7)，[解析程序](https://github.com/ysc/superword/blob/a78ab4aa2ab62fddeb664065accb06e538eb0059/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
 
 包含63777个单词的爱词霸新版HTML页面：[下载地址](http://pan.baidu.com/s/1ntky0zR)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
