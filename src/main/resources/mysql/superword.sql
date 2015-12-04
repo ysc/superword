@@ -12,8 +12,6 @@ CREATE  TABLE `superword`.`user_word` (
 
   `word` VARCHAR(200)  NOT NULL ,
 
-  `dictionary` VARCHAR(200)  NOT NULL ,
-
   `date_time` TIMESTAMP  NOT NULL ,
 
   PRIMARY KEY (`id`) ,
