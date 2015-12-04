@@ -20,6 +20,10 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.util.UUID" %>
 <%@ page import="org.apdplat.superword.tools.Definition" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.UserWord" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -29,6 +33,15 @@
         word = "fantastic";
     }
     word = word.trim();
+
+    User user = (User)request.getSession().getAttribute("user");
+
+    UserWord userWord = new UserWord();
+    userWord.setDateTime(new Date());
+    userWord.setUserName(user==null?"anonymity":user.getUserName());
+    userWord.setWord(word);
+    MySQLUtils.saveUserWordToDatabase(userWord);
+
     StringBuilder definitionHtmls = new StringBuilder();
 
     StringBuilder otherDictionary = new StringBuilder();
@@ -40,28 +53,26 @@
             continue;
         }
         String definitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(dictionary)+word+"&word="+word+"&dict="+dictionary.name();
-        String definitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+dictionary.getDes()+"</a>";
+        String definitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"openWindow('"+definitionURL+"', '"+word+"');\">"+dictionary.getDes()+"</a>";
         otherDictionary.append(definitionHtml).append(" | ");
     }
     otherDictionary.setLength(otherDictionary.length() - 3);
 
-    String linkPrefix = request.getServletContext().getContextPath()+"/definition.jsp?word=";
-
     String icibaLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.ICIBA);
     String icibaDefinitionURL = icibaLinkPrefix+word+"&word="+word+"&dict="+Dictionary.ICIBA.name();
-    String icibaDefinitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+icibaDefinitionURL+"', '"+word+"');\">爱词霸解释</a>";
+    String icibaDefinitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"openWindow('"+icibaDefinitionURL+"', '"+word+"');\">爱词霸解释</a>";
 
     String youdaoLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.YOUDAO);
     String youdaoDefinitionURL = youdaoLinkPrefix+word+"&word="+word+"&dict="+Dictionary.YOUDAO.name();
-    String youdaoDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+youdaoDefinitionURL+"', '"+word+"');\">有道解释</a>";
+    String youdaoDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+youdaoDefinitionURL+"', '"+word+"');\">有道解释</a>";
 
     String oxfordLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.OXFORD);
     String oxfordDefinitionURL = oxfordLinkPrefix+word+"&word="+word+"&dict="+Dictionary.OXFORD.name();
-    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a>";
+    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a>";
 
     String websterLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.WEBSTER);
     String websterDefinitionURL = websterLinkPrefix+word+"&word="+word+"&dict="+Dictionary.WEBSTER.name();
-    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"viewDefinition('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a>";
+    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a>";
 
     definitionHtmls.append("<table border=\"1\">");
 
@@ -70,13 +81,9 @@
             .append("</td><td>")
             .append(youdaoDefinitionHtml)
             .append("</td></tr>")
-            .append("<tr><td ondblclick=\"querySelectionWord('")
-            .append(linkPrefix)
-            .append("', '');\">")
+            .append("<tr><td ondblclick=\"querySelectionWord();\">")
             .append(Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"))
-            .append("</td><td ondblclick=\"querySelectionWord('")
-            .append(linkPrefix)
-            .append("', '');\">")
+            .append("</td><td ondblclick=\"querySelectionWord();\">")
             .append(Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"))
             .append("</td></tr>");
 
@@ -85,13 +92,9 @@
             .append("</td><td>")
             .append(websterDefinitionHtml)
             .append("</td></tr>")
-            .append("<tr><td ondblclick=\"querySelectionWord('")
-            .append(linkPrefix)
-            .append("', '');\">")
+            .append("<tr><td ondblclick=\"querySelectionWord();\">")
             .append(Definition.getDefinitionString(Dictionary.OXFORD, word, "<br/>"))
-            .append("</td><td ondblclick=\"querySelectionWord('")
-            .append(linkPrefix)
-            .append("', '');\">")
+            .append("</td><td ondblclick=\"querySelectionWord();\">")
             .append(Definition.getDefinitionString(Dictionary.WEBSTER, word, "<br/>"))
             .append("</td></tr>");
 
@@ -127,8 +130,6 @@
                 query();
             }
         }
-        var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
-        var dict = '<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>';
     </script>
 </head>
 <body id="top">
