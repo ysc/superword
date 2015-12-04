@@ -422,7 +422,7 @@ public class MySQLUtils {
 
     public static List<UserWord> getHistoryUserWordsFromDatabase(String userName) {
         List<UserWord> userWords = new ArrayList<>();
-        String sql = "select id,word,date_time from user_word where user_name=?";
+        String sql = "select id,word,date_time from user_word where user_name=? order by date_time desc";
         Connection con = getConnection();
         if(con == null){
             return userWords;
@@ -585,7 +585,7 @@ public class MySQLUtils {
     }
 
     public static void saveUserWordToDatabase(UserWord userWord) {
-        String sql = "insert into user_word (user_name, word, date_time) values (?, ?, ?, ?)";
+        String sql = "insert into user_word (user_name, word, date_time) values (?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
             return ;
