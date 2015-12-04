@@ -43,7 +43,6 @@ public class Definition {
     public static final String YOUDAO_CSS_PATH = "div#phrsListTab.trans-wrapper.clearfix div.trans-container ul li" +
             " | div.trans-container ul p.wordGroup";
     public static final String COLLINS_CSS_PATH = "html body div#wrapper div.content.english div.dictionary div.definition_wrapper.english div.definition_main div.definition_content.col.main_bar";
-    public static final String WEBSTER_CSS_PATH = "html body div.body_container div.upper_content_container div.left_content_well div.main_content_area div#wordclick.wordclick div.border-top div.border-left div.border-right div.border-bottom div.corner-top-left div.corner-top-right div.corner-bottom-left div.corner-bottom-right div#mwEntryData";
     public static final String CAMBRIDGE_CSS_PATH = "html body div.wrapper.responsive_container div.cdo-dblclick-area div.responsive_row div.responsive_cell_center div.cdo-section div#entryContent.entrybox.english";
     public static final String MACMILLAN_CSS_PATH = "html body div.responsive_container div.responsive_row div#rightcol.responsive_cell_center_plus_right div#contentpanel div#entryContent div.responsive_cell_center_plus_right div.HOMOGRAPH";
     public static final String HERITAGE_CSS_PATH = "html body div#content.container div.container3 div#results table tbody tr td div.pseg div.ds-list";
@@ -59,7 +58,7 @@ public class Definition {
     private static final String REFERER = "http://www.iciba.com/";
     private static final String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:36.0) Gecko/20100101 Firefox/36.0";
 
-    public static String getDefinitionString(Dictionary dictionary, String word, String joinString){
+    public static String getDefinitionString(Dictionary dictionary, String word, String joinString) {
         return concat(getDefinition(dictionary, word), joinString);
     }
 
@@ -104,7 +103,7 @@ public class Definition {
         return parseDefinition(WordLinker.COLLINS + word, COLLINS_CSS_PATH, word, Dictionary.COLLINS);
     }
     public static List<String> getDefinitionForWEBSTER(String word){
-        return parseDefinition(WordLinker.WEBSTER + word, WEBSTER_CSS_PATH, word, Dictionary.WEBSTER);
+        return parseDefinition(WordLinker.WEBSTER + word, null, word, Dictionary.WEBSTER);
     }
     public static List<String> getDefinitionForOXFORD(String word){
         return parseDefinition(WordLinker.OXFORD + word, null, word, Dictionary.OXFORD);
@@ -130,7 +129,7 @@ public class Definition {
 
     public static List<String> parseDefinition(String url, String cssPath, String word, Dictionary dictionary){
         String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary.name());
-        if(StringUtils.isNotBlank(wordDefinition)){
+        if(StringUtils.isNotBlank(wordDefinition)) {
             return Arrays.asList(wordDefinition.split("<br/>"));
         }
         String html = getContent(url);
@@ -143,7 +142,10 @@ public class Definition {
 
     public static List<String> parseDefinitionFromHtml(String html, String cssPath, String word, Dictionary dictionary){
         if(dictionary == Dictionary.OXFORD){
-            return parseDefinitionForOxford(html, cssPath);
+            return parseDefinitionForOxford(html, null);
+        }
+        if(dictionary == Dictionary.WEBSTER){
+            return parseDefinitionForWebster(html, null);
         }
         List<String> list = new ArrayList<>();
         try {
@@ -168,6 +170,39 @@ public class Definition {
             }
         } catch (Exception e){
             LOGGER.error("解析定义出错：" + word, e);
+        }
+        return list;
+    }
+
+    public static List<String> parseDefinitionForWebster(String html, String cssPath){
+        List<String> list = new ArrayList<>();
+        try {
+            for (Element element : Jsoup.parse(html).select("div.tense-box.quick-def-box.simple-def-box.card-box.def-text div.inner-box-wrapper")) {
+                StringBuilder definition = new StringBuilder();
+                String partOfSpeech = element.select("div.word-attributes span.main-attr em").text().trim();
+                for (Element defElement : element.select("div.definition-block.def-text ul.definition-list.no-count li p.definition-inner-item span")){
+                    String def = defElement.text().trim();
+                    if(def.length() < 3){
+                        continue;
+                    }
+                    if(Character.isAlphabetic(def.charAt(0))){
+                        def = ": " + def;
+                    }else{
+                        int index = 0;
+                        while(!Character.isAlphabetic(def.charAt(++index))){
+                            //
+                        }
+                        def = ": " + def.substring(index);
+                    }
+                    definition.append(partOfSpeech)
+                            .append(" ")
+                            .append(def);
+                    list.add(definition.toString());
+                    definition.setLength(0);
+                }
+            }
+        } catch (Exception e){
+            LOGGER.error("解析定义出错：", e);
         }
         return list;
     }
@@ -235,6 +270,7 @@ public class Definition {
     }
 
     public static void main(String[] args) {
-        getDefinitionForOXFORD("make").stream().forEach(System.out::println);
+        //getDefinitionForOXFORD("make").forEach(System.out::println);
+        getDefinitionForWEBSTER("make").forEach(System.out::println);
     }
 }
