@@ -49,7 +49,7 @@ public class WordLinker {
     //如果是需要生成HTML代码片段贴到博客中
     //则不能使用服务器端调整
     //将此值设置为null
-    public static final String SERVER_REDIRECT_VALUE = "common/server-redirect.jspx";
+    public static final String SERVER_REDIRECT_VALUE = "/common/server-redirect.jspx";
     public static String serverRedirect = SERVER_REDIRECT_VALUE;
     public static boolean jsDefinition = true;
 
@@ -127,6 +127,9 @@ public class WordLinker {
         return toLink(word, emphasize, emPre, emSuf, Dictionary.ICIBA);
     }
     public static String toLink(String word, String emphasize, String emPre, String emSuf, Dictionary dictionary){
+        if(dictionary == null){
+            dictionary = Dictionary.ICIBA;
+        }
         switch (dictionary){
             case ICIBA: return linkToICIBA(word, emphasize, emPre, emSuf);
             case YOUDAO: return linkToYOUDAO(word, emphasize, emPre, emSuf);
@@ -194,9 +197,9 @@ public class WordLinker {
         if(jsDefinition){
             html.append("<a href=\"#")
                     .append(UUID.randomUUID())
-                    .append("\" onclick=\"viewDefinition('")
-                    .append(url)
-                    .append("', '"+word+"');\">");
+                    .append("\" onclick=\"queryWord('")
+                    .append(word)
+                    .append("');\">");
 
         }else {
             html.append("<a target=\"_blank\" href=\"")
