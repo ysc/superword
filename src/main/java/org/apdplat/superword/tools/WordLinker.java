@@ -58,7 +58,7 @@ public class WordLinker {
     public static final String ICIBA = "http://www.iciba.com/";
     public static final String YOUDAO = "http://dict.youdao.com/search?q=";
     public static final String COLLINS = "http://www.collinsdictionary.com/dictionary/english/";
-    public static final String WEBSTER = "http://www.merriam-webster.com/dictionary/";
+    public static final String WEBSTER = "http://beta.merriam-webster.com/dictionary/";
     public static final String OXFORD = "http://www.oxforddictionaries.com/definition/english/";
     public static final String CAMBRIDGE = "http://dictionary.cambridge.org/dictionary/english/";
     public static final String MACMILLAN = "http://www.macmillandictionary.com/dictionary/british/";
