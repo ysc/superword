@@ -422,7 +422,7 @@ public class MySQLUtils {
 
     public static List<UserWord> getHistoryUserWordsFromDatabase(String userName) {
         List<UserWord> userWords = new ArrayList<>();
-        String sql = "select id,word,dictionary,date_time from user_word where user_name=?";
+        String sql = "select id,word,date_time from user_word where user_name=?";
         Connection con = getConnection();
         if(con == null){
             return userWords;
@@ -436,12 +436,10 @@ public class MySQLUtils {
             while (rs.next()) {
                 int id = rs.getInt(1);
                 String word = rs.getString(2);
-                String dictionary = rs.getString(3);
-                Timestamp timestamp = rs.getTimestamp(4);
+                Timestamp timestamp = rs.getTimestamp(3);
                 UserWord userWord = new UserWord();
                 userWord.setId(id);
                 userWord.setWord(word);
-                userWord.setDictionary(dictionary);
                 userWord.setDateTime(new java.util.Date(timestamp.getTime()));
                 userWord.setUserName(userName);
                 userWords.add(userWord);
@@ -587,7 +585,7 @@ public class MySQLUtils {
     }
 
     public static void saveUserWordToDatabase(UserWord userWord) {
-        String sql = "insert into user_word (user_name, word, dictionary, date_time) values (?, ?, ?, ?)";
+        String sql = "insert into user_word (user_name, word, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
             return ;
@@ -598,8 +596,7 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userWord.getUserName());
             pst.setString(2, userWord.getWord());
-            pst.setString(3, userWord.getDictionary());
-            pst.setTimestamp(4, new Timestamp(userWord.getDateTime().getTime()));
+            pst.setTimestamp(3, new Timestamp(userWord.getDateTime().getTime()));
             pst.executeUpdate();
         } catch (SQLException e) {
             LOG.error("保存失败", e);
