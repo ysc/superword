@@ -52,9 +52,10 @@ $(document).ready(function(){
 });
 
 //查看定义
-function viewDefinition(url, word){
-  window.open(url, word, 'width=1200,height=600');
+function openWindow(url, word){
+  window.open(contextPath+url, word, 'width=1200,height=600');
 }
+
 //trim()
 function trim(x) {
   if(x.trim){
@@ -66,7 +67,11 @@ function trim(x) {
   return x;
 }
 
-function querySelectionWord(linkPrefix, dict){
+function queryWord(word){
+  openWindow("/definition.jsp?word="+word, word);
+}
+
+function querySelectionWord(){
   var word = "";
   if(window.getSelection){
     word = window.getSelection().toString();
@@ -81,7 +86,7 @@ function querySelectionWord(linkPrefix, dict){
     word = document.selection.createRange().text;
   }
   word = trim(word);
-  if(/^[a-zA-Z]{3,15}$/.test(word)){
-    viewDefinition(linkPrefix+word+"&word="+word+"&dict="+dict, word);
+  if(word != ""){
+    openWindow("/definition.jsp?word="+word, word);
   }
 }
