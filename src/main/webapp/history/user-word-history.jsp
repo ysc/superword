@@ -19,8 +19,6 @@
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.model.UserWord" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.superword.model.QQUser" %>
 <%@ page import="java.util.UUID" %>
@@ -36,25 +34,21 @@
     List<UserWord> userWords = MySQLUtils.getHistoryUserWordsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
-    htmlFragment.append("<tr><th>序号</th><th>单词</th><th>所有词典定义</th><th>时间</th></tr>");
+    htmlFragment.append("<tr><th>序号</th><th>查词记录</th><th>时间</th></tr>");
     int i = 1;
     for (UserWord userWord : userWords) {
         String word = userWord.getWord();
-        String definitionURL = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.valueOf(userWord.getDictionary()))+word+"&word="+word+"&dict="+Dictionary.valueOf(userWord.getDictionary()).name();
-        String definitionHtml = "<a  href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+definitionURL+"', '"+word+"');\">"+userWord.getWord()+"("+Dictionary.valueOf(userWord.getDictionary()).getDes()+")"+"</a>";
-        StringBuilder all = new StringBuilder();
-        for(Dictionary dictionary : Dictionary.values()){
-            String url = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(dictionary)+word+"&word="+word+"&dict="+dictionary.name();
-            String html = "<a  href=\"#"+ UUID.randomUUID()+"\" onclick=\"viewDefinition('"+url+"', '"+word+"');\">"+dictionary.getDes()+"</a>";
-            all.append(html).append(" | ");
-        }
-        all.setLength(all.length()-3);
+
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append(definitionHtml)
-                .append("</td><td>")
-                .append(all.toString())
+                .append("<a  href=\"#")
+                .append(UUID.randomUUID())
+                .append("\" onclick=\"queryWord('")
+                .append(word)
+                .append("');\">")
+                .append(word)
+                .append("</a>")
                 .append("</td><td>")
                 .append(userWord.getDateTimeString())
                 .append("</td></tr>");

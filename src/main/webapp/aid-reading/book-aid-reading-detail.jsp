@@ -68,7 +68,7 @@
     for(Doc doc : hits.getDocs()){
         htmlFragment.append(i.incrementAndGet())
                 .append(". ")
-                .append(doc.getText().replaceAll(regex.toString(), "<font color=\"red\">"+ WordLinker.toLink(word, WordLinker.getValidDictionary(request.getParameter("dict")))+"</font>"))
+                .append(doc.getText().replaceAll(regex.toString(), "<font color=\"red\">"+ WordLinker.toLink(word)+"</font>"))
                 .append("<br/>\n");
     }
     if(pageSize > hits.getHitCount() && hits.getHitCount() > 0){
@@ -84,7 +84,6 @@
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
     <script type="text/javascript">
         function update(){
-            var dict = document.getElementById("dict").value;
             var book = document.getElementById("book").value;
             var word = document.getElementById("word").value;
             var pageSize = document.getElementById("pageSize").value;
@@ -93,7 +92,7 @@
                 return;
             }
             book = encodeURIComponent(book);
-            location.href = "book-aid-reading-detail.jsp?word="+word+"&dict="+dict+"&book="+book+"&pageSize="+pageSize;
+            location.href = "book-aid-reading-detail.jsp?word="+word+"&book="+book+"&pageSize="+pageSize;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -101,8 +100,6 @@
                 update();
             }
         }
-        var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
-        var dict = '<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>';
     </script>
 </head>
 <body id="top">
@@ -115,12 +112,10 @@
     <p>
         <font color="red">搜索单词：</font><input onchange="update();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
         <font color="red">显示条数：</font><input onchange="update();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择书籍：</font>
         <jsp:include page="../select/book-select.jsp"/>
     </p>
-    <div ondblclick="querySelectionWord(linkPrefix, dict);">
+    <div ondblclick="querySelectionWord();">
         <font color="red">双击文本选中单词可查看定义</font><br/>
         <%=htmlFragment%>
     </div>

@@ -18,7 +18,6 @@
 
 <%@ page import="org.apdplat.superword.tools.AidReading" %>
 <%@ page import="java.util.Arrays" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="java.util.Set" %>
 <%@ page import="java.net.URLDecoder" %>
@@ -56,7 +55,7 @@
     try{
         column = Integer.parseInt(request.getParameter("column"));
     }catch (Exception e){}
-    String htmlFragment = AidReading.analyse(words, WordLinker.getValidDictionary(request.getParameter("dict")), column, false, null, Arrays.asList(text));
+    String htmlFragment = AidReading.analyse(words, column, false, null, Arrays.asList(text));
 %>
 
 <html>
@@ -94,8 +93,6 @@
             }
             display = !display;
         }
-        var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
-        var dict = '<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>';
     </script>
 </head>
 <body id="top">
@@ -108,14 +105,12 @@
     <form method="post" id="form" action="text-aid-reading.jsp">
         <p>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"/><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="../select/words-select.jsp"/><br/>
         </p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">隐藏文本(双击选中单词可查看定义)：</span></font>
         <div id="text_div" style="display:block">
-            <textarea ondblclick="querySelectionWord(linkPrefix, dict);" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
+            <textarea ondblclick="querySelectionWord();" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
             <span style="cursor: pointer" onclick="update();"><font color="red">确定分析文本</font></span>
         </div>
     </form>

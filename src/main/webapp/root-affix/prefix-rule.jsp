@@ -20,7 +20,6 @@
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="org.apdplat.superword.rule.PrefixRule" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.util.concurrent.ConcurrentHashMap" %>
 
@@ -52,7 +51,7 @@
         try{
             column = Integer.parseInt(request.getParameter("column"));
         }catch (Exception e){}
-        htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(PrefixRule.convert(data), column, WordLinker.getValidDictionary(request.getParameter("dict")));
+        htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(PrefixRule.convert(data), column);
     }
 %>
 <html>
@@ -64,7 +63,6 @@
     <script type="text/javascript">
         function update(){
             var prefixes = document.getElementById("prefixes").value;
-            var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
             var strict = document.getElementById("strict").value;
             var column = document.getElementById("column").value;
@@ -72,7 +70,7 @@
             if(prefixes == ""){
                 return;
             }
-            location.href = "prefix-rule.jsp?prefixes="+prefixes+"&dict="+dict+"&words_type="+words_type+"&strict="+strict+"&column="+column;
+            location.href = "prefix-rule.jsp?prefixes="+prefixes+"&words_type="+words_type+"&strict="+strict+"&column="+column;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -94,8 +92,6 @@
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">严格匹配：</font>
         <jsp:include page="../select/strict-select.jsp"/><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>

@@ -22,7 +22,6 @@
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.rule.DynamicSuffixRule" %>
 <%@ page import="java.util.ArrayList" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.model.UserDynamicSuffix" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
@@ -49,7 +48,7 @@
         if(data.size() > 500){
             data = data.subList(0, 500);
         }
-        htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixList, WordLinker.getValidDictionary(request.getParameter("dict")));
+        htmlFragment = DynamicSuffixRule.toHtmlFragment(data, suffixList);
     }
 %>
 <html>
@@ -61,12 +60,11 @@
     <script type="text/javascript">
         function update(){
             var suffixes = document.getElementById("suffixes").value;
-            var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
             if(suffixes == ""){
                 return;
             }
-            location.href = "dynamic-suffix-rule.jsp?suffixes="+suffixes+"&dict="+dict+"&words_type="+words_type;
+            location.href = "dynamic-suffix-rule.jsp?suffixes="+suffixes+"&words_type="+words_type;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -86,8 +84,6 @@
     </p>
     <p>
         <font color="red">输入动态后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>

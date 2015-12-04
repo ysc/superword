@@ -66,11 +66,11 @@
             temp.append("<tr>");
             temp.append("<td> ").append(i++)
                     .append(". </td><td> ")
-                    .append(WordLinker.toLink(hit.getText(), WordLinker.getValidDictionary(request.getParameter("dict"))))
+                    .append(WordLinker.toLink(hit.getText()))
                     .append(" </td><td> ")
                     .append(hit.getScore())
                     .append("</td><td> ")
-                    .append("<a target=\"_blank\" href=\"similar-word-rule.jsp?word=" + hit.getText() + "&count=" + count + "&dict=" + WordLinker.getValidDictionary(request.getParameter("dict")).name() + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
+                    .append("<a target=\"_blank\" href=\"similar-word-rule.jsp?word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
                     .append(" </td>\n");
             temp.append("</tr>\n");
         }
@@ -88,12 +88,11 @@
         function update(){
             var word = document.getElementById("word").value;
             var count = document.getElementById("count").value;
-            var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
             if(word == ""){
                 return;
             }
-            location.href = "similar-word-rule.jsp?word="+word+"&count="+count+"&dict="+dict+"&words_type="+words_type;
+            location.href = "similar-word-rule.jsp?word="+word+"&count="+count+"&words_type="+words_type;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -116,8 +115,6 @@
     <p>
         <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="select/words-select.jsp"/>
     </p>

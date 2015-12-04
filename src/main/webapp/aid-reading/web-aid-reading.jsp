@@ -18,7 +18,6 @@
 
 <%@ page import="org.apdplat.superword.tools.AidReading" %>
 <%@ page import="java.util.Arrays" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="java.util.Set" %>
 <%@ page import="org.jsoup.Jsoup" %>
@@ -62,7 +61,7 @@
         if(StringUtils.isBlank(text)){
             htmlFragment = "获取网页内容失败请重新输入其他网页地址";
         }else{
-            htmlFragment = AidReading.analyse(words, WordLinker.getValidDictionary(request.getParameter("dict")), column, false, null, Arrays.asList(text));
+            htmlFragment = AidReading.analyse(words, column, false, null, Arrays.asList(text));
         }
     }catch (Exception e){
         htmlFragment = "获取网页内容失败请重新输入其他网页地址";
@@ -79,7 +78,6 @@
     <script type="text/javascript">
         function update(){
             var words_type = document.getElementById("words_type").value;
-            var dict = document.getElementById("dict").value;
             var url = document.getElementById("url").value;
             var column = document.getElementById("column").value;
 
@@ -87,7 +85,7 @@
                 return;
             }
             url = encodeURIComponent(url);
-            location.href = "web-aid-reading.jsp?words_type="+words_type+"&dict="+dict+"&url="+url+"&column="+column;
+            location.href = "web-aid-reading.jsp?words_type="+words_type+"&url="+url+"&column="+column;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -108,8 +106,6 @@
             }
             display = !display;
         }
-        var linkPrefix = '<%=WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.getValidDictionary(request.getParameter("dict")))%>';
-        var dict = '<%=WordLinker.getValidDictionary(request.getParameter("dict"))%>';
     </script>
 </head>
 <body id="top">
@@ -122,14 +118,12 @@
     <p>
         <font color="red">网页地址：</font><input onchange="update();" id="url" name="url" value="<%=url%>" size="150" maxlength="500"><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="../select/words-select.jsp"/><br/>
     </p>
     <p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">双击网页内容选中单词可查看定义(点击隐藏)：</span></font><br/>
-        <div ondblclick="querySelectionWord(linkPrefix, dict);" id="text_div" style="display:block">
+        <div ondblclick="querySelectionWord();" id="text_div" style="display:block">
             <%=text%>
         </div>
     </p>

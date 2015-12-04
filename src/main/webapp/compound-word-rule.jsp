@@ -20,7 +20,6 @@
 <%@ page import="org.apdplat.superword.rule.CompoundWord" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="java.util.HashMap" %>
@@ -51,10 +50,9 @@
         }
     }
 
-    Dictionary dictionary = WordLinker.getValidDictionary(request.getParameter("dict"));
     String htmlFragment = "";
     if("true".equals(all)){
-        htmlFragment = HtmlFormatter.toHtmlForCompoundWord(compound, column, dictionary);
+        htmlFragment = HtmlFormatter.toHtmlForCompoundWord(compound, column);
     }else{
         if(word != null && word.length() > 3){
             Word w = new Word(word, "");
@@ -63,9 +61,9 @@
             if(data != null && data.size() > 0) {
                 Map<Word, Map<Integer, List<Word>>> temp = new HashMap<Word, Map<Integer, List<Word>>>();
                 temp.put(w, data);
-                htmlFragment = HtmlFormatter.toHtmlForCompoundWord(temp, column, dictionary);
+                htmlFragment = HtmlFormatter.toHtmlForCompoundWord(temp, column);
             }else{
-                htmlFragment = "<font color=\"red\">不能分解，请尝试其他分级词汇：</font>"+WordLinker.toLink(w.getWord(), dictionary);
+                htmlFragment = "<font color=\"red\">不能分解，请尝试其他分级词汇：</font>"+WordLinker.toLink(w.getWord());
             }
         }else{
             htmlFragment = "<font color=\"red\">单词长度要>3</font>";
@@ -81,22 +79,20 @@
     <script type="text/javascript">
         function update(){
             var word = document.getElementById("word").value;
-            var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
             var column = document.getElementById("column").value;
 
             if(word == ""){
                 return;
             }
-            location.href = "compound-word-rule.jsp?all=false&word="+word+"&dict="+dict+"&words_type="+words_type+"&column="+column;
+            location.href = "compound-word-rule.jsp?all=false&word="+word+"&words_type="+words_type+"&column="+column;
         }
         function viewAllCompound(){
             var word = document.getElementById("word").value;
-            var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
             var column = document.getElementById("column").value;
 
-            location.href = "compound-word-rule.jsp?all=true&word="+word+"&dict="+dict+"&words_type="+words_type+"&column="+column;
+            location.href = "compound-word-rule.jsp?all=true&word="+word+"&words_type="+words_type+"&column="+column;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -115,8 +111,6 @@
     <p>
         <font color="red">输入单词：</font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">每行词数：</font><input onchange="viewAllCompound();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="select/words-select.jsp"/><br/>
     </p>

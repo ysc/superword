@@ -20,7 +20,6 @@
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="org.apdplat.superword.rule.RootRule" %>
 <%@ page import="org.apdplat.superword.tools.HtmlFormatter" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.util.*" %>
 <%@ page import="java.util.concurrent.ConcurrentHashMap" %>
 
@@ -52,7 +51,7 @@
         try{
             column = Integer.parseInt(request.getParameter("column"));
         }catch (Exception e){}
-        htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(data, column, WordLinker.getValidDictionary(request.getParameter("dict")));
+        htmlFragment = HtmlFormatter.toHtmlTableFragmentForRootAffix(data, column);
     }
 %>
 <html>
@@ -64,14 +63,13 @@
     <script type="text/javascript">
         function update(){
             var roots = document.getElementById("roots").value;
-            var dict = document.getElementById("dict").value;
             var words_type = document.getElementById("words_type").value;
             var column = document.getElementById("column").value;
 
             if(roots == ""){
                 return;
             }
-            location.href = "root-rule.jsp?roots="+roots+"&dict="+dict+"&words_type="+words_type+"&column="+column;
+            location.href = "root-rule.jsp?roots="+roots+"&words_type="+words_type+"&column="+column;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -91,8 +89,6 @@
     <p>
         <font color="red">输入词根：</font><input onchange="update();" id="roots" name="roots" value="<%=roots==null?"":roots%>" size="50" maxlength="50"><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>

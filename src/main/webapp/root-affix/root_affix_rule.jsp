@@ -43,9 +43,9 @@
     if(data != null && data.size() > 0){
         Map<Word, List<Word>> temp = new HashMap<Word, List<Word>>();
         temp.put(word, data);
-        htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(temp, column, Integer.MAX_VALUE, WordLinker.getValidDictionary(request.getParameter("dict"))).get(0);
+        htmlFragment = HtmlFormatter.toHtmlTableFragmentForIndependentWord(temp, column, Integer.MAX_VALUE).get(0);
     }else{
-        htmlFragment = WordLinker.toLink(word.getWord(), WordLinker.getValidDictionary(request.getParameter("dict")));
+        htmlFragment = WordLinker.toLink(word.getWord());
     }
 %>
 <html>
@@ -57,14 +57,13 @@
     <script type="text/javascript">
         function update(){
             var word = document.getElementById("word").value;
-            var dict = document.getElementById("dict").value;
             var column = document.getElementById("column").value;
             var strict = document.getElementById("strict").value;
 
             if(word == ""){
                 return;
             }
-            location.href = "root_affix_rule.jsp?word="+word+"&dict="+dict+"&column="+column+"&strict="+strict;
+            location.href = "root_affix_rule.jsp?word="+word+"&column="+column+"&strict="+strict;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -84,8 +83,6 @@
         <font color="red">输入单词：</font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">严格匹配：</font>
         <jsp:include page="../select/strict-select.jsp"/><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
     </p>
     <%=htmlFragment%>

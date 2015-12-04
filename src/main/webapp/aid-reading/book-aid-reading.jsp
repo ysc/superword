@@ -18,7 +18,6 @@
 
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="org.apdplat.superword.tools.AidReading" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.util.Set" %>
 <%@ page import="org.apdplat.superword.model.UserBook" %>
 <%@ page import="java.util.Date" %>
@@ -48,7 +47,7 @@
     try{
         column = Integer.parseInt(request.getParameter("column"));
     }catch (Exception e){}
-    String htmlFragment = AidReading.analyse(words, WordLinker.getValidDictionary(request.getParameter("dict")), column, true, book, book);
+    String htmlFragment = AidReading.analyse(words, column, true, book, book);
 %>
 
 <html>
@@ -60,7 +59,6 @@
     <script type="text/javascript">
         function update(){
             var words_type = document.getElementById("words_type").value;
-            var dict = document.getElementById("dict").value;
             var book = document.getElementById("book").value;
             var column = document.getElementById("column").value;
 
@@ -68,7 +66,7 @@
                 return;
             }
             book = encodeURIComponent(book);
-            location.href = "book-aid-reading.jsp?words_type="+words_type+"&dict="+dict+"&book="+book+"&column="+column;
+            location.href = "book-aid-reading.jsp?words_type="+words_type+"&book="+book+"&column="+column;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -87,8 +85,6 @@
 
     <p>
         <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词典：</font>
-        <jsp:include page="../select/dictionary-select.jsp"/><br/>
         <font color="red">选择词汇：</font>
         <jsp:include page="../select/words-select.jsp"/><br/>
         <font color="red">选择书籍：</font>
