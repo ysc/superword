@@ -52,8 +52,14 @@ public class AidReading {
 
         System.out.println(result);
     }
+    public static String analyse(Set<Word> words, int column, String... resources) {
+        return analyse(words, Dictionary.ICIBA, column, resources);
+    }
     public static String analyse(Set<Word> words, Dictionary dictionary, int column, String... resources) {
         return analyse(words, dictionary, column, false, null, resources);
+    }
+    public static String analyse(Set<Word> words, int column, boolean searchOriginalText, String book, String... resources) {
+        return analyse(words, Dictionary.ICIBA, column, searchOriginalText, book, resources);
     }
     public static String analyse(Set<Word> words, Dictionary dictionary, int column, boolean searchOriginalText, String book, String... resources) {
         List<String> text = new ArrayList<>();
@@ -61,6 +67,9 @@ public class AidReading {
             text.addAll(FileUtils.readResource(resource));
         }
         return analyse(words, dictionary, column, searchOriginalText, book, text);
+    }
+    public static String analyse(Set<Word> words, int column, boolean searchOriginalText, String book, List<String> text) {
+        return analyse(words, Dictionary.ICIBA, column, searchOriginalText, book, text);
     }
     public static String analyse(Set<Word> words, Dictionary dictionary, int column, boolean searchOriginalText, String book, List<String> text) {
         Set<String> wordSet = new HashSet<>();
