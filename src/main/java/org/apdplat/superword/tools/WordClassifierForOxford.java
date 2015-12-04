@@ -71,15 +71,6 @@ public class WordClassifierForOxford {
             showStatus(i.incrementAndGet(), words.size(), word.getWord());
             String html = getContent(word.getWord());
             //LOGGER.debug("获取到的HTML：" +html);
-            int times = 0;
-            while (StringUtils.isNotBlank(html) && html.contains("非常抱歉，来自您ip的请求异常频繁")) {
-                //使用新的IP地址
-                DynamicIp.toNewIp();
-                html = getContent(word.getWord());
-                if (++times > 2) {
-                    break;
-                }
-            }
 
             if (StringUtils.isNotBlank(html)) {
                 html = word.getWord() + "杨尚川" + html;
