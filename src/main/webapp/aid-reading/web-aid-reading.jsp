@@ -29,6 +29,9 @@
 <%@ page import="java.net.URLDecoder" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.extractor.html.impl.JSoupHtmlFetcher" %>
+<%@ page import="java.nio.file.Files" %>
+<%@ page import="java.io.File" %>
+<%@ page import="java.util.List" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -55,12 +58,31 @@
     String text = "";
     String htmlFragment = "";
     try{
-        HtmlFetcher htmlFetcher = new JSoupHtmlFetcher();
-
-        text = Jsoup.parse(htmlFetcher.fetch(url)).text();
-        if(StringUtils.isBlank(text)){
-            htmlFragment = "获取网页内容失败请重新输入其他网页地址";
-        }else{
+        String fileName = MySQLUtils.MD5(url)+".txt";
+        File file = new File(application.getRealPath("/WEB-INF/data/web-aid-reading/"+fileName));
+        if(!Files.exists(file.getParentFile().toPath())){
+            file.getParentFile().mkdirs();
+        }
+        if(Files.exists(file.toPath())){
+            List<String> list = Files.readAllLines(file.toPath());
+            if(list != null && list.size() >= 2){
+                StringBuilder str = new StringBuilder();
+                for(int i=1; i<list.size(); i++){
+                    str.append(list.get(i)).append("\r\n");
+                }
+                text = str.toString();
+            }
+        }
+        if(StringUtils.isBlank(text)) {
+            HtmlFetcher htmlFetcher = new JSoupHtmlFetcher();
+            text = Jsoup.parse(htmlFetcher.fetch(url)).text();
+            if (StringUtils.isBlank(text)) {
+                htmlFragment = "获取网页内容失败请重新输入其他网页地址";
+            } else {
+                Files.write(file.toPath(), Arrays.asList(url, text));
+            }
+        }
+        if(StringUtils.isNotBlank(text)){
             htmlFragment = AidReading.analyse(words, column, false, null, Arrays.asList(text));
         }
     }catch (Exception e){
@@ -124,7 +146,7 @@
     <p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">双击网页内容选中单词可查看定义(点击隐藏)：</span></font><br/>
         <div ondblclick="querySelectionWord();" id="text_div" style="display:block">
-            <%=text%>
+            <%=text.replace("\r", "").replace("\n", "</br>")%>
         </div>
     </p>
     <%=htmlFragment%>
