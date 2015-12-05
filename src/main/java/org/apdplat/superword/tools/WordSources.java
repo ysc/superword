@@ -29,6 +29,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -40,7 +41,7 @@ import java.util.stream.Collectors;
 public class WordSources {
     private WordSources(){}
     private static final Logger LOGGER = LoggerFactory.getLogger(WordSources.class);
-
+    private static final Map<String, Set<Word>> CACHE = new ConcurrentHashMap<>();
     /**
      * 考纲词汇
      * @return
@@ -121,7 +122,7 @@ public class WordSources {
                 .stream()
                 .filter(word -> !subtrahend.contains(word))
                 .collect(Collectors.toSet());
-        LOGGER.info("结果个数："+result.size());
+        LOGGER.info("结果个数：" + result.size());
         return result;
     }
     public static void save(Set<Word> words, String path){
@@ -149,6 +150,13 @@ public class WordSources {
     public static Set<Word> get(int index, String... files){
         Set<Word> set = new HashSet<>();
         for(String file : files){
+            Set<Word> value = CACHE.get(file);
+            if(value != null){
+                LOGGER.info("cache hit word file: " + file);
+                set.addAll(value);
+                continue;
+            }
+
             URL url = null;
             if(file.startsWith("/")){
                 url = WordSources.class.getResource(file);
@@ -163,7 +171,7 @@ public class WordSources {
                 LOGGER.error("解析词典失败："+file);
                 continue;
             }
-            System.out.println("parse word file: "+url);
+            LOGGER.info("parse word file: " + url);
             List<String> words = getExistWords(url);
             Set<Word> wordSet = words.parallelStream()
                     .filter(line -> !line.trim().startsWith("#") && !"".equals(line.trim()))
@@ -172,8 +180,9 @@ public class WordSources {
                     .filter(word -> StringUtils.isAlphanumeric(word.getWord()))
                     .collect(Collectors.toSet());
             set.addAll(wordSet);
+            CACHE.put(file, wordSet);
         }
-        System.out.println("unique words count: "+set.size());
+        LOGGER.info("unique words count: " + set.size());
         return set;
     }
     private static List<String> getExistWords(URL url){
