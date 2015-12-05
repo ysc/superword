@@ -62,6 +62,51 @@ public class MySQLUtils {
     private MySQLUtils() {
     }
 
+    public static String getWordPronunciation(String word, String dictionary) {
+        String sql = "select pronunciation from word_pronunciation where word=? and dictionary=?";
+        Connection con = getConnection();
+        if(con == null){
+            return "";
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, word);
+            pst.setString(2, dictionary);
+            rs = pst.executeQuery();
+            if (rs.next()) {
+                return rs.getString(1);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询单词音标失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return "";
+    }
+
+    public static void saveWordPronunciation(String word, String dictionary, String pronunciation) {
+        String sql = "insert into word_pronunciation (word, dictionary, pronunciation) values (?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, word);
+            pst.setString(2, dictionary);
+            pst.setString(3, pronunciation);
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            LOG.error("单词音标保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+    }
+
     public static boolean deleteWordDefinition(String word) {
         String sql = "delete from word_definition where word=?";
         Connection con = getConnection();
