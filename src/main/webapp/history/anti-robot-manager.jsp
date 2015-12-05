@@ -16,7 +16,6 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
-<%@ page import="java.util.Enumeration" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="java.util.concurrent.atomic.AtomicInteger" %>
 <%@ page import="org.apdplat.superword.system.AntiRobotFilter" %>
@@ -38,25 +37,21 @@
     html.append("每日每用户访问请求次数限制: ").append(AntiRobotFilter.limit).append("<br/><br/>");
 
     html.append("<table>")
-            .append("<tr><th>序号</th><th>用户名称</th><th>用户地址</th><th>访问日期</th><th>访问次数</th></tr>");
+        .append("<tr><th>序号</th><th>用户名称</th><th>用户地址</th><th>访问日期</th><th>访问次数</th></tr>");
     AtomicInteger i = new AtomicInteger();
-    Enumeration<String> keys = application.getAttributeNames();
-    while(keys.hasMoreElements()){
-        String key = keys.nextElement();
-        if(key.startsWith("anti-robot-")){
-            String[] attrs = key.substring(11).split("-");
-            html.append("<tr><th>")
-                    .append(i.incrementAndGet())
-                    .append("</th><th>")
-                    .append(attrs[0])
-                    .append("</th><th>")
-                    .append(attrs[1])
-                    .append("</th><th>")
-                    .append(attrs[2])
-                    .append("</th><th>")
-                    .append(application.getAttribute(key))
-                    .append("</th></tr>");
-        }
+    for(String item : AntiRobotFilter.getData()){
+        String[] attrs = item.split("-");
+        html.append("<tr><th>")
+                .append(i.incrementAndGet())
+                .append("</th><th>")
+                .append(attrs[0])
+                .append("</th><th>")
+                .append(attrs[1])
+                .append("</th><th>")
+                .append(attrs[2])
+                .append("</th><th>")
+                .append(attrs[3])
+                .append("</th></tr>");
     }
     html.append("</table>");
 %>

@@ -30,13 +30,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 反爬虫反机器人攻击
@@ -88,31 +87,47 @@ public class AntiRobotFilter implements Filter {
 
     public void init(FilterConfig config) throws ServletException {
         int initialDelay = 24-LocalDateTime.now().getHour();
-        scheduledExecutorService.scheduleAtFixedRate(()->{
+        scheduledExecutorService.scheduleAtFixedRate(() -> {
             LOG.info("clear last day anti-robot counter");
             LocalDateTime timePoint = LocalDateTime.now().minusDays(1);
-            String date = timePoint.getYear()+""+timePoint.getMonth().getValue()+""+timePoint.getDayOfMonth();
+            String date = timePoint.getYear() + "" + timePoint.getMonth().getValue() + "" + timePoint.getDayOfMonth();
             List<String> archive = new ArrayList<>();
             Enumeration<String> keys = servletContext.getAttributeNames();
-            while(keys.hasMoreElements()){
+            while (keys.hasMoreElements()) {
                 String key = keys.nextElement();
-                if(key.startsWith("anti-robot-") && key.endsWith(date)){
+                if (key.startsWith("anti-robot-") && key.endsWith(date)) {
                     servletContext.removeAttribute(key);
                     archive.add(key);
                 }
             }
-            try{
+            try {
                 File path = new File(servletContext.getRealPath("/WEB-INF/anti-robot-archive/"));
-                if(!path.exists()){
+                if (!path.exists()) {
                     path.mkdirs();
                 }
-                String file = path.getPath()+date+".txt";
+                String file = path.getPath() + date + ".txt";
                 Files.write(Paths.get(file), archive);
-                LOG.info("clear last day anti-robot counter finished: "+file);
-            }catch (Exception e){
+                LOG.info("clear last day anti-robot counter finished: " + file);
+            } catch (Exception e) {
                 LOG.error("save anti-robot-archive failed", e);
             }
         }, initialDelay, 24, TimeUnit.HOURS);
     }
 
+    public static List<String> getData(){
+        Map<String, Integer> map = new HashMap<>();
+        Enumeration<String> keys = servletContext.getAttributeNames();
+        while(keys.hasMoreElements()){
+            String key = keys.nextElement();
+            if(key.startsWith("anti-robot-")){
+                map.put(key.substring(11), ((AtomicInteger) servletContext.getAttribute(key)).intValue());
+            }
+        }
+        return map
+                .entrySet()
+                .stream()
+                .sorted((a,b)->b.getValue().compareTo(a.getValue()))
+                .map(e->e.getKey()+"-"+e.getValue())
+                .collect(Collectors.toList());
+    }
 }
