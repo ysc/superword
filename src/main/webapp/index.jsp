@@ -17,8 +17,12 @@
   --%>
 
 <%@ page import="org.apdplat.superword.model.User" %>
-
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+
+<%
+    User user = (User) request.getSession().getAttribute("user");
+%>
+
 <html>
 <head>
   <title>superword是一个Java实现的英文单词分析和辅助阅读开源项目，主要研究英语单词音近形似转化规律、前缀后缀规律、词之间的相似性规律和辅助阅读等等。</title>
@@ -50,6 +54,9 @@
       <li><a href="<%=request.getContextPath()%>/root-affix/suffix-rule.jsp?suffixes=ence,ance,age&words_type=SYLLABUS&strict=Y&column=6">后缀规则</a></li>
       <li><a href="<%=request.getContextPath()%>/root-affix/dynamic-suffix-rule.jsp?suffixes=ise-ize&words_type=SYLLABUS">动态后缀规则</a></li>
       <li><a href="<%=request.getContextPath()%>/similar-word-rule.jsp?word=north&count=10&words_type=CET4">拼写相似规则</a></li>
+    <%
+      if(user != null){
+    %>
       <li><a href="<%=request.getContextPath()%>/history/user-word-history.jsp">用户查词记录</a></li>
       <li><a href="<%=request.getContextPath()%>/history/user-text-history.jsp">文本分析记录</a></li>
       <li><a href="<%=request.getContextPath()%>/history/user-url-history.jsp">网页分析记录</a></li>
@@ -58,7 +65,9 @@
       <li><a href="<%=request.getContextPath()%>/history/user-dynamic-prefix-history.jsp">动态前缀分析记录</a></li>
       <li><a href="<%=request.getContextPath()%>/history/user-dynamic-suffix-history.jsp">动态后缀分析记录</a></li>
     <%
-      User user = (User) request.getSession().getAttribute("user");
+      }
+    %>
+    <%
       if(user != null && "ysc".equals(user.getUserName())){
     %>
       <li><a href="<%=request.getContextPath()%>/history/anti-robot-manager.jsp?limit=1000">反机器人管理</a></li>
