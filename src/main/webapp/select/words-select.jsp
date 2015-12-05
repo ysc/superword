@@ -121,7 +121,11 @@
         application.setAttribute("CATTI_count", CATTI_count);
     }
 
-    Integer SYLLABUS_count = WordSources.getSyllabusVocabulary().size();
+    Integer SYLLABUS_count = (Integer)application.getAttribute("SYLLABUS_count");
+    if(SYLLABUS_count == null){
+        SYLLABUS_count = WordSources.getSyllabusVocabulary().size();
+        application.setAttribute("SYLLABUS_count", SYLLABUS_count);
+    }
 
     Integer computer_count = (Integer)application.getAttribute("computer_count");
     if(computer_count == null){
