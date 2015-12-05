@@ -183,3 +183,13 @@ CREATE  TABLE `superword`.`word_definition` (
   `definition` TEXT  NOT NULL,
 
   PRIMARY KEY (`word`, `dictionary`) );
+
+CREATE  TABLE `superword`.`word_pronunciation` (
+
+  `word` VARCHAR(32)  NOT NULL,
+
+  `dictionary` VARCHAR(32)  NOT NULL,
+
+  `pronunciation` VARCHAR(200)  NOT NULL,
+
+  PRIMARY KEY (`word`, `dictionary`) );
