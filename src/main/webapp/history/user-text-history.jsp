@@ -36,13 +36,14 @@
     htmlFragment.append("<tr><th>序号</th><th>分析文本</th><th>时间</th></tr>");
     int i = 1;
     for (UserText userText : userTexts) {
+        int limit = userText.getText().length()>100?100:userText.getText().length();
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
                 .append("<a target=\"_blank\" href=\"../aid-reading/text-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&id=")
                 .append(userText.getId())
                 .append("\">")
-                .append(userText.getText().substring(0, 100))
+                .append(userText.getText().substring(0, limit))
                 .append("...</a>")
                 .append("</td><td>")
                 .append(userText.getDateTimeString())
