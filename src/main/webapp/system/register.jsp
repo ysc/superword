@@ -36,7 +36,7 @@
         boolean success = MySQLUtils.register(user);
         if(success) {
             session.setAttribute("user", user);
-            response.sendRedirect(request.getContextPath()+"/");
+            request.getRequestDispatcher("/index.jsp").forward(request, response);
         }else{
             tip = "注册失败，请稍后重试或与管理员联系！";
         }

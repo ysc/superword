@@ -37,7 +37,7 @@
         boolean success = MySQLUtils.login(user);
         if(success) {
             session.setAttribute("user", user);
-            response.sendRedirect(request.getContextPath()+"/");
+            request.getRequestDispatcher("/index.jsp").forward(request, response);
         }else{
             tip = "登录失败，用户名或者密码错误！";
         }
