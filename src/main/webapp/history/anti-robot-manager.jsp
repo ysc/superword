@@ -38,7 +38,7 @@
     html.append("每日每用户访问请求次数限制: ").append(AntiRobotFilter.limit).append("<br/><br/>");
 
     html.append("<table>")
-            .append("<tr><th>序号</th><th>用户名称</th><th>用户地址</th><th>访问日期</th><th>访问次数</th><th>IP地址的地理位置</th></tr>");
+            .append("<tr><th>序号</th><th>用户名称</th><th>用户IP</th><th>访问日期</th><th>访问次数</th><th>用户地理位置</th></tr>");
     AtomicInteger i = new AtomicInteger();
     for(String item : AntiRobotFilter.getData()){
         String[] attrs = item.split("-");
@@ -53,7 +53,7 @@
                 .append("</th><th>")
                 .append(attrs[3])
                 .append("</th><th>")
-                .append(IPUtils.getIPLocation(attrs[2]))
+                .append(IPUtils.getIPLocation(attrs[1]))
                 .append("</th></tr>");
     }
     html.append("</table>");
