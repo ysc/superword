@@ -39,6 +39,8 @@
         superword/src/main/resources/mysql/superword.sql
         和
         superword/src/main/resources/mysql/word_definition.sql
+        和
+        superword/src/main/resources/mysql/word_pronunciation.sql
         文件中的脚本   
     
     4、运行项目
