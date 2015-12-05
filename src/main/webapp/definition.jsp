@@ -17,13 +17,11 @@
   --%>
 
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
-<%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.util.UUID" %>
-<%@ page import="org.apdplat.superword.tools.Definition" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.superword.model.UserWord" %>
 <%@ page import="java.util.Date" %>
-<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+<%@ page import="org.apdplat.superword.tools.*" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -68,11 +66,11 @@
 
     String oxfordLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.OXFORD);
     String oxfordDefinitionURL = oxfordLinkPrefix+word+"&word="+word+"&dict="+Dictionary.OXFORD.name();
-    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a>";
+    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a> | <a target=\"_blank\" href=\"oxford.jsp\">牛津词性列表</a>";
 
     String websterLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.WEBSTER);
     String websterDefinitionURL = websterLinkPrefix+word+"&word="+word+"&dict="+Dictionary.WEBSTER.name();
-    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a>";
+    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a> | <a target=\"_blank\" href=\"webster.jsp\">韦氏词性列表</a>";
 
     definitionHtmls.append("<table border=\"1\">");
 
@@ -82,8 +80,16 @@
             .append(youdaoDefinitionHtml)
             .append("</td></tr>")
             .append("<tr><td ondblclick=\"querySelectionWord();\">")
+            .append("音标: <br/>")
+            .append(Pronunciation.getPronunciationString(Dictionary.ICIBA, word, " <font color=\"red\">|</font> "))
+            .append("<br/><br/>")
+            .append("定义: <br/>")
             .append(Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"))
             .append("</td><td ondblclick=\"querySelectionWord();\">")
+            .append("音标: <br/>")
+            .append(Pronunciation.getPronunciationString(Dictionary.YOUDAO, word, " <font color=\"red\">|</font> "))
+            .append("<br/><br/>")
+            .append("定义: <br/>")
             .append(Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"))
             .append("</td></tr>");
 
@@ -92,10 +98,19 @@
             .append("</td><td>")
             .append(websterDefinitionHtml)
             .append("</td></tr>")
+            .append("<tr><td>")
             .append("<tr><td ondblclick=\"querySelectionWord();\">")
-            .append(Definition.getDefinitionString(Dictionary.OXFORD, word, "<br/>"))
+            .append("音标: <br/>")
+            .append(Pronunciation.getPronunciationString(Dictionary.OXFORD, word, " <font color=\"red\">|</font> "))
+            .append("<br/><br/>")
+            .append("定义: <br/>")
+            .append(OxfordPOS.highlight(Definition.getDefinitionString(Dictionary.OXFORD, word, "<br/>")))
             .append("</td><td ondblclick=\"querySelectionWord();\">")
-            .append(Definition.getDefinitionString(Dictionary.WEBSTER, word, "<br/>"))
+            .append("音标: <br/>")
+            .append(Pronunciation.getPronunciationString(Dictionary.WEBSTER, word, " <font color=\"red\">|</font> "))
+            .append("<br/><br/>")
+            .append("定义: <br/>")
+            .append(WebsterPOS.highlight(Definition.getDefinitionString(Dictionary.WEBSTER, word, "<br/>")))
             .append("</td></tr>");
 
     definitionHtmls.append("</table>")
