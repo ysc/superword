@@ -31,6 +31,8 @@ import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * 数据存储层
@@ -45,6 +47,8 @@ public class MySQLUtils {
     private static final String PASSWORD = "root";
 
     private static DataSource dataSource = null;
+
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newCachedThreadPool();
 
     static {
         try {
@@ -188,7 +192,6 @@ public class MySQLUtils {
             pst.executeUpdate();
             return true;
         } catch (SQLException e) {
-            e.printStackTrace();
             LOG.error("注册失败", e);
         } finally {
             close(con, pst, rs);
@@ -453,6 +456,10 @@ public class MySQLUtils {
     }
 
     public static void saveUserSimilarWordToDatabase(UserSimilarWord userSimilarWord) {
+        EXECUTOR_SERVICE.execute(()->_saveUserSimilarWordToDatabase(userSimilarWord));
+    }
+
+    public static void _saveUserSimilarWordToDatabase(UserSimilarWord userSimilarWord) {
         String sql = "insert into user_similar_word (user_name, similar_word, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
@@ -475,6 +482,10 @@ public class MySQLUtils {
     }
 
     public static void saveUserDynamicPrefixToDatabase(UserDynamicPrefix userDynamicPrefix) {
+        EXECUTOR_SERVICE.execute(()->_saveUserDynamicPrefixToDatabase(userDynamicPrefix));
+    }
+
+    public static void _saveUserDynamicPrefixToDatabase(UserDynamicPrefix userDynamicPrefix) {
         String sql = "insert into user_dynamic_prefix (user_name, dynamic_prefix, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
@@ -497,6 +508,10 @@ public class MySQLUtils {
     }
 
     public static void saveUserDynamicSuffixToDatabase(UserDynamicSuffix userDynamicSuffix) {
+        EXECUTOR_SERVICE.execute(()->_saveUserDynamicSuffixToDatabase(userDynamicSuffix));
+    }
+
+    public static void _saveUserDynamicSuffixToDatabase(UserDynamicSuffix userDynamicSuffix) {
         String sql = "insert into user_dynamic_suffix (user_name, dynamic_suffix, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
@@ -519,6 +534,10 @@ public class MySQLUtils {
     }
 
     public static void saveUserBookToDatabase(UserBook userBook) {
+        EXECUTOR_SERVICE.execute(()->_saveUserBookToDatabase(userBook));
+    }
+
+    public static void _saveUserBookToDatabase(UserBook userBook) {
         String sql = "insert into user_book (user_name, book, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
@@ -541,6 +560,10 @@ public class MySQLUtils {
     }
 
     public static void saveUserUrlToDatabase(UserUrl userUrl) {
+        EXECUTOR_SERVICE.execute(()->_saveUserUrlToDatabase(userUrl));
+    }
+
+    public static void _saveUserUrlToDatabase(UserUrl userUrl) {
         String sql = "insert into user_url (user_name, url, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
@@ -563,6 +586,10 @@ public class MySQLUtils {
     }
 
     public static void saveUserTextToDatabase(UserText userText) {
+        EXECUTOR_SERVICE.execute(()->_saveUserTextToDatabase(userText));
+    }
+
+    public static void _saveUserTextToDatabase(UserText userText) {
         String sql = "insert into user_text (user_name, text, md5, date_time) values (?, ?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
@@ -585,6 +612,10 @@ public class MySQLUtils {
     }
 
     public static void saveUserWordToDatabase(UserWord userWord) {
+        EXECUTOR_SERVICE.execute(()->_saveUserWordToDatabase(userWord));
+    }
+
+    public static void _saveUserWordToDatabase(UserWord userWord) {
         String sql = "insert into user_word (user_name, word, date_time) values (?, ?, ?)";
         Connection con = getConnection();
         if(con == null){
