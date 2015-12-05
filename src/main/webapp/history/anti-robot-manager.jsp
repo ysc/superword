@@ -19,6 +19,7 @@
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="java.util.concurrent.atomic.AtomicInteger" %>
 <%@ page import="org.apdplat.superword.system.AntiRobotFilter" %>
+<%@ page import="org.apdplat.superword.tools.IPUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -37,7 +38,7 @@
     html.append("每日每用户访问请求次数限制: ").append(AntiRobotFilter.limit).append("<br/><br/>");
 
     html.append("<table>")
-        .append("<tr><th>序号</th><th>用户名称</th><th>用户地址</th><th>访问日期</th><th>访问次数</th></tr>");
+            .append("<tr><th>序号</th><th>用户名称</th><th>用户地址</th><th>访问日期</th><th>访问次数</th><th>IP地址的地理位置</th></tr>");
     AtomicInteger i = new AtomicInteger();
     for(String item : AntiRobotFilter.getData()){
         String[] attrs = item.split("-");
@@ -51,6 +52,8 @@
                 .append(attrs[2])
                 .append("</th><th>")
                 .append(attrs[3])
+                .append("</th><th>")
+                .append(IPUtils.getIPLocation(attrs[2]))
                 .append("</th></tr>");
     }
     html.append("</table>");
