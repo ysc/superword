@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -45,6 +46,7 @@ public class AntiRobotFilter implements Filter {
     private static final Logger LOG = LoggerFactory.getLogger(AntiRobotFilter.class);
 
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+    private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
 
     public static int limit = 1000;
 
@@ -54,11 +56,10 @@ public class AntiRobotFilter implements Filter {
     }
 
     private String getKey(HttpServletRequest request){
-        String host = request.getRemoteAddr();
+        String ip = request.getRemoteAddr();
         User user = (User) request.getSession().getAttribute("user");
         String userString = user==null?"anonymity":user.getUserName();
-        LocalDateTime timePoint = LocalDateTime.now();
-        return "anti-robot-"+userString+"-"+host+"-"+timePoint.getYear()+""+timePoint.getMonth().getValue()+""+timePoint.getDayOfMonth();
+        return "anti-robot-"+userString+"-"+ip+"-"+SIMPLE_DATE_FORMAT.format(new Date());
     }
 
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
@@ -90,7 +91,7 @@ public class AntiRobotFilter implements Filter {
         scheduledExecutorService.scheduleAtFixedRate(() -> {
             LOG.info("clear last day anti-robot counter");
             LocalDateTime timePoint = LocalDateTime.now().minusDays(1);
-            String date = timePoint.getYear() + "" + timePoint.getMonth().getValue() + "" + timePoint.getDayOfMonth();
+            String date = SIMPLE_DATE_FORMAT.format(timePoint);
             List<String> archive = new ArrayList<>();
             Enumeration<String> keys = servletContext.getAttributeNames();
             while (keys.hasMoreElements()) {
@@ -126,8 +127,8 @@ public class AntiRobotFilter implements Filter {
         return map
                 .entrySet()
                 .stream()
-                .sorted((a,b)->b.getValue().compareTo(a.getValue()))
-                .map(e->e.getKey()+"-"+e.getValue())
+                .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
+                .map(e -> e.getKey() + "-" + e.getValue())
                 .collect(Collectors.toList());
     }
 }
