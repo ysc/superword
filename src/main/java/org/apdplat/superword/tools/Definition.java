@@ -132,18 +132,13 @@ public class Definition {
         String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary.name());
         if(StringUtils.isNotBlank(wordDefinition)) {
             return Arrays.asList(wordDefinition.split("<br/>"));
-        }else{
-            return Collections.emptyList();
         }
-        //disable for speed
-        /*
         String html = getContent(url);
         List<String> list = parseDefinitionFromHtml(html, cssPath, word, dictionary);
         if(!list.isEmpty()){
             MySQLUtils.saveWordDefinition(word, dictionary.name(), concat(list, "<br/>"));
         }
         return list;
-        */
     }
 
     public static List<String> parseDefinitionFromHtml(String html, String cssPath, String word, Dictionary dictionary){
