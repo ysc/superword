@@ -162,7 +162,7 @@
     <%=definitionHtmls.toString()%>
     <br/>
     <br/>
-    <a target="_blank" href="pox.jsp">牛津词典、韦氏词典、爱词霸和有道词典的词性对比</a>
+    <a target="_blank" href="pos.jsp">牛津词典、韦氏词典、爱词霸和有道词典的词性对比</a>
     <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>
