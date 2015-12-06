@@ -66,11 +66,11 @@
 
     String oxfordLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.OXFORD);
     String oxfordDefinitionURL = oxfordLinkPrefix+word+"&word="+word+"&dict="+Dictionary.OXFORD.name();
-    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a> | <a target=\"_blank\" href=\"oxford.jsp\">牛津词性列表</a>";
+    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a>";
 
     String websterLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.WEBSTER);
     String websterDefinitionURL = websterLinkPrefix+word+"&word="+word+"&dict="+Dictionary.WEBSTER.name();
-    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a> | <a target=\"_blank\" href=\"webster.jsp\">韦氏词性列表</a>";
+    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a>";
 
     definitionHtmls.append("<table border=\"1\">");
 
@@ -160,6 +160,9 @@
     </script>
 
     <%=definitionHtmls.toString()%>
+    <br/>
+    <br/>
+    <a target="_blank" href="pox.jsp">牛津词典、韦氏词典、爱词霸和有道词典的词性对比</a>
     <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>
