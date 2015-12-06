@@ -29,12 +29,11 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.sql.Date;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * 数据存储层
@@ -129,12 +128,12 @@ public class MySQLUtils {
         return false;
     }
 
-    public static Set<String> getWordsByPOS(String pos, String dictionary, int limit) {
+    public static List<String> getWordsByPOS(String pos, String dictionary, int limit) {
         Set<String> words = new HashSet<>();
         String sql = "select word, definition from word_definition where dictionary=?";
         Connection con = getConnection();
         if(con == null){
-            return words;
+            return Collections.emptyList();
         }
         PreparedStatement pst = null;
         ResultSet rs = null;
@@ -153,7 +152,7 @@ public class MySQLUtils {
                     }
                 }
                 if(words.size() >= limit){
-                    return words;
+                    break;
                 }
             }
         } catch (SQLException e) {
@@ -161,7 +160,7 @@ public class MySQLUtils {
         } finally {
             close(con, pst, rs);
         }
-        return words;
+        return words.stream().sorted().collect(Collectors.toList());
     }
 
     public static String getWordDefinition(String word, String dictionary) {
