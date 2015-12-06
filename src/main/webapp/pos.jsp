@@ -17,10 +17,9 @@
   --%>
 
 <%@ page import="org.apache.commons.lang.StringUtils" %>
-<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
-<%@ page import="org.apdplat.superword.tools.OxfordPOS" %>
-<%@ page import="org.apdplat.superword.tools.WebsterPOS" %>
 <%@ page import="java.util.List" %>
+<%@ page import="java.util.ArrayList" %>
+<%@ page import="org.apdplat.superword.tools.*" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -41,12 +40,12 @@
                     .append(dictionary)
                     .append(" 词典中词性为 ")
                     .append(pos)
-                    .append(" 的部分单词如下：<br/><br/>")
-                    .append("<textarea rows=\"10\" cols=\"97\" >");
+                    .append(" 的部分单词如下：<br/><br/>");
+            List<String> data = new ArrayList<String>();
             for(String word : words){
-                example.append(word).append(" ");
+                data.add(WordLinker.toLink(word));
             }
-            example.append("</textarea><br/><br/>");
+            example.append(HtmlFormatter.toHtmlTableFragment(data, 10));
         }
     }
 %>
@@ -62,7 +61,6 @@
     <jsp:include page="common/head.jsp"/>
 
     <h3>词性列表</h3>
-    <%=example%>
     <table border="1" ondblclick="querySelectionWord();">
         <tr><td>牛津词典</td><td>韦氏词典</td><td>爱词霸</td><td>有道词典</td></tr>
         <tr>
@@ -145,6 +143,9 @@
             </td>
         </tr>
     </table>
+
+    <br/>
+    <%=example%>
 
     <jsp:include page="common/bottom.jsp"/>
 </body>
