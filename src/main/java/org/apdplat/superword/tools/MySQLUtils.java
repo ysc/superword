@@ -30,7 +30,9 @@ import org.slf4j.LoggerFactory;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -125,6 +127,41 @@ public class MySQLUtils {
             close(con, pst, rs);
         }
         return false;
+    }
+
+    public static Set<String> getWordsByPOS(String pos, String dictionary, int limit) {
+        Set<String> words = new HashSet<>();
+        String sql = "select word, definition from word_definition where dictionary=?";
+        Connection con = getConnection();
+        if(con == null){
+            return words;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, dictionary);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                String word = rs.getString(1);
+                String definition = rs.getString(2);
+                String[] attrs = definition.split("<br/>");
+                for(String attr : attrs) {
+                    if (StringUtils.isNotBlank(attr)
+                            && attr.startsWith(pos)) {
+                        words.add(word);
+                    }
+                }
+                if(words.size() >= limit){
+                    return words;
+                }
+            }
+        } catch (SQLException e) {
+            LOG.error("根据词性查询单词失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return words;
     }
 
     public static String getWordDefinition(String word, String dictionary) {
