@@ -28,9 +28,15 @@
 <%
     String pos = request.getParameter("pos");
     String dictionary = request.getParameter("dictionary");
+    int limit = 10;
     StringBuilder example = new StringBuilder();
     if(StringUtils.isNotBlank(pos) && StringUtils.isNotBlank(dictionary)){
-        Set<String> words = MySQLUtils.getWordsByPOS(pos, dictionary, 10);
+        String key = pos+dictionary+limit;
+        Set<String> words = (Set<String>)application.getAttribute(key);
+        if(words == null){
+            words = MySQLUtils.getWordsByPOS(pos, dictionary, limit);
+            application.setAttribute(key, words);
+        }
         if(!words.isEmpty()){
             example.append("在 ")
                     .append(dictionary)
