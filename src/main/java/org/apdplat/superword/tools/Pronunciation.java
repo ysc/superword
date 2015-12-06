@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -129,13 +130,18 @@ public class Pronunciation {
         String wordPronunciation = MySQLUtils.getWordPronunciation(word, dictionary.name());
         if(StringUtils.isNotBlank(wordPronunciation)) {
             return Arrays.asList(wordPronunciation.split(" \\| "));
+        }else{
+            return Collections.emptyList();
         }
+        //disable for speed
+        /*
         String html = getContent(url);
         List<String> list = parsePronunciationFromHtml(html, cssPath, word, dictionary);
         if(!list.isEmpty()){
             MySQLUtils.saveWordPronunciation(word, dictionary.name(), concat(list, " | "));
         }
         return list;
+        */
     }
 
     public static List<String> parsePronunciationFromHtml(String html, String cssPath, String word, Dictionary dictionary){
