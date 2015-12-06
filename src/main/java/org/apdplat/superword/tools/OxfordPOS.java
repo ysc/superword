@@ -25,13 +25,13 @@ import java.util.Arrays;
  * Created by ysc on 12/6/15.
  */
 public enum OxfordPOS {
-    symbol, plural, prefix, interrogative,
-    exclamation, adjective, predeterminer, combiningForm,
-    conjunction, pronoun, auxiliary, possessive,
-    preposition, contraction, modal, infinitiveMarker,
-    relativePossessive_determiner, verb, noun, cardinal,
-    abbreviation, interrogativePossessive_determiner, determiner, adverb,
-    ordinal, relative;
+    abbreviation, adjective, adverb, auxiliary,
+    cardinal, combiningForm, conjunction, contraction,
+    determiner, exclamation, infinitiveMarker, interrogative,
+    interrogativePossessive_determiner, modal, noun, ordinal,
+    plural, possessive, predeterminer, prefix,
+    preposition, pronoun, relative, relativePossessive_determiner,
+    symbol, verb;
 
     public static String highlight(String definition){
         StringBuilder result = new StringBuilder(definition);
@@ -46,5 +46,13 @@ public enum OxfordPOS {
                         }
                 );
         return result.toString();
+    }
+
+    public static void main(String[] args) {
+        Arrays.asList(OxfordPOS.values())
+                .stream()
+                .map(e->e.name())
+                .sorted()
+                .forEach(i->System.out.print(i+", "));
     }
 }

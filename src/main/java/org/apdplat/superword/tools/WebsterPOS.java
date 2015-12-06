@@ -25,11 +25,11 @@ import java.util.Arrays;
  * Created by ysc on 12/6/15.
  */
 public enum WebsterPOS {
-    symbol, definite, interjection, prefix,
-    verb, noun, combining, suffix,
-    indefinite, adjective, conjunction, pronoun,
-    service, intransitive, preposition, trademark,
-    adverb, transitive;
+    adjective, adverb, combining, conjunction,
+    definite, indefinite, interjection, intransitive,
+    noun, prefix, preposition, pronoun,
+    service, suffix, symbol, trademark,
+    transitive, verb;
 
     public static String highlight(String definition){
         StringBuilder result = new StringBuilder(definition);
@@ -43,5 +43,13 @@ public enum WebsterPOS {
                         }
                 );
         return result.toString();
+    }
+
+    public static void main(String[] args) {
+        Arrays.asList(WebsterPOS.values())
+                .stream()
+                .map(e -> e.name())
+                .sorted()
+                .forEach(i->System.out.print(i+", "));
     }
 }
