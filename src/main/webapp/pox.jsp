@@ -31,7 +31,7 @@
     int limit = 10;
     StringBuilder example = new StringBuilder();
     if(StringUtils.isNotBlank(pos) && StringUtils.isNotBlank(dictionary)){
-        String key = pos+dictionary+limit;
+        String key = "pos-"+pos+dictionary+limit;
         Set<String> words = (Set<String>)application.getAttribute(key);
         if(words == null){
             words = MySQLUtils.getWordsByPOS(pos, dictionary, limit);
