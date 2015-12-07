@@ -63,6 +63,37 @@ public class MySQLUtils {
     private MySQLUtils() {
     }
 
+    public static List<String> getWordPurePronunciation(String word, String dictionary){
+        String pronunciation = getWordPronunciation(word, dictionary);
+        return extractPurePronunciation(pronunciation);
+    }
+
+    public static List<String> extractPurePronunciation(String pronunciation){
+        Set<String> set = new HashSet<>();
+        String[] attrs = pronunciation.split(" \\| ");
+        if(attrs != null){
+            for(String attr : attrs){
+                attr = attr.replace("英", "")
+                        .replace("美", "")
+                        .replace("[", "")
+                        .replace("]", "")
+                        .replace("/", "")
+                        .replace("\\", "")
+                        .replaceAll("\\s+", "");
+                if(StringUtils.isNotBlank(attr)){
+                    String[] items = attr.split(";");
+                    if(items != null){
+                        Collections.addAll(set, items);
+                    }
+                }
+
+            }
+        }
+        List<String> list = new ArrayList<>();
+        list.addAll(set);
+        return list;
+    }
+
     public static String getWordPronunciation(String word, String dictionary) {
         String sql = "select pronunciation from word_pronunciation where word=? and dictionary=?";
         Connection con = getConnection();
@@ -195,6 +226,39 @@ public class MySQLUtils {
             close(con, pst, rs);
         }
         return words;
+    }
+
+    public static Map<String, Set<String>> getAllWordPronunciation(String dictionary, Set<Word> words) {
+        Map<String, Set<String>> map = new HashMap<>();
+        String sql = "select word, pronunciation from word_pronunciation where dictionary=?";
+        Connection con = getConnection();
+        if(con == null){
+            return map;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, dictionary);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                String word = rs.getString(1);
+                String pronunciation = rs.getString(2);
+                if(StringUtils.isNotBlank(word)
+                        && StringUtils.isNotBlank(pronunciation)
+                        && words.contains(new Word(word, ""))) {
+                    for(String item : extractPurePronunciation(pronunciation)){
+                        map.putIfAbsent(item, new HashSet());
+                        map.get(item).add(word);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOG.error("查询所有单词音标失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return map;
     }
 
     public static List<String> getAllWordDefinition(String dictionary, Set<Word> words) {
