@@ -57,7 +57,7 @@
 
         StringBuilder temp = new StringBuilder();
         int i=1;
-        temp.append("<table border=\"1\">\n");
+        temp.append("<table ondblclick=\"querySelectionWord();\" border=\"1\">\n");
         for(Hit hit : result.getHits()){
             String[] attrs = hit.getText().split("_");
             String w = attrs[0];
