@@ -37,7 +37,7 @@
         }
         if(!words.isEmpty()){
             example.append("在 ")
-                    .append(dictionary)
+                    .append(WordLinker.Dictionary.valueOf(dictionary).getDes())
                     .append(" 词典中词性为 ")
                     .append(pos)
                     .append(" 的部分单词如下：<br/><br/>");
