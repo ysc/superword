@@ -18,12 +18,14 @@
 
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="org.apdplat.word.segmentation.SegmentationAlgorithm" %>
 <%@ page import="java.util.*" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="org.apdplat.superword.model.UserSimilarWord" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.word.analysis.*" %>
+<%@ page import="org.apache.commons.lang.StringUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -46,45 +48,60 @@
         userSimilarWord.setUserName(user == null ? "anonymity" : user.getUserName());
         MySQLUtils.saveUserSimilarWordToDatabase(userSimilarWord);
 
+        Dictionary dictionary = WordLinker.getValidDictionary(request.getParameter("dictionary"));
         Set<Word> words = (Set<Word>)application.getAttribute("words_"+request.getAttribute("words_type"));
-        String wordDefinition = MySQLUtils.getWordDefinition(word, WordLinker.Dictionary.WEBSTER.name());
-        List<String> allWordDefinition = MySQLUtils.getAllWordDefinition(WordLinker.Dictionary.WEBSTER.name(), words);
+        String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary.name());
+        if(StringUtils.isBlank(wordDefinition)){
+            htmlFragment = "没有该词的定义, 不能计算. ";
+        }else {
+            List<String> allWordDefinition = MySQLUtils.getAllWordDefinition(dictionary.name(), words);
 
-        TextSimilarity textSimilarity = new CosineTextSimilarity();
-        textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
+            TextSimilarity textSimilarity = new CosineTextSimilarity();
 
-        Hits result = textSimilarity.rank(wordDefinition, allWordDefinition, count);
-
-        StringBuilder temp = new StringBuilder();
-        int i=1;
-        temp.append("<table ondblclick=\"querySelectionWord();\" border=\"1\">\n");
-        for(Hit hit : result.getHits()){
-            String[] attrs = hit.getText().split("_");
-            String w = attrs[0];
-            StringBuilder definition = new StringBuilder(attrs[1]);
-            for(int j=2; j<attrs.length; j++){
-                definition.append(attrs[j]).append("_");
+            if(dictionary == Dictionary.OXFORD || dictionary == Dictionary.WEBSTER) {
+                textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
             }
-            temp.append("<tr>");
-            temp.append("<td> ").append(i++)
-                    .append(". </td><td> ")
-                    .append(WordLinker.toLink(w))
-                    .append(" </td><td> ")
-                    .append(definition)
-                    .append(" </td><td> ")
-                    .append(hit.getScore())
-                    .append("</td><td> ")
-                    .append("<a target=\"_blank\" href=\"definition-similar-rule.jsp?word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
-                    .append(" </td>\n");
-            temp.append("</tr>\n");
+            if(dictionary == Dictionary.ICIBA || dictionary == Dictionary.YOUDAO) {
+                if(user == null || !"ysc".equals(user.getUserName())){
+                    out.println("没有权限访问中文词典的定义相似性计算<a href=\"definition-similar-rule.jsp?dictionary=WEBSTER&word="+word+"&count="+count+"&words_type="+request.getAttribute("words_type")+"\">返回</a>");
+                    return;
+                }
+                textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.MaxNgramScore);
+            }
+
+            Hits result = textSimilarity.rank(wordDefinition, allWordDefinition, count);
+
+            StringBuilder temp = new StringBuilder();
+            int i = 1;
+            temp.append("<table ondblclick=\"querySelectionWord();\" border=\"1\">\n");
+            for (Hit hit : result.getHits()) {
+                String[] attrs = hit.getText().split("_");
+                String w = attrs[0];
+                StringBuilder definition = new StringBuilder(attrs[1]);
+                for (int j = 2; j < attrs.length; j++) {
+                    definition.append(attrs[j]).append("_");
+                }
+                temp.append("<tr>");
+                temp.append("<td> ").append(i++)
+                        .append(". </td><td> ")
+                        .append(WordLinker.toLink(w))
+                        .append(" </td><td> ")
+                        .append(definition)
+                        .append(" </td><td> ")
+                        .append(hit.getScore())
+                        .append("</td><td> ")
+                        .append("<a target=\"_blank\" href=\"definition-similar-rule.jsp?dictionary"+dictionary.name()+"&word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
+                        .append(" </td>\n");
+                temp.append("</tr>\n");
+            }
+            temp.append("</table>\n");
+            htmlFragment = temp.toString();
         }
-        temp.append("</table>\n");
-        htmlFragment = temp.toString();
     }
 %>
 <html>
 <head>
-    <title>拼写相似规则</title>
+    <title>定义相似规则</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -93,10 +110,11 @@
             var word = document.getElementById("word").value;
             var count = document.getElementById("count").value;
             var words_type = document.getElementById("words_type").value;
+            var dictionary = document.getElementById("dictionary").value;
             if(word == ""){
                 return;
             }
-            location.href = "definition-similar-rule.jsp?word="+word+"&count="+count+"&words_type="+words_type;
+            location.href = "definition-similar-rule.jsp?dictionary="+dictionary+"&word="+word+"&count="+count+"&words_type="+words_type;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -116,7 +134,9 @@
         <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
         <font color="red">选择词汇：</font>
-        <jsp:include page="../select/words-select.jsp"/>
+        <jsp:include page="../select/words-select.jsp"/><br/>
+        <font color="red">选择词典：</font>
+        <jsp:include page="../select/dictionary-select-for-symbol.jsp"/>
     </p>
     <p></p>
     <p><a href="#" onclick="update();">提交</a></p>
