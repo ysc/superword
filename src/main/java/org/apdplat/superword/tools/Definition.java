@@ -258,7 +258,7 @@ public class Definition {
                 .header("Referer", REFERER)
                 .header("Host", HOST)
                 .header("User-Agent", USER_AGENT)
-                .timeout(60000)
+                .timeout(3000)
                 .ignoreContentType(true);
         String html = "";
         try {
