@@ -89,20 +89,20 @@ public class AntiRobotFilter implements Filter {
     public void init(FilterConfig config) throws ServletException {
         int initialDelay = 24-LocalDateTime.now().getHour();
         scheduledExecutorService.scheduleAtFixedRate(() -> {
-            LOG.info("clear last day anti-robot counter");
-            LocalDateTime timePoint = LocalDateTime.now().minusDays(1);
-            String date = SIMPLE_DATE_FORMAT.format(timePoint);
-            List<String> archive = new ArrayList<>();
-            Enumeration<String> keys = servletContext.getAttributeNames();
-            while (keys.hasMoreElements()) {
-                String key = keys.nextElement();
-                if (key.startsWith("anti-robot-") && key.endsWith(date)) {
-                    servletContext.removeAttribute(key);
-                    archive.add(key);
-                }
-            }
             try {
-                File path = new File(servletContext.getRealPath("/WEB-INF/anti-robot-archive/"));
+                LOG.info("clear last day anti-robot counter");
+                LocalDateTime timePoint = LocalDateTime.now().minusDays(1);
+                String date = SIMPLE_DATE_FORMAT.format(timePoint);
+                List<String> archive = new ArrayList<>();
+                Enumeration<String> keys = servletContext.getAttributeNames();
+                while (keys.hasMoreElements()) {
+                    String key = keys.nextElement();
+                    if (key.startsWith("anti-robot-") && key.endsWith(date)) {
+                        archive.add(key);
+                    }
+                }
+                archive.forEach(servletContext::removeAttribute);
+                File path = new File(servletContext.getRealPath("/WEB-INF/data/anti-robot-archive/"));
                 if (!path.exists()) {
                     path.mkdirs();
                 }
