@@ -197,6 +197,36 @@ public class MySQLUtils {
         return words;
     }
 
+    public static List<String> getAllWordDefinition(String dictionary, Set<Word> words) {
+        List<String> set = new ArrayList<>();
+        String sql = "select word, definition from word_definition where dictionary=?";
+        Connection con = getConnection();
+        if(con == null){
+            return set;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, dictionary);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                String word = rs.getString(1);
+                String definition = rs.getString(2);
+                if(StringUtils.isNotBlank(word)
+                        && StringUtils.isNotBlank(definition)
+                        && words.contains(new Word(word, ""))) {
+                    set.add(word + "_" + definition);
+                }
+            }
+        } catch (SQLException e) {
+            LOG.error("查询所有单词定义失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return set;
+    }
+
     public static String getWordDefinition(String word, String dictionary) {
         String sql = "select definition from word_definition where word=? and dictionary=?";
         Connection con = getConnection();
