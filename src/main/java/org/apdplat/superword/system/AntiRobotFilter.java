@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -92,7 +93,7 @@ public class AntiRobotFilter implements Filter {
             try {
                 LOG.info("clear last day anti-robot counter");
                 LocalDateTime timePoint = LocalDateTime.now().minusDays(1);
-                String date = SIMPLE_DATE_FORMAT.format(timePoint);
+                String date = SIMPLE_DATE_FORMAT.format(Date.from(timePoint.atZone(ZoneId.systemDefault()).toInstant()));
                 List<String> archive = new ArrayList<>();
                 Enumeration<String> keys = servletContext.getAttributeNames();
                 while (keys.hasMoreElements()) {
@@ -130,5 +131,11 @@ public class AntiRobotFilter implements Filter {
                 .sorted((a, b) -> b.getValue().compareTo(a.getValue()))
                 .map(e -> e.getKey() + "-" + e.getValue())
                 .collect(Collectors.toList());
+    }
+
+    public static void main(String[] args) {
+        LocalDateTime timePoint = LocalDateTime.now().minusDays(1);
+        String date = SIMPLE_DATE_FORMAT.format(Date.from(timePoint.atZone(ZoneId.systemDefault()).toInstant()));
+        System.out.println(date);
     }
 }
