@@ -128,12 +128,45 @@ public class MySQLUtils {
         return false;
     }
 
+    public static Map<String, String> getWordAndPronunciationBySymbol(String symbol, String dictionary, int limit, Set<Word> words) {
+        Map<String, String> map = new LinkedHashMap<>();
+        String sql = "select word, pronunciation from word_pronunciation where dictionary=?";
+        Connection con = getConnection();
+        if(con == null){
+            return map;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, dictionary);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                String word = rs.getString(1);
+                String pronunciation = rs.getString(2);
+                if (words.contains(new Word(word, ""))
+                        && StringUtils.isNotBlank(pronunciation)
+                        && pronunciation.contains(symbol)) {
+                    map.put(word, pronunciation);
+                }
+                if(map.size() >= limit){
+                    break;
+                }
+            }
+        } catch (SQLException e) {
+            LOG.error("根据音标符号查询单词失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return map;
+    }
+
     public static List<String> getWordsByPOS(String pos, String dictionary, int limit) {
-        Set<String> words = new HashSet<>();
+        List<String> words = new ArrayList<>();
         String sql = "select word, definition from word_definition where dictionary=?";
         Connection con = getConnection();
         if(con == null){
-            return Collections.emptyList();
+            return words;
         }
         PreparedStatement pst = null;
         ResultSet rs = null;
@@ -149,6 +182,7 @@ public class MySQLUtils {
                     if (StringUtils.isNotBlank(attr)
                             && attr.startsWith(pos)) {
                         words.add(word);
+                        break;
                     }
                 }
                 if(words.size() >= limit){
@@ -160,7 +194,7 @@ public class MySQLUtils {
         } finally {
             close(con, pst, rs);
         }
-        return words.stream().sorted().collect(Collectors.toList());
+        return words;
     }
 
     public static String getWordDefinition(String word, String dictionary) {
