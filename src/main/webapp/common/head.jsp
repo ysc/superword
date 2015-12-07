@@ -50,7 +50,7 @@
       <a href="<%=request.getContextPath()%>/system/login.jsp">登录</a>
     </td>
     <td>
-      <a href="<%=request.getContextPath()%>/system/login.jspx">QQ账号登录</a>
+      <a href="<%=request.getContextPath()%>/system/login.jspx"><img src="<%=request.getContextPath()%>/images/qq_32.png" alt="QQ帐号登录"/></a>
     </td>
 <%
   }else{
