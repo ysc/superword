@@ -33,13 +33,25 @@
     List<UserSimilarWord> userSimilarWords = MySQLUtils.getHistoryUserSimilarWordsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
-    htmlFragment.append("<tr><th>序号</th><th>单词</th><th>时间</th></tr>");
+    htmlFragment.append("<tr><th>序号</th><th>拼写相似</th><th>定义相似</th><th>发音相似</th><th>时间</th></tr>");
     int i = 1;
     for (UserSimilarWord userSimilarWord : userSimilarWords) {
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append("<a target=\"_blank\" href=\"../similar-word-rule.jsp?count=10&dict=ICIBA&words_type=CET4&word=")
+                .append("<a target=\"_blank\" href=\"../similar/spell-similar-rule.jsp?count=100&words_type=SYLLABUS&word=")
+                .append(userSimilarWord.getSimilarWord())
+                .append("\">")
+                .append(userSimilarWord.getSimilarWord())
+                .append("</a>")
+                .append("</td><td>")
+                .append("<a target=\"_blank\" href=\"../similar/definition-similar-rule.jsp?dictionary=WEBSTER&count=100&words_type=SYLLABUS&word=")
+                .append(userSimilarWord.getSimilarWord())
+                .append("\">")
+                .append(userSimilarWord.getSimilarWord())
+                .append("</a>")
+                .append("</td><td>")
+                .append("<a target=\"_blank\" href=\"../similar/pronunciation-similar-rule.jsp?dictionary=OXFORD&count=100&words_type=SYLLABUS&word=")
                 .append(userSimilarWord.getSimilarWord())
                 .append("\">")
                 .append(userSimilarWord.getSimilarWord())
