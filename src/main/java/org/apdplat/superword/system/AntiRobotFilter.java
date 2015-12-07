@@ -18,6 +18,7 @@
 
 package org.apdplat.superword.system;
 
+import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +50,8 @@ public class AntiRobotFilter implements Filter {
     private ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
     private static final SimpleDateFormat SIMPLE_DATE_FORMAT = new SimpleDateFormat("yyyyMMdd");
 
-    public static int limit = 1000;
+    public static volatile int limit = 1000;
+    public static volatile int invalidCount = 0;
 
     private static ServletContext servletContext = null;
 
@@ -65,6 +67,16 @@ public class AntiRobotFilter implements Filter {
 
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
         HttpServletRequest request = (HttpServletRequest)req;
+        String userAgent = request.getHeader("User-Agent");
+        if(StringUtils.isBlank(userAgent)){
+            invalidCount++;
+            HttpServletResponse response = (HttpServletResponse)resp;
+            response.setContentType("text/html");
+            response.setCharacterEncoding("utf-8");
+            response.getWriter().write("superword是一个Java实现的英文单词分析和辅助阅读开源项目，主要研究英语单词音近形似转化规律、前缀后缀规律、词之间的相似性规律和辅助阅读等等。Clean code、Fluent style、Java8 feature: Lambdas, Streams and Functional-style Programming。 升学考试、工作求职、充电提高，都少不了英语的身影，英语对我们来说实在太重要了。你还在为记不住英语单词而苦恼吗？还在为看不懂英文资料和原版书籍而伤神吗？superword可以在你英语学习的路上助你一臂之力。 superword利用计算机强大的计算能力，使用机器学习和数据挖掘算法找到读音相近、外形相似、含义相关、同义反义、词根词缀的英语单词，从而非常有利于我们深入地记忆理解这些单词，同时，辅助阅读功能更是能够提供阅读的速度和质量。 支持最权威的2部中文词典和9部英文词典，支持23种分级词汇，囊括了所有的英语考试，还专门针对程序员提供了249本最热门的技术书籍的辅助阅读功能。");
+            return;
+        }
+
         if(servletContext == null){
             servletContext = request.getServletContext();
         }
@@ -107,6 +119,8 @@ public class AntiRobotFilter implements Filter {
                 if (!path.exists()) {
                     path.mkdirs();
                 }
+                archive.add("user agent invalid count: "+invalidCount);
+                invalidCount = 0;
                 String file = path.getPath() + date + ".txt";
                 Files.write(Paths.get(file), archive);
                 LOG.info("clear last day anti-robot counter finished: " + file);

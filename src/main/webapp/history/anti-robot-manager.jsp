@@ -35,7 +35,7 @@
     try{
         AntiRobotFilter.limit = Integer.parseInt(limit);
     }catch (Exception e){}
-    html.append("每日每用户访问请求次数限制: ").append(AntiRobotFilter.limit).append("<br/><br/>");
+    html.append("每日每用户访问请求次数限制: ").append(AntiRobotFilter.limit).append(", 用户代理无效请求数: ").append(AntiRobotFilter.invalidCount).append("<br/><br/>");
 
     html.append("<table>")
             .append("<tr><th>序号</th><th>用户名称</th><th>用户IP</th><th>访问日期</th><th>访问次数</th><th>用户地理位置</th></tr>");
