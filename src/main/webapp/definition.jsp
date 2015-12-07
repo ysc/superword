@@ -162,7 +162,7 @@
     <%=definitionHtmls.toString()%>
     <br/>
     <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N"><font color="red">分析词根词缀</font></a><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar-word-rule.jsp?word=<%=word%>&count=10&words_type=SYLLABUS"><font color="red">拼写相似的词</font></a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/spell-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS"><font color="red">拼写相似的词</font></a><br/>
     <br/>
     <a target="_blank" href="pos.jsp">牛津词典、韦氏词典、爱词霸和有道词典的词性符号对比</a><br/>
     <a target="_blank" href="symbol.jsp">牛津词典、韦氏词典、爱词霸和有道词典的音标符号对比</a>

@@ -53,7 +53,7 @@
       <li><a href="<%=request.getContextPath()%>/root-affix/suffixes.jsp">常见后缀</a></li>
       <li><a href="<%=request.getContextPath()%>/root-affix/suffix-rule.jsp?suffixes=ence,ance,age&words_type=SYLLABUS&strict=Y&column=6">后缀规则</a></li>
       <li><a href="<%=request.getContextPath()%>/root-affix/dynamic-suffix-rule.jsp?suffixes=ise-ize&words_type=SYLLABUS">动态后缀规则</a></li>
-      <li><a href="<%=request.getContextPath()%>/similar-word-rule.jsp?word=north&count=10&words_type=CET4">拼写相似规则</a></li>
+      <li><a href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=legendary&count=100&words_type=SYLLABUS">拼写相似规则</a></li>
     <%
       if(user != null){
     %>

@@ -31,7 +31,7 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
     String word = request.getParameter("word");
-    int count = 10;
+    int count = 100;
     try{
         count = Integer.parseInt(request.getParameter("count"));
     }catch (Exception e){
@@ -70,7 +70,7 @@
                     .append(" </td><td> ")
                     .append(hit.getScore())
                     .append("</td><td> ")
-                    .append("<a target=\"_blank\" href=\"similar-word-rule.jsp?word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
+                    .append("<a target=\"_blank\" href=\"spell-similar-rule.jsp?word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
                     .append(" </td>\n");
             temp.append("</tr>\n");
         }
@@ -92,7 +92,7 @@
             if(word == ""){
                 return;
             }
-            location.href = "similar-word-rule.jsp?word="+word+"&count="+count+"&words_type="+words_type;
+            location.href = "spell-similar-rule.jsp?word="+word+"&count="+count+"&words_type="+words_type;
         }
         document.onkeypress=function(e){
             var e = window.event || e ;
@@ -103,7 +103,7 @@
     </script>
 </head>
 <body id="top">
-    <jsp:include page="common/head.jsp"/>
+    <jsp:include page="../common/head.jsp"/>
     <p>
         ***用法说明:
         拼写相似规则，英语是拼音文字而不是表意文字，
@@ -116,11 +116,11 @@
         <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
         <font color="red">选择词汇：</font>
-        <jsp:include page="select/words-select.jsp"/>
+        <jsp:include page="../select/words-select.jsp"/>
     </p>
     <p></p>
     <p><a href="#" onclick="update();">提交</a></p>
     <%=htmlFragment%>
-    <jsp:include page="common/bottom.jsp"/>
+    <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>
