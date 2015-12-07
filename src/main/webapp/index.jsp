@@ -55,6 +55,7 @@
       <li><a href="<%=request.getContextPath()%>/root-affix/dynamic-suffix-rule.jsp?suffixes=ise-ize&words_type=SYLLABUS">动态后缀规则</a></li>
       <li><a href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=legendary&count=100&words_type=SYLLABUS">拼写相似规则</a></li>
       <li><a href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=fabulous&count=100&words_type=SYLLABUS">定义相似规则</a></li>
+      <li><a href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=think&count=100&words_type=SYLLABUS&dictionary=ICIBA">发音相似规则</a></li>
     <%
       if(user != null){
     %>
