@@ -121,7 +121,7 @@ public class AntiRobotFilter implements Filter {
                 }
                 archive.add("user agent invalid count: "+invalidCount);
                 invalidCount = 0;
-                String file = path.getPath() + date + ".txt";
+                String file = path.getPath() + "/" + date + ".txt";
                 Files.write(Paths.get(file), archive);
                 LOG.info("clear last day anti-robot counter finished: " + file);
             } catch (Exception e) {
