@@ -1,59 +1,78 @@
-###superword是一个Java实现的英文单词分析和辅助阅读开源项目，主要研究英语单词音近形似转化规律、前缀后缀规律、词之间的相似性规律和辅助阅读等等。Clean code、Fluent style、Java8 feature: Lambdas, Streams and Functional-style Programming。
+###Superword is a Java open source project dedicated in the study of English words analysis and auxiliary reading, including but not limited to, spelling similarity, definition similarity, pronunciation similarity, the transformation rules of the spelling, the prefix and the dynamic prefix, the suffix and the dynamic suffix, roots, compound words, text auxiliary reading, web page auxiliary reading, book auxiliary reading, etc.. 
 
-###升学考试、工作求职、充电提高，都少不了英语的身影，英语对我们来说实在太重要了。你还在为记不住英语单词而苦恼吗？还在为看不懂英文资料和原版书籍而伤神吗？superword可以在你英语学习的路上助你一臂之力。
+###[Online Superword](http://123.56.99.179/)
 
-###superword利用计算机强大的计算能力，使用机器学习和数据挖掘算法找到读音相近、外形相似、含义相关、同义反义、词根词缀的英语单词，从而非常有利于我们深入地记忆理解这些单词，同时，辅助阅读功能更是能够提供阅读的速度和质量。
+###[Donate to support Superword](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
 
-###支持最权威的2部中文词典和9部英文词典，支持23种分级词汇，囊括了所有的英语考试，还专门针对程序员提供了249本最热门的技术书籍的辅助阅读功能。
+###Quick Start: 
 
-###[在线访问地址](http://123.56.99.179/)
-
-###[捐赠致谢](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
-
-###使用方法：
-
-    1、安装JDK8
-        将JDK的bin目录加入PATH环境变量，确保在命令行能调用java命令：
+    1、Install JDK8
+    
+        Add the $JAVA_HOME/bin directory into the $PATH environment variable，ensure you can use Java command: 
+        
         java -version
             java version "1.8.0_60"
-        注意:
-        必须是JDK8
             
-    2、获取superword源码
+        Tip:
+        Must use JDK8 not JDK7.
+            
+    2、Get the source code of superword
+    
         git clone https://github.com/ysc/superword.git
         cd superword
-        建议自己注册一个GitHub账号，将项目Fork到自己的账号下，然后再从自己的账号下签出项目源码，
-        这样便于使用GitHub的Pull requests功能进行协作开发。
-        注意:
-        如果访问github很慢可以使用以下地址:
+        
+        We suggest  you register a GitHub account, fork the superword project to your own account, 
+        and then clone the source code from your own account.
+        This facilitates the application of GitHub features "Pull requests" for collaborative development.
+        
+        Tip for Chinese:
+        If you can't access GitHub or the download speed is very slow, use the following address:
+        
         git clone https://git.oschina.net/ysc/superword.git
         
-    3、配置MySQL数据库
-        MySQL编码：UTF-8，
-        主机：127.0.0.1
-        端口：3306
-        数据库：superword
-        用户名：root
-        密码：root
-        在MySQL命令行中执行
-        superword/src/main/resources/mysql/superword.sql
-        和
-        superword/src/main/resources/mysql/word_definition.sql
-        和
-        superword/src/main/resources/mysql/word_pronunciation.sql
-        文件中的脚本   
+    3、Configure MySQL database
     
-    4、运行项目
-        unix类操作系统执行：
+        MySQL character encoding: UTF-8，
+        Server IP Address: 127.0.0.1
+        Server Port: 3306
+        Database: superword
+        User name: root
+        Password: root
+        
+        Execute the script in MySQL command line:
+        source src/main/resources/mysql/superword.sql
+        source src/main/resources/mysql/word_definition.sql
+        source src/main/resources/mysql/word_pronunciation.sql
+    
+    4、Run the project
+    
+        UNIX-like operating systems: 
             chmod +x startup.sh & ./startup.sh
-        windows类操作系统执行：
+            
+        Windows operating system: 
             mvn clean install
-            将target/superword-1.0.war文件手动拷贝到你自己的apache-tomcat-8.0.28/webapps目录后启动tomcat
+            Manually copy the target/superword-1.0.war file to your own apache-tomcat-8.0.28/webapps directory, 
+            then start Tomcat.
 
-    5、使用系统
-        打开浏览器访问：http://localhost:8080/superword/index.jsp
+    5、Use system
+    
+        Open browser access: http://localhost:8080/superword/index.jsp
+      
+###Resources download
 
-###相关文章
+The HTML page of the Oxford dictionary that contains 33376 words: [Download address](http://pan.baidu.com/s/1pJmwr95)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForOxford.java)
+
+The HTML page of the Merriam-Webster dictionary that contains 59809 words: [Download address](http://pan.baidu.com/s/1ntGmA3B)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForWebster.java)
+
+The HTML page of the old version iCIBA dictionary that contains 61809 words: [Download address](http://pan.baidu.com/s/1bnD9gy7)，[Parse Program](https://github.com/ysc/superword/blob/a78ab4aa2ab62fddeb664065accb06e538eb0059/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
+
+The HTML page of the new version iCIBA dictionary that contains 63777 words: [Download address](http://pan.baidu.com/s/1ntky0zR)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
+
+The HTML page of the youdao dictionary that contains 63789 words: [Download address](http://pan.baidu.com/s/1pJH4ugj)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForYouDao.java)
+
+The 249 PDF e-books is related to IT field and software development: [it-software-domain.zip](http://pan.baidu.com/s/1kT1NA3l)
+
+###Related articles
 
 [如何正确地快速地看电影学英语](http://my.oschina.net/apdplat/blog/530605)
 
@@ -90,17 +109,3 @@
 [JDK源代码以及200多部软件著作中出现的以连字符构造的1011个合成词](http://my.oschina.net/apdplat/blog/394495)
 
 [利用1691个精选句子彻底掌握2898个单词](http://my.oschina.net/apdplat/blog/394941)
-
-###资源下载
-
-包含33376个单词的牛津词典HTML页面：[下载地址](http://pan.baidu.com/s/1pJmwr95)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForOxford.java)
-
-包含59809个单词的韦氏词典解析HTML页面：[下载地址](http://pan.baidu.com/s/1ntGmA3B)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForWebster.java)
-
-包含61809个单词的爱词霸旧版HTML页面：[下载地址](http://pan.baidu.com/s/1bnD9gy7)，[解析程序](https://github.com/ysc/superword/blob/a78ab4aa2ab62fddeb664065accb06e538eb0059/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
-
-包含63777个单词的爱词霸新版HTML页面：[下载地址](http://pan.baidu.com/s/1ntky0zR)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
-
-包含63789个单词的有道词典HTML页面：[下载地址](http://pan.baidu.com/s/1pJH4ugj)，[解析程序](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForYouDao.java)
-
-IT领域中和软件开发相关的249本PDF电子书：[it-software-domain.zip](http://pan.baidu.com/s/1kT1NA3l)
