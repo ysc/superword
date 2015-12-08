@@ -36,11 +36,11 @@
             application.setAttribute(key, words);
         }
         if(!words.isEmpty()){
-            example.append("在 ")
+            example.append("In ")
                     .append(WordLinker.Dictionary.valueOf(dictionary).getDes())
-                    .append(" 词典中词性为 ")
+                    .append(" dictionary, the words have the part of speech ")
                     .append(pos)
-                    .append(" 的部分单词如下：<br/><br/>");
+                    .append(" list below: <br/><br/>");
             List<String> data = new ArrayList<String>();
             for(String word : words){
                 data.add(WordLinker.toLink(word));
@@ -52,7 +52,7 @@
 
 <html>
 <head>
-   <title>词性列表</title>
+   <title>part of speech symbol list</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -60,9 +60,9 @@
 <body id="top" ondblclick="querySelectionWord();" >
     <jsp:include page="common/head.jsp"/>
 
-    <h3>词性列表</h3>
+    <h3>part of speech symbol list</h3>
     <table border="1" ondblclick="querySelectionWord();">
-        <tr><td>牛津词典</td><td>韦氏词典</td><td>爱词霸</td><td>有道词典</td></tr>
+        <tr><td>Oxford</td><td>Webster's</td><td>iCIBA</td><td>Youdao</td></tr>
         <tr>
             <td valign="top">
                 <ol>

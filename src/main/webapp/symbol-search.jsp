@@ -44,11 +44,11 @@
             application.setAttribute(key, map);
         }
         if(!map.isEmpty()){
-            htmlFragment.append("在 ")
+            htmlFragment.append("In ")
                     .append(WordLinker.Dictionary.valueOf(dictionary).getDes())
-                    .append(" 词典中包含音标符号 ")
+                    .append(" dictionary, the words have the phonetic symbol ")
                     .append(symbol)
-                    .append(" 的部分单词如下：<br/><br/>");
+                    .append(" list below: <br/><br/>");
             List<String> data = new ArrayList<String>();
             for(Map.Entry<String, String> entry : map.entrySet()){
                 data.add(WordLinker.toLink(entry.getKey())+"<br/>"+entry.getValue().replace(symbol, "<font color=\"red\">" + symbol + "</font>").replace(" | ", "<br/>"));
@@ -60,7 +60,7 @@
 
 <html>
 <head>
-   <title>音标搜索</title>
+   <title>phonetic symbol search</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -82,15 +82,15 @@
 <body id="top">
     <jsp:include page="common/head.jsp"/>
     <p>
-        音标搜索
+        phonetic symbol search
     </p>
     <form method="get" id="form" action="symbol-search.jsp">
         <p>
-            <font color="red">输入音标：</font><input onchange="update();" id="symbol" name="symbol" value="<%=symbol==null?"":symbol%>" size="50" maxlength="50"><br/>
-            <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"/><br/>
-            <font color="red">选择词典：</font>
+            <font color="red">input phonetic symbol: </font><input onchange="update();" id="symbol" name="symbol" value="<%=symbol==null?"":symbol%>" size="50" maxlength="50"><br/>
+            <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"/><br/>
+            <font color="red">select dictionary: </font>
             <jsp:include page="select/dictionary-select-for-symbol.jsp"/><br/>
-            <font color="red">选择词汇：</font>
+            <font color="red">select words level: </font>
             <jsp:include page="select/words-select.jsp"/>
         </p>
     </form>
@@ -99,7 +99,7 @@
 
     <br/>
     <br/>
-    <a target="_blank" href="symbol.jsp">牛津词典、韦氏词典、爱词霸和有道词典的音标符号对比</a>
+    <a target="_blank" href="symbol.jsp">Comparison of phonetic symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a>
     <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>

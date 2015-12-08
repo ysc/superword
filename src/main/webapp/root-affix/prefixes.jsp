@@ -20,6 +20,7 @@
 <%@ page import="org.apdplat.superword.rule.PrefixRule" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="java.util.UUID" %>
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 
@@ -27,9 +28,14 @@
   List<Prefix> prefixes = PrefixRule.getAllPrefixes();
   StringBuilder stringBuilder = new StringBuilder();
   stringBuilder.append("<table>\n");
-  stringBuilder.append("<tr><th>序号</th><th>前缀</th><th>含义</th><th>英文牛津含义</th></tr>");
+  stringBuilder.append("<tr align=\"left\"><th>No.</th><th>Prefix</th><th>Chinese Meaning</th><th>English Oxford Meaning</th></tr>");
+
+  String oxfordLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(WordLinker.Dictionary.OXFORD);
+
   int i=1;
   for(Prefix prefix : prefixes){
+    String oxfordDefinitionURL = oxfordLinkPrefix+prefix.getPrefix()+"&word="+prefix.getPrefix()+"&dict="+ WordLinker.Dictionary.OXFORD.name();
+    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+prefix.getPrefix()+"');\">"+prefix.getPrefix()+"</a>";
     stringBuilder.append("<tr><td>")
             .append(i++)
             .append("</td><td>")
@@ -41,7 +47,7 @@
             .append("</td><td>")
             .append(prefix.getDes().replace(";", ";<br/>"))
             .append("</td><td>")
-            .append(WordLinker.toLink(prefix.getPrefix(), WordLinker.Dictionary.OXFORD))
+            .append(oxfordDefinitionHtml)
             .append("</td></tr>\n");
   }
   stringBuilder.append("</table>\n");
@@ -49,13 +55,14 @@
 
 <html>
 <head>
-    <title>常见前缀</title>
+    <title>commonly used prefix</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 </head>
 <body id="top">
   <jsp:include page="../common/head.jsp"/>
+  <h3>commonly used prefix</h3>
   <%=stringBuilder.toString()%>
   <jsp:include page="../common/bottom.jsp"/>
 </body>

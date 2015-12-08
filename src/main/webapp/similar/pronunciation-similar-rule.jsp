@@ -61,9 +61,9 @@
             @Override
             public double similarScore(String text1, String text2) {
                 if(LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("文本1：");
+                    LOGGER.debug("文本1: ");
                     LOGGER.debug("\t" + text1);
-                    LOGGER.debug("文本2：");
+                    LOGGER.debug("文本2: ");
                     LOGGER.debug("\t" + text2);
                 }
                 if(text1 == null || text2 == null){
@@ -88,11 +88,11 @@
             temp.append("<td>\n")
                 .append("<table border=\"1\">\n")
                 .append("<tr>")
-                .append("<th align=\"left\" colspan=\"5\">跟单词 ")
+                .append("<th align=\"left\" colspan=\"5\">The pronunciations of words are similar with ")
                 .append(word)
-                .append(" 的发音 ")
+                .append(" ")
                 .append(pronunciation)
-                .append(" 相似的单词: </th>")
+                .append(" list below: </th>")
                 .append("</tr>\n");
             Hits result = textSimilarity.rank(pronunciation, target, count);
             int i=1;
@@ -114,7 +114,7 @@
                         .append(" </td><td> ")
                         .append(hit.getScore())
                         .append("</td><td> ")
-                        .append("<a target=\"_blank\" href=\"pronunciation-similar-rule.jsp?word=" + hitWord.toString() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "&dictionary=" + request.getParameter("dictionary") + "\">相似</a>")
+                        .append("<a target=\"_blank\" href=\"pronunciation-similar-rule.jsp?word=" + hitWord.toString() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "&dictionary=" + request.getParameter("dictionary") + "\">similar word</a>")
                         .append(" </td>")
                         .append("</tr>\n");
             }
@@ -128,7 +128,7 @@
 %>
 <html>
 <head>
-    <title>发音相似规则</title>
+    <title>pronunciation similarity rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -154,19 +154,17 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***发音相似规则:
-        根据单词的音标来计算单词之间的相似度
+        ***pronunciation similarity rule: 
+        To calculate the similarity among words according to word pronunciation.
     </p>
     <p>
-        <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
-        <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">input word: </font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">result count: </font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/><br/>
-        <font color="red">选择词典：</font>
+        <font color="red">select dictionary: </font>
         <jsp:include page="../select/dictionary-select-for-symbol.jsp"/>
     </p>
-    <p></p>
-    <p><a href="#" onclick="update();">提交</a></p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>
 </body>

@@ -77,7 +77,7 @@
             HtmlFetcher htmlFetcher = new JSoupHtmlFetcher();
             text = Jsoup.parse(htmlFetcher.fetch(url)).text();
             if (StringUtils.isBlank(text)) {
-                htmlFragment = "获取网页内容失败请重新输入其他网页地址";
+                htmlFragment = "Failed to get the web page content, please try once again or re-enter the other web page url.";
             } else {
                 Files.write(file.toPath(), Arrays.asList(url, text));
             }
@@ -86,14 +86,14 @@
             htmlFragment = AidReading.analyse(words, column, false, null, Arrays.asList(text));
         }
     }catch (Exception e){
-        htmlFragment = "获取网页内容失败请重新输入其他网页地址";
+        htmlFragment = "Failed to get the web page content, please try once again or re-enter the other web page url.";
         e.printStackTrace();
     }
 %>
 
 <html>
 <head>
-    <title>网页辅助阅读</title>
+    <title>web page auxiliary reading</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -121,10 +121,10 @@
             var tip = document.getElementById("tip");
             if(display){
                 text_div.style.display = "none";
-                tip.innerText = "双击网页内容选中单词可查看定义(点击显示)：";
+                tip.innerText = "Double click the word on the page to see the definition(Click Display): ";
             }else{
                 text_div.style.display = "block";
-                tip.innerText = "双击网页内容选中单词可查看定义(点击隐藏)：";
+                tip.innerText = "Double click the word on the page to see the definition(Click Hide): ";
             }
             display = !display;
         }
@@ -134,17 +134,17 @@
     <jsp:include page="../common/head.jsp"/>
 
     <p>
-        网页辅助阅读
+        web page auxiliary reading
     </p>
 
     <p>
-        <font color="red">网页地址：</font><input onchange="update();" id="url" name="url" value="<%=url%>" size="150" maxlength="500"><br/>
-        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">web page url: </font><input onchange="update();" id="url" name="url" value="<%=url%>" size="150" maxlength="500"><br/>
+        <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/><br/>
     </p>
     <p>
-        <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">双击网页内容选中单词可查看定义(点击隐藏)：</span></font><br/>
+        <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">Double click the word on the page to see the definition(Click Hide): </span></font><br/>
         <div ondblclick="querySelectionWord();" id="text_div" style="display:block">
             <%=text.replace("\r", "").replace("\n", "</br>")%>
         </div>

@@ -24,31 +24,31 @@
     <%
         if (Dictionary.ICIBA==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
     %>
-    <option value="ICIBA" selected="selected">爱词霸</option>
-    <option value="YOUDAO">有道</option>
-    <option value="WEBSTER">韦氏</option>
-    <option value="OXFORD">牛津</option>
+    <option value="ICIBA" selected="selected">iCIBA</option>
+    <option value="YOUDAO">Youdao</option>
+    <option value="WEBSTER">Webster's</option>
+    <option value="OXFORD">Oxford</option>
     <%
     } else if (Dictionary.YOUDAO==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
     %>
-    <option value="ICIBA">爱词霸</option>
-    <option value="YOUDAO" selected="selected">有道</option>
-    <option value="WEBSTER">韦氏</option>
-    <option value="OXFORD">牛津</option>
+    <option value="ICIBA">iCIBA</option>
+    <option value="YOUDAO" selected="selected">Youdao</option>
+    <option value="WEBSTER">Webster's</option>
+    <option value="OXFORD">Oxford</option>
     <%
     } else if (Dictionary.WEBSTER==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
     %>
-    <option value="ICIBA">爱词霸</option>
-    <option value="YOUDAO">有道</option>
-    <option value="WEBSTER" selected="selected">韦氏</option>
-    <option value="OXFORD">牛津</option>
+    <option value="ICIBA">iCIBA</option>
+    <option value="YOUDAO">Youdao</option>
+    <option value="WEBSTER" selected="selected">Webster's</option>
+    <option value="OXFORD">Oxford</option>
     <%
     } else if (Dictionary.OXFORD==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
     %>
-    <option value="ICIBA">爱词霸</option>
-    <option value="YOUDAO">有道</option>
-    <option value="WEBSTER">韦氏</option>
-    <option value="OXFORD" selected="selected">牛津</option>
+    <option value="ICIBA">iCIBA</option>
+    <option value="YOUDAO">Youdao</option>
+    <option value="WEBSTER">Webster's</option>
+    <option value="OXFORD" selected="selected">Oxford</option>
     <%
     }
     %>

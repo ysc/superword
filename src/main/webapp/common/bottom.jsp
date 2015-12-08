@@ -23,12 +23,12 @@
   <%
     if(!"true".equals(request.getParameter("index"))){
   %>
-  <a href="<%=request.getContextPath()%>/index.jsp">返回主页</a> <br/>
+  <a href="<%=request.getContextPath()%>/index.jsp">Home page</a> <br/>
   <%
     }
   %>
-  <a target="_blank" href="<%=request.getContextPath()%>/common/feedback.jsp">建议反馈</a> <br/>
-  <a target="_blank" href="https://github.com/ysc/QuestionAnsweringSystem/wiki/donation">爱心捐赠支持superword的发展</a><br/>
-  目前正在开发测试中，经常会增加新功能，推荐使用<a target="_blank" href="http://pan.baidu.com/s/1bnwTVC7">Chrome浏览器</a>
+  <a target="_blank" href="<%=request.getContextPath()%>/common/feedback.jsp">Feedback</a> <br/>
+  <a target="_blank" href="https://github.com/ysc/QuestionAnsweringSystem/wiki/donation">Donate to support Superword</a><br/>
+  We recommend the use of the <a target="_blank" href="http://pan.baidu.com/s/1bnwTVC7">Google's Chrome browser</a>
 </p>
-<p id="back-to-top"><a href="#top"><span></span>返回顶部</a></p>
+<p id="back-to-top"><a href="#top"><span></span>Back Top</a></p>

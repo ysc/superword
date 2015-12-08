@@ -39,7 +39,7 @@
             session.setAttribute("user", user);
             request.getRequestDispatcher("/index.jsp").forward(request, response);
         }else{
-            tip = "登录失败，用户名或者密码错误！";
+            tip = "failed to sign in，username or password is incorrect!";
         }
     }
     if(userName == null){
@@ -48,7 +48,7 @@
 %>
 <html>
 <head>
-    <title>用户注册</title>
+    <title>Sign in</title>
     <script type="text/javascript" src="../js/md5.js"></script>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
@@ -59,7 +59,7 @@
             var userName = document.getElementById("userName").value;
             var password = document.getElementById("password").value;
             if (userName == "" || password == "") {
-                document.getElementById("tip").innerText = "用户名或者密码为空!";
+                document.getElementById("tip").innerText = "username or password is empty!";
                 return;
             }
             if (lock) {
@@ -84,8 +84,8 @@
     <p><font color="red"><span id="tip"><%=tip%></span></font></p>
     <p>
         <br/>
-        <font color="red">用户名称：</font><input id="userName" name="userName" value="<%=userName%>" size="50" maxlength="50"/><br/>
-        <font color="red">用户密码：</font><input id="password" name="password" type="password" size="50" maxlength="50"/><br/>
+        <font color="red">username: </font><input id="userName" name="userName" value="<%=userName%>" size="50" maxlength="50"/><br/>
+        <font color="red">password: </font><input id="password" name="password" type="password" size="50" maxlength="50"/><br/>
     </p>
     <script type="text/javascript">
         if(document.getElementById('userName').value==""){
@@ -94,7 +94,7 @@
             document.getElementById('password').focus();
         }
     </script>
-    <font color="red"><span style="cursor: pointer" onclick="login();">登录系统</span></font>
+    <font color="red"><span style="cursor: pointer" onclick="login();">Sign in</span></font>
 </form>
 <jsp:include page="../common/bottom.jsp"/>
 </body>

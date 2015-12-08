@@ -22,13 +22,13 @@
   <%
     if("N".equalsIgnoreCase(request.getParameter("strict"))){
   %>
-    <option value="Y">是</option>
-    <option value="N" selected="selected">否</option>
+    <option value="Y">Yes</option>
+    <option value="N" selected="selected">No</option>
   <%
   }else{
   %>
-    <option value="Y" selected="selected">是</option>
-    <option value="N">否</option>
+    <option value="Y" selected="selected">Yes</option>
+    <option value="N">No</option>
   <%
     }
   %>

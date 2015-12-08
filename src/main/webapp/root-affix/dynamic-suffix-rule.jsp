@@ -53,7 +53,7 @@
 %>
 <html>
 <head>
-    <title>动态后缀规则</title>
+    <title>dynamic suffix rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -77,14 +77,12 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***用法说明:
-        动态后缀规则，比如规则为：ise-ize，
-        表示单词集合中，有两个词分别以ise和ize结尾，
-        且除了后缀外，其他部分都相同
+        ***dynamic suffix rule:
+        For example, the rule is: ise-ize, there are any two words respective ended with ize and ise, and in addition to the suffix, the other parts are the same.
     </p>
     <p>
-        <font color="red">输入动态后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">input dynamic suffix：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level：</font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>
     <%=htmlFragment%>

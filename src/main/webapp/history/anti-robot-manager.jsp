@@ -25,7 +25,7 @@
 <%
     User user = (User) request.getSession().getAttribute("user");
     if(user == null || !user.getUserName().equals("ysc")){
-        out.println("您没有权限访问该页面");
+        out.println("You do not have permission to access the page.");
         return;
     }
 
@@ -35,10 +35,14 @@
     try{
         AntiRobotFilter.limit = Integer.parseInt(limit);
     }catch (Exception e){}
-    html.append("每日每用户访问请求次数限制: ").append(AntiRobotFilter.limit).append(", 用户代理无效请求数: ").append(AntiRobotFilter.invalidCount).append("<br/><br/>");
+    html.append("The maximum number of requests is ")
+            .append(AntiRobotFilter.limit)
+            .append(" per user per day, invalid request number is ")
+            .append(AntiRobotFilter.invalidCount)
+            .append(" without user agent.<br/><br/>");
 
     html.append("<table>")
-            .append("<tr><th>序号</th><th>用户名称</th><th>用户IP</th><th>访问日期</th><th>访问次数</th><th>用户地理位置</th></tr>");
+            .append("<tr><th>No.</th><th>Username</th><th>User IP</th><th>Access Date</th><th>Access Count</th><th>User Location</th></tr>");
     AtomicInteger i = new AtomicInteger();
     for(String item : AntiRobotFilter.getData()){
         String[] attrs = item.split("-");
@@ -60,7 +64,7 @@
 %>
 <html>
 <head>
-    <title>反机器人管理</title>
+    <title>anti robot management</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>

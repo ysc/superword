@@ -70,7 +70,7 @@
                     .append(" </td><td> ")
                     .append(hit.getScore())
                     .append("</td><td> ")
-                    .append("<a target=\"_blank\" href=\"spell-similar-rule.jsp?word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
+                    .append("<a target=\"_blank\" href=\"spell-similar-rule.jsp?word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">similar word</a>")
                     .append(" </td>\n");
             temp.append("</tr>\n");
         }
@@ -80,7 +80,7 @@
 %>
 <html>
 <head>
-    <title>拼写相似规则</title>
+    <title>spelling similarity rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -105,21 +105,15 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***用法说明:
-        拼写相似规则，英语是拼音文字而不是表意文字，
-        所以，拼写相似的单词大多没有什么意义的关联，
-        但是我们在阅读的时候因为长得像所以很容易认错，
-        因此，在学习一个新单词的时候，
-        系统地学习跟新单词拼写相似的单词是非常有必要的
+        ***spelling similarity rule:
+        English is alphabetic writing but not ideographs, so similar spelling almost doesn't have the similar meaning, but we often mistake them in reading because they look like so alike. Therefore, when you learn a new word, you should learn the other words which are similar in spelling too.
     </p>
     <p>
-        <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
-        <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">input word: </font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">result count: </font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>
-    <p></p>
-    <p><a href="#" onclick="update();">提交</a></p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>
 </body>

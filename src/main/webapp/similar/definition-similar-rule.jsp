@@ -52,7 +52,7 @@
         Set<Word> words = (Set<Word>)application.getAttribute("words_"+request.getAttribute("words_type"));
         String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary.name());
         if(StringUtils.isBlank(wordDefinition)){
-            htmlFragment = "没有该词的定义, 不能计算. ";
+            htmlFragment = "We don't have the definition of the specified word, so the similarity can't be calculated. ";
         }else {
             List<String> allWordDefinition = MySQLUtils.getAllWordDefinition(dictionary.name(), words);
 
@@ -63,7 +63,7 @@
             }
             if(dictionary == Dictionary.ICIBA || dictionary == Dictionary.YOUDAO) {
                 if(user == null || !"ysc".equals(user.getUserName())){
-                    out.println("没有权限访问中文词典的定义相似性计算<a href=\"definition-similar-rule.jsp?dictionary=WEBSTER&word="+word+"&count="+count+"&words_type="+request.getAttribute("words_type")+"\">返回</a>");
+                    out.println("You don't have the permission to access the functionality.<a href=\"definition-similar-rule.jsp?dictionary=WEBSTER&word="+word+"&count="+count+"&words_type="+request.getAttribute("words_type")+"\">Return</a>");
                     return;
                 }
                 textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.MaxNgramScore);
@@ -90,7 +90,7 @@
                         .append(" </td><td> ")
                         .append(hit.getScore())
                         .append("</td><td> ")
-                        .append("<a target=\"_blank\" href=\"definition-similar-rule.jsp?dictionary"+dictionary.name()+"&word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">相似</a>")
+                        .append("<a target=\"_blank\" href=\"definition-similar-rule.jsp?dictionary"+dictionary.name()+"&word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">similar word</a>")
                         .append(" </td>\n");
                 temp.append("</tr>\n");
             }
@@ -101,7 +101,7 @@
 %>
 <html>
 <head>
-    <title>定义相似规则</title>
+    <title>definition similarity rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -127,19 +127,17 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***用法说明:
-        定义相似规则，根据单词的定义来计算两个单词之间的相似度
+        ***definition similarity rule:
+        To calculate the similarity among words according to the definition of words.
     </p>
     <p>
-        <font color="red">输入单词：</font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
-        <font color="red">结果数目：</font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">input word: </font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">result count: </font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/><br/>
-        <font color="red">选择词典：</font>
+        <font color="red">select dictionary: </font>
         <jsp:include page="../select/dictionary-select-for-symbol.jsp"/>
     </p>
-    <p></p>
-    <p><a href="#" onclick="update();">提交</a></p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>
 </body>

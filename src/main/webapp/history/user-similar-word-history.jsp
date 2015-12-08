@@ -33,7 +33,7 @@
     List<UserSimilarWord> userSimilarWords = MySQLUtils.getHistoryUserSimilarWordsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
-    htmlFragment.append("<tr><th>序号</th><th>拼写相似</th><th>定义相似</th><th>发音相似</th><th>时间</th></tr>");
+    htmlFragment.append("<tr><th>No.</th><th>Spelling Similarity</th><th>Definition Similarity</th><th>Pronunciation Similarity</th><th>Time</th></tr>");
     int i = 1;
     for (UserSimilarWord userSimilarWord : userSimilarWords) {
         htmlFragment.append("<tr><td>")
@@ -65,14 +65,14 @@
 
 <html>
 <head>
-    <title>用户相似单词分析记录</title>
+    <title>similar word analysis record</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>用户 <%=displayName%> 相似单词分析记录</p>
+<p>user <%=displayName%> similar word analysis record</p>
 <%=htmlFragment%>
 <jsp:include page="../common/bottom.jsp"/>
 </body>

@@ -78,7 +78,7 @@
 
 <html>
 <head>
-    <title>辅助阅读</title>
+    <title>book auxiliary reading -- search word corresponding to the original</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -106,17 +106,17 @@
     <jsp:include page="../common/head.jsp"/>
 
     <p>
-        书籍辅助阅读-搜索单词对应原文
+        book auxiliary reading -- search word corresponding to the original
     </p>
 
     <p>
-        <font color="red">搜索单词：</font><input onchange="update();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
-        <font color="red">显示条数：</font><input onchange="update();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
-        <font color="red">选择书籍：</font>
+        <font color="red">search word: </font><input onchange="update();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
+        <font color="red">display count: </font><input onchange="update();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
+        <font color="red">select book: </font>
         <jsp:include page="../select/book-select.jsp"/>
     </p>
     <div ondblclick="querySelectionWord();">
-        <font color="red">双击文本选中单词可查看定义</font><br/>
+        <font color="red">Double click the word on the page to see the definition</font><br/>
         <%=htmlFragment%>
     </div>
     <jsp:include page="../common/bottom.jsp"/>

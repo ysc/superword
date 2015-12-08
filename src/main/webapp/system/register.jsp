@@ -38,7 +38,7 @@
             session.setAttribute("user", user);
             request.getRequestDispatcher("/index.jsp").forward(request, response);
         }else{
-            tip = "注册失败，请稍后重试或与管理员联系！";
+            tip = "failed to sign up，please try once more or contact with administrator!";
         }
     }
     if(userName == null){
@@ -47,7 +47,7 @@
 %>
 <html>
 <head>
-    <title>用户注册</title>
+    <title>Sign up</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -59,15 +59,15 @@
             var password = document.getElementById("password").value;
             var _password = document.getElementById("_password").value;
             if(password.length < 6){
-                document.getElementById("tip").innerText = "密码长度要>=6";
+                document.getElementById("tip").innerText = "the length of password must greater than five";
                 return;
             }
             if(userName.length < 3){
-                document.getElementById("tip").innerText = "用户名长度要>=3";
+                document.getElementById("tip").innerText = "the length of username must greater than two";
                 return;
             }
             if (password != _password) {
-                document.getElementById("tip").innerText = "两次密码输入不相等!";
+                document.getElementById("tip").innerText = "check the password";
                 return;
             }
             if (lock) {
@@ -92,14 +92,14 @@
     <p><font color="red"><span id="tip"><%=tip%></span></font></p>
     <p>
         <br/>
-        <font color="red">用户名称：</font><input id="userName" name="userName" size="50" value="<%=userName%>" maxlength="50"/><br/>
-        <font color="red">用户密码：</font><input id="password" name="password" type="password" size="50" maxlength="50"/><br/>
-        <font color="red">确认密码：</font><input id="_password" name="_password" type="password" size="50" maxlength="50"/><br/>
+        <font color="red">username: </font><input id="userName" name="userName" size="50" value="<%=userName%>" maxlength="50"/><br/>
+        <font color="red">password: </font><input id="password" name="password" type="password" size="50" maxlength="50"/><br/>
+        <font color="red">re-input password: </font><input id="_password" name="_password" type="password" size="50" maxlength="50"/><br/>
         <script type="text/javascript">
             document.getElementById('userName').focus();
         </script>
     </p>
-    <font color="red"><span style="cursor: pointer" onclick="register();">注册账号</span></font>
+    <font color="red"><span style="cursor: pointer" onclick="register();">Sign up</span></font>
 </form>
 <jsp:include page="../common/bottom.jsp"/>
 </body>

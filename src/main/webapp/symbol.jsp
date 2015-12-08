@@ -22,7 +22,7 @@
 
 <html>
 <head>
-   <title>音标符号列表</title>
+   <title>phonetic symbol list</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -30,9 +30,9 @@
 <body id="top">
     <jsp:include page="common/head.jsp"/>
 
-    <h3>音标符号列表</h3>
+    <h3>phonetic symbol list</h3>
     <table border="1">
-        <tr><td>牛津词典</td><td>韦氏词典</td><td>爱词霸</td><td>有道词典</td></tr>
+        <tr><td>Oxford</td><td>Webster's</td><td>iCIBA</td><td>Youdao</td></tr>
         <tr>
             <td valign="top">
                 <ol>

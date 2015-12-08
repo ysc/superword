@@ -58,19 +58,19 @@
 
     String icibaLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.ICIBA);
     String icibaDefinitionURL = icibaLinkPrefix+word+"&word="+word+"&dict="+Dictionary.ICIBA.name();
-    String icibaDefinitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"openWindow('"+icibaDefinitionURL+"', '"+word+"');\">爱词霸解释</a>";
+    String icibaDefinitionHtml = "<a href=\"#"+ UUID.randomUUID()+"\" onclick=\"openWindow('"+icibaDefinitionURL+"', '"+word+"');\">iCIBA definition</a>";
 
     String youdaoLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.YOUDAO);
     String youdaoDefinitionURL = youdaoLinkPrefix+word+"&word="+word+"&dict="+Dictionary.YOUDAO.name();
-    String youdaoDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+youdaoDefinitionURL+"', '"+word+"');\">有道解释</a>";
+    String youdaoDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+youdaoDefinitionURL+"', '"+word+"');\">Youdao definition</a>";
 
     String oxfordLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.OXFORD);
     String oxfordDefinitionURL = oxfordLinkPrefix+word+"&word="+word+"&dict="+Dictionary.OXFORD.name();
-    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+word+"');\">牛津解释</a>";
+    String oxfordDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+oxfordDefinitionURL+"', '"+word+"');\">Oxford definition</a>";
 
     String websterLinkPrefix = WordLinker.serverRedirect+"?url="+WordLinker.getLinkPrefix(Dictionary.WEBSTER);
     String websterDefinitionURL = websterLinkPrefix+word+"&word="+word+"&dict="+Dictionary.WEBSTER.name();
-    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">韦氏解释</a>";
+    String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">Webster's definition</a>";
 
     definitionHtmls.append("<table border=\"1\">");
 
@@ -80,16 +80,16 @@
             .append(youdaoDefinitionHtml)
             .append("</td></tr>")
             .append("<tr><td ondblclick=\"querySelectionWord();\">")
-            .append("音标: <br/>")
+            .append("phonetic symbol: <br/>")
             .append(Pronunciation.getPronunciationString(Dictionary.ICIBA, word, " <font color=\"red\">|</font> "))
             .append("<br/><br/>")
-            .append("定义: <br/>")
+            .append("definition(Chinese): <br/>")
             .append(Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"))
             .append("</td><td ondblclick=\"querySelectionWord();\">")
-            .append("音标: <br/>")
+            .append("phonetic symbol: <br/>")
             .append(Pronunciation.getPronunciationString(Dictionary.YOUDAO, word, " <font color=\"red\">|</font> "))
             .append("<br/><br/>")
-            .append("定义: <br/>")
+            .append("definition(Chinese): <br/>")
             .append(Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"))
             .append("</td></tr>");
 
@@ -100,28 +100,28 @@
             .append("</td></tr>")
             .append("<tr><td>")
             .append("<tr><td ondblclick=\"querySelectionWord();\">")
-            .append("音标: <br/>")
+            .append("phonetic symbol: <br/>")
             .append(Pronunciation.getPronunciationString(Dictionary.OXFORD, word, " <font color=\"red\">|</font> "))
             .append("<br/><br/>")
-            .append("定义: <br/>")
+            .append("definition: <br/>")
             .append(OxfordPOS.highlight(Definition.getDefinitionString(Dictionary.OXFORD, word, "<br/>")))
             .append("</td><td ondblclick=\"querySelectionWord();\">")
-            .append("音标: <br/>")
+            .append("phonetic symbol: <br/>")
             .append(Pronunciation.getPronunciationString(Dictionary.WEBSTER, word, " <font color=\"red\">|</font> "))
             .append("<br/><br/>")
-            .append("定义: <br/>")
+            .append("definition: <br/>")
             .append(WebsterPOS.highlight(Definition.getDefinitionString(Dictionary.WEBSTER, word, "<br/>")))
             .append("</td></tr>");
 
     definitionHtmls.append("</table>")
             .append("<br/><br/>");
 
-    definitionHtmls.append("<font color=\"red\">其他英文词典解释: </font>").append(otherDictionary.toString());
+    definitionHtmls.append("<font color=\"red\">Other English Dictionaries's definition: </font>").append(otherDictionary.toString());
 %>
 
 <html>
 <head>
-    <title>定义查询</title>
+    <title>word definition</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -130,7 +130,7 @@
         function query() {
             var word = document.getElementById("word").value;
             if (word == "") {
-                document.getElementById("tip").innerText = "请输入查询定义的单词";
+                document.getElementById("tip").innerText = "Please input the word which you want to query.";
                 return;
             }
             if (lock) {
@@ -151,8 +151,8 @@
     <jsp:include page="common/head.jsp"/>
     <p>
         <font color="red"><span id="tip"></span></font><br/>
-        <font color="red">输入单词：</font><input onchange="query();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"/>
-        <button type="button" onclick="query();">查询定义</button><br/>
+        <font color="red">Input Word：</font><input onchange="query();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"/>
+        <button type="button" onclick="query();">Query definition</button><br/>
     </p>
     <script type="text/javascript">
         document.getElementById('word').select();
@@ -161,13 +161,13 @@
 
     <%=definitionHtmls.toString()%>
     <br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N"><font color="red">分析词根词缀</font></a><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS"><font color="red">拼写相似的词</font></a><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=WEBSTER"><font color="red">定义相似的词</font></a><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=ICIBA"><font color="red">发音相似的词</font></a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N"><font color="red">analyze roots and affix</font></a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS"><font color="red">similar spelling</font></a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=WEBSTER"><font color="red">similar definition</font></a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=ICIBA"><font color="red">similar pronunciation</font></a><br/>
     <br/>
-    <a target="_blank" href="pos.jsp">牛津词典、韦氏词典、爱词霸和有道词典的词性符号对比</a><br/>
-    <a target="_blank" href="symbol.jsp">牛津词典、韦氏词典、爱词霸和有道词典的音标符号对比</a>
+    <a target="_blank" href="pos.jsp">Comparison of part of speech symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a><br/>
+    <a target="_blank" href="symbol.jsp">Comparison of phonetic symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a>
     <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>

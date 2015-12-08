@@ -96,8 +96,8 @@ public class WordLinker {
     }
 
     public static enum Dictionary{
-        ICIBA("爱词霸"), YOUDAO("有道"), COLLINS("柯林斯"), WEBSTER("韦氏"), OXFORD("牛津"),
-        CAMBRIDGE("剑桥"), MACMILLAN("麦克米伦"), HERITAGE("美国传统"), WIKTIONARY("维基词典"),
+        ICIBA("iCIBA"), YOUDAO("Youdao"), COLLINS("Collins"), WEBSTER("Webster's"), OXFORD("Oxford"),
+        CAMBRIDGE("Cambridge"), MACMILLAN("Macmillan"), HERITAGE("Heritage"), WIKTIONARY("Wiktionary"),
         WORDNET("WordNet"), RANDOMHOUSE("RandomHouse");
         private String des;
         private Dictionary(String des){

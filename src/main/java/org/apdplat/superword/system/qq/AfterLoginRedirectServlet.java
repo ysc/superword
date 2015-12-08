@@ -113,6 +113,6 @@ public class AfterLoginRedirectServlet extends HttpServlet {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        out.println("<h1><a href=\""+request.getContextPath()+"/index.jsp\">使用QQ登陆失败，请重试或者使用其他方式登录</a></h1>");
+        out.println("<h1><a href=\""+request.getContextPath()+"/index.jsp\">Failed to login via QQ, please try again or use other ways.</a></h1>");
     }
 }

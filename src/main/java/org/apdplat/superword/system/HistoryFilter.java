@@ -41,16 +41,16 @@ public class HistoryFilter implements Filter {
             HttpServletResponse response = (HttpServletResponse)resp;
             response.setContentType("text/html");
             response.setCharacterEncoding("utf-8");
-            response.getWriter().write("未登录用户不能查看!<br/>");
+            response.getWriter().write("In order to access the resource, you must sign in!<br/>");
             response.getWriter().write("<a href=\"");
             response.getWriter().write(request.getContextPath());
-            response.getWriter().write("/system/register.jsp\">注册</a>");
+            response.getWriter().write("/system/register.jsp\">Sign up</a>");
             response.getWriter().write("    <a href=\"");
             response.getWriter().write(request.getContextPath());
-            response.getWriter().write("/system/login.jsp\">登录</a>");
+            response.getWriter().write("/system/login.jsp\">Sign in</a>");
             response.getWriter().write("    <a href=\"");
             response.getWriter().write(request.getContextPath());
-            response.getWriter().write("/system/login.jspx\">QQ账号登录</a>");
+            response.getWriter().write("/system/login.jspx\"><img src=\""+request.getContextPath()+"/images/qq_32.png\" alt=\"QQ Account Sign In\"/></a>");
 
             return;
         }

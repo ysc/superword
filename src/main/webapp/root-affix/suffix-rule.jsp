@@ -83,16 +83,15 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***用法说明:
-        后缀规则，从指定的英文单词的集合中找出符合后缀规则的单词，
-        如：ics或者ian，多个后缀可用逗号分隔，如：ence,ance,age
+        ***suffix rule:
+        Find out the words that are consistent with the suffix rule from the set of the specified English words, such as: ics or ian, multiple suffixes can be separated by a comma, such as: ence, age, ance.
     </p>
     <p>
-        <font color="red">输入后缀：</font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
-        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">严格匹配：</font>
+        <font color="red">input suffix: </font><input onchange="update();" id="suffixes" name="suffixes" value="<%=suffixes==null?"":suffixes%>" size="50" maxlength="50"><br/>
+        <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">strictly match: </font>
         <jsp:include page="../select/strict-select.jsp"/><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>
     <%=htmlFragment%>

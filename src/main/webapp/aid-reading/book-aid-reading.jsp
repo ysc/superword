@@ -52,7 +52,7 @@
 
 <html>
 <head>
-    <title>辅助阅读</title>
+    <title>book auxiliary reading</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -80,14 +80,14 @@
     <jsp:include page="../common/head.jsp"/>
 
     <p>
-        书籍辅助阅读
+        book auxiliary reading
     </p>
 
     <p>
-        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/><br/>
-        <font color="red">选择书籍：</font>
+        <font color="red">select book: </font>
         <jsp:include page="../select/book-select.jsp"/>
     </p>
     <%=htmlFragment%>

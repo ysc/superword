@@ -56,7 +56,7 @@
 %>
 <html>
 <head>
-    <title>词根规则</title>
+    <title>roots rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -82,14 +82,13 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***用法说明:
-        词根规则，从指定的英文单词的集合中找出符合词根规则的单词，
-        如：son或者spir，多个后缀可用逗号分隔，如：spect,spic
+        ***roots rule:
+        Find out the words that are consistent with the roots rule from the set of the specified English words, such as: son or spir, multiple roots can be separated by a comma, such as: spect,spic.
     </p>
     <p>
-        <font color="red">输入词根：</font><input onchange="update();" id="roots" name="roots" value="<%=roots==null?"":roots%>" size="50" maxlength="50"><br/>
-        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">input roots: </font><input onchange="update();" id="roots" name="roots" value="<%=roots==null?"":roots%>" size="50" maxlength="50"><br/>
+        <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>
     <%=htmlFragment%>

@@ -1,5 +1,3 @@
-<%@ page import="org.apdplat.superword.model.User" %>
-<%@ page import="org.apdplat.superword.model.QQUser" %>
 <%--
   ~ APDPlat - Application Product Development Platform
   ~ Copyright (c) 2013, 杨尚川, yang-shangchuan@qq.com
@@ -18,14 +16,18 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.QQUser" %>
+
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+
 <script type="text/javascript">
     var contextPath = '<%=request.getServletContext().getContextPath()%>';
 </script>
 <table>
   <tr>
     <td>
-      <h2><a href="https://github.com/ysc/superword" target="_blank">superword开源项目</a></h2>
+      <h3><a href="https://github.com/ysc/superword" target="_blank">Welcome to the Superword Open Source Project!</a></h3>
     </td>
     <td>
       <div class="bdsharebuttonbox" data-tag="share_1">
@@ -35,7 +37,7 @@
         <a class="bds_baidu" data-cmd="baidu"></a>
         <a class="bds_renren" data-cmd="renren"></a>
         <a class="bds_tqq" data-cmd="tqq"></a>
-        <a class="bds_more" data-cmd="more">更多</a>
+        <a class="bds_more" data-cmd="more">More</a>
         <a class="bds_count" data-cmd="count"></a>
       </div>
     </td>
@@ -44,13 +46,13 @@
   if(user==null){
 %>
     <td>
-      <a href="<%=request.getContextPath()%>/system/register.jsp">注册</a>
+      <a href="<%=request.getContextPath()%>/system/register.jsp">Sign up</a>
     </td>
     <td>
-      <a href="<%=request.getContextPath()%>/system/login.jsp">登录</a>
+      <a href="<%=request.getContextPath()%>/system/login.jsp">Sign in</a>
     </td>
     <td>
-      <a href="<%=request.getContextPath()%>/system/login.jspx"><img src="<%=request.getContextPath()%>/images/qq_32.png" alt="QQ帐号登录"/></a>
+      <a href="<%=request.getContextPath()%>/system/login.jspx"><img src="<%=request.getContextPath()%>/images/qq_32.png" alt="QQ Account Sign In"/></a>
     </td>
 <%
   }else{
@@ -63,7 +65,7 @@
       欢迎【<%=displayName%>】
     </td>
     <td>
-      <a href="<%=request.getContextPath()+"/system/logout.jsp"%>">注销</a>
+      <a href="<%=request.getContextPath()+"/system/logout.jsp"%>">Sign out</a>
     </td>
 <%
   }
@@ -72,7 +74,7 @@
   if(!"true".equals(request.getParameter("index"))){
 %>
     <td>
-    <a href="<%=request.getContextPath()%>/index.jsp">返回主页</a> <br/>
+    <a href="<%=request.getContextPath()%>/index.jsp">Home page</a> <br/>
     </td>
 <%
   }

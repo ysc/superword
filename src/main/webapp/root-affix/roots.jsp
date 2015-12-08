@@ -26,7 +26,7 @@
   List<Word> roots = RootRule.getAllRoots();
   StringBuilder stringBuilder = new StringBuilder();
   stringBuilder.append("<table>\n");
-  stringBuilder.append("<tr><th>序号</th><th>词根</th><th>含义</th></tr>");
+  stringBuilder.append("<tr align=\"left\"><th>No.</th><th>Roots</th><th>Chinese Meaning</th></tr>");
   int i=1;
   for(Word root : roots){
     stringBuilder.append("<tr><td>")
@@ -46,13 +46,14 @@
 
 <html>
 <head>
-    <title>常见词根</title>
+    <title>commonly used roots</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 </head>
 <body id="top">
   <jsp:include page="../common/head.jsp"/>
+  <h3>commonly used roots</h3>
   <%=stringBuilder.toString()%>
   <jsp:include page="../common/bottom.jsp"/>
 </body>

@@ -63,16 +63,16 @@
                 temp.put(w, data);
                 htmlFragment = HtmlFormatter.toHtmlForCompoundWord(temp, column);
             }else{
-                htmlFragment = "<font color=\"red\">不能分解，请尝试其他分级词汇：</font>"+WordLinker.toLink(w.getWord());
+                htmlFragment = "<font color=\"red\">decomposition failed，please try other words level: </font>"+WordLinker.toLink(w.getWord());
             }
         }else{
-            htmlFragment = "<font color=\"red\">单词长度要>3</font>";
+            htmlFragment = "<font color=\"red\">the length of word must greater than three</font>";
         }
     }
 %>
 <html>
 <head>
-    <title>复合词分析规则</title>
+    <title>compound word analysis rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -105,18 +105,18 @@
 <body id="top">
     <jsp:include page="common/head.jsp"/>
     <p>
-        ***用法说明:
-        复合词分析规则，判断一个词是不是复合词就看它是不是由2个或2个以上现有词简单拼装在一起形成的词
+        ***compound word analysis rule:
+        A compound word is the result of two words being joined.
     </p>
     <p>
-        <font color="red">输入单词：</font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
-        <font color="red">每行词数：</font><input onchange="viewAllCompound();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">input word: </font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">words per line: </font><input onchange="viewAllCompound();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="select/words-select.jsp"/><br/>
     </p>
     <p>
-        <a href="#1" onclick="update();">分解输入的单词</a><br/>
-        <a href="#2" onclick="viewAllCompound();">查看所有复合词</a>
+        <a href="#1" onclick="update();">decomposition the input word</a><br/>
+        <a href="#2" onclick="viewAllCompound();">view all compound word</a>
     </p>
     <%=htmlFragment%>
     <jsp:include page="common/bottom.jsp"/>

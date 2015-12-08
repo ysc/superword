@@ -60,7 +60,7 @@
 
 <html>
 <head>
-    <title>文本辅助阅读</title>
+    <title>text auxiliary reading</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -86,10 +86,10 @@
             var tip = document.getElementById("tip");
             if(display){
                 text_div.style.display = "none";
-                tip.innerText = "显示文本(双击选中单词可查看定义)：";
+                tip.innerText = "Double click the word on the page to see the definition(Click Display): ";
             }else{
                 text_div.style.display = "block";
-                tip.innerText = "隐藏文本(双击选中单词可查看定义)：";
+                tip.innerText = "Double click the word on the page to see the definition(Click Hide): ";
             }
             display = !display;
         }
@@ -99,19 +99,19 @@
     <jsp:include page="../common/head.jsp"/>
 
     <p>
-        文本辅助阅读
+        text auxiliary reading
     </p>
 
     <form method="post" id="form" action="text-aid-reading.jsp">
         <p>
-        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"/><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"/><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/><br/>
         </p>
-        <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">隐藏文本(双击选中单词可查看定义)：</span></font>
+        <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">Double click the word on the page to see the definition(Click Hide): </span></font>
         <div id="text_div" style="display:block">
             <textarea ondblclick="querySelectionWord();" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
-            <span style="cursor: pointer" onclick="update();"><font color="red">确定分析文本</font></span>
+            <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
         </div>
     </form>
     <%=htmlFragment%>

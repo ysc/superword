@@ -36,7 +36,7 @@
 
 <html>
 <head>
-    <title>独立词规则</title>
+    <title>independent word rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -62,13 +62,13 @@
     <jsp:include page="common/head.jsp"/>
 
     <p>
-        ***用法说明:
-        独立词规则，没有任何前缀、后缀和词根的词，这类词比较少,需要重点记忆
+        ***independent word rule:
+        Independent word is the word doesn't have any prefixes, suffixes and roots. The quantity of independent word is very little, but it is very important basic for further construct word.
     </p>
 
     <p>
-        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level: </font>
         <jsp:include page="select/words-select.jsp"/><br/>
     </p>
     <%=htmlFragment%>

@@ -143,74 +143,74 @@
     <%
         if ("primary_school".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="primary_school" selected="selected">小学(<%=primary_school_count%>)</option>
+    <option value="primary_school" selected="selected">Primary School English(<%=primary_school_count%>)</option>
     <%
         } else {
     %>
-    <option value="primary_school">小学(<%=primary_school_count%>)</option>
+    <option value="primary_school">Primary School English(<%=primary_school_count%>)</option>
     <%
         }
         if ("junior_school".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="junior_school" selected="selected">初中(<%=junior_school_count%>)</option>
+    <option value="junior_school" selected="selected">Junior School English(<%=junior_school_count%>)</option>
     <%
         } else {
     %>
-    <option value="junior_school">初中(<%=junior_school_count%>)</option>
+    <option value="junior_school">Junior School English(<%=junior_school_count%>)</option>
     <%
         }
         if ("senior_school".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="senior_school" selected="selected">高中(<%=senior_school_count%>)</option>
+    <option value="senior_school" selected="selected">Senior School English(<%=senior_school_count%>)</option>
     <%
         } else {
     %>
-    <option value="senior_school">高中(<%=senior_school_count%>)</option>
+    <option value="senior_school">Senior School English(<%=senior_school_count%>)</option>
     <%
         }
         if ("university".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="university" selected="selected">大学(<%=university_count%>)</option>
+    <option value="university" selected="selected">College English(<%=university_count%>)</option>
     <%
         } else {
     %>
-    <option value="university">大学(<%=university_count%>)</option>
+    <option value="university">College English(<%=university_count%>)</option>
     <%
         }
         if ("new_conception".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="new_conception" selected="selected">新概念英语(<%=new_conception_count%>)</option>
+    <option value="new_conception" selected="selected">New Concept English(<%=new_conception_count%>)</option>
     <%
         } else {
     %>
-    <option value="new_conception">新概念英语(<%=new_conception_count%>)</option>
+    <option value="new_conception">New Concept English(<%=new_conception_count%>)</option>
     <%
         }
         if ("CET4".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="CET4" selected="selected">4级(<%=CET4_count%>)</option>
+    <option value="CET4" selected="selected">CET4(<%=CET4_count%>)</option>
     <%
         } else {
     %>
-    <option value="CET4">4级(<%=CET4_count%>)</option>
+    <option value="CET4">CET4(<%=CET4_count%>)</option>
     <%
         }
         if ("CET6".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="CET6" selected="selected">6级(<%=CET6_count%>)</option>
+    <option value="CET6" selected="selected">CET6(<%=CET6_count%>)</option>
     <%
         } else {
     %>
-    <option value="CET6">6级(<%=CET6_count%>)</option>
+    <option value="CET6">CET6(<%=CET6_count%>)</option>
     <%
         }
         if ("KY".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="KY" selected="selected">考研(<%=KY_count%>)</option>
+    <option value="KY" selected="selected">Postgraduate Entrance Examination (<%=KY_count%>)</option>
     <%
         } else {
     %>
-    <option value="KY">考研(<%=KY_count%>)</option>
+    <option value="KY">Postgraduate Entrance Examination (<%=KY_count%>)</option>
     <%
         }
         if ("MBA".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
@@ -233,47 +233,47 @@
         }
         if ("TEM4".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="TEM4" selected="selected">专4(<%=TEM4_count%>)</option>
+    <option value="TEM4" selected="selected">TEM4(<%=TEM4_count%>)</option>
     <%
         } else {
     %>
-    <option value="TEM4">专4(<%=TEM4_count%>)</option>
+    <option value="TEM4">TEM4(<%=TEM4_count%>)</option>
     <%
         }
         if ("TEM8".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="TEM8" selected="selected">专8(<%=TEM8_count%>)</option>
+    <option value="TEM8" selected="selected">TEM8(<%=TEM8_count%>)</option>
     <%
         } else {
     %>
-    <option value="TEM8">专8(<%=TEM8_count%>)</option>
+    <option value="TEM8">TEM8(<%=TEM8_count%>)</option>
     <%
         }
         if ("TOEFL".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="TOEFL" selected="selected">托福(<%=TOEFL_count%>)</option>
+    <option value="TOEFL" selected="selected">TOEFL(<%=TOEFL_count%>)</option>
     <%
         } else {
     %>
-    <option value="TOEFL">托福(<%=TOEFL_count%>)</option>
+    <option value="TOEFL">TOEFL(<%=TOEFL_count%>)</option>
     <%
         }
         if ("TOEIC".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="TOEIC" selected="selected">托业(<%=TOEIC_count%>)</option>
+    <option value="TOEIC" selected="selected">TOEIC(<%=TOEIC_count%>)</option>
     <%
         } else {
     %>
-    <option value="TOEIC">托业(<%=TOEIC_count%>)</option>
+    <option value="TOEIC">TOEIC(<%=TOEIC_count%>)</option>
     <%
         }
         if ("IELTS".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="IELTS" selected="selected">雅思(<%=IELTS_count%>)</option>
+    <option value="IELTS" selected="selected">IELTS(<%=IELTS_count%>)</option>
     <%
         } else {
     %>
-    <option value="IELTS">雅思(<%=IELTS_count%>)</option>
+    <option value="IELTS">IELTS(<%=IELTS_count%>)</option>
     <%
         }
         if ("SAT".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
@@ -305,47 +305,47 @@
         }
         if ("ADULT".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="ADULT" selected="selected">成人英语(<%=ADULT_count%>)</option>
+    <option value="ADULT" selected="selected">Adult English(<%=ADULT_count%>)</option>
     <%
         } else {
     %>
-    <option value="ADULT">成人英语(<%=ADULT_count%>)</option>
+    <option value="ADULT">Adult English(<%=ADULT_count%>)</option>
     <%
         }
         if ("CATTI".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="CATTI" selected="selected">翻译考试(<%=CATTI_count%>)</option>
+    <option value="CATTI" selected="selected">CATTI(<%=CATTI_count%>)</option>
     <%
         } else {
     %>
-    <option value="CATTI">翻译考试(<%=CATTI_count%>)</option>
+    <option value="CATTI">CATTI(<%=CATTI_count%>)</option>
     <%
         }
         if ("SYLLABUS".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="SYLLABUS" selected="selected">所有以上考纲词汇(<%=SYLLABUS_count%>)</option>
+    <option value="SYLLABUS" selected="selected">All of the above syllabus vocabulary(<%=SYLLABUS_count%>)</option>
     <%
         } else {
     %>
-    <option value="SYLLABUS">所有以上考纲词汇(<%=SYLLABUS_count%>)</option>
+    <option value="SYLLABUS">All of the above syllabus vocabulary(<%=SYLLABUS_count%>)</option>
     <%
         }
         if ("computer".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="computer" selected="selected">计算机(<%=computer_count%>)</option>
+    <option value="computer" selected="selected">Computer(<%=computer_count%>)</option>
     <%
         } else {
     %>
-    <option value="computer">计算机(<%=computer_count%>)</option>
+    <option value="computer">Computer(<%=computer_count%>)</option>
     <%
         }
         if ("ALL".equalsIgnoreCase((String)request.getAttribute("words_type"))) {
     %>
-    <option value="ALL" selected="selected">所有词汇(<%=ALL_count%>)</option>
+    <option value="ALL" selected="selected">All Words(<%=ALL_count%>)</option>
     <%
         } else {
     %>
-    <option value="ALL">所有词汇(<%=ALL_count%>)</option>
+    <option value="ALL">All Words(<%=ALL_count%>)</option>
     <%
         }
     %>

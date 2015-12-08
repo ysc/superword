@@ -54,7 +54,7 @@
 %>
 <html>
 <head>
-    <title>动态前缀规则</title>
+    <title>dynamic prefix rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -78,14 +78,12 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***用法说明:
-        动态前缀规则，比如规则为：m-imm，
-        表示单词集合中，有两个词分别以m和imm开始，
-        且除了前缀外，其他部分都相同
+        ***dynamic prefix rule:
+        For example, the rule is: m-imm, there are any two words respective started with m and imm, and in addition to the prefix, the other parts are the same.
     </p>
     <p>
-        <font color="red">输入动态前缀：</font><input onchange="update();" id="prefixes" name="prefixes" value="<%=prefixes==null?"":prefixes%>" size="50" maxlength="50"><br/>
-        <font color="red">选择词汇：</font>
+        <font color="red">input dynamic prefix：</font><input onchange="update();" id="prefixes" name="prefixes" value="<%=prefixes==null?"":prefixes%>" size="50" maxlength="50"><br/>
+        <font color="red">select words level：</font>
         <jsp:include page="../select/words-select.jsp"/>
     </p>
     <%=htmlFragment%>

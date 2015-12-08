@@ -50,7 +50,7 @@
 %>
 <html>
 <head>
-    <title>词根词缀分析规则</title>
+    <title>roots and affix analysis rule</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
@@ -76,14 +76,14 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
     <p>
-        ***用法说明:
-        词根词缀分析规则，分析单词可能拥有的所有前缀、后缀和词根
+        ***roots and affix analysis rule:
+        Find out all the prefixes, suffixes and roots belonging to the specify word.
     </p>
     <p>
-        <font color="red">输入单词：</font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
-        <font color="red">严格匹配：</font>
-        <jsp:include page="../select/strict-select.jsp"/><br/>
-        <font color="red">每行词数：</font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">input word: </font><input onchange="update();" id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
+        <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
+        <font color="red">strictly match: </font>
+        <jsp:include page="../select/strict-select.jsp"/>
     </p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>
