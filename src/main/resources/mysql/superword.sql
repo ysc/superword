@@ -193,3 +193,15 @@ CREATE  TABLE `superword`.`word_pronunciation` (
   `pronunciation` VARCHAR(200)  NOT NULL,
 
   PRIMARY KEY (`word`, `dictionary`) );
+
+CREATE  TABLE `superword`.`my_new_words` (
+
+  `user_name` VARCHAR(200)  NOT NULL ,
+
+  `word` VARCHAR(200)  NOT NULL ,
+
+  `date_time` TIMESTAMP  NOT NULL ,
+
+  PRIMARY KEY (`user_name`, `word`) ,
+
+  INDEX `date_time_INDEX` (`date_time` ASC) );
