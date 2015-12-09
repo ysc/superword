@@ -62,7 +62,7 @@
       }
 %>
     <td>
-      欢迎【<%=displayName%>】
+      Welcome【<%=displayName%>】
     </td>
     <td>
       <a href="<%=request.getContextPath()+"/system/logout.jsp"%>">Sign out</a>
