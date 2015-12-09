@@ -188,9 +188,15 @@
     </script>
     <%
         if(user != null){
+            if(MySQLUtils.isMyNewWord(user.getUserName(), word)){
+    %>
+    <%=word%> has been added to <a href="history/my-new-words-book.jsp">my new words book</a><br/>
+    <%
+            }else{
     %>
     <span id="action_add_to_my_new_words"><span onclick="addToMyNewWordsBook('<%=word%>');" style="cursor:pointer"><font color="red">add to my new words book</font></span></span><br/>
     <%
+            }
         }
     %>
     <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N">analyze roots and affix</a><br/>
