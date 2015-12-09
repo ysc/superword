@@ -180,7 +180,7 @@
     <p>
         <font color="red"><span id="tip"></span></font><br/>
         <font color="red">Input Word：</font><input onchange="query();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"/>
-        <button type="button" onclick="query();">Query definition</button><br/>
+        <span style="cursor: pointer" onclick="query();"><font color="red">Submit</font></span><br/>
     </p>
     <script type="text/javascript">
         document.getElementById('word').select();
@@ -199,13 +199,14 @@
             }
         }
     %>
+    <a target="_blank" href="<%=request.getContextPath()%>/char-transform-rule.jsp?word=<%=word%>&words_type=SYLLABUS">character transform rule</a><br/>
     <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N">analyze roots and affix</a><br/>
     <a target="_blank" href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS">similar spelling</a><br/>
     <a target="_blank" href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=WEBSTER">similar definition</a><br/>
     <a target="_blank" href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=ICIBA">similar pronunciation</a><br/>
     <br/>
     <%=definitionHtmls.toString()%>
-    <br/>
+    <br/><br/>
     <a target="_blank" href="pos.jsp">Comparison of part of speech symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a><br/>
     <a target="_blank" href="symbol.jsp">Comparison of phonetic symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a>
     <jsp:include page="common/bottom.jsp"/>
