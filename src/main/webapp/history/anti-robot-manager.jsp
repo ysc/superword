@@ -42,7 +42,7 @@
             .append(" without user agent.<br/><br/>");
 
     html.append("<table>")
-            .append("<tr><th>No.</th><th>Username</th><th>User IP</th><th>Access Date</th><th>Access Count</th><th>User Location</th></tr>");
+            .append("<tr><th>No.</th><th>Username</th><th>User IP</th><th>Access Date</th><th>Access Count</th><th>User Location</th><th>User Agent</th></tr>");
     AtomicInteger i = new AtomicInteger();
     for(String item : AntiRobotFilter.getData()){
         String[] attrs = item.split("-");
@@ -53,11 +53,13 @@
                 .append("</th><th>")
                 .append(attrs[1])
                 .append("</th><th>")
-                .append(attrs[2])
-                .append("</th><th>")
                 .append(attrs[3])
                 .append("</th><th>")
+                .append(attrs[4])
+                .append("</th><th>")
                 .append(IPUtils.getIPLocation(attrs[1]))
+                .append("</th><th>")
+                .append(attrs[2])
                 .append("</th></tr>");
     }
     html.append("</table>");

@@ -62,7 +62,7 @@ public class AntiRobotFilter implements Filter {
         String ip = request.getRemoteAddr();
         User user = (User) request.getSession().getAttribute("user");
         String userString = user==null?"anonymity":user.getUserName();
-        return "anti-robot-"+userString+"-"+ip+"-"+SIMPLE_DATE_FORMAT.format(new Date());
+        return "anti-robot-"+userString+"-"+ip+"-"+request.getHeader("User-Agent").replace("-", "_")+"-"+SIMPLE_DATE_FORMAT.format(new Date());
     }
 
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
@@ -106,23 +106,27 @@ public class AntiRobotFilter implements Filter {
                 LOG.info("clear last day anti-robot counter");
                 LocalDateTime timePoint = LocalDateTime.now().minusDays(1);
                 String date = SIMPLE_DATE_FORMAT.format(Date.from(timePoint.atZone(ZoneId.systemDefault()).toInstant()));
-                List<String> archive = new ArrayList<>();
+                Map<String, Integer> archive = new HashMap<String, Integer>();
                 Enumeration<String> keys = servletContext.getAttributeNames();
                 while (keys.hasMoreElements()) {
                     String key = keys.nextElement();
                     if (key.startsWith("anti-robot-") && key.endsWith(date)) {
-                        archive.add(key);
+                        archive.put(key, ((AtomicInteger)servletContext.getAttribute(key)).intValue());
                     }
                 }
-                archive.forEach(servletContext::removeAttribute);
+                archive.keySet().forEach(servletContext::removeAttribute);
                 File path = new File(servletContext.getRealPath("/WEB-INF/data/anti-robot-archive/"));
                 if (!path.exists()) {
                     path.mkdirs();
                 }
-                archive.add("user agent invalid count: "+invalidCount);
+                archive.put("user agent invalid count", invalidCount);
                 invalidCount = 0;
                 String file = path.getPath() + "/" + date + ".txt";
-                Files.write(Paths.get(file), archive);
+                Files.write(Paths.get(file),
+                        archive.entrySet()
+                                .stream()
+                                .map(e->e.getKey().replace("anti-robot-", "").replace("-", "\t")+"\t"+e.getValue())
+                                .collect(Collectors.toList()));
                 LOG.info("clear last day anti-robot counter finished: " + file);
             } catch (Exception e) {
                 LOG.error("save anti-robot-archive failed", e);
