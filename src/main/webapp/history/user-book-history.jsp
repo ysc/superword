@@ -61,7 +61,7 @@
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>user <%=displayName%> book analysis record</p>
+<h3>user <%=displayName%> book analysis record</h3>
 <%=htmlFragment%>
 <jsp:include page="../common/bottom.jsp"/>
 </body>

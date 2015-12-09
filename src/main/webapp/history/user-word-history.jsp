@@ -65,7 +65,7 @@
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>user <%=displayName%> search word record</p>
+<h3>user <%=displayName%> search word record</h3>
 
 <%=htmlFragment%>
 

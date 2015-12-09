@@ -60,7 +60,7 @@
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>user <%=displayName%> dynamic prefix analysis record</p>
+<h3>user <%=displayName%> dynamic prefix analysis record</h3>
 <%=htmlFragment%>
 <jsp:include page="../common/bottom.jsp"/>
 </body>

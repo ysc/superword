@@ -16,43 +16,57 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
-<%@ page import="org.apdplat.superword.model.UserText" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.util.List" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.superword.model.QQUser" %>
+<%@ page import="java.util.UUID" %>
+<%@ page import="org.apdplat.superword.model.MyNewWord" %>
+<%@ page import="org.apache.commons.lang.StringUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
     User user = (User)session.getAttribute("user");
+
+    String word = request.getParameter("word");
+    if("true".equals(request.getParameter("delete"))
+            && user != null
+            && StringUtils.isNotBlank(user.getUserName())
+            && StringUtils.isNotBlank(word)){
+        MySQLUtils.deleteMyNewWord(user.getUserName(), word);
+    }
+
     String displayName = user.getUserName();
     if(user instanceof QQUser){
         displayName = ((QQUser)user).getNickname();
     }
-    List<UserText> userTexts = MySQLUtils.getHistoryUserTextsFromDatabase(user.getUserName());
+    List<MyNewWord> myNewWords = MySQLUtils.getMyNewWordsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
     htmlFragment.append("<table>");
-    htmlFragment.append("<tr><th>No.</th><th>Text</th><th>Time</th></tr>");
+    htmlFragment.append("<tr><th>No.</th><th>Word</th><th>Time</th><th>Delete</th></tr>");
     int i = 1;
-    for (UserText userText : userTexts) {
-        int len = userText.getText().length();
-        String text = "";
-        if(len > 100){
-            text = userText.getText().substring(0, 100)+" ...";
-        }else{
-            text = userText.getText();
-        }
+    for (MyNewWord myNewWord : myNewWords) {
+        String w = myNewWord.getWord();
+
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
-                .append("<a target=\"_blank\" href=\"../aid-reading/text-aid-reading.jsp?words_type=CET4&dict=ICIBA&column=6&id=")
-                .append(userText.getId())
-                .append("\">")
-                .append(text)
+                .append("<a  href=\"#")
+                .append(UUID.randomUUID())
+                .append("\" onclick=\"queryWord('")
+                .append(w)
+                .append("');\">")
+                .append(w)
                 .append("</a>")
                 .append("</td><td>")
-                .append(userText.getDateTimeString())
+                .append(myNewWord.getDateTimeString())
+                .append("</td><td>")
+                .append("<a  href=\"my-new-words-book.jsp?delete=true&word=")
+                .append(w)
+                .append("\">")
+                .append("delete")
+                .append("</a>")
                 .append("</td></tr>");
     }
     htmlFragment.append("</table>");
@@ -60,15 +74,17 @@
 
 <html>
 <head>
-    <title>text analysis record</title>
+    <title>my new words book</title>
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<h3>user <%=displayName%> text analysis record</h3>
+<h3>user <%=displayName%>'s new words book</h3>
+
 <%=htmlFragment%>
+
 <jsp:include page="../common/bottom.jsp"/>
 </body>
 </html>

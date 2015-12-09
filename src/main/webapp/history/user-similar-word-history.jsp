@@ -72,7 +72,7 @@
 </head>
 <body id="top">
 <jsp:include page="../common/head.jsp"/>
-<p>user <%=displayName%> similar word analysis record</p>
+<h3>user <%=displayName%> similar word analysis record</h3>
 <%=htmlFragment%>
 <jsp:include page="../common/bottom.jsp"/>
 </body>
