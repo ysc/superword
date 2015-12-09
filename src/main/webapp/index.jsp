@@ -66,6 +66,7 @@
       <li><a href="<%=request.getContextPath()%>/history/user-similar-word-history.jsp">similar word analysis record</a></li>
       <li><a href="<%=request.getContextPath()%>/history/user-dynamic-prefix-history.jsp">dynamic prefix analysis record</a></li>
       <li><a href="<%=request.getContextPath()%>/history/user-dynamic-suffix-history.jsp">dynamic suffix analysis record</a></li>
+      <li><a href="<%=request.getContextPath()%>/history/my-new-words-book.jsp">my new words book</a></li>
     <%
       }
     %>
