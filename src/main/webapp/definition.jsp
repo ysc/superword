@@ -22,17 +22,32 @@
 <%@ page import="org.apdplat.superword.model.UserWord" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.*" %>
+<%@ page import="org.apache.commons.lang.StringUtils" %>
+<%@ page import="org.apdplat.superword.model.MyNewWord" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
 <%
+    User user = (User)request.getSession().getAttribute("user");
+    
+    String newWord = request.getParameter("new_word");
+    if(StringUtils.isNotBlank(newWord)
+            && user != null
+            && StringUtils.isNotBlank(user.getUserName())){
+        MyNewWord myNewWord = new MyNewWord();
+        myNewWord.setWord(newWord);
+        myNewWord.setDateTime(new Date());
+        myNewWord.setUserName(user.getUserName());
+        MySQLUtils.saveMyNewWordsToDatabase(myNewWord);
+        out.println(newWord+" has been added to <a href=\"history/my-new-words-book.jsp\">my new words book</a>");
+        return;
+    }
+    
     String word = request.getParameter("word");
-    if(word == null){
+    if(StringUtils.isBlank(word)){
         word = "fantastic";
     }
     word = word.trim();
-
-    User user = (User)request.getSession().getAttribute("user");
 
     UserWord userWord = new UserWord();
     userWord.setDateTime(new Date());
@@ -114,7 +129,7 @@
             .append("</td></tr>");
 
     definitionHtmls.append("</table>")
-            .append("<br/><br/>");
+            .append("<br/>");
 
     definitionHtmls.append("<font color=\"red\">Other English Dictionaries's definition: </font>").append(otherDictionary.toString());
 %>
@@ -145,6 +160,19 @@
                 query();
             }
         }
+        var loc = false;
+        function addToMyNewWordsBook(word){
+            if (loc) {
+                return;
+            }
+            loc = true;
+            $.ajax({
+                url: "definition.jsp?new_word="+word, 
+                success: function(result){
+                    $("#action_add_to_my_new_words").html(result);
+                }
+            });
+        }
     </script>
 </head>
 <body id="top">
@@ -158,13 +186,19 @@
         document.getElementById('word').select();
         document.getElementById('word').focus();
     </script>
-
-    <%=definitionHtmls.toString()%>
+    <%
+        if(user != null){
+    %>
+    <span id="action_add_to_my_new_words"><span onclick="addToMyNewWordsBook('<%=word%>');" style="cursor:pointer"><font color="red">add to my new words book</font></span></span><br/>
+    <%
+        }
+    %>
+    <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N">analyze roots and affix</a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS">similar spelling</a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=WEBSTER">similar definition</a><br/>
+    <a target="_blank" href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=ICIBA">similar pronunciation</a><br/>
     <br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N"><font color="red">analyze roots and affix</font></a><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS"><font color="red">similar spelling</font></a><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=WEBSTER"><font color="red">similar definition</font></a><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=ICIBA"><font color="red">similar pronunciation</font></a><br/>
+    <%=definitionHtmls.toString()%>
     <br/>
     <a target="_blank" href="pos.jsp">Comparison of part of speech symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a><br/>
     <a target="_blank" href="symbol.jsp">Comparison of phonetic symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a>
