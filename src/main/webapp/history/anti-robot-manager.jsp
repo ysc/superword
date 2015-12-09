@@ -46,25 +46,41 @@
     AtomicInteger i = new AtomicInteger();
     for(String item : AntiRobotFilter.getData()){
         String[] attrs = item.split("-");
-        String userAgent = attrs[2];
-        if(userAgent.contains("Spider") || userAgent.contains("bot")){
-            userAgent = "<font color=\"red\">" + userAgent + "</font>";
+        String pre = "";
+        String suf = "";
+        if(attrs[2].contains("Spider") || attrs[2].contains("bot")){
+            pre = "<font color=\"red\">";
+            suf = "</font>";
         }
-        html.append("<tr><th>")
+        html.append("<tr><td>")
+                .append(pre)
                 .append(i.incrementAndGet())
-                .append("</th><th>")
+                .append(suf)
+                .append("</td><td>")
+                .append(pre)
                 .append(attrs[0])
-                .append("</th><th>")
+                .append(suf)
+                .append("</td><td>")
+                .append(pre)
                 .append(attrs[1])
-                .append("</th><th>")
+                .append(suf)
+                .append("</td><td>")
+                .append(pre)
                 .append(attrs[3])
-                .append("</th><th>")
+                .append(suf)
+                .append("</td><td>")
+                .append(pre)
                 .append(attrs[4])
-                .append("</th><th>")
+                .append(suf)
+                .append("</td><td>")
+                .append(pre)
                 .append(IPUtils.getIPLocation(attrs[1]))
-                .append("</th><th>")
-                .append(userAgent)
-                .append("</th></tr>");
+                .append(suf)
+                .append("</td><td>")
+                .append(pre)
+                .append(attrs[2])
+                .append(suf)
+                .append("</td></tr>");
     }
     html.append("</table>");
 %>
