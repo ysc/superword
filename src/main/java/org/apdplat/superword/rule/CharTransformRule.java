@@ -260,8 +260,8 @@ public class CharTransformRule {
     }
 
     public static void main(String[] args) throws Exception {
-        //WordLinker.serverRedirect = null;
-        //WordLinker.jsDefinition = false;
+        WordLinker.serverRedirect = null;
+        WordLinker.jsDefinition = false;
 
         Set<Word> words = WordSources.getSyllabusVocabulary();
 
