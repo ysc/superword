@@ -632,6 +632,57 @@ public class MySQLUtils {
         return userTexts;
     }
 
+    public static boolean deleteMyNewWord(String userName, String word) {
+        String sql = "delete from my_new_words where user_name=? and word=?";
+        Connection con = getConnection();
+        if(con == null){
+            return false;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            pst.setString(2, word);
+            return pst.execute();
+        } catch (SQLException e) {
+            LOG.error("删除我的新词失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return false;
+    }
+
+    public static List<MyNewWord> getMyNewWordsFromDatabase(String userName) {
+        List<MyNewWord> myNewWords = new ArrayList<>();
+        String sql = "select word,date_time from my_new_words where user_name=? order by date_time desc";
+        Connection con = getConnection();
+        if(con == null){
+            return myNewWords;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            rs = pst.executeQuery();
+            while (rs.next()) {
+                String word = rs.getString(1);
+                Timestamp timestamp = rs.getTimestamp(2);
+                MyNewWord myNewWord = new MyNewWord();
+                myNewWord.setWord(word);
+                myNewWord.setDateTime(new java.util.Date(timestamp.getTime()));
+                myNewWord.setUserName(userName);
+                myNewWords.add(myNewWord);
+            }
+        } catch (SQLException e) {
+            LOG.error("查询失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return myNewWords;
+    }
+
     public static List<UserWord> getHistoryUserWordsFromDatabase(String userName) {
         List<UserWord> userWords = new ArrayList<>();
         String sql = "select id,word,date_time from user_word where user_name=? order by date_time desc";
@@ -815,6 +866,31 @@ public class MySQLUtils {
             pst.executeUpdate();
         } catch (SQLException e) {
             LOG.error("保存失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+    }
+
+    public static void saveMyNewWordsToDatabase(MyNewWord myNewWord) {
+        EXECUTOR_SERVICE.execute(()->_saveMyNewWordsToDatabase(myNewWord));
+    }
+
+    public static void _saveMyNewWordsToDatabase(MyNewWord myNewWord) {
+        String sql = "insert into my_new_words (user_name, word, date_time) values (?, ?, ?)";
+        Connection con = getConnection();
+        if(con == null){
+            return ;
+        }
+        PreparedStatement pst = null;
+        ResultSet rs = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, myNewWord.getUserName());
+            pst.setString(2, myNewWord.getWord());
+            pst.setTimestamp(3, new Timestamp(myNewWord.getDateTime().getTime()));
+            pst.executeUpdate();
+        } catch (SQLException e) {
+            LOG.error("保存我的生词失败", e);
         } finally {
             close(con, pst, rs);
         }
