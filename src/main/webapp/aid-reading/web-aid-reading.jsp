@@ -133,9 +133,9 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
 
-    <p>
+    <h3>
         web page auxiliary reading
-    </p>
+    </h3>
 
     <p>
         <font color="red">web page url: </font><input onchange="update();" id="url" name="url" value="<%=url%>" size="150" maxlength="500"><br/>

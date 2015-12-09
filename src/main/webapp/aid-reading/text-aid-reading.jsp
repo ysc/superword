@@ -98,9 +98,9 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
 
-    <p>
+    <h3>
         text auxiliary reading
-    </p>
+    </h3>
 
     <form method="post" id="form" action="text-aid-reading.jsp">
         <p>

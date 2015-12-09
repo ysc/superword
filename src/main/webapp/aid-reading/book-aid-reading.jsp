@@ -79,9 +79,9 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
 
-    <p>
+    <h3>
         book auxiliary reading
-    </p>
+    </h3>
 
     <p>
         <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>

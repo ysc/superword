@@ -105,9 +105,9 @@
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
 
-    <p>
+    <h3>
         book auxiliary reading -- search word corresponding to the original
-    </p>
+    </h3>
 
     <p>
         <font color="red">search word: </font><input onchange="update();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
