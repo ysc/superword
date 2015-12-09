@@ -32,6 +32,8 @@ import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordSources;
 
 /**
+ * 字符转换规则:
+ *
  * 单词的发展是一个历史的递进的过程，从无到有，从有到多
  * 字母之间的转化是有一定规律的，如元音字母（a e i o u)之间相互转化
  * 发音相近的辅音(如双唇音唇齿音的清辅音和浊辅音等等)之间的转化
@@ -44,39 +46,117 @@ import org.apdplat.superword.tools.WordSources;
 public class CharTransformRule {
     private CharTransformRule(){}
 
+    private static final List<CharMap> CHAR_MAP_REGULAR = new ArrayList<>();
+
+    static {
+        CHAR_MAP_REGULAR.add(new CharMap("b", "p"));
+        CHAR_MAP_REGULAR.add(new CharMap("b", "m"));
+        CHAR_MAP_REGULAR.add(new CharMap("b", "f"));
+        CHAR_MAP_REGULAR.add(new CharMap("b", "v"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("p", "m"));
+        CHAR_MAP_REGULAR.add(new CharMap("p", "f"));
+        CHAR_MAP_REGULAR.add(new CharMap("p", "v"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("m", "f"));
+        CHAR_MAP_REGULAR.add(new CharMap("m", "v"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("f", "v"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("d", "t"));
+        CHAR_MAP_REGULAR.add(new CharMap("d", "s"));
+        CHAR_MAP_REGULAR.add(new CharMap("d", "c"));
+        CHAR_MAP_REGULAR.add(new CharMap("d", "z"));
+        CHAR_MAP_REGULAR.add(new CharMap("d", "th"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("t", "s"));
+        CHAR_MAP_REGULAR.add(new CharMap("t", "c"));
+        CHAR_MAP_REGULAR.add(new CharMap("t", "z"));
+        CHAR_MAP_REGULAR.add(new CharMap("t", "th"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("s", "c"));
+        CHAR_MAP_REGULAR.add(new CharMap("s", "z"));
+        CHAR_MAP_REGULAR.add(new CharMap("s", "th"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("c", "z"));
+        CHAR_MAP_REGULAR.add(new CharMap("c", "th"));
+        CHAR_MAP_REGULAR.add(new CharMap("ch", "k"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("z", "th"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("g", "k"));
+        CHAR_MAP_REGULAR.add(new CharMap("g", "c"));
+        CHAR_MAP_REGULAR.add(new CharMap("g", "h"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("k", "c"));
+        CHAR_MAP_REGULAR.add(new CharMap("k", "h"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("c", "h"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("r", "l"));
+        CHAR_MAP_REGULAR.add(new CharMap("r", "n"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("l", "n"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("m", "n"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("a", "e"));
+        CHAR_MAP_REGULAR.add(new CharMap("a", "i"));
+        CHAR_MAP_REGULAR.add(new CharMap("a", "o"));
+        CHAR_MAP_REGULAR.add(new CharMap("a", "u"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("e", "i"));
+        CHAR_MAP_REGULAR.add(new CharMap("e", "o"));
+        CHAR_MAP_REGULAR.add(new CharMap("e", "u"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("i", "o"));
+        CHAR_MAP_REGULAR.add(new CharMap("i", "u"));
+
+        CHAR_MAP_REGULAR.add(new CharMap("o", "u"));
+
+        //发音相同的字母和字母组合
+        CHAR_MAP_REGULAR.add(new CharMap("ph", "f"));
+        //字母长得像，容易写错
+        CHAR_MAP_REGULAR.add(new CharMap("v", "u"));
+        CHAR_MAP_REGULAR.add(new CharMap("v", "w"));
+        CHAR_MAP_REGULAR.add(new CharMap("u", "w"));
+        CHAR_MAP_REGULAR.add(new CharMap("i", "l"));
+        CHAR_MAP_REGULAR.add(new CharMap("i", "j"));
+        CHAR_MAP_REGULAR.add(new CharMap("f", "t"));
+        CHAR_MAP_REGULAR.add(new CharMap("m", "w"));
+    }
+
     public static String toHtmlFragmentForWord(Map<Word,  Map<CharMap, List<Word>>> data){
         StringBuilder result = new StringBuilder();
         AtomicInteger i = new AtomicInteger();
         data.keySet().forEach(target -> {
-            result.append(i.incrementAndGet())
-                    .append("、")
-                    .append(target.getWord())
-                    .append("</br>\n");
+            if(data.size() > 1) {
+                result.append(i.incrementAndGet())
+                        .append(". ")
+                        .append(target.getWord())
+                        .append("</br>\n");
+            }
             AtomicInteger j = new AtomicInteger();
             data.get(target).keySet().forEach(charMap -> {
                 result.append("\t")
                         .append(j.incrementAndGet())
-                        .append("、")
+                        .append(". ")
                         .append(charMap.getFrom())
                         .append(" - ")
                         .append(charMap.getTo())
-                        .append("</br>\n");
-                AtomicInteger z = new AtomicInteger();
+                        .append("\n");
                 String from = charMap.getFrom();
                 String to = charMap.getTo();
+                result.append("<ol>\n");
                 data.get(target).get(charMap).forEach(word -> {
                     result.append("\t\t")
-                            .append(z.incrementAndGet())
-                            .append(")、<a target=\"_blank\" href=\"http://www.iciba.com/")
-                            .append(word.getWord())
-                            .append("\">")
-                            .append(word.getWord())
-                            .append("</a> -> <a target=\"_blank\" href=\"http://www.iciba.com/")
-                            .append(word.getWord().replaceAll(from, to))
-                            .append("\">")
-                            .append(word.getWord().replaceAll(from, to))
-                            .append("</a></br>\n");
+                            .append("<li>")
+                            .append(WordLinker.toLink(word.getWord(), from))
+                            .append(" -> ")
+                            .append(WordLinker.toLink(word.getWord().replaceAll(from, to), to))
+                            .append("</li>\n");
                 });
+                result.append("</ol>\n");
             });
         });
         return result.toString();
@@ -114,92 +194,10 @@ public class CharTransformRule {
         return result;
     }
 
-    /**
-     * 内置规则
-     * @param words
-     */
     public static Map<CharMap, List<Word>> transforms(Set<Word> words) {
-        List<CharMap> charMaps = new ArrayList<>();
-        
-        charMaps.add(new CharMap("b", "p"));
-        charMaps.add(new CharMap("b", "m"));
-        charMaps.add(new CharMap("b", "f"));
-        charMaps.add(new CharMap("b", "v"));
-
-        charMaps.add(new CharMap("p", "m"));
-        charMaps.add(new CharMap("p", "f"));
-        charMaps.add(new CharMap("p", "v"));
-
-        charMaps.add(new CharMap("m", "f"));
-        charMaps.add(new CharMap("m", "v"));
-
-        charMaps.add(new CharMap("f", "v"));
-
-        charMaps.add(new CharMap("d", "t"));
-        charMaps.add(new CharMap("d", "s"));
-        charMaps.add(new CharMap("d", "c"));
-        charMaps.add(new CharMap("d", "z"));
-        charMaps.add(new CharMap("d", "th"));
-
-        charMaps.add(new CharMap("t", "s"));
-        charMaps.add(new CharMap("t", "c"));
-        charMaps.add(new CharMap("t", "z"));
-        charMaps.add(new CharMap("t", "th"));
-
-        charMaps.add(new CharMap("s", "c"));
-        charMaps.add(new CharMap("s", "z"));
-        charMaps.add(new CharMap("s", "th"));
-
-        charMaps.add(new CharMap("c", "z"));
-        charMaps.add(new CharMap("c", "th"));
-        charMaps.add(new CharMap("ch", "k"));
-
-        charMaps.add(new CharMap("z", "th"));
-
-        charMaps.add(new CharMap("g", "k"));
-        charMaps.add(new CharMap("g", "c"));
-        charMaps.add(new CharMap("g", "h"));
-
-        charMaps.add(new CharMap("k", "c"));
-        charMaps.add(new CharMap("k", "h"));
-
-        charMaps.add(new CharMap("c", "h"));
-
-        charMaps.add(new CharMap("r", "l"));
-        charMaps.add(new CharMap("r", "n"));
-
-        charMaps.add(new CharMap("l", "n"));
-
-        charMaps.add(new CharMap("m", "n"));
-
-        charMaps.add(new CharMap("a", "e"));
-        charMaps.add(new CharMap("a", "i"));
-        charMaps.add(new CharMap("a", "o"));
-        charMaps.add(new CharMap("a", "u"));
-
-        charMaps.add(new CharMap("e", "i"));
-        charMaps.add(new CharMap("e", "o"));
-        charMaps.add(new CharMap("e", "u"));
-
-        charMaps.add(new CharMap("i", "o"));
-        charMaps.add(new CharMap("i", "u"));
-
-        charMaps.add(new CharMap("o", "u"));
-
-        //发音相同的字母和字母组合
-        charMaps.add(new CharMap("ph", "f"));
-        //字母长得像，容易写错
-        charMaps.add(new CharMap("v", "u"));
-        charMaps.add(new CharMap("v", "w"));
-        charMaps.add(new CharMap("u", "w"));
-        charMaps.add(new CharMap("i", "l"));
-        charMaps.add(new CharMap("i", "j"));
-        charMaps.add(new CharMap("f", "t"));
-        charMaps.add(new CharMap("m", "w"));
-
         Map<CharMap, List<Word>> result = new ConcurrentHashMap<>();
 
-        charMaps.parallelStream().forEach(charMap -> result.putAll(transform(words, charMap)));
+        CHAR_MAP_REGULAR.parallelStream().forEach(charMap -> result.putAll(transform(words, charMap)));
 
         return result;
     }
@@ -222,7 +220,9 @@ public class CharTransformRule {
                  .sorted()
                  .collect(Collectors.toList());
         Map<CharMap, List<Word>> result = new HashMap<>();
-        result.put(new CharMap(from, to), list);
+        if(!list.isEmpty()) {
+            result.put(new CharMap(from, to), list);
+        }
         return result;
     }
 
@@ -260,17 +260,21 @@ public class CharTransformRule {
     }
 
     public static void main(String[] args) throws Exception {
-        Set<Word> words = WordSources.getAll();
+        //WordLinker.serverRedirect = null;
+        //WordLinker.jsDefinition = false;
 
-        Map<CharMap, List<Word>> data = CharTransformRule.transforms(words);
-        String html = CharTransformRule.toHtmlFragmentForRule(data);
+        Set<Word> words = WordSources.getSyllabusVocabulary();
 
-        Map<Word,  Map<CharMap, List<Word>>> data2 = CharTransformRule.transforms(words, words);
+        //Map<CharMap, List<Word>> data = CharTransformRule.transforms(words);
+        //String html = CharTransformRule.toHtmlFragmentForRule(data);
+
+        Map<Word,  Map<CharMap, List<Word>>> data2 = CharTransformRule.transforms(words, new Word("back", ""));
         String html2 = CharTransformRule.toHtmlFragmentForWord(data2);
 
-        System.out.println(html);
+        //System.out.println(html);
         System.out.println(html2);
 
-        Files.write(Paths.get("target/char_transform_rule.txt"), Arrays.asList(html,html2));
+        //Files.write(Paths.get("target/char_transform_rule.txt"), Arrays.asList(html, html2));
+        Files.write(Paths.get("target/char_transform_rule.txt"), Arrays.asList(html2));
     }
 }
