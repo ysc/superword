@@ -20,6 +20,7 @@ package org.apdplat.superword.system;
 
 import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.User;
+import org.apdplat.superword.tools.IPUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -111,7 +112,7 @@ public class AntiRobotFilter implements Filter {
                 while (keys.hasMoreElements()) {
                     String key = keys.nextElement();
                     if (key.startsWith("anti-robot-") && key.endsWith(date)) {
-                        archive.put(key, ((AtomicInteger)servletContext.getAttribute(key)).intValue());
+                        archive.put(key, ((AtomicInteger) servletContext.getAttribute(key)).intValue());
                     }
                 }
                 archive.keySet().forEach(servletContext::removeAttribute);
@@ -119,14 +120,22 @@ public class AntiRobotFilter implements Filter {
                 if (!path.exists()) {
                     path.mkdirs();
                 }
-                archive.put("user agent invalid count", invalidCount);
-                invalidCount = 0;
-                String file = path.getPath() + "/" + date + ".txt";
+                String file = path.getPath() + "/" + date + "__user_agent_invalid_count_" + invalidCount + ".txt";
                 Files.write(Paths.get(file),
                         archive.entrySet()
                                 .stream()
-                                .map(e->e.getKey().replace("anti-robot-", "").replace("-", "\t")+"\t"+e.getValue())
+                                .map(e -> e.getKey().replace("anti-robot-", "").replace("-", "\t") + "\t" + e.getValue())
+                                .map(line -> {
+                                    String[] attrs = line.split("\\s+");
+                                    String location = "";
+                                    if (attrs != null && attrs.length > 1) {
+                                        String ip = attrs[1];
+                                        location = IPUtils.getIPLocation(ip).toString();
+                                    }
+                                    return line+"\t"+location;
+                                })
                                 .collect(Collectors.toList()));
+                invalidCount = 0;
                 LOG.info("clear last day anti-robot counter finished: " + file);
             } catch (Exception e) {
                 LOG.error("save anti-robot-archive failed", e);
