@@ -89,7 +89,8 @@
         <font color="red">input roots: </font><input onchange="update();" id="roots" name="roots" value="<%=roots==null?"":roots%>" size="50" maxlength="50"><br/>
         <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">select words level: </font>
-        <jsp:include page="../select/words-select.jsp"/>
+        <jsp:include page="../select/words-select.jsp"/><br/><br/>
+        <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
     </p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>

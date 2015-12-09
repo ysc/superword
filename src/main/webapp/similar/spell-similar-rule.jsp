@@ -112,7 +112,8 @@
         <font color="red">input word: </font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
         <font color="red">result count: </font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
         <font color="red">select words level: </font>
-        <jsp:include page="../select/words-select.jsp"/>
+        <jsp:include page="../select/words-select.jsp"/><br/><br/>
+        <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
     </p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>

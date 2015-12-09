@@ -91,7 +91,8 @@
             <font color="red">select dictionary: </font>
             <jsp:include page="select/dictionary-select-for-symbol.jsp"/><br/>
             <font color="red">select words level: </font>
-            <jsp:include page="select/words-select.jsp"/>
+            <jsp:include page="select/words-select.jsp"/><br/><br/>
+            <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
         </p>
     </form>
 

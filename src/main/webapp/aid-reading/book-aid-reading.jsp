@@ -88,7 +88,8 @@
         <font color="red">select words level: </font>
         <jsp:include page="../select/words-select.jsp"/><br/>
         <font color="red">select book: </font>
-        <jsp:include page="../select/book-select.jsp"/>
+        <jsp:include page="../select/book-select.jsp"/><br/><br/>
+        <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
     </p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>

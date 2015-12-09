@@ -141,7 +141,8 @@
         <font color="red">web page url: </font><input onchange="update();" id="url" name="url" value="<%=url%>" size="150" maxlength="500"><br/>
         <font color="red">words per line: </font><input onchange="update();" id="column" name="column" value="<%=column%>" size="50" maxlength="50"><br/>
         <font color="red">select words level: </font>
-        <jsp:include page="../select/words-select.jsp"/><br/>
+        <jsp:include page="../select/words-select.jsp"/><br/><br/>
+        <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
     </p>
     <p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">Double click the word on the page to see the definition(Click Hide): </span></font><br/>

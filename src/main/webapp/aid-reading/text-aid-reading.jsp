@@ -110,7 +110,7 @@
         </p>
         <font color="red"><span style="cursor: pointer" onclick="change();" id="tip">Double click the word on the page to see the definition(Click Hide): </span></font>
         <div id="text_div" style="display:block">
-            <textarea ondblclick="querySelectionWord();" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/>
+            <textarea ondblclick="querySelectionWord();" id="text" name="text" rows="13" cols="100"  maxlength="10000"><%=text%></textarea><br/><br/>
             <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
         </div>
     </form>

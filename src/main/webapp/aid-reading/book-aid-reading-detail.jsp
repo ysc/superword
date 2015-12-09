@@ -113,7 +113,8 @@
         <font color="red">search word: </font><input onchange="update();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"><br/>
         <font color="red">display count: </font><input onchange="update();" id="pageSize" name="pageSize" value="<%=pageSize%>" size="50" maxlength="50"><br/>
         <font color="red">select book: </font>
-        <jsp:include page="../select/book-select.jsp"/>
+        <jsp:include page="../select/book-select.jsp"/><br/><br/>
+        <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
     </p>
     <div ondblclick="querySelectionWord();">
         <font color="red">Double click the word on the page to see the definition</font><br/>

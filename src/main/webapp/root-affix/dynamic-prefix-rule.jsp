@@ -84,7 +84,8 @@
     <p>
         <font color="red">input dynamic prefix：</font><input onchange="update();" id="prefixes" name="prefixes" value="<%=prefixes==null?"":prefixes%>" size="50" maxlength="50"><br/>
         <font color="red">select words level：</font>
-        <jsp:include page="../select/words-select.jsp"/>
+        <jsp:include page="../select/words-select.jsp"/><br/><br/>
+        <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
     </p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>

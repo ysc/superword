@@ -115,8 +115,8 @@
         <jsp:include page="select/words-select.jsp"/><br/>
     </p>
     <p>
-        <a href="#1" onclick="update();">decomposition the input word</a><br/>
-        <a href="#2" onclick="viewAllCompound();">view all compound word</a>
+        <a href="#1" onclick="update();"><font color="red">decomposition the input word</font></a><br/>
+        <a href="#2" onclick="viewAllCompound();"><font color="red">view all compound word</font></a>
     </p>
     <%=htmlFragment%>
     <jsp:include page="common/bottom.jsp"/>
