@@ -46,6 +46,10 @@
     AtomicInteger i = new AtomicInteger();
     for(String item : AntiRobotFilter.getData()){
         String[] attrs = item.split("-");
+        String userAgent = attrs[2];
+        if(userAgent.contains("Spider") || userAgent.contains("bot")){
+            userAgent = "<font color=\"red\">" + userAgent + "</font>";
+        }
         html.append("<tr><th>")
                 .append(i.incrementAndGet())
                 .append("</th><th>")
@@ -59,7 +63,7 @@
                 .append("</th><th>")
                 .append(IPUtils.getIPLocation(attrs[1]))
                 .append("</th><th>")
-                .append(attrs[2])
+                .append(userAgent)
                 .append("</th></tr>");
     }
     html.append("</table>");
