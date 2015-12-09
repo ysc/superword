@@ -632,8 +632,8 @@ public class MySQLUtils {
         return userTexts;
     }
 
-    public static boolean deleteMyNewWord(String userName, String word) {
-        String sql = "delete from my_new_words where user_name=? and word=?";
+    public static boolean isMyNewWord(String userName, String word) {
+        String sql = "select user_name, word from my_new_words where user_name=? and word=?";
         Connection con = getConnection();
         if(con == null){
             return false;
@@ -644,11 +644,34 @@ public class MySQLUtils {
             pst = con.prepareStatement(sql);
             pst.setString(1, userName);
             pst.setString(2, word);
+            rs = pst.executeQuery();
+            if (rs.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            LOG.error("查询我的新词失败", e);
+        } finally {
+            close(con, pst, rs);
+        }
+        return false;
+    }
+
+    public static boolean deleteMyNewWord(String userName, String word) {
+        String sql = "delete from my_new_words where user_name=? and word=?";
+        Connection con = getConnection();
+        if(con == null){
+            return false;
+        }
+        PreparedStatement pst = null;
+        try {
+            pst = con.prepareStatement(sql);
+            pst.setString(1, userName);
+            pst.setString(2, word);
             return pst.execute();
         } catch (SQLException e) {
             LOG.error("删除我的新词失败", e);
         } finally {
-            close(con, pst, rs);
+            close(con, pst);
         }
         return false;
     }
