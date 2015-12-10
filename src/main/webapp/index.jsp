@@ -57,6 +57,7 @@
       <li><a href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=fabulous&count=100&words_type=SYLLABUS&dictionary=WEBSTER">definition similarity rule</a></li>
       <li><a href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=think&count=100&words_type=SYLLABUS&dictionary=ICIBA">pronunciation similarity rule</a></li>
       <li><a href="<%=request.getContextPath()%>/char-transform-rule.jsp?word=love&words_type=SYLLABUS">character transform rule</a></li>
+      <li><a href="<%=request.getContextPath()%>/vocabulary-test.jsp">vocabulary test</a></li>
     <%
       if(user != null){
     %>
