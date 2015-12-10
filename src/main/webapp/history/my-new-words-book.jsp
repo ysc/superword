@@ -44,7 +44,7 @@
     }
     List<MyNewWord> myNewWords = MySQLUtils.getMyNewWordsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
-    htmlFragment.append("<table border=\"1\"> ondblclick=\"querySelectionWord();\"");
+    htmlFragment.append("<table border=\"1\" ondblclick=\"querySelectionWord();\">");
     htmlFragment.append("<tr><th>No.</th><th>Word</th><th>Chinese Meaning</th><th>English Meaning</th><th>Time</th><th>Delete</th></tr>");
     int i = 1;
     for (MyNewWord myNewWord : myNewWords) {
