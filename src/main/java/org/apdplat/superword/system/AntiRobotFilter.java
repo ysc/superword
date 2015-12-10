@@ -69,7 +69,12 @@ public class AntiRobotFilter implements Filter {
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
         HttpServletRequest request = (HttpServletRequest)req;
         String userAgent = request.getHeader("User-Agent");
-        if(StringUtils.isBlank(userAgent)){
+        if(StringUtils.isBlank(userAgent)
+                || userAgent.length() < 100
+                || userAgent.contains("Java")
+                || userAgent.contains("360Spider")
+                || userAgent.contains("HaosouSpider")
+                || userAgent.contains("Googlebot")){
             invalidCount++;
             HttpServletResponse response = (HttpServletResponse)resp;
             response.setContentType("text/html");
