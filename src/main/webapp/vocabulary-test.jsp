@@ -94,12 +94,21 @@
         }
         table.append("</table><br/>")
             .append("<a href=\"vocabulary-test.jsp?restart=true\">在测一次</a><br/>");
-        htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+rightCount*300+" words.</font><br/>"+table.toString();
+        htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+rightCount*300*0.75+" words.</font><br/>"+table.toString();
     }else{
         StringBuilder html = new StringBuilder();
         html.append("<font color=\"red\"><h4>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h4></font>\n");
         for(String option : quizItem.getMeanings()){
-            html.append("<input onchange=\"update();\" type=\"checkbox\" name=\"answer\" value=\"").append(URLEncoder.encode(option, "utf-8")).append("\">").append(option).append("<br/>\n");
+            html.append("<input onchange=\"update();\" type=\"checkbox\" name=\"answer\" value=\"")
+                    .append(URLEncoder.encode(option, "utf-8"))
+                    .append("\">")
+                    .append("<a href=\"vocabulary-test.jsp?word=")
+                    .append(quizItem.getWord().getWord())
+                    .append("&answer=")
+                    .append(URLEncoder.encode(option, "utf-8"))
+                    .append("\">")
+                    .append(option)
+                    .append("</a><br/>\n");
         }
         htmlFragment = html.toString();
     }
@@ -122,7 +131,7 @@
         }
     </script>
 </head>
-<body id="top">
+<body id="top" ondblclick="querySelectionWord();">
     <jsp:include page="common/head.jsp"/>
 
     <h3>vocabulary test</h3>
