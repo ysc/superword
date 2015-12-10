@@ -23,6 +23,7 @@
 <%@ page import="java.util.UUID" %>
 <%@ page import="org.apdplat.superword.model.MyNewWord" %>
 <%@ page import="org.apache.commons.lang.StringUtils" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -43,8 +44,8 @@
     }
     List<MyNewWord> myNewWords = MySQLUtils.getMyNewWordsFromDatabase(user.getUserName());
     StringBuilder htmlFragment = new StringBuilder();
-    htmlFragment.append("<table>");
-    htmlFragment.append("<tr><th>No.</th><th>Word</th><th>Time</th><th>Delete</th></tr>");
+    htmlFragment.append("<table border=\"1\">");
+    htmlFragment.append("<tr><th>No.</th><th>Word</th><th>Chinese Meaning</th><th>English Meaning</th><th>Time</th><th>Delete</th></tr>");
     int i = 1;
     for (MyNewWord myNewWord : myNewWords) {
         String w = myNewWord.getWord();
@@ -59,6 +60,10 @@
                 .append("');\">")
                 .append(w)
                 .append("</a>")
+                .append("</td><td>")
+                .append(MySQLUtils.getWordDefinition(w, Dictionary.YOUDAO.name()))
+                .append("</td><td>")
+                .append(MySQLUtils.getWordDefinition(w, Dictionary.WEBSTER.name()))
                 .append("</td><td>")
                 .append(myNewWord.getDateTimeString())
                 .append("</td><td>")
