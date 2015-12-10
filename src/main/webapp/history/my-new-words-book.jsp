@@ -49,7 +49,14 @@
     int i = 1;
     for (MyNewWord myNewWord : myNewWords) {
         String w = myNewWord.getWord();
-
+        String englishMeaning = MySQLUtils.getWordDefinition(w, Dictionary.WEBSTER.name());
+        if(StringUtils.isBlank(englishMeaning)){
+            englishMeaning = MySQLUtils.getWordDefinition(w, Dictionary.OXFORD.name());
+        }
+        String chineseMeaning = MySQLUtils.getWordDefinition(w, Dictionary.YOUDAO.name());
+        if(StringUtils.isBlank(chineseMeaning)){
+            chineseMeaning = MySQLUtils.getWordDefinition(w, Dictionary.ICIBA.name());
+        }
         htmlFragment.append("<tr><td>")
                 .append(i++)
                 .append("</td><td>")
@@ -61,9 +68,9 @@
                 .append(w)
                 .append("</a>")
                 .append("</td><td>")
-                .append(MySQLUtils.getWordDefinition(w, Dictionary.YOUDAO.name()))
+                .append(chineseMeaning)
                 .append("</td><td>")
-                .append(MySQLUtils.getWordDefinition(w, Dictionary.WEBSTER.name()))
+                .append(englishMeaning)
                 .append("</td><td>")
                 .append(myNewWord.getDateTimeString())
                 .append("</td><td>")
