@@ -48,6 +48,12 @@ public class Quiz{
         quizItems.stream().filter(quizItem -> quizItem.isRight()).forEach(quizItem -> {
             float rightRate = levelRightCount.get(quizItem.getLevel()).intValue()
                     / (float)LEVEL_TO_TOTAL_COUNT.get(quizItem.getLevel());
+            if(quizItem.getLevel() > 1){
+                int lastLevel = quizItem.getLevel() - 1;
+                float lastRightRate = levelRightCount.get(lastLevel).intValue()
+                        / (float)LEVEL_TO_TOTAL_COUNT.get(lastLevel);
+                rightRate *= lastRightRate;
+            }
             count.addAndGet(SCALE*rightRate);
         });
         return count.intValue();
