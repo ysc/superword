@@ -36,7 +36,8 @@
     }
     Quiz quiz = (Quiz)session.getAttribute("vocabulary_test");
     if(quiz == null){
-        quiz = Quiz.buildQuiz(Dictionary.YOUDAO);
+        Dictionary dictionary = WordLinker.getValidDictionary(request.getParameter("dictionary"));
+        quiz = Quiz.buildQuiz(dictionary);
         session.setAttribute("vocabulary_test", quiz);
     }
     String word = request.getParameter("word");
@@ -93,7 +94,8 @@
                     .append("</tr>");
         }
         table.append("</table><br/>")
-            .append("<a href=\"vocabulary-test.jsp?restart=true\">在测一次</a><br/>");
+                .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=YOUDAO\">Test Again (Chinese)</a><br/>")
+                .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=WEBSTER\">Test Again (English)</a><br/>");
         htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+rightCount*300*0.75+" words.</font><br/>"+table.toString();
     }else{
         StringBuilder html = new StringBuilder();
