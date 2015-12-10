@@ -23,6 +23,10 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.net.URLDecoder" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.MyNewWord" %>
+<%@ page import="java.util.Date" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -39,7 +43,20 @@
     String answer = request.getParameter("answer");
     if(StringUtils.isNotBlank(word) && StringUtils.isNotBlank(answer)){
         answer = URLDecoder.decode(answer, "utf-8");
-        quiz.answer(word, answer);
+        boolean right = quiz.answer(word, answer);
+        if(!right){
+            User user = (User)request.getSession().getAttribute("user");
+            String newWord = word;
+            if(StringUtils.isNotBlank(newWord)
+                    && user != null
+                    && StringUtils.isNotBlank(user.getUserName())){
+                MyNewWord myNewWord = new MyNewWord();
+                myNewWord.setWord(newWord);
+                myNewWord.setDateTime(new Date());
+                myNewWord.setUserName(user.getUserName());
+                MySQLUtils.saveMyNewWordsToDatabase(myNewWord);
+            }
+        }
     }
     String htmlFragment = "";
     QuizItem quizItem = quiz.getQuizItem();
