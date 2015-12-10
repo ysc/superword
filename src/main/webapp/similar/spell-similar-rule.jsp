@@ -18,6 +18,7 @@
 
 <%@ page import="org.apdplat.superword.model.Word" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="org.apdplat.word.analysis.Hit" %>
 <%@ page import="org.apdplat.word.analysis.Hits" %>
 <%@ page import="org.apdplat.word.analysis.EditDistanceTextSimilarity" %>
@@ -27,6 +28,7 @@
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="org.apdplat.superword.model.UserSimilarWord" %>
 <%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apache.commons.lang.StringUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -61,14 +63,28 @@
 
         StringBuilder temp = new StringBuilder();
         int i=1;
-        temp.append("<table>\n");
+        temp.append("<table border=\"1\" ondblclick=\"querySelectionWord();\">");
+        temp.append("<tr><th>No.</th><th>Word</th><th>Similar Score</th><th>Chinese Meaning</th><th>English Meaning</th><th>Similar Word</th></tr>");
         for(Hit hit : result.getHits()){
+            String w = hit.getText();
+            String englishMeaning = MySQLUtils.getWordDefinition(w, Dictionary.WEBSTER.name());
+            if(StringUtils.isBlank(englishMeaning)){
+                englishMeaning = MySQLUtils.getWordDefinition(w, Dictionary.OXFORD.name());
+            }
+            String chineseMeaning = MySQLUtils.getWordDefinition(w, Dictionary.YOUDAO.name());
+            if(StringUtils.isBlank(chineseMeaning)){
+                chineseMeaning = MySQLUtils.getWordDefinition(w, Dictionary.ICIBA.name());
+            }
             temp.append("<tr>");
             temp.append("<td> ").append(i++)
                     .append(". </td><td> ")
-                    .append(WordLinker.toLink(hit.getText()))
+                    .append(WordLinker.toLink(w))
                     .append(" </td><td> ")
                     .append(hit.getScore())
+                    .append("</td><td>")
+                    .append(chineseMeaning)
+                    .append("</td><td>")
+                    .append(englishMeaning)
                     .append("</td><td> ")
                     .append("<a target=\"_blank\" href=\"spell-similar-rule.jsp?word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">similar word</a>")
                     .append(" </td>\n");
