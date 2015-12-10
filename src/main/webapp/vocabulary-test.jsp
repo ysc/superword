@@ -63,7 +63,7 @@
     QuizItem quizItem = quiz.getQuizItem();
     if(quizItem == null){
         StringBuilder table = new StringBuilder();
-        table.append("<table>")
+        table.append("<table border=\"1\">")
                 .append("<tr align=\"left\"><th>No.</th><th>Word</th><th>Right Or Wrong</th><th>Your Answer</th><th>Right Answer</th></tr>");
         int i=1;
         int rightCount=0;
