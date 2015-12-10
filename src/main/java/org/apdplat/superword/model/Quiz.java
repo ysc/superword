@@ -69,21 +69,70 @@ public class Quiz{
         List<Word> level2 = new ArrayList<>();
         level2.addAll(WordSources.get("/word_junior_school.txt"));
         level2.removeAll(level1);
-        build(level2, dictionary, quiz, 15);
+        build(level2, dictionary, quiz, 10);
 
         List<Word> level3 = new ArrayList<>();
         level3.addAll(WordSources.get("/word_senior_school.txt"));
         level3.removeAll(level1);
         level3.removeAll(level2);
-        build(level3, dictionary, quiz, 25);
+        build(level3, dictionary, quiz, 15);
 
         List<Word> level4 = new ArrayList<>();
-        level4.addAll(WordSources.getSyllabusVocabulary());
+        level4.addAll(WordSources.get("/word_CET4.txt"));
         level4.removeAll(level1);
         level4.removeAll(level2);
         level4.removeAll(level3);
-        build(level4, dictionary, quiz, 55);
+        build(level4, dictionary, quiz, 15);
 
+        List<Word> level5 = new ArrayList<>();
+        level5.addAll(WordSources.get("/word_CET6.txt"));
+        level5.removeAll(level1);
+        level5.removeAll(level2);
+        level5.removeAll(level3);
+        level5.removeAll(level4);
+        build(level5, dictionary, quiz, 15);
+
+        List<Word> level6 = new ArrayList<>();
+        level6.addAll(WordSources.get("/word_IELTS.txt"));
+        level6.removeAll(level1);
+        level6.removeAll(level2);
+        level6.removeAll(level3);
+        level6.removeAll(level4);
+        level6.removeAll(level5);
+        build(level6, dictionary, quiz, 10);
+
+        List<Word> level7 = new ArrayList<>();
+        level7.addAll(WordSources.get("/word_TOEFL.txt"));
+        level7.removeAll(level1);
+        level7.removeAll(level2);
+        level7.removeAll(level3);
+        level7.removeAll(level4);
+        level7.removeAll(level5);
+        level7.removeAll(level6);
+        build(level7, dictionary, quiz, 10);
+
+        List<Word> level8 = new ArrayList<>();
+        level8.addAll(WordSources.get("/word_GRE.txt"));
+        level8.removeAll(level1);
+        level8.removeAll(level2);
+        level8.removeAll(level3);
+        level8.removeAll(level4);
+        level8.removeAll(level5);
+        level8.removeAll(level6);
+        level8.removeAll(level7);
+        build(level8, dictionary, quiz, 10);
+
+        List<Word> level9 = new ArrayList<>();
+        level9.addAll(WordSources.getSyllabusVocabulary());
+        level9.removeAll(level1);
+        level9.removeAll(level2);
+        level9.removeAll(level3);
+        level9.removeAll(level4);
+        level9.removeAll(level5);
+        level9.removeAll(level6);
+        level9.removeAll(level7);
+        level9.removeAll(level8);
+        build(level9, dictionary, quiz, 10);
 
         return quiz;
     }
