@@ -20,11 +20,10 @@ package org.apdplat.superword.model;
 
 import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
+import org.apdplat.word.util.AtomicFloat;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -32,10 +31,27 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author 杨尚川
  */
 public class Quiz{
+    private static final Map<Integer, Integer> LEVEL_TO_TOTAL_COUNT = new ConcurrentHashMap<>();
+    private static final int SCALE = 300;
     private List<QuizItem> quizItems = new ArrayList<>();
     private int step=0;
 
     private Quiz(){}
+
+    public int getEvaluationCount(){
+        Map<Integer, AtomicInteger> levelRightCount = new HashMap<>();
+        quizItems.stream().filter(quizItem -> quizItem.isRight()).forEach(quizItem -> {
+            levelRightCount.putIfAbsent(quizItem.getLevel(), new AtomicInteger());
+            levelRightCount.get(quizItem.getLevel()).incrementAndGet();
+        });
+        AtomicFloat count = new AtomicFloat();
+        quizItems.stream().filter(quizItem -> quizItem.isRight()).forEach(quizItem -> {
+            float rightRate = levelRightCount.get(quizItem.getLevel()).intValue()
+                    / (float)LEVEL_TO_TOTAL_COUNT.get(quizItem.getLevel());
+            count.addAndGet(SCALE*rightRate);
+        });
+        return count.intValue();
+    }
 
     public QuizItem getQuizItem(){
         if(step < quizItems.size()){
@@ -64,25 +80,25 @@ public class Quiz{
 
         List<Word> level1 = new ArrayList<>();
         level1.addAll(WordSources.get("/word_primary_school.txt"));
-        build(level1, dictionary, quiz, 5);
+        build(level1, dictionary, quiz, 5, 1);
 
         List<Word> level2 = new ArrayList<>();
         level2.addAll(WordSources.get("/word_junior_school.txt"));
         level2.removeAll(level1);
-        build(level2, dictionary, quiz, 10);
+        build(level2, dictionary, quiz, 10, 2);
 
         List<Word> level3 = new ArrayList<>();
         level3.addAll(WordSources.get("/word_senior_school.txt"));
         level3.removeAll(level1);
         level3.removeAll(level2);
-        build(level3, dictionary, quiz, 15);
+        build(level3, dictionary, quiz, 15, 3);
 
         List<Word> level4 = new ArrayList<>();
         level4.addAll(WordSources.get("/word_CET4.txt"));
         level4.removeAll(level1);
         level4.removeAll(level2);
         level4.removeAll(level3);
-        build(level4, dictionary, quiz, 15);
+        build(level4, dictionary, quiz, 15, 4);
 
         List<Word> level5 = new ArrayList<>();
         level5.addAll(WordSources.get("/word_CET6.txt"));
@@ -90,7 +106,7 @@ public class Quiz{
         level5.removeAll(level2);
         level5.removeAll(level3);
         level5.removeAll(level4);
-        build(level5, dictionary, quiz, 15);
+        build(level5, dictionary, quiz, 15, 5);
 
         List<Word> level6 = new ArrayList<>();
         level6.addAll(WordSources.get("/word_IELTS.txt"));
@@ -99,7 +115,7 @@ public class Quiz{
         level6.removeAll(level3);
         level6.removeAll(level4);
         level6.removeAll(level5);
-        build(level6, dictionary, quiz, 10);
+        build(level6, dictionary, quiz, 10, 6);
 
         List<Word> level7 = new ArrayList<>();
         level7.addAll(WordSources.get("/word_TOEFL.txt"));
@@ -109,7 +125,7 @@ public class Quiz{
         level7.removeAll(level4);
         level7.removeAll(level5);
         level7.removeAll(level6);
-        build(level7, dictionary, quiz, 10);
+        build(level7, dictionary, quiz, 10, 7);
 
         List<Word> level8 = new ArrayList<>();
         level8.addAll(WordSources.get("/word_GRE.txt"));
@@ -120,7 +136,7 @@ public class Quiz{
         level8.removeAll(level5);
         level8.removeAll(level6);
         level8.removeAll(level7);
-        build(level8, dictionary, quiz, 10);
+        build(level8, dictionary, quiz, 10, 8);
 
         List<Word> level9 = new ArrayList<>();
         level9.addAll(WordSources.getSyllabusVocabulary());
@@ -132,22 +148,24 @@ public class Quiz{
         level9.removeAll(level6);
         level9.removeAll(level7);
         level9.removeAll(level8);
-        build(level9, dictionary, quiz, 10);
+        build(level9, dictionary, quiz, 10, 9);
 
         return quiz;
     }
 
-    private static void build(List<Word> level, Dictionary dictionary, Quiz quiz, int limit){
+    private static void build(List<Word> words, Dictionary dictionary, Quiz quiz, int limit, int level){
+        LEVEL_TO_TOTAL_COUNT.put(level, limit);
         int count = 0;
         for(;;){
-            Word word = level.get(new Random(System.nanoTime()).nextInt(level.size()));
-            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), level, dictionary);
+            Word word = words.get(new Random(System.nanoTime()).nextInt(words.size()));
+            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, dictionary);
             if(quizItem == null){
                 continue;
             }
             if(quiz.quizItems.contains(quizItem)){
                 continue;
             }
+            quizItem.setLevel(level);
             quiz.quizItems.add(quizItem);
             if((++count) >= limit){
                 break;

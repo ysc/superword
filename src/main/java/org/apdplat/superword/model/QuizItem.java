@@ -33,8 +33,17 @@ public class QuizItem implements Comparable {
     private Word word;
     private List<Word> otherWords = new ArrayList<>();
     private String answer;
+    private int level;
 
     private QuizItem(){}
+
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
+    public int getLevel() {
+        return level;
+    }
 
     public void setAnswer(String answer) {
         this.answer = answer;
