@@ -101,7 +101,7 @@
         StringBuilder html = new StringBuilder();
         html.append("<font color=\"red\"><h4>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h4></font>\n");
         for(String option : quizItem.getMeanings()){
-            html.append("<input onchange=\"update();\" type=\"checkbox\" name=\"answer\" value=\"")
+            html.append("<p><input onchange=\"update();\" type=\"checkbox\" name=\"answer\" value=\"")
                     .append(URLEncoder.encode(option, "utf-8"))
                     .append("\">")
                     .append("<a href=\"vocabulary-test.jsp?word=")
@@ -110,7 +110,7 @@
                     .append(URLEncoder.encode(option, "utf-8"))
                     .append("\">")
                     .append(option)
-                    .append("</a><br/>\n");
+                    .append("</a></p>\n");
         }
         htmlFragment = html.toString();
     }
