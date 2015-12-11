@@ -262,10 +262,14 @@ public class MySQLUtils {
     }
 
     public static List<String> getAllWordDefinition(String dictionary, Set<Word> words) {
+        return getAllWordDefinition(dictionary, words, "_");
+    }
+
+    public static List<String> getAllWordDefinition(String dictionary, Set<Word> words, String split) {
         return getAllWordDefinitionMap(dictionary, words)
                 .entrySet()
                 .parallelStream()
-                .map(entry -> entry.getKey()+"_"+entry.getValue())
+                .map(entry -> entry.getKey()+split+entry.getValue())
                 .collect(Collectors.toList());
     }
 
