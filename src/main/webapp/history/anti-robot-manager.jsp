@@ -39,7 +39,7 @@
             .append(AntiRobotFilter.limit)
             .append(" per user per day, invalid request number is ")
             .append(AntiRobotFilter.invalidCount)
-            .append(" without user agent.<br/><br/>");
+            .append(".<br/><br/>");
 
     html.append("<table>")
             .append("<tr><th>No.</th><th>Username</th><th>User IP</th><th>Access Date</th><th>Access Count</th><th>User Location</th><th>User Agent</th></tr>");

@@ -70,7 +70,7 @@ public class AntiRobotFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest)req;
         String userAgent = request.getHeader("User-Agent");
         if(StringUtils.isBlank(userAgent)
-                || userAgent.length() < 100
+                || userAgent.length() < 50
                 || userAgent.contains("Java")
                 || userAgent.contains("360Spider")
                 || userAgent.contains("HaosouSpider")
