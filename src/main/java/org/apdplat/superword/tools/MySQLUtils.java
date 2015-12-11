@@ -284,7 +284,7 @@ public class MySQLUtils {
                 if(StringUtils.isNotBlank(word)
                         && StringUtils.isNotBlank(definition)
                         && words.contains(new Word(word, ""))) {
-                    set.add(word + "_" + definition);
+                    set.add(word + split + definition);
                 }
             }
         } catch (SQLException e) {
