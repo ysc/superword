@@ -24,6 +24,8 @@
 <%@ page import="org.apdplat.superword.tools.*" %>
 <%@ page import="org.apache.commons.lang.StringUtils" %>
 <%@ page import="org.apdplat.superword.model.MyNewWord" %>
+<%@ page import="java.nio.file.Files" %>
+<%@ page import="java.nio.file.Paths" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -51,9 +53,18 @@
 
     UserWord userWord = new UserWord();
     userWord.setDateTime(new Date());
-    userWord.setUserName(user==null?"anonymity":user.getUserName());
+    userWord.setUserName(user == null ? "anonymity" : user.getUserName());
     userWord.setWord(word);
     MySQLUtils.saveUserWordToDatabase(userWord);
+
+    String file = application.getRealPath("/audio/"+word.toLowerCase()+".mp3");
+    String audio = "";
+    if(Files.exists(Paths.get(file))){
+        audio = "    <audio controls>\n" +
+                "        <source src=\"audio/"+word.toLowerCase()+".mp3\" type=\"audio/mpeg\">\n" +
+                "        Your browser does not support the audio element.\n" +
+                "    </audio><br/><br/>";
+    }
 
     StringBuilder definitionHtmls = new StringBuilder();
 
@@ -208,6 +219,7 @@
             }
         }
     %>
+    <%=audio%>
     <font color="red">Word Level: <%=WordSources.getLevels(word)%></font><br/><br/>
     <a target="_blank" href="<%=request.getContextPath()%>/char-transform-rule.jsp?word=<%=word%>&words_type=SYLLABUS">transform character</a> <font color="red"> | </font>
     <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N">analyze roots and affix</a> <font color="red"> | </font>
