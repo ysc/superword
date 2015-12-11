@@ -81,22 +81,24 @@
                     .append("<td>")
                     .append(WordLinker.toLink(item.getWord().getWord()))
                     .append("</td>")
-                    .append("<td><font color=\"red\">")
-                    .append(item.isRight()?"Right":"Wrong")
-                    .append("</font></td>")
                     .append("<td>")
-                    .append(item.getAnswer())
+                    .append(item.isRight()?"Right":"<font color=\"red\">Wrong</font>")
                     .append("</td>")
-                    .append("<td><font color=\"red\">")
+                    .append("<td>")
+                    .append(item.isRight()?"":"<font color=\"red\">")
+                    .append(item.getAnswer())
+                    .append(item.isRight()?"":"</font>")
+                    .append("</td><td>")
+                    .append(item.isRight()?"":"<font color=\"blue\">")
                     .append(item.getWord().getMeaning())
-                    .append("</font>")
+                    .append(item.isRight()?"":"</font>")
                     .append("</td>")
                     .append("</tr>");
         }
         table.append("</table><br/>")
                 .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=YOUDAO\">Test Again (Chinese)</a><br/>")
                 .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=WEBSTER\">Test Again (English)</a><br/>");
-        htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+quiz.getEvaluationCount()+" words.</font><br/>"+table.toString();
+        htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+quiz.getEvaluationCount()+" words.</font><br/><br/>"+table.toString();
     }else{
         StringBuilder html = new StringBuilder();
         html.append("<font color=\"red\"><h1>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h1></font>\n");
