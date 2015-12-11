@@ -102,14 +102,14 @@
         html.append("<font color=\"red\"><h1>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h1></font>\n");
         html.append("<h1><ul>");
         for(String option : quizItem.getMeanings()){
-            html.append("<li>")
+            html.append("<p><li>")
                     .append("<a href=\"vocabulary-test.jsp?word=")
                     .append(quizItem.getWord().getWord())
                     .append("&answer=")
                     .append(URLEncoder.encode(option, "utf-8"))
                     .append("\">")
                     .append(option)
-                    .append("</a></li><br/>\n");
+                    .append("</a></li></p>\n");
         }
         html.append("</ul></h1>");
         htmlFragment = html.toString();
