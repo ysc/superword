@@ -48,7 +48,7 @@ public class InstantTip {
 
     public static String getWordsByPrefix(String prefix){
         StringBuilder html= new StringBuilder();
-        html.append("<ul>\n");
+        html.append("<ol>\n");
         int i=0;
         for(String word : WORDS_TO_DEFINITION.keySet()){
             if(word.toLowerCase().startsWith(prefix.toLowerCase())){
@@ -58,7 +58,7 @@ public class InstantTip {
                 }
             }
         }
-        html.append("</ul>\n");
+        html.append("</ol>\n");
         return html.toString();
     }
 
