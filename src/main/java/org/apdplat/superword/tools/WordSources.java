@@ -42,6 +42,71 @@ public class WordSources {
     private WordSources(){}
     private static final Logger LOGGER = LoggerFactory.getLogger(WordSources.class);
     private static final Map<String, Set<Word>> CACHE = new ConcurrentHashMap<>();
+    public static List<String> getLevels(String word){
+        Word w = new Word(word, "");
+        List<String> levels = new ArrayList<>();
+        if(get("/word_primary_school.txt").contains(w)){
+            levels.add("PrimarySchool");
+        }
+        if(get("/word_junior_school.txt").contains(w)){
+            levels.add("JuniorSchool");
+        }
+        if(get("/word_senior_school.txt").contains(w)){
+            levels.add("SeniorSchool");
+        }
+        if(get("/word_university.txt").contains(w)){
+            levels.add("University");
+        }
+        if(get("/word_new_conception.txt").contains(w)){
+            levels.add("NewConception");
+        }
+        if(get("/word_ADULT.txt").contains(w)){
+            levels.add("ADULT");
+        }
+        if(get("/word_CET4.txt").contains(w)){
+            levels.add("CET4");
+        }
+        if(get("/word_CET6.txt").contains(w)){
+            levels.add("CET6");
+        }
+        if(get("/word_TEM4.txt").contains(w)){
+            levels.add("TEM4");
+        }
+        if(get("/word_TEM8.txt").contains(w)){
+            levels.add("TEM8");
+        }
+        if(get("/word_CATTI.txt").contains(w)){
+            levels.add("CATTI");
+        }
+        if(get("/word_GMAT.txt").contains(w)){
+            levels.add("GMAT");
+        }
+        if(get("/word_GRE.txt").contains(w)){
+            levels.add("GRE");
+        }
+        if(get("/word_SAT.txt").contains(w)){
+            levels.add("SAT");
+        }
+        if(get("/word_BEC.txt").contains(w)){
+            levels.add("BEC");
+        }
+        if(get("/word_MBA.txt").contains(w)){
+            levels.add("MBA");
+        }
+        if(get("/word_IELTS.txt").contains(w)){
+            levels.add("IELTS");
+        }
+        if(get("/word_TOEFL.txt").contains(w)){
+            levels.add("TOEFL");
+        }
+        if(get("/word_TOEIC.txt").contains(w)){
+            levels.add("TOEIC");
+        }
+        if(get("/word_KY.txt").contains(w)){
+            levels.add("KY");
+        }
+        return levels;
+    }
     /**
      * 考纲词汇
      * @return
