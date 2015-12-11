@@ -173,14 +173,23 @@
                 }
             });
         }
+        function instant(prefix){
+            $.ajax({
+                url: "word.instant?prefix="+prefix,
+                success: function(result){
+                    $("#instant_tip").html(result);
+                }
+            });
+        }
     </script>
 </head>
 <body id="top">
     <jsp:include page="common/head.jsp"/>
     <p>
         <font color="red"><span id="tip"></span></font><br/>
-        <font color="red">Input Word：</font><input onchange="query();" id="word" name="word" value="<%=word%>" size="50" maxlength="50"/>
+        <font color="red">Input Word：</font><input onkeyup="instant(this.value);" onchange="query();" id="word" name="word" value="<%=word%>" size="50" maxlength="50" autocomplete="off"/>
         <span style="cursor: pointer" onclick="query();"><font color="red">Submit</font></span><br/>
+        <div id="instant_tip"></div>
     </p>
     <script type="text/javascript">
         document.getElementById('word').select();
