@@ -262,15 +262,19 @@ public class MySQLUtils {
     }
 
     public static List<String> getAllWordDefinition(String dictionary, Set<Word> words) {
-        return getAllWordDefinition(dictionary, words, "_");
+        return getAllWordDefinitionMap(dictionary, words)
+                .entrySet()
+                .parallelStream()
+                .map(entry -> entry.getKey()+"_"+entry.getValue())
+                .collect(Collectors.toList());
     }
 
-    public static List<String> getAllWordDefinition(String dictionary, Set<Word> words, String split) {
-        List<String> set = new ArrayList<>();
+    public static Map<String, String> getAllWordDefinitionMap(String dictionary, Set<Word> words) {
+        Map<String, String> map = new HashMap<>();
         String sql = "select word, definition from word_definition where dictionary=?";
         Connection con = getConnection();
         if(con == null){
-            return set;
+            return map;
         }
         PreparedStatement pst = null;
         ResultSet rs = null;
@@ -284,7 +288,7 @@ public class MySQLUtils {
                 if(StringUtils.isNotBlank(word)
                         && StringUtils.isNotBlank(definition)
                         && words.contains(new Word(word, ""))) {
-                    set.add(word + split + definition);
+                    map.put(word, definition);
                 }
             }
         } catch (SQLException e) {
@@ -292,7 +296,7 @@ public class MySQLUtils {
         } finally {
             close(con, pst, rs);
         }
-        return set;
+        return map;
     }
 
     public static String getWordDefinition(String word, String dictionary) {
