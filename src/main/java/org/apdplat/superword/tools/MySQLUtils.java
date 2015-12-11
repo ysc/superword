@@ -262,6 +262,10 @@ public class MySQLUtils {
     }
 
     public static List<String> getAllWordDefinition(String dictionary, Set<Word> words) {
+        return getAllWordDefinition(dictionary, words, "_");
+    }
+
+    public static List<String> getAllWordDefinition(String dictionary, Set<Word> words, String split) {
         List<String> set = new ArrayList<>();
         String sql = "select word, definition from word_definition where dictionary=?";
         Connection con = getConnection();
