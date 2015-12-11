@@ -99,19 +99,19 @@
         htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+quiz.getEvaluationCount()+" words.</font><br/>"+table.toString();
     }else{
         StringBuilder html = new StringBuilder();
-        html.append("<font color=\"red\"><h4>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h4></font>\n");
+        html.append("<font color=\"red\"><h1>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h1></font>\n");
+        html.append("<h1><ul>");
         for(String option : quizItem.getMeanings()){
-            html.append("<p><input onchange=\"update();\" type=\"checkbox\" name=\"answer\" value=\"")
-                    .append(URLEncoder.encode(option, "utf-8"))
-                    .append("\">")
+            html.append("<li>")
                     .append("<a href=\"vocabulary-test.jsp?word=")
                     .append(quizItem.getWord().getWord())
                     .append("&answer=")
                     .append(URLEncoder.encode(option, "utf-8"))
                     .append("\">")
                     .append(option)
-                    .append("</a></p>\n");
+                    .append("</a></li><br/>\n");
         }
+        html.append("</ul></h1>");
         htmlFragment = html.toString();
     }
 %>
@@ -122,16 +122,6 @@
     <link href="<%=request.getContextPath()%>/css/superword.css" rel="stylesheet" type="text/css"/>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/jquery-2.1.4.min.js"></script>
     <script type="text/javascript" src="<%=request.getContextPath()%>/js/superword.js"></script>
-    <script type="text/javascript">
-        var lock = false;
-        function update(){
-            if(lock){
-                return;
-            }
-            lock = true;
-            document.getElementById("form").submit();
-        }
-    </script>
 </head>
 <body id="top" ondblclick="querySelectionWord();">
     <jsp:include page="common/head.jsp"/>
@@ -142,9 +132,7 @@
         out.println(htmlFragment);
     }else{
 %>
-    <form method="post" id="form" action="vocabulary-test.jsp?word=<%=quizItem.getWord().getWord()%>">
-        <%=htmlFragment%>
-    </form>
+    <%=htmlFragment%>
 <%
     }
 %>
