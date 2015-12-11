@@ -51,9 +51,11 @@
     <td>
       <a href="<%=request.getContextPath()%>/system/login.jsp">Sign in</a>
     </td>
+      <%--
     <td>
       <a href="<%=request.getContextPath()%>/system/login.jspx"><img src="<%=request.getContextPath()%>/images/qq_32.png" alt="QQ Account Sign In"/></a>
     </td>
+      --%>
 <%
   }else{
       String displayName = user.getUserName();
