@@ -40,9 +40,11 @@ public class Quiz{
 
     public int getEvaluationCount(){
         Map<Integer, AtomicInteger> levelRightCount = new HashMap<>();
-        quizItems.stream().filter(quizItem -> quizItem.isRight()).forEach(quizItem -> {
+        quizItems.stream().forEach(quizItem -> {
             levelRightCount.putIfAbsent(quizItem.getLevel(), new AtomicInteger());
-            levelRightCount.get(quizItem.getLevel()).incrementAndGet();
+            if(quizItem.isRight()) {
+                levelRightCount.get(quizItem.getLevel()).incrementAndGet();
+            }
         });
         AtomicFloat count = new AtomicFloat();
         quizItems.stream().filter(quizItem -> quizItem.isRight()).forEach(quizItem -> {
@@ -52,6 +54,9 @@ public class Quiz{
                 int lastLevel = quizItem.getLevel() - 1;
                 float lastRightRate = levelRightCount.get(lastLevel).intValue()
                         / (float)LEVEL_TO_TOTAL_COUNT.get(lastLevel);
+                if(lastRightRate == 0){
+                    lastRightRate = 0.1f;
+                }
                 rightRate *= lastRightRate;
             }
             count.addAndGet(SCALE*rightRate);
