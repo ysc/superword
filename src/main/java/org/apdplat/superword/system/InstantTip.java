@@ -51,7 +51,7 @@ public class InstantTip {
         html.append("<ul>\n");
         int i=0;
         for(String word : WORDS_TO_DEFINITION.keySet()){
-            if(word.startsWith(prefix)){
+            if(word.toLowerCase().startsWith(prefix.toLowerCase())){
                 html.append("<li>").append(WordLinker.toLink(word)).append("  ").append(WORDS_TO_DEFINITION.get(word)).append("</li>\n");
                 if((++i) >= RECORD_COUNT_LIMIT){
                     break;
