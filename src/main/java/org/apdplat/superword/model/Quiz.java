@@ -42,7 +42,7 @@ public class Quiz{
     private Quiz(){}
 
     public String getConsumedTime(){
-        return TimeUtils.getTimeDes(endQuizTime - startQuizTime);
+        return TimeUtils.getTimeEnglishDes(endQuizTime - startQuizTime);
     }
 
     public int getEvaluationCount(){
@@ -79,7 +79,7 @@ public class Quiz{
         if(cost > 3600){
             cost = 3600;
         }
-        
+
         if((count.intValue() + cost) > 0){
             return count.intValue() + cost;
         }

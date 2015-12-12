@@ -65,6 +65,54 @@ public class TimeUtils {
         return -1;
     }
 
+    public static String getTimeEnglishDes(Long ms) {
+        //处理参数为NULL的情况
+        if(ms == null){
+            return "";
+        }
+        boolean minus = false;
+        if(ms < 0){
+            minus = true;
+            ms = -ms;
+        }
+        int ss = 1000;
+        int mi = ss * 60;
+        int hh = mi * 60;
+        int dd = hh * 24;
+
+        long day = ms / dd;
+        long hour = (ms - day * dd) / hh;
+        long minute = (ms - day * dd - hour * hh) / mi;
+        long second = (ms - day * dd - hour * hh - minute * mi) / ss;
+        long milliSecond = ms - day * dd - hour * hh - minute * mi - second * ss;
+
+        StringBuilder str=new StringBuilder();
+        if(day>0){
+            str.append(day).append("day,");
+        }
+        if(hour>0){
+            str.append(hour).append("hour,");
+        }
+        if(minute>0){
+            str.append(minute).append("minute,");
+        }
+        if(second>0){
+            str.append(second).append("second,");
+        }
+        if(milliSecond>0){
+            str.append(milliSecond).append("milli second,");
+        }
+        if(str.length()>0){
+            str.setLength(str.length() - 1);
+        }
+
+        if(minus){
+            return "-"+str.toString();
+        }
+
+        return str.toString();
+    }
+
     public static String getTimeDes(Long ms) {
         //处理参数为NULL的情况
         if(ms == null){
