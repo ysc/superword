@@ -116,6 +116,7 @@ public class AntiRobotFilter implements Filter {
                         session.setAttribute("redirect", null);
                         session.setAttribute("isHuman", "true");
                         response.sendRedirect(path);
+                        return;
                     }
                 }
 

@@ -83,7 +83,7 @@ public class QuizItem implements Comparable {
 
     public static QuizItem buildIdentifyHumanQuiz(){
         List<Word> words = WordSources
-                .getSyllabusVocabulary()
+                .get("/word_CET4.txt")
                 .parallelStream()
                 .filter(w -> w.getWord().length() > 3)
                 .collect(Collectors.toList());
