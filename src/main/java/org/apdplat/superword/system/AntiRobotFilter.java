@@ -19,6 +19,7 @@
 package org.apdplat.superword.system;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.model.QuizItem;
 import org.apdplat.superword.model.User;
 import org.apdplat.superword.tools.IPUtils;
 import org.slf4j.Logger;
@@ -27,8 +28,10 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -67,7 +70,15 @@ public class AntiRobotFilter implements Filter {
     }
 
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
+        HttpServletResponse response = (HttpServletResponse)resp;
+        response.setContentType("text/html");
+        response.setCharacterEncoding("utf-8");
+
         HttpServletRequest request = (HttpServletRequest)req;
+        if(servletContext == null){
+            servletContext = request.getServletContext();
+        }
+
         String userAgent = request.getHeader("User-Agent");
         if(StringUtils.isBlank(userAgent)
                 || userAgent.length() < 50
@@ -76,16 +87,65 @@ public class AntiRobotFilter implements Filter {
                 || userAgent.contains("HaosouSpider")
                 || userAgent.contains("Googlebot")){
             invalidCount++;
-            HttpServletResponse response = (HttpServletResponse)resp;
-            response.setContentType("text/html");
-            response.setCharacterEncoding("utf-8");
             response.getWriter().write("Superword is a Java open source project dedicated in the study of English words analysis and auxiliary reading, including but not limited to, spelling similarity, definition similarity, pronunciation similarity, the transformation rules of the spelling, the prefix and the dynamic prefix, the suffix and the dynamic suffix, roots, compound words, text auxiliary reading, web page auxiliary reading, book auxiliary reading, etc..");
             return;
         }
 
-        if(servletContext == null){
-            servletContext = request.getServletContext();
+        HttpSession session = request.getSession();
+        if(session.getAttribute("isHuman") == null){
+            if(session.getAttribute("redirect") == null){
+                session.setAttribute("redirect", request.getRequestURI());
+            }
+
+            String _token = request.getParameter("token");
+            String _word = request.getParameter("word");
+            String _answer = request.getParameter("answer");
+            if(StringUtils.isNotBlank(_token)
+                    && StringUtils.isNotBlank(_word)
+                    && StringUtils.isNotBlank(_answer)
+                    && session.getAttribute("token") != null
+                    && session.getAttribute("token").toString().equals(_token)
+                    && session.getAttribute("quizItem") != null){
+                session.setAttribute("token", null);
+                QuizItem quizItem = (QuizItem)session.getAttribute("quizItem");
+                if(_word.equals(quizItem.getWord().getWord())){
+                    quizItem.setAnswer(_answer);
+                    if(quizItem.isRight()){
+                        String path = session.getAttribute("redirect").toString();
+                        session.setAttribute("redirect", null);
+                        session.setAttribute("isHuman", "true");
+                        response.sendRedirect(path);
+                    }
+                }
+
+            }
+
+            QuizItem quizItem = QuizItem.buildIdentifyHumanQuiz();
+            String token = UUID.randomUUID().toString();
+            session.setAttribute("quizItem", quizItem);
+            session.setAttribute("token", token);
+            StringBuilder html = new StringBuilder();
+            html.append("<h1>").append("Click the correct meaning for the word <font color=\"red\">").append(quizItem.getWord().getWord()).append(":</font></h1>\n");
+            html.append("<h1><ul>");
+            for(String option : quizItem.getMeanings()){
+                html.append("<p><li>")
+                        .append("<a href=\"identify.quiz?word=")
+                        .append(quizItem.getWord().getWord())
+                        .append("&token=")
+                        .append(token)
+                        .append("&answer=")
+                        .append(URLEncoder.encode(option, "utf-8"))
+                        .append("\">")
+                        .append(option)
+                        .append("</a></li></p>\n");
+            }
+            html.append("</ul><br/>\n")
+                    .append("If you can't answer the question correctly, you won't have the permission to access the web site.")
+                    .append("</h1>");
+            response.getWriter().write(html.toString());
+            return;
         }
+
         String key = getKey(request);
         AtomicInteger count = (AtomicInteger)servletContext.getAttribute(key);
         if(count == null){
@@ -94,9 +154,6 @@ public class AntiRobotFilter implements Filter {
         }
 
         if(count.incrementAndGet() > limit){
-            HttpServletResponse response = (HttpServletResponse)resp;
-            response.setContentType("text/html");
-            response.setCharacterEncoding("utf-8");
             response.getWriter().write("System has detected that your IP visit is too frequent and has automatically forbidden your vist. We are sorry to bring inconvenience to you, please understand, please come back tomorrow. Bye Bye!");
 
             return;
