@@ -142,7 +142,7 @@ public class AntiRobotFilter implements Filter {
             session.setAttribute("token", token);
             StringBuilder html = new StringBuilder();
             html.append("<h1>").append("Click the correct meaning for the word <font color=\"red\">").append(quizItem.getWord().getWord()).append(":</font></h1>\n");
-            html.append("<h2><ul>");
+            html.append("<h2><ul ondblclick=\"querySelectionWord();\">");
             for(String option : quizItem.getMeanings()){
                 html.append("<li>")
                         .append("<a href=\"")
