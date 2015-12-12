@@ -57,23 +57,42 @@
     userWord.setWord(word);
     MySQLUtils.saveUserWordToDatabase(userWord);
 
-    String file = application.getRealPath("/audio/"+word.toLowerCase()+".mp3");
-    StringBuilder audio = new StringBuilder();
+    String file = application.getRealPath("/audio/oxford/"+word.toLowerCase()+".mp3");
+    StringBuilder oxfordAudio = new StringBuilder();
     if(Files.exists(Paths.get(file))){
-        audio.append("<audio controls>")
-                .append("<source src=\"audio/")
+        oxfordAudio.append("<audio controls>")
+                .append("<source src=\"audio/oxford/")
                 .append(word.toLowerCase())
                 .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
         int i=2;
-        while(Files.exists(Paths.get(application.getRealPath("/audio/"+word.toLowerCase()+"_"+i+".mp3")))){
-            audio.append("<audio controls>")
-                    .append("<source src=\"audio/")
+        while(Files.exists(Paths.get(application.getRealPath("/audio/oxford/"+word.toLowerCase()+"_"+i+".mp3")))){
+            oxfordAudio.append("<audio controls>")
+                    .append("<source src=\"audio/oxford/")
                     .append(word.toLowerCase())
                     .append("_")
                     .append(i++)
                     .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
         }
-        audio.append("<br/>");
+        oxfordAudio.append("<br/>");
+    }
+
+    file = application.getRealPath("/audio/webster/"+word.toLowerCase()+".mp3");
+    StringBuilder websterAudio = new StringBuilder();
+    if(Files.exists(Paths.get(file))){
+        websterAudio.append("<audio controls>")
+                .append("<source src=\"audio/webster/")
+                .append(word.toLowerCase())
+                .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+        int i=2;
+        while(Files.exists(Paths.get(application.getRealPath("/audio/webster/"+word.toLowerCase()+"_"+i+".mp3")))){
+            websterAudio.append("<audio controls>")
+                    .append("<source src=\"audio/webster/")
+                    .append(word.toLowerCase())
+                    .append("_")
+                    .append(i++)
+                    .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+        }
+        websterAudio.append("<br/>");
     }
 
     StringBuilder definitionHtmls = new StringBuilder();
@@ -229,7 +248,37 @@
             }
         }
     %>
-    <%=audio.toString()%>
+    <table>
+        <tr>
+            <%
+                if(oxfordAudio.length() > 0){
+            %>
+            <th>Oxford Audio</th>
+            <%
+                }
+                if(websterAudio.length() > 0){
+            %>
+            <th>Webster's Audio</th>
+            <%
+                }
+            %>
+        </tr>
+        <tr>
+            <%
+                if(oxfordAudio.length() > 0){
+            %>
+            <td><%=oxfordAudio.toString()%></td>
+            <%
+                }
+                if(websterAudio.length() > 0){
+            %>
+            <td><%=websterAudio.toString()%></td>
+            <%
+                }
+            %>
+        </tr>
+    </table>
+
     <font color="red">Word Level: <%=WordSources.getLevels(word)%></font><br/><br/>
     <a target="_blank" href="<%=request.getContextPath()%>/char-transform-rule.jsp?word=<%=word%>&words_type=SYLLABUS">transform character</a> <font color="red"> | </font>
     <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N">analyze roots and affix</a> <font color="red"> | </font>
