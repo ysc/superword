@@ -83,6 +83,7 @@ public class AntiRobotFilter implements Filter {
         if(StringUtils.isBlank(userAgent)
                 || userAgent.length() < 50
                 || userAgent.contains("Java")
+                || userAgent.contains("bingbot")
                 || userAgent.contains("360Spider")
                 || userAgent.contains("HaosouSpider")
                 || userAgent.contains("Googlebot")){
