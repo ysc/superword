@@ -104,8 +104,8 @@ public class AntiRobotFilter implements Filter {
                 return;
             }
 
-            if(session.getAttribute("redirect") == null){
-                session.setAttribute("redirect", request.getRequestURI());
+            if(session.getAttribute("forward") == null){
+                session.setAttribute("forward", StringUtils.isBlank(request.getPathInfo()) ? "/" : request.getPathInfo());
             }
 
             String _token = request.getParameter("token");
@@ -123,17 +123,16 @@ public class AntiRobotFilter implements Filter {
                 if(_word.equals(quizItem.getWord().getWord())){
                     quizItem.setAnswer(_answer);
                     if(quizItem.isRight()){
-                        String path = session.getAttribute("redirect").toString();
+                        String path = session.getAttribute("forward").toString();
                         if(path.contains("identify.quiz")){
                             path = path.replace("identify.quiz", "");
                         }
-                        session.setAttribute("redirect", null);
+                        session.setAttribute("forward", null);
                         session.setAttribute("isHuman", "true");
-                        response.sendRedirect(path);
+                        request.getRequestDispatcher(path).forward(request, response);
                         return;
                     }
                 }
-
             }
 
             QuizItem quizItem = QuizItem.buildIdentifyHumanQuiz(12);
@@ -142,7 +141,7 @@ public class AntiRobotFilter implements Filter {
             session.setAttribute("token", token);
             StringBuilder html = new StringBuilder();
             html.append("<h1>").append("Click the correct meaning for the word <font color=\"red\">").append(quizItem.getWord().getWord()).append(":</font></h1>\n");
-            html.append("<h2><ul ondblclick=\"querySelectionWord();\">");
+            html.append("<h2><ul>");
             for(String option : quizItem.getMeanings()){
                 html.append("<li>")
                         .append("<a href=\"")
