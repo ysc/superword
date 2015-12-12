@@ -58,12 +58,22 @@
     MySQLUtils.saveUserWordToDatabase(userWord);
 
     String file = application.getRealPath("/audio/"+word.toLowerCase()+".mp3");
-    String audio = "";
+    StringBuilder audio = new StringBuilder();
     if(Files.exists(Paths.get(file))){
-        audio = "    <audio controls>\n" +
-                "        <source src=\"audio/"+word.toLowerCase()+".mp3\" type=\"audio/mpeg\">\n" +
-                "        Your browser does not support the audio element.\n" +
-                "    </audio><br/><br/>";
+        audio.append("<audio controls>")
+                .append("<source src=\"audio/")
+                .append(word.toLowerCase())
+                .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+        int i=2;
+        while(Files.exists(Paths.get(application.getRealPath("/audio/"+word.toLowerCase()+"_"+i+".mp3")))){
+            audio.append("<audio controls>")
+                    .append("<source src=\"audio/")
+                    .append(word.toLowerCase())
+                    .append("_")
+                    .append(i++)
+                    .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+        }
+        audio.append("<br/>");
     }
 
     StringBuilder definitionHtmls = new StringBuilder();
@@ -219,7 +229,7 @@
             }
         }
     %>
-    <%=audio%>
+    <%=audio.toString()%>
     <font color="red">Word Level: <%=WordSources.getLevels(word)%></font><br/><br/>
     <a target="_blank" href="<%=request.getContextPath()%>/char-transform-rule.jsp?word=<%=word%>&words_type=SYLLABUS">transform character</a> <font color="red"> | </font>
     <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N">analyze roots and affix</a> <font color="red"> | </font>
