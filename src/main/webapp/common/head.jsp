@@ -24,12 +24,14 @@
 <script type="text/javascript">
     var contextPath = '<%=request.getServletContext().getContextPath()%>';
 </script>
+<h3>
 <table>
   <tr>
     <td>
-      <h3><a href="https://github.com/ysc/superword" target="_blank">Welcome to the Superword Open Source Project!</a></h3>
+      <a href="https://github.com/ysc/superword" target="_blank">View on GitHub</a>
     </td>
       <%--
+    <td> | </td>
     <td>
       <div class="bdsharebuttonbox" data-tag="share_1">
         <a class="bds_mshare" data-cmd="mshare"></a>
@@ -47,9 +49,11 @@
   User user = (User)session.getAttribute("user");
   if(user==null){
 %>
+    <td> | </td>
     <td>
       <a href="<%=request.getContextPath()%>/system/register.jsp">Sign up</a>
     </td>
+    <td> | </td>
     <td>
       <a href="<%=request.getContextPath()%>/system/login.jsp">Sign in</a>
     </td>
@@ -65,9 +69,11 @@
           displayName = ((QQUser)user).getNickname();
       }
 %>
+    <td> | </td>
     <td>
       Welcome【<%=displayName%>】
     </td>
+    <td> | </td>
     <td>
       <a href="<%=request.getContextPath()+"/system/logout.jsp"%>">Sign out</a>
     </td>
@@ -77,6 +83,7 @@
 <%
   if(!"true".equals(request.getParameter("index"))){
 %>
+    <td> | </td>
     <td>
     <a href="<%=request.getContextPath()%>/index.jsp">Home page</a> <br/>
     </td>
@@ -85,3 +92,4 @@
 %>
   </tr>
 </table>
+</h3>
