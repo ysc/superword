@@ -194,6 +194,9 @@ public class Quiz{
         int count = 0;
         for(;;){
             Word word = words.get(new Random(System.nanoTime()).nextInt(words.size()));
+            if(word.getWord().length() < 3){
+                continue;
+            }
             QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, dictionary);
             if(quizItem == null){
                 continue;

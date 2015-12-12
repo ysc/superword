@@ -90,7 +90,8 @@ public class QuizItem implements Comparable {
 
             for(;;){
                 String candidate = words.get(new Random(System.nanoTime()).nextInt(words.size())).getWord();
-                if(word.equals(candidate)){
+                if(word.equals(candidate)
+                        || candidate.length() < 3){
                     continue;
                 }
                 String definition = getDefinition(candidate, dictionary);
