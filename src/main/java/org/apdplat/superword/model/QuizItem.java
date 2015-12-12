@@ -21,9 +21,11 @@ package org.apdplat.superword.model;
 import org.apache.commons.lang3.StringUtils;
 import org.apdplat.superword.tools.MySQLUtils;
 import org.apdplat.superword.tools.WordLinker.Dictionary;
+import org.apdplat.superword.tools.WordSources;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 /**
  * 词汇量测试项目
@@ -77,6 +79,22 @@ public class QuizItem implements Comparable {
             }
         }
         return selectedDefinition;
+    }
+
+    public static QuizItem buildIdentifyHumanQuiz(){
+        List<Word> words = WordSources
+                .getSyllabusVocabulary()
+                .parallelStream()
+                .filter(w -> w.getWord().length() > 3)
+                .collect(Collectors.toList());
+        for(;;){
+            Word word = words.get(new Random(System.nanoTime()).nextInt(words.size()));
+            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, Dictionary.YOUDAO);
+            if(quizItem == null){
+                continue;
+            }
+            return quizItem;
+        }
     }
 
     public static QuizItem buildQuizItem(String word, List<Word> words, Dictionary dictionary){
