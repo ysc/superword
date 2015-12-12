@@ -131,7 +131,9 @@ public class AntiRobotFilter implements Filter {
             html.append("<h2><ul>");
             for(String option : quizItem.getMeanings()){
                 html.append("<li>")
-                        .append("<a href=\"identify.quiz?word=")
+                        .append("<a href=\"")
+                        .append(servletContext.getContextPath())
+                        .append("/identify.quiz?word=")
                         .append(quizItem.getWord().getWord())
                         .append("&token=")
                         .append(token)
