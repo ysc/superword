@@ -60,19 +60,19 @@
       
 ###Resources download
 
-The audio files that contains 31222 words: [Download address](http://pan.baidu.com/share/link?shareid=3958453300&uk=3157595467)
+The audio files that contain 31222 words: [Download address](http://pan.baidu.com/share/link?shareid=3958453300&uk=3157595467)
 
-The HTML page of the Oxford dictionary that contains 33376 words: [Download address](http://pan.baidu.com/s/1pJmwr95)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForOxford.java)
+The HTML pages of the Oxford dictionary that contain 33376 words: [Download address](http://pan.baidu.com/s/1pJmwr95)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForOxford.java)
 
-The HTML page of the Merriam-Webster dictionary that contains 59809 words: [Download address](http://pan.baidu.com/s/1ntGmA3B)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForWebster.java)
+The HTML pages of the Merriam-Webster dictionary that contain 59809 words: [Download address](http://pan.baidu.com/s/1ntGmA3B)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForWebster.java)
 
-The HTML page of the old version iCIBA dictionary that contains 61809 words: [Download address](http://pan.baidu.com/s/1bnD9gy7)，[Parse Program](https://github.com/ysc/superword/blob/a78ab4aa2ab62fddeb664065accb06e538eb0059/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
+The HTML pages of the old version iCIBA dictionary that contain 61809 words: [Download address](http://pan.baidu.com/s/1bnD9gy7)，[Parse Program](https://github.com/ysc/superword/blob/a78ab4aa2ab62fddeb664065accb06e538eb0059/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
 
-The HTML page of the new version iCIBA dictionary that contains 63777 words: [Download address](http://pan.baidu.com/s/1ntky0zR)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
+The HTML pages of the new version iCIBA dictionary that contain 63777 words: [Download address](http://pan.baidu.com/s/1ntky0zR)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifier.java)
 
-The HTML page of the youdao dictionary that contains 63789 words: [Download address](http://pan.baidu.com/s/1pJH4ugj)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForYouDao.java)
+The HTML pages of the youdao dictionary that contain 63789 words: [Download address](http://pan.baidu.com/s/1pJH4ugj)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForYouDao.java)
 
-The 249 PDF e-books is related to IT field and software development: [it-software-domain.zip](http://pan.baidu.com/s/1kT1NA3l)
+The 249 PDF e-books are related to IT field and software development: [it-software-domain.zip](http://pan.baidu.com/s/1kT1NA3l)
 
 ###Related articles
 
