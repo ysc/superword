@@ -18,6 +18,7 @@
 
 package org.apdplat.superword.model;
 
+import org.apdplat.superword.tools.TimeUtils;
 import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
 import org.apdplat.word.util.AtomicFloat;
@@ -35,10 +36,18 @@ public class Quiz{
     private static final int SCALE = 300;
     private List<QuizItem> quizItems = new ArrayList<>();
     private int step=0;
+    private long startQuizTime;
+    private long endQuizTime;
 
     private Quiz(){}
 
+    public String getConsumedTime(){
+        return TimeUtils.getTimeDes(endQuizTime - startQuizTime);
+    }
+
     public int getEvaluationCount(){
+        endQuizTime = System.currentTimeMillis();
+
         Map<Integer, AtomicInteger> levelRightCount = new HashMap<>();
         quizItems.stream().forEach(quizItem -> {
             levelRightCount.putIfAbsent(quizItem.getLevel(), new AtomicInteger());
@@ -61,7 +70,21 @@ public class Quiz{
             }
             count.addAndGet(SCALE*rightRate);
         });
-        return count.intValue();
+        int cost = (480 - (int)(endQuizTime - startQuizTime)/1000) * 20;
+
+        if(cost < -9600){
+            cost = -9600;
+        }
+
+        if(cost > 3600){
+            cost = 3600;
+        }
+        
+        if((count.intValue() + cost) > 0){
+            return count.intValue() + cost;
+        }
+
+        return - (count.intValue() + cost);
     }
 
     public QuizItem getQuizItem(){
@@ -160,6 +183,8 @@ public class Quiz{
         level9.removeAll(level7);
         level9.removeAll(level8);
         build(level9, dictionary, quiz, 10, 9);
+
+        quiz.startQuizTime = System.currentTimeMillis();
 
         return quiz;
     }
