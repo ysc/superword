@@ -113,6 +113,9 @@ public class AntiRobotFilter implements Filter {
                     quizItem.setAnswer(_answer);
                     if(quizItem.isRight()){
                         String path = session.getAttribute("redirect").toString();
+                        if(path.contains("identify.quiz")){
+                            path = path.replace("identify.quiz", "");
+                        }
                         session.setAttribute("redirect", null);
                         session.setAttribute("isHuman", "true");
                         response.sendRedirect(path);
