@@ -122,15 +122,15 @@ public class AntiRobotFilter implements Filter {
 
             }
 
-            QuizItem quizItem = QuizItem.buildIdentifyHumanQuiz();
+            QuizItem quizItem = QuizItem.buildIdentifyHumanQuiz(12);
             String token = UUID.randomUUID().toString();
             session.setAttribute("quizItem", quizItem);
             session.setAttribute("token", token);
             StringBuilder html = new StringBuilder();
             html.append("<h1>").append("Click the correct meaning for the word <font color=\"red\">").append(quizItem.getWord().getWord()).append(":</font></h1>\n");
-            html.append("<h1><ul>");
+            html.append("<h2><ul>");
             for(String option : quizItem.getMeanings()){
-                html.append("<p><li>")
+                html.append("<li>")
                         .append("<a href=\"identify.quiz?word=")
                         .append(quizItem.getWord().getWord())
                         .append("&token=")
@@ -139,10 +139,10 @@ public class AntiRobotFilter implements Filter {
                         .append(URLEncoder.encode(option, "utf-8"))
                         .append("\">")
                         .append(option)
-                        .append("</a></li></p>\n");
+                        .append("</a></li>\n");
             }
-            html.append("</ul><br/>\n")
-                    .append("If you can't answer the question correctly, you won't have the permission to access the web site.")
+            html.append("</ul></h2>\n")
+                    .append("<h1>If you can't answer the question correctly, you won't have the permission to access the web site.")
                     .append("</h1>");
             response.getWriter().write(html.toString());
             return;
