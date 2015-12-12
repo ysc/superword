@@ -67,7 +67,8 @@ public class QuizItem implements Comparable {
             return null;
         }
         String selectedDefinition = attrs[new Random(System.nanoTime()).nextInt(attrs.length)].trim();
-        if(StringUtils.isBlank(selectedDefinition)){
+        if(StringUtils.isBlank(selectedDefinition)
+                || selectedDefinition.contains(word)){
             return null;
         }
         for(char c : selectedDefinition.substring(selectedDefinition.indexOf(".")+1).toCharArray()){
