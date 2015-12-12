@@ -60,6 +60,8 @@
       
 ###Resources download
 
+The audio files that contains 31222 words: [Download address](http://pan.baidu.com/share/link?shareid=3958453300&uk=3157595467)
+
 The HTML page of the Oxford dictionary that contains 33376 words: [Download address](http://pan.baidu.com/s/1pJmwr95)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForOxford.java)
 
 The HTML page of the Merriam-Webster dictionary that contains 59809 words: [Download address](http://pan.baidu.com/s/1ntGmA3B)，[Parse Program](https://github.com/ysc/superword/blob/master/src/main/java/org/apdplat/superword/tools/WordClassifierForWebster.java)
