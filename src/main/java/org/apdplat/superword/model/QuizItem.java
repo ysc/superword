@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apdplat.superword.tools.MySQLUtils;
 import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
+import org.apdplat.word.recognition.RecognitionTool;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -73,8 +74,16 @@ public class QuizItem implements Comparable {
                 || selectedDefinition.contains(word)){
             return null;
         }
-        for(char c : selectedDefinition.substring(selectedDefinition.indexOf(".")+1).toCharArray()){
-            if( (c>='a' && c<='z') || (c>='A' && c<='Z')){
+        if(!RecognitionTool.isEnglish(selectedDefinition.charAt(0))){
+            return null;
+        }
+        if(dictionary == Dictionary.YOUDAO || dictionary == Dictionary.ICIBA) {
+            for (char c : selectedDefinition.substring(selectedDefinition.indexOf(".") + 1).toCharArray()) {
+                if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+                    return null;
+                }
+            }
+            if(selectedDefinition.length() > 25){
                 return null;
             }
         }
