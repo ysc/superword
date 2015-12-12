@@ -81,7 +81,7 @@ public class QuizItem implements Comparable {
         return selectedDefinition;
     }
 
-    public static QuizItem buildIdentifyHumanQuiz(){
+    public static QuizItem buildIdentifyHumanQuiz(int optionCount){
         List<Word> words = WordSources
                 .get("/word_CET4.txt")
                 .parallelStream()
@@ -89,7 +89,7 @@ public class QuizItem implements Comparable {
                 .collect(Collectors.toList());
         for(;;){
             Word word = words.get(new Random(System.nanoTime()).nextInt(words.size()));
-            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, Dictionary.YOUDAO);
+            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, Dictionary.YOUDAO, optionCount);
             if(quizItem == null){
                 continue;
             }
@@ -98,6 +98,10 @@ public class QuizItem implements Comparable {
     }
 
     public static QuizItem buildQuizItem(String word, List<Word> words, Dictionary dictionary){
+        return buildQuizItem(word, words, dictionary, 4);
+    }
+
+    public static QuizItem buildQuizItem(String word, List<Word> words, Dictionary dictionary, int optionCount){
         try {
             QuizItem quizItem = new QuizItem();
             String selectedDefinition = getDefinition(word, dictionary);
@@ -109,7 +113,7 @@ public class QuizItem implements Comparable {
             for(;;){
                 String candidate = words.get(new Random(System.nanoTime()).nextInt(words.size())).getWord();
                 if(word.equals(candidate)
-                        || candidate.length() < 3){
+                        || candidate.length() < 4){
                     continue;
                 }
                 String definition = getDefinition(candidate, dictionary);
@@ -117,7 +121,7 @@ public class QuizItem implements Comparable {
                     continue;
                 }
                 quizItem.otherWords.add(new Word(candidate, definition));
-                if(quizItem.otherWords.size() >= 3){
+                if(quizItem.otherWords.size() >= (optionCount-1)){
                     return quizItem;
                 }
             }
