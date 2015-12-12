@@ -29,6 +29,7 @@
     <td>
       <h3><a href="https://github.com/ysc/superword" target="_blank">Welcome to the Superword Open Source Project!</a></h3>
     </td>
+      <%--
     <td>
       <div class="bdsharebuttonbox" data-tag="share_1">
         <a class="bds_mshare" data-cmd="mshare"></a>
@@ -41,6 +42,7 @@
         <a class="bds_count" data-cmd="count"></a>
       </div>
     </td>
+      --%>
 <%
   User user = (User)session.getAttribute("user");
   if(user==null){
