@@ -92,7 +92,7 @@ public class AntiRobotFilter implements Filter {
             return;
         }
 
-        HttpSession session = request.getSession();
+        HttpSession session = request.getSession(true);
         if(session.getAttribute("isHuman") == null){
             AtomicInteger identifyCount = (AtomicInteger)session.getAttribute("identifyCount");
             if(identifyCount == null){
