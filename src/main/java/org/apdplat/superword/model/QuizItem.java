@@ -98,7 +98,7 @@ public class QuizItem implements Comparable {
                 .collect(Collectors.toList());
         for(;;){
             Word word = words.get(new Random(System.nanoTime()).nextInt(words.size()));
-            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, Dictionary.YOUDAO, optionCount);
+            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, Dictionary.WEBSTER, optionCount);
             if(quizItem == null){
                 continue;
             }
