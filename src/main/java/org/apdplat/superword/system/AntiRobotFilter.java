@@ -70,14 +70,20 @@ public class AntiRobotFilter implements Filter {
     }
 
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws ServletException, IOException {
-        HttpServletResponse response = (HttpServletResponse)resp;
-        response.setContentType("text/html");
-        response.setCharacterEncoding("utf-8");
-
         HttpServletRequest request = (HttpServletRequest)req;
+
+        if(request.getRequestURI().endsWith("/favicon.ico")){
+            chain.doFilter(req, resp);
+            return;
+        }
+
         if(servletContext == null){
             servletContext = request.getServletContext();
         }
+
+        HttpServletResponse response = (HttpServletResponse)resp;
+        response.setContentType("text/html");
+        response.setCharacterEncoding("utf-8");
 
         String userAgent = request.getHeader("User-Agent");
         if(StringUtils.isBlank(userAgent)
@@ -135,7 +141,7 @@ public class AntiRobotFilter implements Filter {
                         StringBuilder html = new StringBuilder();
                         html.append("<h1>The meaning of red color font is your answer, but the right answer is the meaning of blue color font for the word <font color=\"red\">")
                                 .append(quizItem.getWord().getWord())
-                                .append(":</font></h1><br/>");
+                                .append(":</font></h1>");
                         html.append("<h2><ul>");
                         for(String option : quizItem.getMeanings()){
                             html.append("<li>");
