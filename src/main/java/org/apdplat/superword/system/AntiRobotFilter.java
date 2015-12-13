@@ -100,7 +100,7 @@ public class AntiRobotFilter implements Filter {
                 session.setAttribute("identifyCount", identifyCount);
             }
             identifyCount.incrementAndGet();
-            if(identifyCount.intValue() > 5){
+            if(identifyCount.intValue() > 200){
                 response.getWriter().write("System has detected that you may not be a human, because you can't answer the question correctly.");
                 return;
             }
@@ -130,6 +130,28 @@ public class AntiRobotFilter implements Filter {
                         session.setAttribute("forward", null);
                         session.setAttribute("isHuman", "true");
                         request.getRequestDispatcher(path).forward(request, response);
+                        return;
+                    }else{
+                        StringBuilder html = new StringBuilder();
+                        html.append("<h1>The meaning of red color font is your answer, but the right answer is the meaning of blue color font for the word <font color=\"red\">")
+                                .append(quizItem.getWord().getWord())
+                                .append(":</font></h1><br/>");
+                        html.append("<h2><ul>");
+                        for(String option : quizItem.getMeanings()){
+                            html.append("<li>");
+                            if(option.equals(_answer)) {
+                                html.append("<font color=\"red\">").append(option).append("</font>");
+                            }else if(option.equals(quizItem.getWord().getMeaning())){
+                                html.append("<font color=\"blue\">").append(option).append("</font>");
+                            }else{
+                                html.append(option);
+                            }
+                            html.append("</li>\n");
+                        }
+                        html.append("</ul></h2>\n<h1><a href=\"")
+                                .append(servletContext.getContextPath())
+                                .append("\">Continue...</a></h1>\n");
+                        response.getWriter().write(html.toString());
                         return;
                     }
                 }
