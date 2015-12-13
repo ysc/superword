@@ -99,8 +99,9 @@ public class AntiRobotFilter implements Filter {
                 identifyCount = new AtomicInteger();
                 session.setAttribute("identifyCount", identifyCount);
             }
-            if(identifyCount.intValue() > 10){
-                response.getWriter().write("Superword is a Java open source project dedicated in the study of English words analysis and auxiliary reading, including but not limited to, spelling similarity, definition similarity, pronunciation similarity, the transformation rules of the spelling, the prefix and the dynamic prefix, the suffix and the dynamic suffix, roots, compound words, text auxiliary reading, web page auxiliary reading, book auxiliary reading, etc..");
+            identifyCount.incrementAndGet();
+            if(identifyCount.intValue() > 5){
+                response.getWriter().write("System has detected that you may not be a human, because you can't answer the question correctly.");
                 return;
             }
 
@@ -117,7 +118,6 @@ public class AntiRobotFilter implements Filter {
                     && session.getAttribute("token") != null
                     && session.getAttribute("token").toString().equals(_token)
                     && session.getAttribute("quizItem") != null){
-                identifyCount.incrementAndGet();
                 session.setAttribute("token", null);
                 QuizItem quizItem = (QuizItem)session.getAttribute("quizItem");
                 if(_word.equals(quizItem.getWord().getWord())){
