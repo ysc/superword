@@ -80,6 +80,10 @@ public class Quiz{
             cost = 3600;
         }
 
+        if(cost > 4800){
+            cost = -cost;
+        }
+
         if((count.intValue() + cost) > 0){
             return count.intValue() + cost;
         }
