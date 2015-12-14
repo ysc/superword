@@ -47,7 +47,7 @@ public class InstantTip {
     }
 
     public static String getWordsByPrefix(String prefix){
-        prefix = prefix.trim().toLowerCase();
+        prefix = prefix.toLowerCase().replaceAll("\\s+", "");
         StringBuilder html= new StringBuilder();
         html.append("<ol>\n");
         int i=0;
