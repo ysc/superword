@@ -42,7 +42,7 @@ public class InstantTipServlet extends HttpServlet {
         response.setCharacterEncoding("utf-8");
         String prefix = request.getParameter("prefix");
         if(StringUtils.isNotBlank(prefix)
-                && RecognitionTool.isEnglish(prefix)){
+                && RecognitionTool.isEnglish(prefix.replaceAll("\\s+", ""))){
             response.getWriter().write(InstantTip.getWordsByPrefix(prefix));
         }else {
             response.getWriter().write("");
