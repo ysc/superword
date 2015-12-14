@@ -47,11 +47,12 @@ public class InstantTip {
     }
 
     public static String getWordsByPrefix(String prefix){
+        prefix = prefix.trim().toLowerCase();
         StringBuilder html= new StringBuilder();
         html.append("<ol>\n");
         int i=0;
         for(String word : WORDS_TO_DEFINITION.keySet()){
-            if(word.toLowerCase().startsWith(prefix.toLowerCase())){
+            if(word.toLowerCase().startsWith(prefix)){
                 html.append("<li>").append(WordLinker.toLink(word)).append("  ").append(WORDS_TO_DEFINITION.get(word)).append("</li>\n");
                 if((++i) >= RECORD_COUNT_LIMIT){
                     break;
