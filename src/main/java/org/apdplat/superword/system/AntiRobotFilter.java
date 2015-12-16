@@ -22,6 +22,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apdplat.superword.model.QuizItem;
 import org.apdplat.superword.model.User;
 import org.apdplat.superword.tools.IPUtils;
+import org.apdplat.superword.tools.MySQLUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -138,6 +139,13 @@ public class AntiRobotFilter implements Filter {
                         request.getRequestDispatcher(path).forward(request, response);
                         return;
                     }else{
+                        Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
+                        if(wrongWordsInQuiz == null){
+                            wrongWordsInQuiz = new HashSet<>();
+                            session.setAttribute("wrong_words_in_quiz", wrongWordsInQuiz);
+                        }
+                        wrongWordsInQuiz.add(quizItem.getWord().getWord());
+
                         StringBuilder html = new StringBuilder();
                         html.append("<h1>The meaning of red color font is your answer, but the right answer is the meaning of blue color font for the word <font color=\"red\">")
                                 .append(quizItem.getWord().getWord())
