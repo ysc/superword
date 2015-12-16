@@ -39,15 +39,14 @@
         if(success) {
             session.setAttribute("user", user);
             Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
-            final String u = userName;
             if(wrongWordsInQuiz != null){
-                wrongWordsInQuiz.stream().map(w->{
+                for(String w : wrongWordsInQuiz){
                     MyNewWord myNewWord = new MyNewWord();
                     myNewWord.setWord(w);
                     myNewWord.setDateTime(new Date());
-                    myNewWord.setUserName(u);
-                    return myNewWord;
-                }).forEach(w -> MySQLUtils.saveMyNewWordsToDatabase(w));
+                    myNewWord.setUserName(userName);
+                    MySQLUtils.saveMyNewWordsToDatabase(myNewWord);
+                }
                 session.setAttribute("wrong_words_in_quiz", null);
             }
             request.getRequestDispatcher("/index.jsp").forward(request, response);
