@@ -20,6 +20,8 @@
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+<%@ page import="java.util.Set" %>
+<%@ page import="org.apdplat.superword.model.MyNewWord" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -36,6 +38,18 @@
         user.setPassword(password);
         boolean success = MySQLUtils.login(user);
         if(success) {
+            Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
+            final String u = userName;
+            if(wrongWordsInQuiz != null){
+                wrongWordsInQuiz.stream().map(w->{
+                    MyNewWord myNewWord = new MyNewWord();
+                    myNewWord.setWord(w);
+                    myNewWord.setDateTime(new Date());
+                    myNewWord.setUserName(u);
+                    return myNewWord;
+                }).forEach(w -> MySQLUtils.saveMyNewWordsToDatabase(w));
+                session.setAttribute("wrong_words_in_quiz", null);
+            }
             session.setAttribute("user", user);
             request.getRequestDispatcher("/index.jsp").forward(request, response);
         }else{
