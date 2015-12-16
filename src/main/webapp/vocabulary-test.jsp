@@ -27,6 +27,8 @@
 <%@ page import="org.apdplat.superword.model.MyNewWord" %>
 <%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
+<%@ page import="java.util.Set" %>
+<%@ page import="java.util.HashSet" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -46,17 +48,12 @@
         answer = URLDecoder.decode(answer, "utf-8");
         boolean right = quiz.answer(word, answer);
         if(!right){
-            User user = (User)request.getSession().getAttribute("user");
-            String newWord = word;
-            if(StringUtils.isNotBlank(newWord)
-                    && user != null
-                    && StringUtils.isNotBlank(user.getUserName())){
-                MyNewWord myNewWord = new MyNewWord();
-                myNewWord.setWord(newWord);
-                myNewWord.setDateTime(new Date());
-                myNewWord.setUserName(user.getUserName());
-                MySQLUtils.saveMyNewWordsToDatabase(myNewWord);
+            Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
+            if(wrongWordsInQuiz == null){
+                wrongWordsInQuiz = new HashSet<>();
+                session.setAttribute("wrong_words_in_quiz", wrongWordsInQuiz);
             }
+            wrongWordsInQuiz.add(word);
         }
     }
     String htmlFragment = "";
