@@ -46,8 +46,14 @@ public class Quiz{
     }
 
     public int getEvaluationCount(){
+        //答题完成时间
         endQuizTime = System.currentTimeMillis();
-
+        //计算每一个级别答对的问题数目
+        //如:
+        //1 -> 2
+        //2 -> 3
+        //...
+        //9 -> 3
         Map<Integer, AtomicInteger> levelRightCount = new HashMap<>();
         quizItems.stream().forEach(quizItem -> {
             levelRightCount.putIfAbsent(quizItem.getLevel(), new AtomicInteger());
@@ -55,14 +61,20 @@ public class Quiz{
                 levelRightCount.get(quizItem.getLevel()).incrementAndGet();
             }
         });
+        //预估总词数
         AtomicFloat count = new AtomicFloat();
         quizItems.stream().filter(quizItem -> quizItem.isRight()).forEach(quizItem -> {
+            //计算每一个级别答对的比率 = 每一个级别答对的题数 / 每一个级别总的题数
             float rightRate = levelRightCount.get(quizItem.getLevel()).intValue()
                     / (float)LEVEL_TO_TOTAL_COUNT.get(quizItem.getLevel());
+            //如果题目属于第一级, 则将第一级答对的比率乘以固定的预估值作为该题预估词数
             if(quizItem.getLevel() > 1){
+                //如果题目不属于第一级, 则将上一级答对的比率和本级相乘
+                //然后用这个比率乘以固定的预估值作为该题预估词数
                 int lastLevel = quizItem.getLevel() - 1;
                 float lastRightRate = levelRightCount.get(lastLevel).intValue()
                         / (float)LEVEL_TO_TOTAL_COUNT.get(lastLevel);
+                //如果上一级全部答错, 则将上一级的答对比率固定设置为0.1
                 if(lastRightRate == 0){
                     lastRightRate = 0.1f;
                 }
@@ -71,23 +83,23 @@ public class Quiz{
             count.addAndGet(SCALE*rightRate);
         });
         int cost = (480 - (int)(endQuizTime - startQuizTime)/1000) * 20;
-
+        //期望答题时间是8分钟。每落后一秒钟预估词数减20, 最多减量不超过9600
         if(cost < -9600){
             cost = -9600;
         }
-
+        //期望答题时间是8分钟。每提前一秒钟预估词数加20，最多加量不超过3600
         if(cost > 3600){
             cost = 3600;
         }
-
+        //假定做题最快时间不少于4分钟，如果少于四分钟，每少N秒预估词数就减去4800+N*20
         if(cost > 4800){
             cost = -cost;
         }
-
+        //返回预估值
         if((count.intValue() + cost) > 0){
             return count.intValue() + cost;
         }
-
+        //如果如上算法最后获得的预估词数是负数，则去除负号取绝对值
         return - (count.intValue() + cost);
     }
 
@@ -188,6 +200,7 @@ public class Quiz{
         level9.removeAll(level8);
         build(level9, dictionary, quiz, 10, 9);
 
+        //答题开始时间
         quiz.startQuizTime = System.currentTimeMillis();
 
         return quiz;
