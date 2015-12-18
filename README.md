@@ -78,6 +78,8 @@ The 249 PDF e-books are related to IT field and software development: [it-softwa
 
 ###Related articles
 
+[一种使用随机抽样梯度下降算法来预估词汇量的方法](http://my.oschina.net/apdplat/blog/547668)
+
 [如何正确地快速地看电影学英语](http://my.oschina.net/apdplat/blog/530605)
 
 [使用Java8实现自己的个性化搜索引擎](http://my.oschina.net/apdplat/blog/396193)
