@@ -23,10 +23,6 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.net.URLDecoder" %>
-<%@ page import="org.apdplat.superword.model.User" %>
-<%@ page import="org.apdplat.superword.model.MyNewWord" %>
-<%@ page import="java.util.Date" %>
-<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="java.util.Set" %>
 <%@ page import="java.util.HashSet" %>
 
