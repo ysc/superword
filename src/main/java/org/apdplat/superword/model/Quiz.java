@@ -27,11 +27,16 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * 词汇量测试
  * @author 杨尚川
  */
 public class Quiz{
+    private static final Logger LOGGER = LoggerFactory.getLogger(Quiz.class);
+
     private static final Map<Integer, Integer> LEVEL_TO_TOTAL_COUNT = new ConcurrentHashMap<>();
     private static final int SCALE = 300;
     private List<QuizItem> quizItems = new ArrayList<>();
@@ -210,21 +215,25 @@ public class Quiz{
         LEVEL_TO_TOTAL_COUNT.put(level, limit);
         int count = 0;
         for(;;){
-            Word word = words.get(new Random(System.nanoTime()).nextInt(words.size()));
-            if(word.getWord().length() < 3){
-                continue;
-            }
-            QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, dictionary);
-            if(quizItem == null){
-                continue;
-            }
-            if(quiz.quizItems.contains(quizItem)){
-                continue;
-            }
-            quizItem.setLevel(level);
-            quiz.quizItems.add(quizItem);
-            if((++count) >= limit){
-                break;
+            try {
+                Word word = words.get(new Random(System.nanoTime()).nextInt(words.size()));
+                if (word.getWord().length() < 3) {
+                    continue;
+                }
+                QuizItem quizItem = QuizItem.buildQuizItem(word.getWord(), words, dictionary);
+                if (quizItem == null) {
+                    continue;
+                }
+                if (quiz.quizItems.contains(quizItem)) {
+                    continue;
+                }
+                quizItem.setLevel(level);
+                quiz.quizItems.add(quizItem);
+                if ((++count) >= limit) {
+                    break;
+                }
+            }catch (Throwable e){
+                LOGGER.error("something wrong when build quiz", e);
             }
         }
     }
