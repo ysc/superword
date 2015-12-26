@@ -58,6 +58,15 @@
     
         Open browser access: http://localhost:8080/superword/index.jsp
       
+###Engaging in complex language behavior requires various kinds of knowledge of language:
+
+    Phonetics and Phonology — knowledge about linguistic sounds
+    Morphology — knowledge of the meaningful components of words
+    Syntax — knowledge of the structural relationships between words
+    Semantics — knowledge of meaning
+    Pragmatics — knowledge of the relationship of meaning to the goals and intentions of the speaker
+    Discourse — knowledge about linguistic units larger than a single utterance
+      
 ###Resources download
 
 The audio files of the Merriam-Webster dictionary that contain 11053 words: [Download address](http://pan.baidu.com/s/1bnQLyJP)
