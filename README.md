@@ -69,6 +69,8 @@
       
 ###Resources download
 
+[4000 Essential English Words](http://pan.baidu.com/s/1kUhEUKR)
+
 The audio files of the Merriam-Webster dictionary that contain 11053 words: [Download address](http://pan.baidu.com/s/1bnQLyJP)
 
 The audio files of the Oxford dictionary that contain 31222 words: [Download address](http://pan.baidu.com/s/1qXe8cO0)
