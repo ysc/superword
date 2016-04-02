@@ -19,10 +19,10 @@
 package org.apdplat.superword.system;
 
 import org.apache.commons.lang.StringUtils;
+import org.apdplat.superword.freemarker.TemplateUtils;
 import org.apdplat.superword.model.QuizItem;
 import org.apdplat.superword.model.User;
 import org.apdplat.superword.tools.IPUtils;
-import org.apdplat.superword.tools.MySQLUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -146,26 +146,12 @@ public class AntiRobotFilter implements Filter {
                         }
                         wrongWordsInQuiz.add(quizItem.getWord().getWord());
 
-                        StringBuilder html = new StringBuilder();
-                        html.append("<h1>The meaning of red color font is your answer, but the right answer is the meaning of blue color font for the word <font color=\"red\">")
-                                .append(quizItem.getWord().getWord())
-                                .append(":</font></h1>");
-                        html.append("<h2><ul>");
-                        for(String option : quizItem.getMeanings()){
-                            html.append("<li>");
-                            if(option.equals(_answer)) {
-                                html.append("<font color=\"red\">").append(option).append("</font>");
-                            }else if(option.equals(quizItem.getWord().getMeaning())){
-                                html.append("<font color=\"blue\">").append(option).append("</font>");
-                            }else{
-                                html.append(option);
-                            }
-                            html.append("</li>\n");
-                        }
-                        html.append("</ul></h2>\n<h1><a href=\"")
-                                .append(servletContext.getContextPath())
-                                .append("\">Continue...</a></h1>\n");
-                        response.getWriter().write(html.toString());
+                        Map<String, Object> data = new HashMap<>();
+                        data.put("quizItem", quizItem);
+                        data.put("answer", _answer);
+                        String html = TemplateUtils.getIdentifyQuiz(data);
+
+                        response.getWriter().write(html);
                         return;
                     }
                 }
