@@ -32,7 +32,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.IOException;
-import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -161,27 +160,15 @@ public class AntiRobotFilter implements Filter {
             String token = UUID.randomUUID().toString();
             session.setAttribute("quizItem", quizItem);
             session.setAttribute("token", token);
-            StringBuilder html = new StringBuilder();
-            html.append("<h1>").append("Click the correct meaning for the word <font color=\"red\">").append(quizItem.getWord().getWord()).append(":</font></h1>\n");
-            html.append("<h2><ul>");
-            for(String option : quizItem.getMeanings()){
-                html.append("<li>")
-                        .append("<a href=\"")
-                        .append(servletContext.getContextPath())
-                        .append("/identify.quiz?word=")
-                        .append(quizItem.getWord().getWord())
-                        .append("&token=")
-                        .append(token)
-                        .append("&answer=")
-                        .append(URLEncoder.encode(option, "utf-8"))
-                        .append("\">")
-                        .append(option)
-                        .append("</a></li>\n");
-            }
-            html.append("</ul></h2>\n")
-                    .append("<h1>If you can't answer the question correctly, you won't have the permission to access the web site.")
-                    .append("</h1>");
-            response.getWriter().write(html.toString());
+
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("quizItem", quizItem);
+            data.put("servletContext", servletContext.getContextPath());
+            data.put("token", token);
+            String html = TemplateUtils.getIdentifyQuizForm(data);
+
+            response.getWriter().write(html);
             return;
         }
 
