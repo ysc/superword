@@ -193,4 +193,8 @@ public class QuizItem implements Comparable {
         }
         return this.word.compareTo(w);
     }
+    public static void main(String[] args) {
+        QuizItem quizItem = QuizItem.buildIdentifyHumanQuiz(12);
+        quizItem.print();
+    }
 }
