@@ -37,7 +37,7 @@
         Server Port: 3306
         Database: superword
         User name: root
-        Password: root
+        Password: 
         
         Execute the script in MySQL command line:
         source src/main/resources/mysql/superword.sql
@@ -57,6 +57,7 @@
     5、Use system
     
         Open browser access: http://localhost:8080/superword/index.jsp
+        Notice: The first time to access the system is very slow, be patient please.
       
 ###Engaging in complex language behavior requires various kinds of knowledge of language:
 
