@@ -16,15 +16,19 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
-<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
+<%@ page import="org.apache.commons.lang3.StringUtils" %>
+<%@ page import="org.apdplat.superword.model.MyNewWord" %>
 <%@ page import="org.apdplat.superword.model.Quiz" %>
 <%@ page import="org.apdplat.superword.model.QuizItem" %>
-<%@ page import="org.apache.commons.lang3.StringUtils" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
-<%@ page import="java.net.URLEncoder" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="java.net.URLDecoder" %>
-<%@ page import="java.util.Set" %>
+<%@ page import="java.net.URLEncoder" %>
+<%@ page import="java.util.Date" %>
 <%@ page import="java.util.HashSet" %>
+<%@ page import="java.util.Set" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -92,6 +96,20 @@
                 .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=YOUDAO\">Test Again (Chinese)</a><br/>")
                 .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=WEBSTER\">Test Again (English)</a><br/>");
         htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+quiz.getEvaluationCount()+" words. The time you spent is "+quiz.getConsumedTime()+"</font><br/><br/>"+table.toString();
+
+        // 如果用户已经登录, 则将答错的词加入生词本, 如果用户没有登录, 那么会在用户注册成功或者登录的时候将答错的词加入生词本
+        User user = (User)request.getSession().getAttribute("user");
+        Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
+        if(wrongWordsInQuiz != null && user != null){
+            for(String w : wrongWordsInQuiz){
+                MyNewWord myNewWord = new MyNewWord();
+                myNewWord.setWord(w);
+                myNewWord.setDateTime(new Date());
+                myNewWord.setUserName(user.getUserName());
+                MySQLUtils.saveMyNewWordsToDatabase(myNewWord);
+            }
+            session.setAttribute("wrong_words_in_quiz", null);
+        }
     }else{
         StringBuilder html = new StringBuilder();
         html.append("<font color=\"red\"><h1>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h1></font>\n");
