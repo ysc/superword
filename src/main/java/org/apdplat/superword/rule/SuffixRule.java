@@ -19,17 +19,21 @@
  */
 package org.apdplat.superword.rule;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
-
 import org.apache.commons.lang.StringUtils;
-import org.apdplat.superword.model.*;
+import org.apdplat.superword.model.ComplexSuffix;
+import org.apdplat.superword.model.Suffix;
+import org.apdplat.superword.model.Word;
 import org.apdplat.superword.tools.HtmlFormatter;
 import org.apdplat.superword.tools.WordSources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 从指定的英文单词的集合中找出符合后缀规则的单词
@@ -42,9 +46,10 @@ public class SuffixRule{
 
     public static List<Suffix> getAllSuffixes(){
     List<Suffix> suffixes = new ArrayList<>();
-    try{
-        List<String> lines = Files.readAllLines(Paths.get("src/main/resources/root_affix.txt"));
-        lines.forEach(line ->{
+    // 流式解析, 自动关闭资源
+    try(BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(PrefixRule.class.getResourceAsStream("/root_affix.txt")))){
+        String line = null;
+        while((line = bufferedReader.readLine()) != null){
             if(StringUtils.isNotBlank(line)
                     && !line.startsWith("#")
                     && line.startsWith("后缀：")){
@@ -63,8 +68,8 @@ public class SuffixRule{
                     LOGGER.error("解析后缀出错："+line);
                 }
             }
-        });
-    } catch (Exception e){
+        }
+    }catch (Exception e){
         LOGGER.error(e.getMessage(), e);
     }
     return suffixes;
