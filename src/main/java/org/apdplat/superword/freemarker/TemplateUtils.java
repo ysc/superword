@@ -11,6 +11,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * 模板工具, 用于生成html代码
@@ -35,18 +36,31 @@ public class TemplateUtils {
     }
 
     /**
-     * 在识别用户是否是机器人的测试中, 如果用户测试识别, 则向用户显示这里生成的HTML代码
-     * @param data 需要保护两个数据项, 一是测试数据集quizItem, 二是用户的回答answer
+     * 在识别用户是否是机器人的测试中, 如果用户测试失败, 则向用户显示这里生成的HTML代码
+     * @param data 需要两个数据项, 一是测试数据集quizItem, 二是用户的回答answer
      * @return 测试结果HTML代码
      */
     public static String getIdentifyQuiz(Map<String, Object> data){
+        return merge(data, "identify_quiz.ftlh");
+    }
+
+    /**
+     * 在识别用户是否是机器人的测试中, 给用户展示这里生成的HTML代码
+     * @param data 需要三个数据项, 一是servletContext, 二是token, 三是quizItem
+     * @return 测试HTML代码
+     */
+    public static String getIdentifyQuizForm(Map<String, Object> data){
+        return merge(data, "identify_quiz_form.ftlh");
+    }
+
+    public static String merge(Map<String, Object> data, String templateName){
         try {
-            Template template = CFG.getTemplate("identify_quiz.ftlh");
+            Template template = CFG.getTemplate(templateName);
             Writer out = new StringWriter();
             template.process(data, out);
             return out.toString();
         }catch (Exception e){
-            LOGGER.error("generate authentication template failed", e);
+            LOGGER.error("generate template "+templateName+" failed", e);
         }
         return "";
     }
@@ -57,5 +71,17 @@ public class TemplateUtils {
         data.put("quizItem", quizItem);
         data.put("answer", "random answer");
         System.out.println(TemplateUtils.getIdentifyQuiz(data));
+
+        quizItem = QuizItem.buildIdentifyHumanQuiz(12);
+        data.put("quizItem", quizItem);
+        data.put("servletContext", "");
+        data.put("token", UUID.randomUUID().toString());
+        System.out.println(TemplateUtils.getIdentifyQuizForm(data));
+
+        quizItem = QuizItem.buildIdentifyHumanQuiz(12);
+        data.put("quizItem", quizItem);
+        data.put("servletContext", "/superword");
+        data.put("token", UUID.randomUUID().toString());
+        System.out.println(TemplateUtils.getIdentifyQuizForm(data));
     }
 }
