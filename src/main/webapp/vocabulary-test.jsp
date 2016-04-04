@@ -26,9 +26,8 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="java.net.URLDecoder" %>
 <%@ page import="java.net.URLEncoder" %>
-<%@ page import="java.util.Date" %>
-<%@ page import="java.util.HashSet" %>
-<%@ page import="java.util.Set" %>
+<%@ page import="java.util.*" %>
+<%@ page import="org.apdplat.superword.freemarker.TemplateUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -111,21 +110,10 @@
             session.setAttribute("wrong_words_in_quiz", null);
         }
     }else{
-        StringBuilder html = new StringBuilder();
-        html.append("<font color=\"red\"><h1>").append(quiz.step()).append(". ").append(quizItem.getWord().getWord()).append(":</h1></font>\n");
-        html.append("<h1><ul>");
-        for(String option : quizItem.getMeanings()){
-            html.append("<p><li>")
-                    .append("<a href=\"vocabulary-test.jsp?word=")
-                    .append(quizItem.getWord().getWord())
-                    .append("&answer=")
-                    .append(URLEncoder.encode(option, "utf-8"))
-                    .append("\">")
-                    .append(option)
-                    .append("</a></li></p>\n");
-        }
-        html.append("</ul></h1>");
-        htmlFragment = html.toString();
+        Map<String, Object> data = new HashMap<>();
+        data.put("quizItem", quizItem);
+        data.put("step", quiz.step());
+        htmlFragment = TemplateUtils.getVocabularyTestForm(data);
     }
 %>
 
