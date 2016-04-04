@@ -148,7 +148,7 @@ public class AntiRobotFilter implements Filter {
                         Map<String, Object> data = new HashMap<>();
                         data.put("quizItem", quizItem);
                         data.put("answer", _answer);
-                        String html = TemplateUtils.getIdentifyQuiz(data);
+                        String html = TemplateUtils.getIdentifyQuizFailure(data);
 
                         response.getWriter().write(html);
                         return;

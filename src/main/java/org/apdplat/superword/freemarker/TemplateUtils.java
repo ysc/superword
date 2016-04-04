@@ -40,8 +40,8 @@ public class TemplateUtils {
      * @param data 需要两个数据项, 一是测试数据集quizItem, 二是用户的回答answer
      * @return 测试结果HTML代码
      */
-    public static String getIdentifyQuiz(Map<String, Object> data){
-        return merge(data, "identify_quiz.ftlh");
+    public static String getIdentifyQuizFailure(Map<String, Object> data){
+        return merge(data, "identify_quiz_failure.ftlh");
     }
 
     /**
@@ -70,7 +70,7 @@ public class TemplateUtils {
         QuizItem quizItem = QuizItem.buildIdentifyHumanQuiz(12);
         data.put("quizItem", quizItem);
         data.put("answer", "random answer");
-        System.out.println(TemplateUtils.getIdentifyQuiz(data));
+        System.out.println(TemplateUtils.getIdentifyQuizFailure(data));
 
         quizItem = QuizItem.buildIdentifyHumanQuiz(12);
         data.put("quizItem", quizItem);
