@@ -38,17 +38,11 @@
         boolean success = MySQLUtils.register(user);
         if(success) {
             session.setAttribute("user", user);
-            Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
-            if(wrongWordsInQuiz != null){
-                for(String w : wrongWordsInQuiz){
-                    MyNewWord myNewWord = new MyNewWord();
-                    myNewWord.setWord(w);
-                    myNewWord.setDateTime(new Date());
-                    myNewWord.setUserName(userName);
-                    MySQLUtils.saveMyNewWordsToDatabase(myNewWord);
-                }
-                session.setAttribute("wrong_words_in_quiz", null);
-            }
+
+            // 如果用户注册之前做过单词测试
+            // 将用户回答错误的单词保存到我的生词本
+            MySQLUtils.saveWrongWordsInQuizToMyNewWords(session);
+
             request.getRequestDispatcher("/index.jsp").forward(request, response);
         }else{
             tip = "failed to sign up，please try once more or contact with administrator!";
