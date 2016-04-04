@@ -27,6 +27,7 @@ import org.apdplat.superword.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.http.HttpSession;
 import javax.sql.DataSource;
 import java.sql.*;
 import java.sql.Date;
@@ -903,6 +904,30 @@ public class MySQLUtils {
             LOG.error("保存失败", e);
         } finally {
             close(con, pst, rs);
+        }
+    }
+
+    /**
+     * 将用户回答错误的单词保存到我的生词本
+     * @param session
+     */
+    public static void saveWrongWordsInQuizToMyNewWords(HttpSession session){
+        if(session == null){
+            return;
+        }
+        User user = (User)session.getAttribute("user");
+        Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
+        if(wrongWordsInQuiz != null
+                && user != null
+                && user.getUserName() != null){
+            for(String w : wrongWordsInQuiz){
+                MyNewWord myNewWord = new MyNewWord();
+                myNewWord.setWord(w);
+                myNewWord.setDateTime(new Date(System.currentTimeMillis()));
+                myNewWord.setUserName(user.getUserName());
+                MySQLUtils.saveMyNewWordsToDatabase(myNewWord);
+            }
+            session.setAttribute("wrong_words_in_quiz", null);
         }
     }
 
