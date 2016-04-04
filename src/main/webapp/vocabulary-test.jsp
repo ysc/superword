@@ -17,15 +17,12 @@
   --%>
 
 <%@ page import="org.apache.commons.lang3.StringUtils" %>
-<%@ page import="org.apdplat.superword.model.MyNewWord" %>
 <%@ page import="org.apdplat.superword.model.Quiz" %>
 <%@ page import="org.apdplat.superword.model.QuizItem" %>
-<%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="java.net.URLDecoder" %>
-<%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.util.*" %>
 <%@ page import="org.apdplat.superword.freemarker.TemplateUtils" %>
 
