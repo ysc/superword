@@ -58,43 +58,9 @@
     String htmlFragment = "";
     QuizItem quizItem = quiz.getQuizItem();
     if(quizItem == null){
-        StringBuilder table = new StringBuilder();
-        table.append("<table border=\"1\">")
-                .append("<tr align=\"left\"><th>No.</th><th>Word</th><th>Right Or Wrong</th><th>Your Answer</th><th>Right Answer</th></tr>");
-        int i=1;
-        int rightCount=0;
-        int wrongCount=0;
-        for(QuizItem item : quiz.getQuizItems()){
-            if(item.isRight()){
-                rightCount++;
-            }else{
-                wrongCount++;
-            }
-            table.append("<tr>")
-                    .append("<td>")
-                    .append(i++)
-                    .append("</td>")
-                    .append("<td>")
-                    .append(WordLinker.toLink(item.getWord().getWord()))
-                    .append("</td>")
-                    .append("<td>")
-                    .append(item.isRight()?"Right":"<font color=\"red\">Wrong</font>")
-                    .append("</td>")
-                    .append("<td>")
-                    .append(item.isRight()?"":"<font color=\"red\">")
-                    .append(item.getAnswer())
-                    .append(item.isRight()?"":"</font>")
-                    .append("</td><td>")
-                    .append(item.isRight()?"":"<font color=\"blue\">")
-                    .append(item.getWord().getMeaning())
-                    .append(item.isRight()?"":"</font>")
-                    .append("</td>")
-                    .append("</tr>");
-        }
-        table.append("</table><br/>")
-                .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=YOUDAO\">Test Again (Chinese)</a><br/>")
-                .append("<a href=\"vocabulary-test.jsp?restart=true&dictionary=WEBSTER\">Test Again (English)</a><br/>");
-        htmlFragment = "<font color=\"red\">Right Count: "+rightCount+", Wrong Count: "+wrongCount+", Your vocabulary is likely "+quiz.getEvaluationCount()+" words. The time you spent is "+quiz.getConsumedTime()+"</font><br/><br/>"+table.toString();
+        Map<String, Object> data = new HashMap<>();
+        data.put("quiz", quiz);
+        htmlFragment = TemplateUtils.getVocabularyTestResult(data);
 
         // 如果用户已经登录, 则将答错的词加入生词本, 如果用户没有登录, 那么会在用户注册成功或者登录的时候将答错的词加入生词本
         User user = (User)request.getSession().getAttribute("user");

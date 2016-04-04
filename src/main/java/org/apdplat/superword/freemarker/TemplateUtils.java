@@ -62,6 +62,15 @@ public class TemplateUtils {
         return merge(data, "vocabulary_test_form.ftlh");
     }
 
+    /**
+     * 在词汇量测试结束后, 给用户展示这里生成的HTML代码
+     * @param data 需要一个数据项: quiz
+     * @return 词汇量测试结果HTML代码
+     */
+    public static String getVocabularyTestResult(Map<String, Object> data){
+        return merge(data, "vocabulary_test_result.ftlh");
+    }
+
     public static String merge(Map<String, Object> data, String templateName){
         try {
             Template template = CFG.getTemplate(templateName);

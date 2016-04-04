@@ -22,13 +22,12 @@ import org.apdplat.superword.tools.TimeUtils;
 import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
 import org.apdplat.word.util.AtomicFloat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * 词汇量测试
@@ -48,6 +47,26 @@ public class Quiz{
 
     public String getConsumedTime(){
         return TimeUtils.getTimeEnglishDes(endQuizTime - startQuizTime);
+    }
+
+    public int getRightCount(){
+        int rightCount=0;
+        for(QuizItem item : getQuizItems()) {
+            if (item.isRight()) {
+                rightCount++;
+            }
+        }
+        return rightCount;
+    }
+
+    public int getWrongCount(){
+        int wrongCount=0;
+        for(QuizItem item : getQuizItems()) {
+            if (!item.isRight()) {
+                wrongCount++;
+            }
+        }
+        return wrongCount;
     }
 
     public int getEvaluationCount(){

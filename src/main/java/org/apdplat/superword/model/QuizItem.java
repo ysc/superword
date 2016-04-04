@@ -20,6 +20,7 @@ package org.apdplat.superword.model;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apdplat.superword.tools.MySQLUtils;
+import org.apdplat.superword.tools.WordLinker;
 import org.apdplat.superword.tools.WordLinker.Dictionary;
 import org.apdplat.superword.tools.WordSources;
 import org.apdplat.word.recognition.RecognitionTool;
@@ -39,6 +40,10 @@ public class QuizItem implements Comparable {
     private int level;
 
     private QuizItem(){}
+
+    public String getWordLink(){
+        return WordLinker.toLink(getWord().getWord());
+    }
 
     public void setLevel(int level) {
         this.level = level;
