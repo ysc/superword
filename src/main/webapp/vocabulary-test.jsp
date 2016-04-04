@@ -94,15 +94,9 @@
     <jsp:include page="common/head.jsp"/>
 
     <h3>vocabulary test</h3>
-<%
-    if(quizItem == null){
-        out.println(htmlFragment);
-    }else{
-%>
+
     <%=htmlFragment%>
-<%
-    }
-%>
+
     <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>
