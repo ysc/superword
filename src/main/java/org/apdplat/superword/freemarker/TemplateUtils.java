@@ -71,6 +71,36 @@ public class TemplateUtils {
         return merge(data, "vocabulary_test_result.ftlh");
     }
 
+    /**
+     * 生成单词定义页面的HTML
+     * @param data
+     * word
+     * servletContext
+     * hasOxfordAudio
+     * oxfordAudios
+     * hasWebsterAudio
+     * websterAudios
+     * icibaDefinitionHtml
+     * youdaoDefinitionHtml
+     * icibaPronunciation
+     * icibaDefinition
+     * youdaoPronunciation
+     * youdaoDefinition
+     * oxfordDefinitionHtml
+     * websterDefinitionHtml
+     * oxfordPronunciation
+     * oxfordDefinition
+     * websterPronunciation
+     * websterDefinition
+     * otherDictionary
+     * isMyNewWord
+     * wordLevels
+     * @return
+     */
+    public static String getWordDefinition(Map<String, Object> data){
+        return merge(data, "word_definition.ftlh");
+    }
+
     public static String merge(Map<String, Object> data, String templateName){
         try {
             Template template = CFG.getTemplate(templateName);

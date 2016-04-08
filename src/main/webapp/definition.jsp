@@ -16,16 +16,16 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
-<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
-<%@ page import="java.util.UUID" %>
+<%@ page import="org.apache.commons.lang.StringUtils" %>
+<%@ page import="org.apdplat.superword.freemarker.TemplateUtils" %>
+<%@ page import="org.apdplat.superword.model.MyNewWord" %>
 <%@ page import="org.apdplat.superword.model.User" %>
 <%@ page import="org.apdplat.superword.model.UserWord" %>
-<%@ page import="java.util.Date" %>
 <%@ page import="org.apdplat.superword.tools.*" %>
-<%@ page import="org.apache.commons.lang.StringUtils" %>
-<%@ page import="org.apdplat.superword.model.MyNewWord" %>
+<%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 <%@ page import="java.nio.file.Files" %>
 <%@ page import="java.nio.file.Paths" %>
+<%@ page import="java.util.*" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 
@@ -33,9 +33,11 @@
     User user = (User)request.getSession().getAttribute("user");
     
     String newWord = request.getParameter("new_word");
-    if(StringUtils.isNotBlank(newWord)
-            && user != null
-            && StringUtils.isNotBlank(user.getUserName())){
+    if(StringUtils.isNotBlank(newWord)){
+        if(user == null || StringUtils.isBlank(user.getUserName())){
+            out.print("need_login");
+            return;
+        }
         MyNewWord myNewWord = new MyNewWord();
         myNewWord.setWord(newWord);
         myNewWord.setDateTime(new Date());
@@ -51,6 +53,10 @@
     }
     word = word.trim();
 
+    Map<String, Object> data = new HashMap<>();
+    data.put("word", word);
+    data.put("servletContext", request.getContextPath());
+
     UserWord userWord = new UserWord();
     userWord.setDateTime(new Date());
     userWord.setUserName(user == null ? "anonymity" : user.getUserName());
@@ -58,44 +64,28 @@
     MySQLUtils.saveUserWordToDatabase(userWord);
 
     String file = application.getRealPath("/audio/oxford/"+word.toLowerCase()+".mp3");
-    StringBuilder oxfordAudio = new StringBuilder();
+    List<String> oxfordAudios = new ArrayList();
     if(Files.exists(Paths.get(file))){
-        oxfordAudio.append("<audio controls>")
-                .append("<source src=\"audio/oxford/")
-                .append(word.toLowerCase())
-                .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+        data.put("hasOxfordAudio", true);
+        oxfordAudios.add(word.toLowerCase());
         int i=2;
         while(Files.exists(Paths.get(application.getRealPath("/audio/oxford/"+word.toLowerCase()+"_"+i+".mp3")))){
-            oxfordAudio.append("<audio controls>")
-                    .append("<source src=\"audio/oxford/")
-                    .append(word.toLowerCase())
-                    .append("_")
-                    .append(i++)
-                    .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+            oxfordAudios.add(word.toLowerCase()+"_"+i++);
         }
-        oxfordAudio.append("<br/>");
+        data.put("oxfordAudios", oxfordAudios);
     }
 
     file = application.getRealPath("/audio/webster/"+word.toLowerCase()+".mp3");
-    StringBuilder websterAudio = new StringBuilder();
+    List<String> websterAudios = new ArrayList();
     if(Files.exists(Paths.get(file))){
-        websterAudio.append("<audio controls>")
-                .append("<source src=\"audio/webster/")
-                .append(word.toLowerCase())
-                .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+        data.put("hasWebsterAudio", true);
+        websterAudios.add(word.toLowerCase());
         int i=2;
         while(Files.exists(Paths.get(application.getRealPath("/audio/webster/"+word.toLowerCase()+"_"+i+".mp3")))){
-            websterAudio.append("<audio controls>")
-                    .append("<source src=\"audio/webster/")
-                    .append(word.toLowerCase())
-                    .append("_")
-                    .append(i++)
-                    .append(".mp3\" type=\"audio/mpeg\">Your browser does not support the audio element.</audio><br/>");
+            websterAudios.add(word.toLowerCase()+"_"+i++);
         }
-        websterAudio.append("<br/>");
+        data.put("websterAudios", websterAudios);
     }
-
-    StringBuilder definitionHtmls = new StringBuilder();
 
     StringBuilder otherDictionary = new StringBuilder();
     for(Dictionary dictionary : Dictionary.values()){
@@ -127,51 +117,27 @@
     String websterDefinitionURL = websterLinkPrefix+word+"&word="+word+"&dict="+Dictionary.WEBSTER.name();
     String websterDefinitionHtml = "<a href=\"#" + UUID.randomUUID()+"\" onclick=\"openWindow('"+websterDefinitionURL+"', '"+word+"');\">Webster's definition</a>";
 
-    definitionHtmls.append("<table border=\"1\">");
+    data.put("icibaDefinitionHtml", icibaDefinitionHtml);
+    data.put("youdaoDefinitionHtml", youdaoDefinitionHtml);
+    data.put("icibaPronunciation", Pronunciation.getPronunciationString(Dictionary.ICIBA, word, " <font color=\"red\">|</font> "));
+    data.put("icibaDefinition", Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"));
+    data.put("youdaoPronunciation", Pronunciation.getPronunciationString(Dictionary.YOUDAO, word, " <font color=\"red\">|</font> "));
+    data.put("youdaoDefinition", Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"));
+    data.put("oxfordDefinitionHtml", oxfordDefinitionHtml);
+    data.put("websterDefinitionHtml", websterDefinitionHtml);
+    data.put("oxfordPronunciation", Pronunciation.getPronunciationString(Dictionary.OXFORD, word, " <font color=\"red\">|</font> "));
+    data.put("oxfordDefinition", OxfordPOS.highlight(Definition.getDefinitionString(Dictionary.OXFORD, word, "<br/>")));
+    data.put("websterPronunciation", Pronunciation.getPronunciationString(Dictionary.WEBSTER, word, " <font color=\"red\">|</font> "));
+    data.put("websterDefinition", WebsterPOS.highlight(Definition.getDefinitionString(Dictionary.WEBSTER, word, "<br/>")));
+    data.put("otherDictionary", otherDictionary.toString());
+    if(user != null && MySQLUtils.isMyNewWord(user.getUserName(), word)){
+        data.put("isMyNewWord", true);
+    }else{
+        data.put("isMyNewWord", false);
+    }
+    data.put("wordLevels", WordSources.getLevels(word).toString());
 
-    definitionHtmls.append("<tr><td>")
-            .append(icibaDefinitionHtml)
-            .append("</td><td>")
-            .append(youdaoDefinitionHtml)
-            .append("</td></tr>")
-            .append("<tr><td ondblclick=\"querySelectionWord();\">")
-            .append("phonetic symbol: <br/>")
-            .append(Pronunciation.getPronunciationString(Dictionary.ICIBA, word, " <font color=\"red\">|</font> "))
-            .append("<br/><br/>")
-            .append("definition(Chinese): <br/>")
-            .append(Definition.getDefinitionString(Dictionary.ICIBA, word, "<br/>"))
-            .append("</td><td ondblclick=\"querySelectionWord();\">")
-            .append("phonetic symbol: <br/>")
-            .append(Pronunciation.getPronunciationString(Dictionary.YOUDAO, word, " <font color=\"red\">|</font> "))
-            .append("<br/><br/>")
-            .append("definition(Chinese): <br/>")
-            .append(Definition.getDefinitionString(Dictionary.YOUDAO, word, "<br/>"))
-            .append("</td></tr>");
-
-    definitionHtmls.append("<tr><td>")
-            .append(oxfordDefinitionHtml)
-            .append("</td><td>")
-            .append(websterDefinitionHtml)
-            .append("</td></tr>")
-            .append("<tr><td>")
-            .append("<tr><td ondblclick=\"querySelectionWord();\">")
-            .append("phonetic symbol: <br/>")
-            .append(Pronunciation.getPronunciationString(Dictionary.OXFORD, word, " <font color=\"red\">|</font> "))
-            .append("<br/><br/>")
-            .append("definition: <br/>")
-            .append(OxfordPOS.highlight(Definition.getDefinitionString(Dictionary.OXFORD, word, "<br/>")))
-            .append("</td><td ondblclick=\"querySelectionWord();\">")
-            .append("phonetic symbol: <br/>")
-            .append(Pronunciation.getPronunciationString(Dictionary.WEBSTER, word, " <font color=\"red\">|</font> "))
-            .append("<br/><br/>")
-            .append("definition: <br/>")
-            .append(WebsterPOS.highlight(Definition.getDefinitionString(Dictionary.WEBSTER, word, "<br/>")))
-            .append("</td></tr>");
-
-    definitionHtmls.append("</table>")
-            .append("<br/>");
-
-    definitionHtmls.append("<font color=\"red\">Other English Dictionaries's definition: </font>").append(otherDictionary.toString());
+    String html = TemplateUtils.getWordDefinition(data);
 %>
 
 <html>
@@ -209,7 +175,11 @@
             $.ajax({
                 url: "definition.jsp?new_word="+word, 
                 success: function(result){
-                    $("#action_add_to_my_new_words").html(result);
+                    if(result.trim() == "need_login"){
+                        location.href = "system/login.jsp";
+                    }else {
+                        $("#action_add_to_my_new_words").html(result);
+                    }
                 }
             });
         }
@@ -225,71 +195,7 @@
 </head>
 <body id="top">
     <jsp:include page="common/head.jsp"/>
-    <p>
-        <font color="red"><span id="tip"></span></font><br/>
-        <font color="red">Input Word：</font><input onkeyup="instant(this.value);" onchange="query();" id="word" name="word" value="<%=word%>" size="50" maxlength="50" autocomplete="off"/>
-        <span style="cursor: pointer" onclick="query();"><font color="red">Submit</font></span><br/>
-        <div id="instant_tip"></div>
-    </p>
-    <script type="text/javascript">
-        document.getElementById('word').select();
-        document.getElementById('word').focus();
-    </script>
-    <%
-        if(user != null){
-            if(MySQLUtils.isMyNewWord(user.getUserName(), word)){
-    %>
-    <%=word%> has been added to <a href="history/my-new-words-book.jsp">my new words book</a><br/><br/>
-    <%
-            }else{
-    %>
-    <span id="action_add_to_my_new_words"><span onclick="addToMyNewWordsBook('<%=word%>');" style="cursor:pointer"><font color="red">add to my new words book</font></span></span><br/><br/>
-    <%
-            }
-        }
-    %>
-    <table>
-        <tr>
-            <%
-                if(oxfordAudio.length() > 0){
-            %>
-            <th>Oxford Audio</th>
-            <%
-                }
-                if(websterAudio.length() > 0){
-            %>
-            <th>Webster's Audio</th>
-            <%
-                }
-            %>
-        </tr>
-        <tr>
-            <%
-                if(oxfordAudio.length() > 0){
-            %>
-            <td><%=oxfordAudio.toString()%></td>
-            <%
-                }
-                if(websterAudio.length() > 0){
-            %>
-            <td><%=websterAudio.toString()%></td>
-            <%
-                }
-            %>
-        </tr>
-    </table>
-
-    <font color="red">Word Level: <%=WordSources.getLevels(word)%></font><br/><br/>
-    <a target="_blank" href="<%=request.getContextPath()%>/char-transform-rule.jsp?word=<%=word%>&words_type=SYLLABUS">transform character</a> <font color="red"> | </font>
-    <a target="_blank" href="<%=request.getContextPath()%>/root-affix/root_affix_rule.jsp?dict=ICIBA&word=<%=word%>&column=6&strict=N">analyze roots and affix</a> <font color="red"> | </font>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/spell-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS">similar spelling</a> <font color="red"> | </font>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/definition-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=WEBSTER">similar definition</a> <font color="red"> | </font>
-    <a target="_blank" href="<%=request.getContextPath()%>/similar/pronunciation-similar-rule.jsp?word=<%=word%>&count=100&words_type=SYLLABUS&dictionary=ICIBA">similar pronunciation</a><br/>
-    <br/>
-    <%=definitionHtmls.toString()%>
-    <br/><br/>
-    <a target="_blank" href="pos.jsp">Comparison of part of speech symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a><br/>
-    <a target="_blank" href="symbol.jsp">Comparison of phonetic symbol of the Oxford dictionary, Webster's dictionary, iCIBA and Youdao dictionary</a>
+    <%=html%>
     <jsp:include page="common/bottom.jsp"/>
 </body>
 </html>
