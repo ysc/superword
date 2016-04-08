@@ -30,8 +30,8 @@
             <td>
                 <#list oxfordAudios as oxfordAudio>
                     <audio controls><source src="audio/oxford/${oxfordAudio}.mp3" type="audio/mpeg">Your browser does not support the audio element.</audio>
+                    <br/>
                 </#list>
-                <br/>
                 <br/>
             </td>
         </#if>
@@ -39,8 +39,8 @@
             <td>
                 <#list websterAudios as websterAudio>
                     <audio controls><source src="audio/webster/${websterAudio}.mp3" type="audio/mpeg">Your browser does not support the audio element.</audio>
+                    <br/>
                 </#list>
-                <br/>
                 <br/>
             </td>
         </#if>
