@@ -46,18 +46,12 @@
     
     4、Run the project
     
-        UNIX-like operating systems: 
-            chmod +x startup.sh & ./startup.sh
-            
-        Windows operating system: 
-            mvn clean install
-            Manually copy the target/superword-1.0.war file to your own apache-tomcat-8.0.28/webapps directory, 
-            then start Tomcat.
+        mvn jetty:run
 
     5、Use system
     
-        Open browser access: http://localhost:8080/superword/index.jsp
-        Notice: The first time to access the system is very slow, be patient please.
+        Open browser access: http://localhost:8080/index.jsp
+        Notice: The first time to access the system may be a little bit slow, be patient please.
       
 ###Engaging in complex language behavior requires various kinds of knowledge of language:
 
