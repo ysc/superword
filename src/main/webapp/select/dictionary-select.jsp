@@ -23,114 +23,16 @@
     <select name="dict" id="dict" onchange="update();">
         <%
         Dictionary selectedDictionary = WordLinker.getValidDictionary(request.getParameter("dict"));
-        if (Dictionary.ICIBA == selectedDictionary) {
+        for(Dictionary dictionary : Dictionary.values()){
+            if (dictionary == selectedDictionary) {
         %>
-            <option value="ICIBA" selected="selected">iCIBA</option>
+            <option value="<%=dictionary.name()%>" selected="selected"><%=dictionary.getDes()%></option>
         <%
-        } else {
+            } else {
         %>
-            <option value="ICIBA">iCIBA</option>
+            <option value="<%=dictionary.name()%>"><%=dictionary.getDes()%></option>
         <%
-        }
-
-        if (Dictionary.YOUDAO == selectedDictionary) {
-        %>
-            <option value="YOUDAO" selected="selected">Youdao</option>
-        <%
-        } else {
-        %>
-            <option value="YOUDAO">Youdao</option>
-        <%
-        }
-
-        if (Dictionary.COLLINS == selectedDictionary) {
-        %>
-            <option value="COLLINS" selected="selected">Collins</option>
-        <%
-        } else {
-        %>
-            <option value="COLLINS">Collins</option>
-        <%
-        }
-
-        if (Dictionary.WEBSTER == selectedDictionary) {
-        %>
-            <option value="WEBSTER" selected="selected">Webster's</option>
-        <%
-        } else {
-        %>
-            <option value="WEBSTER">Webster's</option>
-        <%
-        }
-
-        if (Dictionary.OXFORD == selectedDictionary) {
-        %>
-            <option value="OXFORD" selected="selected">Oxford</option>
-        <%
-        } else {
-        %>
-            <option value="OXFORD">Oxford</option>
-        <%
-        }
-
-        if (Dictionary.CAMBRIDGE == selectedDictionary) {
-        %>
-            <option value="CAMBRIDGE" selected="selected">Cambridge</option>
-        <%
-        } else {
-        %>
-            <option value="CAMBRIDGE">Cambridge</option>
-        <%
-        }
-
-        if (Dictionary.MACMILLAN == selectedDictionary) {
-        %>
-            <option value="MACMILLAN" selected="selected">Macmillan</option>
-        <%
-        } else {
-        %>
-            <option value="MACMILLAN">Macmillan</option>
-        <%
-        }
-
-        if (Dictionary.HERITAGE == selectedDictionary) {
-        %>
-            <option value="HERITAGE" selected="selected">Heritage</option>
-        <%
-        } else {
-        %>
-            <option value="HERITAGE">Heritage</option>
-        <%
-        }
-
-        if (Dictionary.WIKTIONARY == selectedDictionary) {
-        %>
-            <option value="WIKTIONARY" selected="selected">Wiktionary</option>
-        <%
-        } else {
-        %>
-            <option value="WIKTIONARY">Wiktionary</option>
-        <%
-        }
-
-        if (Dictionary.WORDNET == selectedDictionary) {
-        %>
-            <option value="WORDNET" selected="selected">WordNet</option>
-        <%
-        } else {
-        %>
-            <option value="WORDNET">WordNet</option>
-        <%
-        }
-
-        if (Dictionary.RANDOMHOUSE == selectedDictionary) {
-        %>
-            <option value="RANDOMHOUSE" selected="selected">RandomHouse</option>
-        <%
-        } else {
-        %>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-        <%
+            }
         }
         %>
     </select>
