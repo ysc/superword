@@ -20,162 +20,106 @@
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
 
-        <select name="dict" id="dict" onchange="update();">
-    <%
+    <select name="dict" id="dict" onchange="update();">
+        <%
         if (Dictionary.ICIBA==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA" selected="selected">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.YOUDAO==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO" selected="selected">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.COLLINS==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS" selected="selected">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.WEBSTER==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER" selected="selected">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.OXFORD==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD" selected="selected">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.CAMBRIDGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE" selected="selected">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.MACMILLAN==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN" selected="selected">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.HERITAGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE" selected="selected">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.WIKTIONARY==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY" selected="selected">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-            <%
-    } else if (Dictionary.WORDNET==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-            %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET" selected="selected">WordNet</option>
-            <option value="RANDOMHOUSE">RandomHouse</option>
-    <%
-    } else if (Dictionary.RANDOMHOUSE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
-    %>
-            <option value="ICIBA">iCIBA</option>
-            <option value="YOUDAO">Youdao</option>
-            <option value="COLLINS">Collins</option>
-            <option value="WEBSTER">Webster's</option>
-            <option value="OXFORD">Oxford</option>
-            <option value="CAMBRIDGE">Cambridge</option>
-            <option value="MACMILLAN">Macmillan</option>
-            <option value="HERITAGE">Heritage</option>
-            <option value="WIKTIONARY">Wiktionary</option>
-            <option value="WORDNET">WordNet</option>
-            <option value="RANDOMHOUSE" selected="selected">RandomHouse</option>
-    <%
-    }
-    %>
-        </select>
+        %>
+        <option value="ICIBA" selected="selected">iCIBA</option>
+        <%
+        } else {
+        %>
+        <option value="ICIBA">iCIBA</option>
+        <%
+        }
+        if (Dictionary.YOUDAO==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="YOUDAO" selected="selected">Youdao</option>
+        <%
+        } else {
+        %>
+        <option value="YOUDAO">Youdao</option>
+        <%
+        }
+        if (Dictionary.COLLINS==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="COLLINS" selected="selected">Collins</option>
+        <%
+        } else {
+        %>
+        <option value="COLLINS">Collins</option>
+        <%
+        }
+        if (Dictionary.WEBSTER==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="WEBSTER" selected="selected">Webster's</option>
+        <%
+        } else {
+        %>
+        <option value="WEBSTER">Webster's</option>
+        <%
+        }
+        if (Dictionary.OXFORD==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="OXFORD" selected="selected">Oxford</option>
+        <%
+        } else {
+        %>
+        <option value="OXFORD">Oxford</option>
+        <%
+        }
+        if (Dictionary.CAMBRIDGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="CAMBRIDGE" selected="selected">Cambridge</option>
+        <%
+        } else {
+        %>
+        <option value="CAMBRIDGE">Cambridge</option>
+        <%
+        }
+        if (Dictionary.MACMILLAN==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="MACMILLAN" selected="selected">Macmillan</option>
+        <%
+        } else {
+        %>
+        <option value="MACMILLAN">Macmillan</option>
+        <%
+        }
+        if (Dictionary.HERITAGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="HERITAGE" selected="selected">Heritage</option>
+        <%
+        } else {
+        %>
+        <option value="HERITAGE">Heritage</option>
+        <%
+        }
+        if (Dictionary.WIKTIONARY==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="WIKTIONARY" selected="selected">Wiktionary</option>
+        <%
+        } else {
+        %>
+        <option value="WIKTIONARY">Wiktionary</option>
+        <%
+        }
+        if (Dictionary.WORDNET==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="WORDNET" selected="selected">WordNet</option>
+        <%
+        } else {
+        %>
+        <option value="WORDNET">WordNet</option>
+        <%
+        }
+        if (Dictionary.RANDOMHOUSE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        %>
+        <option value="RANDOMHOUSE" selected="selected">RandomHouse</option>
+        <%
+        } else {
+        %>
+        <option value="RANDOMHOUSE">RandomHouse</option>
+        <%
+        }
+        %>
+    </select>
