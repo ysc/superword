@@ -4,7 +4,7 @@
 
 ###[Donate to support Superword](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
 
-###Quick Start: 
+###Getting Started: 
 
     1、Install JDK8
     
@@ -24,11 +24,6 @@
         We suggest  you register a GitHub account, fork the superword project to your own account, 
         and then clone the source code from your own account.
         This facilitates the application of GitHub features "Pull requests" for collaborative development.
-        
-        Tip for Chinese:
-        If you can't access GitHub or the download speed is very slow, use the following address:
-        
-        git clone https://git.oschina.net/ysc/superword.git
         
     3、Configure MySQL database
     
