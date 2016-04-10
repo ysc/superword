@@ -22,103 +22,114 @@
 
     <select name="dict" id="dict" onchange="update();">
         <%
-        if (Dictionary.ICIBA==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+        Dictionary selectedDictionary = WordLinker.getValidDictionary(request.getParameter("dict"));
+        if (Dictionary.ICIBA == selectedDictionary) {
         %>
-        <option value="ICIBA" selected="selected">iCIBA</option>
+            <option value="ICIBA" selected="selected">iCIBA</option>
         <%
         } else {
         %>
-        <option value="ICIBA">iCIBA</option>
+            <option value="ICIBA">iCIBA</option>
         <%
         }
-        if (Dictionary.YOUDAO==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.YOUDAO == selectedDictionary) {
         %>
-        <option value="YOUDAO" selected="selected">Youdao</option>
+            <option value="YOUDAO" selected="selected">Youdao</option>
         <%
         } else {
         %>
-        <option value="YOUDAO">Youdao</option>
+            <option value="YOUDAO">Youdao</option>
         <%
         }
-        if (Dictionary.COLLINS==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.COLLINS == selectedDictionary) {
         %>
-        <option value="COLLINS" selected="selected">Collins</option>
+            <option value="COLLINS" selected="selected">Collins</option>
         <%
         } else {
         %>
-        <option value="COLLINS">Collins</option>
+            <option value="COLLINS">Collins</option>
         <%
         }
-        if (Dictionary.WEBSTER==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.WEBSTER == selectedDictionary) {
         %>
-        <option value="WEBSTER" selected="selected">Webster's</option>
+            <option value="WEBSTER" selected="selected">Webster's</option>
         <%
         } else {
         %>
-        <option value="WEBSTER">Webster's</option>
+            <option value="WEBSTER">Webster's</option>
         <%
         }
-        if (Dictionary.OXFORD==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.OXFORD == selectedDictionary) {
         %>
-        <option value="OXFORD" selected="selected">Oxford</option>
+            <option value="OXFORD" selected="selected">Oxford</option>
         <%
         } else {
         %>
-        <option value="OXFORD">Oxford</option>
+            <option value="OXFORD">Oxford</option>
         <%
         }
-        if (Dictionary.CAMBRIDGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.CAMBRIDGE == selectedDictionary) {
         %>
-        <option value="CAMBRIDGE" selected="selected">Cambridge</option>
+            <option value="CAMBRIDGE" selected="selected">Cambridge</option>
         <%
         } else {
         %>
-        <option value="CAMBRIDGE">Cambridge</option>
+            <option value="CAMBRIDGE">Cambridge</option>
         <%
         }
-        if (Dictionary.MACMILLAN==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.MACMILLAN == selectedDictionary) {
         %>
-        <option value="MACMILLAN" selected="selected">Macmillan</option>
+            <option value="MACMILLAN" selected="selected">Macmillan</option>
         <%
         } else {
         %>
-        <option value="MACMILLAN">Macmillan</option>
+            <option value="MACMILLAN">Macmillan</option>
         <%
         }
-        if (Dictionary.HERITAGE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.HERITAGE == selectedDictionary) {
         %>
-        <option value="HERITAGE" selected="selected">Heritage</option>
+            <option value="HERITAGE" selected="selected">Heritage</option>
         <%
         } else {
         %>
-        <option value="HERITAGE">Heritage</option>
+            <option value="HERITAGE">Heritage</option>
         <%
         }
-        if (Dictionary.WIKTIONARY==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.WIKTIONARY == selectedDictionary) {
         %>
-        <option value="WIKTIONARY" selected="selected">Wiktionary</option>
+            <option value="WIKTIONARY" selected="selected">Wiktionary</option>
         <%
         } else {
         %>
-        <option value="WIKTIONARY">Wiktionary</option>
+            <option value="WIKTIONARY">Wiktionary</option>
         <%
         }
-        if (Dictionary.WORDNET==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.WORDNET == selectedDictionary) {
         %>
-        <option value="WORDNET" selected="selected">WordNet</option>
+            <option value="WORDNET" selected="selected">WordNet</option>
         <%
         } else {
         %>
-        <option value="WORDNET">WordNet</option>
+            <option value="WORDNET">WordNet</option>
         <%
         }
-        if (Dictionary.RANDOMHOUSE==WordLinker.getValidDictionary(request.getParameter("dict"))) {
+
+        if (Dictionary.RANDOMHOUSE == selectedDictionary) {
         %>
-        <option value="RANDOMHOUSE" selected="selected">RandomHouse</option>
+            <option value="RANDOMHOUSE" selected="selected">RandomHouse</option>
         <%
         } else {
         %>
-        <option value="RANDOMHOUSE">RandomHouse</option>
+            <option value="RANDOMHOUSE">RandomHouse</option>
         <%
         }
         %>
