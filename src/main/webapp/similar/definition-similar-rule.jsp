@@ -16,16 +16,16 @@
   ~  along with this program.  If not, see <http://www.gnu.org/licenses/>.
   --%>
 
+<%@ page import="org.apache.commons.lang.StringUtils" %>
+<%@ page import="org.apdplat.superword.freemarker.TemplateUtils" %>
+<%@ page import="org.apdplat.superword.model.User" %>
+<%@ page import="org.apdplat.superword.model.UserSimilarWord" %>
 <%@ page import="org.apdplat.superword.model.Word" %>
+<%@ page import="org.apdplat.superword.rule.DefinitionSimilarRule" %>
+<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
-<%@ page import="org.apdplat.word.segmentation.SegmentationAlgorithm" %>
 <%@ page import="java.util.*" %>
-<%@ page import="org.apdplat.superword.tools.MySQLUtils" %>
-<%@ page import="org.apdplat.superword.model.UserSimilarWord" %>
-<%@ page import="org.apdplat.superword.model.User" %>
-<%@ page import="org.apdplat.word.analysis.*" %>
-<%@ page import="org.apache.commons.lang.StringUtils" %>
 
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%
@@ -39,6 +39,8 @@
     if(count > 100){
         count = 100;
     }
+    String wordsType = request.getParameter("words_type");
+    Dictionary dictionary = WordLinker.getValidDictionary(request.getParameter("dictionary"));
     String htmlFragment = "";
     if(word != null && !"".equals(word.trim())){
         User user = (User)session.getAttribute("user");
@@ -48,54 +50,26 @@
         userSimilarWord.setUserName(user == null ? "anonymity" : user.getUserName());
         MySQLUtils.saveUserSimilarWordToDatabase(userSimilarWord);
 
-        Dictionary dictionary = WordLinker.getValidDictionary(request.getParameter("dictionary"));
-        Set<Word> words = (Set<Word>)application.getAttribute("words_"+request.getAttribute("words_type"));
+        Set<Word> words = (Set<Word>)application.getAttribute("words_"+wordsType);
         String wordDefinition = MySQLUtils.getWordDefinition(word, dictionary.name());
         if(StringUtils.isBlank(wordDefinition)){
             htmlFragment = "We don't have the definition of the specified word, so the similarity can't be calculated. ";
         }else {
-            List<String> allWordDefinition = MySQLUtils.getAllWordDefinition(dictionary.name(), words);
-
-            TextSimilarity textSimilarity = new CosineTextSimilarity();
-
-            if(dictionary == Dictionary.OXFORD || dictionary == Dictionary.WEBSTER) {
-                textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.PureEnglish);
-            }
             if(dictionary == Dictionary.ICIBA || dictionary == Dictionary.YOUDAO) {
                 if(user == null || !"ysc".equals(user.getUserName())){
-                    out.println("You don't have the permission to access the functionality.<a href=\"definition-similar-rule.jsp?dictionary=WEBSTER&word="+word+"&count="+count+"&words_type="+request.getAttribute("words_type")+"\">Return</a>");
+                    out.println("You don't have the permission to access the functionality.<a href=\"definition-similar-rule.jsp?dictionary=WEBSTER&word="+word+"&count="+count+"&words_type="+request.getAttribute("words_type")+"\"> Return</a>");
                     return;
                 }
-                textSimilarity.setSegmentationAlgorithm(SegmentationAlgorithm.MaxNgramScore);
             }
+            List<DefinitionSimilarRule.Result> results = DefinitionSimilarRule.run(dictionary, words, wordDefinition, count);
+            Map<String, Object> data = new HashMap<>();
+            data.put("results", results);
+            data.put("word", word);
+            data.put("dictionary", dictionary.name());
+            data.put("count", count);
+            data.put("words_type", request.getAttribute("words_type"));
 
-            Hits result = textSimilarity.rank(wordDefinition, allWordDefinition, count);
-
-            StringBuilder temp = new StringBuilder();
-            int i = 1;
-            temp.append("<table ondblclick=\"querySelectionWord();\" border=\"1\">\n");
-            for (Hit hit : result.getHits()) {
-                String[] attrs = hit.getText().split("_");
-                String w = attrs[0];
-                StringBuilder definition = new StringBuilder(attrs[1]);
-                for (int j = 2; j < attrs.length; j++) {
-                    definition.append(attrs[j]).append("_");
-                }
-                temp.append("<tr>");
-                temp.append("<td> ").append(i++)
-                        .append(". </td><td> ")
-                        .append(WordLinker.toLink(w))
-                        .append(" </td><td> ")
-                        .append(definition)
-                        .append(" </td><td> ")
-                        .append(hit.getScore())
-                        .append("</td><td> ")
-                        .append("<a target=\"_blank\" href=\"definition-similar-rule.jsp?dictionary"+dictionary.name()+"&word=" + hit.getText() + "&count=" + count + "&words_type=" + request.getAttribute("words_type") + "\">similar word</a>")
-                        .append(" </td>\n");
-                temp.append("</tr>\n");
-            }
-            temp.append("</table>\n");
-            htmlFragment = temp.toString();
+            htmlFragment = TemplateUtils.getDefinitionSimilarResult(data);
         }
     }
 %>
@@ -122,23 +96,19 @@
                 update();
             }
         }
+        // 异步加载下拉框
+        $(document).ready(function(){
+            $.get("../select/words-select.jsp?words_type=<%=wordsType%>", function (data, status) {
+                $("#wordsLevel").html(data);
+            });
+            $.get("../select/dictionary-select-for-symbol.jsp?dictionary=<%=dictionary.name()%>", function (data, status) {
+                $("#dictionaries").html(data);
+            });
+        });
     </script>
 </head>
 <body id="top">
     <jsp:include page="../common/head.jsp"/>
-    <p>
-        ***definition similarity rule:
-        To calculate the similarity among words according to the definition of words.
-    </p>
-    <p>
-        <font color="red">input word: </font><input id="word" name="word" value="<%=word==null?"":word%>" size="50" maxlength="50"><br/>
-        <font color="red">result count: </font><input id="count" name="count" value="<%=count%>" size="50" maxlength="50"><br/>
-        <font color="red">select words level: </font>
-        <jsp:include page="../select/words-select.jsp"/><br/>
-        <font color="red">select dictionary: </font>
-        <jsp:include page="../select/dictionary-select-for-symbol.jsp"/><br/><br/>
-        <span style="cursor: pointer" onclick="update();"><font color="red">Submit</font></span>
-    </p>
     <%=htmlFragment%>
     <jsp:include page="../common/bottom.jsp"/>
 </body>

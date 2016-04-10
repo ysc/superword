@@ -101,6 +101,20 @@ public class TemplateUtils {
         return merge(data, "word_definition.ftlh");
     }
 
+    /**
+     * 单词定义相似性计算结果展示HTML
+     * @param data
+     * results
+     * word
+     * dictionary
+     * count
+     * words_type
+     * @return
+     */
+    public static String getDefinitionSimilarResult(Map<String, Object> data) {
+        return merge(data, "definition_similar_rule.ftlh");
+    }
+
     public static String merge(Map<String, Object> data, String templateName){
         try {
             Template template = CFG.getTemplate(templateName);
