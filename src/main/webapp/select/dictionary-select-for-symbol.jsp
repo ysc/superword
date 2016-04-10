@@ -19,37 +19,25 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker" %>
 <%@ page import="org.apdplat.superword.tools.WordLinker.Dictionary" %>
+<%@ page import="java.util.Arrays" %>
+<%@ page import="java.util.List" %>
 
+<%!
+    private static final List<Dictionary> DICTIONARIES = Arrays.asList(Dictionary.ICIBA, Dictionary.YOUDAO, Dictionary.WEBSTER, Dictionary.OXFORD);
+%>
 <select name="dictionary" id="dictionary" onchange="update();">
     <%
-        if (Dictionary.ICIBA==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
+        Dictionary selectedDictionary = WordLinker.getValidDictionary(request.getParameter("dictionary"));
+        for(Dictionary dictionary : DICTIONARIES){
+            if (dictionary == selectedDictionary) {
     %>
-    <option value="ICIBA" selected="selected">iCIBA</option>
-    <option value="YOUDAO">Youdao</option>
-    <option value="WEBSTER">Webster's</option>
-    <option value="OXFORD">Oxford</option>
+    <option value="<%=dictionary.name()%>" selected="selected"><%=dictionary.getDes()%></option>
     <%
-    } else if (Dictionary.YOUDAO==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
+    } else {
     %>
-    <option value="ICIBA">iCIBA</option>
-    <option value="YOUDAO" selected="selected">Youdao</option>
-    <option value="WEBSTER">Webster's</option>
-    <option value="OXFORD">Oxford</option>
+    <option value="<%=dictionary.name()%>"><%=dictionary.getDes()%></option>
     <%
-    } else if (Dictionary.WEBSTER==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
-    %>
-    <option value="ICIBA">iCIBA</option>
-    <option value="YOUDAO">Youdao</option>
-    <option value="WEBSTER" selected="selected">Webster's</option>
-    <option value="OXFORD">Oxford</option>
-    <%
-    } else if (Dictionary.OXFORD==WordLinker.getValidDictionary(request.getParameter("dictionary"))) {
-    %>
-    <option value="ICIBA">iCIBA</option>
-    <option value="YOUDAO">Youdao</option>
-    <option value="WEBSTER">Webster's</option>
-    <option value="OXFORD" selected="selected">Oxford</option>
-    <%
-    }
+            }
+        }
     %>
 </select>
