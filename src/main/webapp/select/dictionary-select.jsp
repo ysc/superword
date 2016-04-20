@@ -26,11 +26,11 @@
         for(Dictionary dictionary : Dictionary.values()){
             if (dictionary == selectedDictionary) {
         %>
-            <option value="<%=dictionary.name()%>" selected="selected"><%=dictionary.getDes()%>ss</option>
+            <option value="<%=dictionary.name()%>" selected="selected"><%=dictionary.getDes()%></option>
         <%
             } else {
         %>
-            <option value="<%=dictionary.name()%>"><%=dictionary.getDes()%>ddaa</option>
+            <option value="<%=dictionary.name()%>"><%=dictionary.getDes()%></option>
         <%
             }
         }
