@@ -132,10 +132,12 @@ public class AntiRobotFilter implements Filter {
                         String path = session.getAttribute("forward").toString();
                         if(path.contains("identify.quiz")){
                             path = path.replace("identify.quiz", "");
+                        }else if(request.getQueryString().contains("other")&&request.getQueryString().length()>6){
+                            path =  request.getServletPath() + "?" + request.getQueryString().split("other=")[1];
                         }
                         session.setAttribute("forward", null);
                         session.setAttribute("isHuman", "true");
-                        request.getRequestDispatcher(path).forward(request, response);
+                        request.getRequestDispatcher(path).forward(request, response);//重新请求一遍
                         return;
                     }else{
                         Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
@@ -166,6 +168,16 @@ public class AntiRobotFilter implements Filter {
             data.put("quizItem", quizItem);
             data.put("servletContext", servletContext.getContextPath());
             data.put("token", token);
+            data.put("path",request.getRequestURL());
+            data.put("other",request.getQueryString());
+
+            System.out.println("春炼1"+request.getRequestURL());
+            System.out.println("春炼2"+request.getPathInfo());
+            System.out.println("春炼3"+request.getQueryString());
+            System.out.println("春炼4"+request.getServletPath());
+            System.out.println("春炼5"+request.getContextPath());
+            System.out.println("春炼6"+request.getParameterNames());
+
             String html = TemplateUtils.getIdentifyQuizForm(data);
 
             response.getWriter().write(html);
