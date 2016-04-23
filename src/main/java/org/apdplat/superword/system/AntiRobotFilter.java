@@ -100,10 +100,16 @@ public class AntiRobotFilter implements Filter {
 
         HttpSession session = request.getSession(true);
         if(session.getAttribute("isHuman") == null){
+
             AtomicInteger identifyCount = (AtomicInteger)session.getAttribute("identifyCount");
+
             if(identifyCount == null){
                 identifyCount = new AtomicInteger();
                 session.setAttribute("identifyCount", identifyCount);
+            }
+            if(identifyCount.intValue() == 0){
+                session.setAttribute("originPath",request.getServletPath());
+                session.setAttribute("originQuery",request.getQueryString());
             }
             identifyCount.incrementAndGet();
             if(identifyCount.intValue() > 200){
@@ -129,12 +135,7 @@ public class AntiRobotFilter implements Filter {
                 if(_word.equals(quizItem.getWord().getWord())){
                     quizItem.setAnswer(_answer);
                     if(quizItem.isRight()){
-                        String path = session.getAttribute("forward").toString();
-                        if(path.contains("identify.quiz")){
-                            path = path.replace("identify.quiz", "");
-                        }else if(request.getQueryString().contains("other")&&request.getQueryString().length()>6){
-                            path =  request.getServletPath() + "?" + request.getQueryString().split("other=")[1];
-                        }
+                        String path = session.getAttribute("originPath") + "?" + session.getAttribute("originQuery");
                         session.setAttribute("forward", null);
                         session.setAttribute("isHuman", "true");
                         request.getRequestDispatcher(path).forward(request, response);//重新请求一遍
