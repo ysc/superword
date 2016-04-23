@@ -116,7 +116,9 @@ public class AntiRobotFilter implements Filter {
                 if(path.contains("identify.quiz")){
                     path = path.replace("identify.quiz", "");
                 }else{
-                    path += "?" + request.getQueryString();
+                    if(request.getQueryString() != null) {
+                        path += "?" + request.getQueryString();
+                    }
                 }
                 LOG.info("记住用户请求的路径, 当用户通过测试后会重定向到这个地址: {}", path);
                 session.setAttribute("forward", path);
