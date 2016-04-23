@@ -171,13 +171,6 @@ public class AntiRobotFilter implements Filter {
             data.put("path",request.getRequestURL());
             data.put("other",request.getQueryString());
 
-            System.out.println("春炼1"+request.getRequestURL());
-            System.out.println("春炼2"+request.getPathInfo());
-            System.out.println("春炼3"+request.getQueryString());
-            System.out.println("春炼4"+request.getServletPath());
-            System.out.println("春炼5"+request.getContextPath());
-            System.out.println("春炼6"+request.getParameterNames());
-
             String html = TemplateUtils.getIdentifyQuizForm(data);
 
             response.getWriter().write(html);
