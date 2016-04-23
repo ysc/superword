@@ -3,7 +3,7 @@
 <h2>
     <ul>
     <#list quizItem.meanings as meaning>
-        <li><a href="${servletContext}/identify.quiz?word=${quizItem.word.word}&token=${token}&answer=${meaning?url}">${meaning}</a></li>
+        <li><a href="${path}?word=${quizItem.word.word}&token=${token}&answer=${meaning?url}&other=${other}">${meaning}</a></li>
     </#list>
     </ul>
 </h2>
