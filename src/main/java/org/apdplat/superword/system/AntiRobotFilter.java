@@ -112,7 +112,14 @@ public class AntiRobotFilter implements Filter {
             }
 
             if(session.getAttribute("forward") == null){
-                session.setAttribute("forward", StringUtils.isBlank(request.getPathInfo()) ? "/" : request.getPathInfo());
+                String path = request.getRequestURL().toString();
+                if(path.contains("identify.quiz")){
+                    path = path.replace("identify.quiz", "");
+                }else{
+                    path += "?" + request.getQueryString();
+                }
+                LOG.info("记住用户请求的路径, 当用户通过测试后会重定向到这个地址: {}", path);
+                session.setAttribute("forward", path);
             }
 
             String _token = request.getParameter("token");
@@ -130,12 +137,9 @@ public class AntiRobotFilter implements Filter {
                     quizItem.setAnswer(_answer);
                     if(quizItem.isRight()){
                         String path = session.getAttribute("forward").toString();
-                        if(path.contains("identify.quiz")){
-                            path = path.replace("identify.quiz", "");
-                        }
                         session.setAttribute("forward", null);
                         session.setAttribute("isHuman", "true");
-                        request.getRequestDispatcher(path).forward(request, response);
+                        response.sendRedirect(path);
                         return;
                     }else{
                         Set<String> wrongWordsInQuiz = (Set<String>)session.getAttribute("wrong_words_in_quiz");
