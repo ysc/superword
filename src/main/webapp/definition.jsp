@@ -73,6 +73,8 @@
             oxfordAudios.add(word.toLowerCase()+"_"+i++);
         }
         data.put("oxfordAudios", oxfordAudios);
+    }else{
+        data.put("hasOxfordAudio", false);
     }
 
     file = application.getRealPath("/audio/webster/"+word.toLowerCase()+".mp3");
@@ -85,6 +87,8 @@
             websterAudios.add(word.toLowerCase()+"_"+i++);
         }
         data.put("websterAudios", websterAudios);
+    }else{
+        data.put("hasWebsterAudio", false);
     }
 
     StringBuilder otherDictionary = new StringBuilder();
