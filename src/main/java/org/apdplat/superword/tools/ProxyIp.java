@@ -310,7 +310,7 @@ public class ProxyIp {
      */
     public static String getCurrentIp(){
         try {
-            String url = "http://1111.ip138.com/ic.asp?timestamp="+System.nanoTime();
+            String url = "http://1212.ip138.com/ic.asp?timestamp="+System.nanoTime();
             String text = Jsoup.connect(url)
                     .header("Accept", ACCEPT)
                     .header("Accept-Encoding", ENCODING)
