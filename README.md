@@ -1,7 +1,5 @@
 ###Superword is a Java open source project dedicated in the study of English words analysis and auxiliary reading, including but not limited to, spelling similarity, definition similarity, pronunciation similarity, the transformation rules of the spelling, the prefix and the dynamic prefix, the suffix and the dynamic suffix, roots, compound words, text auxiliary reading, web page auxiliary reading, book auxiliary reading, etc.. 
 
-###[Online Superword](http://123.56.99.179/)
-
 ###[Donate to support Superword](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
 
 ###Getting Started: 
