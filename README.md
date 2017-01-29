@@ -114,3 +114,5 @@ The 249 PDF e-books are related to IT field and software development: [it-softwa
 [JDK源代码以及200多部软件著作中出现的以连字符构造的1011个合成词](http://my.oschina.net/apdplat/blog/394495)
 
 [利用1691个精选句子彻底掌握2898个单词](http://my.oschina.net/apdplat/blog/394941)
+
+[https://travis-ci.org/ysc/superword](https://travis-ci.org/ysc/superword)
