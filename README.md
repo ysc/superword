@@ -32,6 +32,10 @@
         User name: root
         Password: 
         
+        notice: 
+        If your mysql password is not empty, please modify the file:
+        src/main/java/org/apdplat/superword/tools/MySQLUtils.java in line 49 to your password.
+        
         Execute the script in MySQL command line:
         source src/main/resources/mysql/superword.sql
         source src/main/resources/mysql/word_definition.sql
