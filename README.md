@@ -1,8 +1,8 @@
-###Superword is a Java open source project dedicated in the study of English words analysis and auxiliary reading, including but not limited to, spelling similarity, definition similarity, pronunciation similarity, the transformation rules of the spelling, the prefix and the dynamic prefix, the suffix and the dynamic suffix, roots, compound words, text auxiliary reading, web page auxiliary reading, book auxiliary reading, etc.. 
+### Superword is a Java open source project dedicated in the study of English words analysis and auxiliary reading, including but not limited to, spelling similarity, definition similarity, pronunciation similarity, the transformation rules of the spelling, the prefix and the dynamic prefix, the suffix and the dynamic suffix, roots, compound words, text auxiliary reading, web page auxiliary reading, book auxiliary reading, etc.. 
 
-###[Donate to support Superword](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
+### [Donate to support Superword](https://github.com/ysc/QuestionAnsweringSystem/wiki/donation)
 
-###Getting Started: 
+### Getting Started: 
 
     1、Install JDK8
     
@@ -50,7 +50,7 @@
         Open browser access: http://localhost:8080/index.jsp
         Notice: The first time to access the system may be a little bit slow, be patient please.
       
-###Engaging in complex language behavior requires various kinds of knowledge of language:
+### Engaging in complex language behavior requires various kinds of knowledge of language:
 
     Phonetics and Phonology — knowledge about linguistic sounds
     Morphology — knowledge of the meaningful components of words
@@ -59,7 +59,7 @@
     Pragmatics — knowledge of the relationship of meaning to the goals and intentions of the speaker
     Discourse — knowledge about linguistic units larger than a single utterance
       
-###Resources download
+### Resources download
 
 [4000 Essential English Words](http://pan.baidu.com/s/1kUhEUKR)
 
@@ -79,7 +79,7 @@ The HTML pages of the youdao dictionary that contain 63789 words: [Download addr
 
 The 249 PDF e-books are related to IT field and software development: [it-software-domain.zip](http://pan.baidu.com/s/1kT1NA3l)
 
-###Related articles
+### Related articles
 
 [一种使用随机抽样梯度下降算法来预估词汇量的方法](http://my.oschina.net/apdplat/blog/547668)
 
