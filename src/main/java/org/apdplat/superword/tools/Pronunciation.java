@@ -28,8 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by ysc on 12/5/15.
@@ -159,7 +160,9 @@ public class Pronunciation {
     }
 
     public static String getContent(String url) {
-        String html = _getContent(url);
+        long start = System.currentTimeMillis();
+        String html = _getContent(url, 1000);
+        LOGGER.info("获取拼音耗时: {}", TimeUtils.getTimeDes(System.currentTimeMillis()-start));
         int times = 0;
         while(StringUtils.isNotBlank(html) && html.contains("非常抱歉，来自您ip的请求异常频繁")){
             //使用新的IP地址
@@ -172,6 +175,17 @@ public class Pronunciation {
         return html;
     }
 
+    private static String _getContent(String url, int timeout) {
+        Future<String> future = ThreadPool.EXECUTOR_SERVICE.submit(()->_getContent(url));
+        try {
+            Thread.sleep(timeout);
+            return future.get(1, TimeUnit.NANOSECONDS);
+        } catch (Throwable e) {
+            LOGGER.error("获取网页异常", e);
+        }
+        return "";
+    }
+
     private static String _getContent(String url) {
         Connection conn = Jsoup.connect(url)
                 .header("Accept", ACCEPT)
@@ -181,7 +195,7 @@ public class Pronunciation {
                 .header("Referer", REFERER)
                 .header("Host", HOST)
                 .header("User-Agent", USER_AGENT)
-                .timeout(3000)
+                .timeout(1000)
                 .ignoreContentType(true);
         String html = "";
         try {
