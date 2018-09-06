@@ -72,8 +72,11 @@ public class AidReading {
         return analyse(words, Dictionary.ICIBA, column, searchOriginalText, book, text);
     }
     public static String analyse(Set<Word> words, Dictionary dictionary, int column, boolean searchOriginalText, String book, List<String> text) {
+        if(words==null){
+            return "";
+        }
         Set<String> wordSet = new HashSet<>();
-        words.forEach(word -> wordSet.add(word.getWord().toLowerCase()));
+        words.stream().filter(word -> word.getWord()!=null).forEach(word -> wordSet.add(word.getWord().toLowerCase()));
         StringBuilder result = new StringBuilder();
         Map<String, AtomicInteger> map = new ConcurrentHashMap<>();
 
